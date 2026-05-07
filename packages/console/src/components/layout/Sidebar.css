@@ -141,8 +141,8 @@
 .klao-sidebar__item--open .klao-sidebar__submenu {
   opacity: 1;
   visibility: visible;
-  max-height: 1000px; /* Large value to avoid internal scrolling */
-  padding: 4px 0 8px 24px;
+  max-height: 1000px;
+  padding: 4px 0 8px 12px; /* Reduced from 24px for a flatter, more unified look */
 }
 
 
@@ -150,29 +150,42 @@
 .klao-sidebar__submenu-link {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 6px 12px;
+  gap: 16px;
+  padding: 8px 16px;
   color: var(--klao-text-muted);
   text-decoration: none;
-  font-size: 0.78rem;
-  font-weight: 400;
-  border-radius: var(--klao-radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: var(--klao-radius-md);
   transition: all 0.2s ease;
 }
 
 .klao-sidebar__submenu-link:hover {
+  color: var(--klao-text-sidebar-active);
+  background-color: var(--klao-bg-body);
+}
+
+.klao-sidebar__submenu-link--active {
+  background-color: var(--klao-primary);
+  color: var(--klao-text-light) !important;
+  box-shadow: 0 4px 12px rgba(157, 206, 224, 0.4);
+  font-weight: 600;
+}
+
+/* Parent highlight when child is active */
+.klao-sidebar__item--open > .klao-sidebar__link {
   color: var(--klao-primary);
-  background-color: rgba(157, 206, 224, 0.05);
+  font-weight: 600;
 }
 
 .klao-sidebar__submenu-icon {
-  width: 18px;
-  height: 18px;
+  width: 24px; /* Matched to top-level icon size */
+  height: 24px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 /* Flyout Submenu (for collapsed mode) */

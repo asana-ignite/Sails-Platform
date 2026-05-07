@@ -77,6 +77,29 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
     if (closeTimeoutRef.current[id]) clearTimeout(closeTimeoutRef.current[id]);
   };
 
+  // Auto-expand menu items if they contain the current path
+  React.useEffect(() => {
+    const currentPath = location.pathname;
+    const itemsToOpen: Record<string, boolean> = {};
+
+    const findAndOpen = (items: any[]) => {
+      for (const item of items) {
+        if (item.children) {
+          const hasActiveChild = item.children.some((child: any) => 
+            child.path && currentPath === child.path
+          );
+          if (hasActiveChild) {
+            itemsToOpen[item.id] = true;
+          }
+          findAndOpen(item.children || []); // Search deeper if needed
+        }
+      }
+    };
+
+    findAndOpen(navigationItems);
+    setOpenMenus(prev => ({ ...prev, ...itemsToOpen }));
+  }, [location.pathname, navigationItems]);
+
   // Click-away logic
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

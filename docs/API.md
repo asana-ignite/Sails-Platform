@@ -8,14 +8,17 @@ Technical summary of the KLAO Core Headless CRM API for AI Agents.
 - **Runtime**: Bun / Next.js
 - **Auth**: NextAuth (Auth.js) — JWT strategy. Token carries `id`, `tenantId`, `role`, `teamId`.
 
-## Request Security Pipeline (Order is MANDATORY)
-```
-Incoming Request
-  → getAppSession()          [session.ts]           — resolve JWT
-  → AccessGuard.check()      [AccessGuard.ts]        — RBAC object-level check
-  → TransactionContext.run() [TransactionContext.ts] — inject RLS context (SET LOCAL)
-  → QueryLayer (DML)         [QueryLayer.ts]         — execute + audit log (atomic)
-```
+## Request Security Pipeline (MANDATORY Order)
+
+Every request to KLAO Core must survive the following pipeline. Failure at any stage results in immediate termination with appropriate HTTP error codes.
+
+| Step | Layer | Component | Owner | Responsibility |
+|---|---|---|---|---|
+| **1** | **Authentication** | `getAppSession()` | **Backend Engineer** | Resolve JWT, validate expiry, and extract `tenantId`, `role`, and `teamId`. |
+| **2** | **Object-Level RBAC** | `AccessGuard.check()` | **Backend Engineer** | Verify that the user's active team has the necessary capabilities for the target object. |
+| **3** | **RLS Context** | `TransactionContext.run()` | **Database Engineer** | Inject user and tenant context into the PostgreSQL session using `SET LOCAL` variables. |
+| **4** | **DML & Auditing** | `QueryLayer` (DML) | **Backend Engineer** | Execute the query and ensure an atomic audit log is recorded in the same transaction. |
+| **V** | **Verification** | `test-security.ts` | **QA Tester** | Automate regression tests to ensure the pipeline remains unbreakable. |
 
 ## Endpoints Summary
 

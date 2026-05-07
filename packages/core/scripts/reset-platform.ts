@@ -60,7 +60,7 @@ async function resetPlatform() {
 
       // 4. Update .env file
       console.log("📝 [PHASE 1] Updating .env file with new DEFAULT_TENANT_ID...");
-      const envPath = path.join(__dirname, '.env');
+      const envPath = path.join(__dirname, '..', '.env');
       if (fs.existsSync(envPath)) {
         let envContent = fs.readFileSync(envPath, 'utf8');
         const regex = /^DEFAULT_TENANT_ID=.*$/m;

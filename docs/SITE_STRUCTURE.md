@@ -78,6 +78,7 @@ The visual identity and token system.
 | :--- | :--- | :--- |
 | `design-tokens.css` | Variables | Centralized CSS variables for colors, spacing, and glass effects. |
 | `globals.css` | Reset/Base | Global CSS resets and utility classes for typography and layout. |
+| `admin-common.css` | Admin Shared | Centralized patterns for admin modules (Modals, Forms, Placeholders). |
 
 ---
 

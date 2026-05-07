@@ -11,9 +11,13 @@ import './AppPluginShell.css';
  * Resolves metadata and dynamic components for ANY application workspace.
  */
 const AppPluginShell: React.FC = () => {
-  const { navigationItems, activeApp } = useConsole();
+  const { navigationItems, activeApp, headerActions } = useConsole();
   const location = useLocation();
   const { appSlug } = useParams<{ appSlug: string }>();
+
+  React.useEffect(() => {
+    console.log("SHELL: Header Actions Updated ->", headerActions ? "PRESENT" : "EMPTY");
+  }, [headerActions]);
 
   // Helper to normalize paths for comparison
   const normalizePath = (p: string | null) => {
@@ -48,29 +52,33 @@ const AppPluginShell: React.FC = () => {
   // Header Data with App-level defaults
   const title = activeMenu?.label || activeApp?.name || 'Workspace';
   const iconName = activeMenu?.icon || activeApp?.icon || 'Box';
-  const subtitle = activeMenu?.requiredCapability 
-    ? `Secured via ${activeMenu.requiredCapability}` 
-    : `Managing all records for the ${activeMenu?.label?.toLowerCase() || activeApp?.name?.toLowerCase() || 'module'} entity.`;
+  
+  // High-fidelity subtitle resolution
+  let subtitle = `Managing all records and configuration for the ${activeMenu?.label?.toLowerCase() || activeApp?.name?.toLowerCase() || 'module'}.`;
+  
+  if (componentKey === 'AdminUserManager') {
+    subtitle = 'Manage platform access, assigned roles, and security permissions for all system members.';
+  } else if (activeMenu?.requiredCapability) {
+    subtitle = `Secured access module requiring ${activeMenu.requiredCapability} authorization.`;
+  }
 
   return (
-    <div className="klao-admin-shell">
-      <header className="klao-admin-shell__header">
+    <div className="klao-admin-shell klao-page-container">
+      <header className="klao-page-header klao-admin-shell__header">
         <div className="klao-page-header__left">
           <div className="klao-page-header__icon-wrapper">
              <DynamicIcon name={iconName} size={24} />
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="klao-page-header__title-group">
+            <div className="klao-page-header__title-row">
               <h1 className="klao-page-header__title">{title}</h1>
-              <span className="klao-admin-shell__plugin-badge">{activeApp?.name || 'App'}</span>
             </div>
             <p className="klao-page-header__subtitle">{subtitle}</p>
           </div>
         </div>
         
-        {/* Universal Action Area */}
-        <div className="klao-page-header__actions">
-           {/* Context-aware actions could be injected here */}
+        <div className="klao-page-header__right">
+           {headerActions}
         </div>
       </header>
 

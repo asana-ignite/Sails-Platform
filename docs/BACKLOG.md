@@ -91,3 +91,11 @@
 - [x] **Hardened Tenant Isolation**: Updated RLS policies to prevent cross-tenant leaks for administrative users.
 - [x] **Additive Permission Model**: `AccessGuard` now aggregates capabilities across all team memberships.
 - [x] **System Admin Fast-Path**: Integrated `is_system_admin` check into database-level RLS policies.
+
+## Phase 8: System Plugins (User & Data Model Management) (In Progress)
+- [ ] **[PM]** Design JSON payloads for `ConsoleMenu` injection.
+- [ ] **[Architect]** Define shared interfaces (`KlaoUser`, `KlaoTableDefinition`, `KlaoFieldDefinition`) in `packages/shared/src/index.ts` enforcing offline-first ID generation rules.
+- [ ] **[Database]** Verify `prisma/schema.prisma` to ensure `users`, `tables`, and `fields` models are ready for UI consumption.
+- [ ] **[BackEnd]** Implement/Verify API endpoints (`/api/tenant/users` and `/api/metadata/*`) ensuring the strict Security Pipeline (`getAppSession` -> `AccessGuard` -> `TransactionContext` -> `QueryLayer`) is enforced.
+- [ ] **[FrontEnd]** Build `UserManager.tsx` and `ObjectManager.tsx` in `packages/console/src/pages/custom/`. Apply strict BEM and "Ghost Glass" CSS. Register both in `src/features/admin/registry.tsx`.
+- [ ] **[QA]** Run `bun run tests/test-security.ts`, cross-package type checks (`tsc --noEmit`), and the frontend Vite `build`.

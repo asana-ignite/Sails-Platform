@@ -2,8 +2,12 @@
 
 This document provides a comprehensive guide to the **KLAO Core** REST API (`klao.app`). The platform is designed as a Headless CRM Engine, allowing full control over tenants, metadata, and dynamic data via standardized HTTP endpoints. The **KLAO Console** (frontend) consumes these APIs.
 
-> **Security Pipeline (every authenticated route):**
-> `getAppSession()` → `AccessGuard.check()` → `TransactionContext.run()` → `QueryLayer (DML + Audit)`
+> **The Mandatory Security Pipeline:**
+> 1.  **Authentication (`getAppSession`)**: Owned by **Backend Engineer**. Resolves identity and tenant context.
+> 2.  **RBAC (`AccessGuard`)**: Owned by **Backend Engineer**. Enforces object-level capabilities.
+> 3.  **RLS (`TransactionContext`)**: Owned by **Database Engineer**. Injects context into PostgreSQL.
+> 4.  **DML & Audit (`QueryLayer`)**: Owned by **Backend Engineer**. Ensures atomic data mutation and logging.
+> 5.  **Verification (`test-security.ts`)**: Owned by **QA Tester**. Validates the pipeline integrity.
 
 
 ---
@@ -54,7 +58,9 @@ Supports two modes:
     "id": "uuid",
     "email": "admin@acme.com",
     "tenantId": "uuid",
-    "teamId": "uuid"
+    "role": "TENANT_ADMIN",
+    "isActive": true,
+    "teams": []
   }
 }
 ```
@@ -306,8 +312,9 @@ Creates a new user account internally using KLAO Identity. Passwords are automat
     "email": "user@example.com",
     "name": "User Name",
     "role": "MEMBER",
+    "isActive": true,
     "tenantId": null,
-    "teamId": null
+    "teams": []
   }
 }
 ```
@@ -325,8 +332,12 @@ Retrieves the current authenticated user's session details, including their tena
     "name": "John Doe",
     "email": "john@example.com",
     "role": "TENANT_ADMIN",
+    "isActive": true,
     "tenantId": "uuid",
-    "teamId": "uuid"
+    "teams": [
+      { "team": { "id": "uuid", "name": "Management" }, "isLeader": true }
+    ],
+    "metadata": { "title": "CEO" }
   }
 }
 ```
@@ -342,7 +353,7 @@ Allows Tenant Admins to provision new users directly into their tenant environme
   "email": "jane@example.com",
   "name": "Jane Smith",
   "role": "MEMBER",
-  "teamId": "optional-uuid"
+  "teamIds": ["optional-uuid-1", "optional-uuid-2"]
 }
 ```
 
@@ -354,17 +365,35 @@ Allows Tenant Admins to provision new users directly into their tenant environme
     "email": "jane@example.com",
     "name": "Jane Smith",
     "role": "MEMBER",
-    "tenantId": "uuid-of-admin-tenant"
+    "isActive": true,
+    "tenantId": "uuid-of-admin-tenant",
+    "teams": [...]
   }
 }
 ```
 
 ---
 
-## Security Note
-All requests must include a valid **Auth.js JWT** (via session cookie or bearer header). The engine automatically extracts `tenantId` and `role` from the token to enforce:
-- **Object-Level Security** (`AccessGuard`) — checks `core.object_permissions` per Team.
-- **Row-Level Security** (`TransactionContext`) — injects `SET LOCAL app.current_user_id` into PostgreSQL to activate native RLS policies.
-- **Audit Logging** (`QueryLayer`) — every DML mutation is atomically logged to `core.audit_logs`.
+## Security Pipeline & Ownership
+All requests to KLAO Core must survive the following pipeline. Failure at any stage results in immediate termination with appropriate HTTP error codes.
 
-`SUPER_ADMIN` role bypasses `AccessGuard` DB lookup entirely (fast-path).
+### 1. Authentication (Backend Engineer)
+- **Component**: `getAppSession()` in `packages/core/src/lib/auth/session.ts`.
+- **Action**: Resolves the Auth.js JWT, validates the signature, and extracts the `tenantId`, `role`, and `activeTeamId`.
+
+### 2. Object-Level RBAC (Backend Engineer)
+- **Component**: `AccessGuard.check()` in `packages/core/src/core/engine/AccessGuard.ts`.
+- **Action**: Queries `core.object_permissions` to ensure the user's active team has the required capabilities for the specific metadata object.
+- **Fast-Path**: The `SUPER_ADMIN` role bypasses this check entirely.
+
+### 3. RLS Context Injection (Database Engineer)
+- **Component**: `TransactionContext.run()` in `packages/core/src/core/engine/TransactionContext.ts`.
+- **Action**: Uses `SET LOCAL` to inject `app.current_user_id` and `app.current_tenant_id` into the PostgreSQL session, enabling native Row-Level Security policies.
+
+### 4. Atomic DML & Auditing (Backend Engineer)
+- **Component**: `QueryLayer` in `packages/core/src/core/engine/QueryLayer.ts`.
+- **Action**: Executes the data mutation and guarantees an atomic entry in `core.audit_logs`. If either the data change or the audit log fails, the entire transaction rolls back.
+
+### 5. Continuous Verification (QA Tester)
+- **Component**: `packages/core/test-security.ts`.
+- **Action**: A suite of regression tests covering 8+ security scenarios (cross-tenant leaks, missing session, RBAC failure, etc.) that MUST be run after any backend or database change.

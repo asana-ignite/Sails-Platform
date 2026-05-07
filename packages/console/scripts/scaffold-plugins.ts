@@ -7,7 +7,7 @@ const components = [
   { name: 'AdminBilling', label: 'Subscription & Billing' },
   { name: 'AdminUserManager', label: 'Users' },
   { name: 'AdminTeamManager', label: 'Teams' },
-  { name: 'AdminEntityManager', label: 'Data Entities' },
+  { name: 'AdminEntityManager', label: 'Data Model' },
   { name: 'AdminAppManager', label: 'Console Apps' },
   { name: 'AdminMenuManager', label: 'Navigation Menus' },
   { name: 'AdminSSOConfig', label: 'SSO Configuration' },

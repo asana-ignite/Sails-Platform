@@ -20,19 +20,19 @@ export interface Tenant {
   updatedAt: string;
 }
 
-export interface TableDefinition {
+export interface KlaoTableDefinition {
   id: string;
   tenantId: string;
   name: string;        // UI display name (e.g., "Sales Leads")
   tableName: string;   // Physical DB name (e.g., "leads")
   description?: string | null;
   createdAt: string;
-  fields?: FieldDefinition[];
+  fields?: KlaoFieldDefinition[];
   rules?: ValidationRule[];
   _count?: { fields: number };
 }
 
-export interface FieldDefinition {
+export interface KlaoFieldDefinition {
   id: string;
   tableId: string;
   name: string;          // UI display name (e.g., "Email Address")
@@ -63,11 +63,21 @@ export interface Team {
   parentId?: string | null;
 }
 
-export interface User {
+export interface KlaoUser {
   id: string;
-  tenantId: string;
+  tenantId: string | null;
   email: string;
-  teamId: string;
+  name?: string | null;
+  image?: string | null;
+  role: string;
+  isActive: boolean;
+  emailVerified: string | null;
+  phone?: string | null;
+  metadata: Record<string, any>;
+  lastLoginAt?: string | null;
+  teams?: { team: Team; isLeader: boolean }[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ObjectPermission {

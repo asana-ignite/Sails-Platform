@@ -29,10 +29,12 @@ A responsive sidebar that transitions between two states:
 - **Panel Background**: `rgba(255, 255, 255, 0.12)` (Light) or `rgba(0, 0, 0, 0.2)` (Dark).
 - **Borders**: `1px solid rgba(255, 255, 255, 0.2)` to define edges without adding visual weight.
 
-### Geometry
+### Geometry & Layout
 - **Main Panels**: `border-radius: 24px`.
 - **Icon Boxes / Cards**: `border-radius: 16px`.
 - **Sub-menu Items**: `border-radius: 12px`.
+- **Page Container**: All primary pages must wrap content in `.klao-page-container` to enforce a `max-width: 1400px` and centered alignment.
+- **Content Spacing**: Standard gutter is `32px` (calc(var(--klao-spacing-unit) * 4)).
 
 ### Iconography
 - **Library**: `lucide-react`.
@@ -66,21 +68,39 @@ All interactive grid elements (App Switcher, Mobile Nav) use hardware-accelerate
 
 ## 5. Page Layout & Universal Shell
 
-Every page within the KLAO Console (Tables, Plugins, or Dashboards) follows a standardized layout structure to ensure visual cohesion.
+Every page within the KLAO Console (Tables, Plugins, or Dashboards) follows a standardized layout structure to ensure visual cohesion across all app workspaces.
+
+### The Page Container (`.klao-page-container`)
+To maintain consistency on high-resolution displays, all pages must be centered with a maximum width of **1400px**. This prevents content from stretching excessively and keeps the "Identity Area" and "Action Area" within the user's primary field of view.
 
 ### The "Identity Area" (Header)
-All headers use a horizontal flex layout with a steel-blue background for the icon wrapper.
-- **Icon**: Dynamic icon representing the entity (size: 24px).
-- **Title**: Large, bold label (e.g., "Leads").
-- **Subtitle**: Contextual description or capability badge.
+All headers use the `.klao-page-header` class with a horizontal flex layout.
+- **Icon Wrapper**: A `42x42px` box with `var(--klao-primary-light)` background.
+- **Title Group**: Contains the main `h1` and an optional subtitle.
+- **Plugin Badge**: Custom modules (Plugins) automatically display their parent App name as a badge next to the title to provide workspace context.
+- **Action Area**: Located on the far right (`.klao-page-header__right`) for primary page actions (e.g., "Add New", "Save", "Export").
 
 ### App-First Shell Architecture
 Custom modules are wrapped in the **`AppPluginShell`**, which automatically:
 1. Resolves the current app context (CRM, Sales, Admin).
 2. Performs a metadata lookup to find the correct title and icon.
-3. Injects the custom React plugin into the main content card.
+3. Injects the custom React plugin into the main content area.
+4. Harmonizes the layout with the standard **`DynamicTablePage`**.
 
 ### Dynamic Rendering Logic
 The system automatically chooses the rendering engine based on the **`actionType`** in the database:
-- `actionType: 'table'` → Renders the **Dynamic Data Grid**.
-* `actionType: 'plugin'` → Renders the **Custom Plugin Shell**.
+- `actionType: 'table'` → Renders the **DynamicTablePage** (Data Grid).
+- `actionType: 'plugin'` → Renders the **AppPluginShell** (Custom Module).
+
+---
+
+## 6. Design References (Aquiry System)
+
+To ensure "Ghost Glass" consistency while expanding functionality, all custom plugins should reference the **Aquiry** theme assets and documentation:
+
+- **Styles & Documentation**: [docs/_docs_references/index.html](file:///Users/asana/Repo/Klao%20Platform/docs/_docs_references/index.html)
+- **Live Templates**: [docs/_assets_references/](file:///Users/asana/Repo/Klao%20Platform/docs/_assets_references/)
+
+### Recommended Mappings for Sprint Phase 8:
+- **User Manager**: Reference `apps-contacts.html` for list views and `pages-profile.html` for detail views.
+- **Data Model Manager**: Reference `datatable-base.html` for schema lists and `form-layout.html` for field configurations.

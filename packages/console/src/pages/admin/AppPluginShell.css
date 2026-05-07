@@ -8,27 +8,31 @@
 .klao-admin-shell__header {
   display: flex;
   justify-content: space-between;
-  align-items: center; /* Same line */
+  align-items: center;
+  /* Same line */
   margin-bottom: calc(var(--klao-spacing-unit) * 2);
 }
 
 .klao-page-header__left {
   display: flex;
-  flex-direction: row; /* Horizontal layout: same line */
   align-items: center;
-  gap: calc(var(--klao-spacing-unit) * 2);
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+  pointer-events: none; /* Let clicks pass through the empty space */
 }
 
-/* Icon Wrapper for Admin Modules */
-.klao-page-header__icon-wrapper {
-  width: 42px;
-  height: 42px;
-  background-color: var(--klao-primary-light);
-  color: var(--klao-primary);
-  border-radius: var(--klao-radius-md);
+.klao-page-header__left > * {
+  pointer-events: auto; /* Re-enable for title/icon */
+}
+
+.klao-page-header__right {
+  position: relative;
+  z-index: 100; /* Force above the left side */
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 12px;
+  pointer-events: auto;
 }
 
 .klao-admin-shell__plugin-badge {
@@ -50,6 +54,13 @@
 }
 
 @keyframes klao-fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

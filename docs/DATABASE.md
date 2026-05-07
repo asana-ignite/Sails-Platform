@@ -18,8 +18,8 @@ The `core` schema is the highly protected central nervous system of the platform
 
 | Category | Tables |
 |---|---|
-| **Auth / Identity** | `users`, `accounts`, `sessions`, `verification_tokens` |
-| **RBAC** | `teams`, `object_permissions` |
+| **Auth / Identity** | `users` (with `isActive`, `phone`, `metadata`, `lastLoginAt`), `accounts`, `sessions`, `verification_tokens` |
+| **RBAC** | `teams`, `object_permissions`, `user_teams` (Many-to-Many join) |
 | **Metadata** | `tenants`, `tables`, `fields`, `validation_rules` |
 | **Console Metadata** | `console_apps`, `console_menus` |
 | **Audit** | `audit_logs` |

@@ -182,7 +182,7 @@ function getMockData() {
           icon: 'Layout',
           order: 2,
           children: [
-            { id: 'm-schema', label: 'Data Entities', icon: 'Database', path: '/settings/schema', order: 0, requiredCapability: 'system.schema.manage' },
+            { id: 'm-schema', label: 'Data Model', icon: 'Database', path: '/settings/schema', order: 0, requiredCapability: 'system.schema.manage' },
             { id: 'm-apps', label: 'Console Apps', icon: 'LayoutGrid', path: '/settings/apps', order: 1, requiredCapability: 'system.apps.manage' },
             { id: 'm-menus', label: 'Navigation Menus', icon: 'Menu', path: '/settings/menus', order: 2, requiredCapability: 'system.menus.manage' }
           ]

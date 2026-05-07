@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
+import { Settings } from 'lucide-react';
 
 const AdminPlaceholder: React.FC = () => {
   const location = useLocation();
@@ -11,18 +12,13 @@ const AdminPlaceholder: React.FC = () => {
     .replace(/\b\w/g, l => l.toUpperCase());
 
   return (
-    <div style={{ padding: '60px', textAlign: 'center', animation: 'klao-fade-in 0.5s ease-out' }}>
-      <div style={{ 
-        display: 'inline-block', 
-        padding: '20px 40px', 
-        background: 'rgba(255,255,255,0.8)', 
-        backdropFilter: 'blur(10px)',
-        border: '1px solid var(--klao-border-color)',
-        borderRadius: 'var(--klao-radius-lg)',
-        boxShadow: 'var(--klao-shadow-lg)'
-      }}>
-        <h1 style={{ marginBottom: '10px', color: 'var(--klao-text-main)' }}>{formattedName}</h1>
-        <p style={{ color: 'var(--klao-text-muted)' }}>
+    <div className="klao-admin-placeholder">
+      <div className="klao-admin-placeholder__icon">
+        <Settings size={40} />
+      </div>
+      <div className="klao-admin-placeholder__content">
+        <h1 className="klao-admin-placeholder__title">{formattedName}</h1>
+        <p className="klao-admin-placeholder__text">
           This administrative module is part of the <strong>Phase 6 Roadmap</strong>.
           <br />
           Currently connected to the <code>{location.pathname}</code> endpoint.

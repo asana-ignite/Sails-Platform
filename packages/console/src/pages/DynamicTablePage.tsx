@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Layers, Database, Plus, Search } from 'lucide-react';
 import { useConsole } from '../contexts/ConsoleContext';
 import { ConsoleMenu } from '@klao/shared';
+import DynamicIcon from '../components/common/DynamicIcon';
 import './DynamicTablePage.css';
 
 const DynamicTablePage: React.FC = () => {
@@ -28,13 +29,14 @@ const DynamicTablePage: React.FC = () => {
   const activeMenu = findMenu(navigationItems);
   const displayTitle = activeMenu?.label || 'Data Table';
   const displaySubtitle = `Managing all records for the ${displayTitle.toLowerCase()} entity.`;
+  const iconName = activeMenu?.icon || 'Database';
 
   return (
-    <div className="klao-dynamic-table">
+    <div className="klao-dynamic-table klao-page-container">
       <header className="klao-page-header klao-dynamic-table__header">
         <div className="klao-page-header__left">
           <div className="klao-page-header__icon-wrapper">
-            <Database size={24} />
+            <DynamicIcon name={iconName} size={24} />
           </div>
           <div>
             <h1 className="klao-page-header__title">{displayTitle}</h1>

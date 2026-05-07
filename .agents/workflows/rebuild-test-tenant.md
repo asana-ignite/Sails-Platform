@@ -1,3 +1,7 @@
+---
+description: Rebuild Test Tenant
+---
+
 # Rebuild Test Tenant Workflow (API-Based)
 
 This workflow resets the KLAO platform to a clean state and re-provisions the default test tenant with standard apps and navigation, executing primarily through the platform's REST APIs.

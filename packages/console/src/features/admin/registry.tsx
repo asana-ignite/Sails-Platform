@@ -11,12 +11,12 @@ export const AdminPluginRegistry: Record<string, any> = {
   AdminBilling: lazy(() => import('../../pages/admin/AdminBilling')),
 
   // Users & Team
-  AdminUserManager: lazy(() => import('../../pages/admin/AdminUserManager')),
+  AdminUserManager: lazy(() => import('../../pages/custom/UserManager')),
   AdminTeamManager: lazy(() => import('../../pages/admin/AdminTeamManager')),
   AdminPermissions: lazy(() => import('../../pages/admin/AdminPermissions')),
 
   // Platform Studio
-  AdminEntityManager: lazy(() => import('../../pages/admin/AdminEntityManager')),
+  AdminEntityManager: lazy(() => import('../../pages/custom/ObjectManager')),
   AdminAppManager: lazy(() => import('../../pages/admin/AdminAppManager')),
   AdminMenuManager: lazy(() => import('../../pages/admin/AdminMenuManager')),
 

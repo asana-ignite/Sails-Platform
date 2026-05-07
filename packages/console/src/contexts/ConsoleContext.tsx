@@ -13,6 +13,10 @@ interface ConsoleContextType {
   isLoading: boolean;
   error: string | null;
   setActiveApp: (appId: string) => void;
+  headerActions: React.ReactNode | null;
+  setHeaderActions: (actions: React.ReactNode | null) => void;
+  showAddUserDrawer: boolean;
+  setShowAddUserDrawer: (show: boolean) => void;
 }
 
 const ConsoleContext = createContext<ConsoleContextType | undefined>(undefined);
@@ -105,6 +109,15 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const [headerActions, setHeaderActions] = useState<React.ReactNode | null>(null);
+  const [showAddUserDrawer, setShowAddUserDrawer] = useState(false);
+
+  useEffect(() => {
+    // Clear header actions on any route change to prevent leakage
+    setHeaderActions(null);
+    setShowAddUserDrawer(false);
+  }, [location.pathname]);
+
   return (
     <ConsoleContext.Provider value={{ 
       apps, 
@@ -112,7 +125,11 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       navigationItems, 
       isLoading, 
       error, 
-      setActiveApp 
+      setActiveApp,
+      headerActions,
+      setHeaderActions,
+      showAddUserDrawer,
+      setShowAddUserDrawer
     }}>
       {children}
     </ConsoleContext.Provider>

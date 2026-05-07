@@ -79,9 +79,14 @@ export class TenantProvisioner {
    * Provision "Settings & Admin" with clean /admin/ paths
    */
   async provisionSystemApps(tenantId: string) {
-    await db.consoleApp.deleteMany({
+    const existing = await db.consoleApp.findFirst({
       where: { tenantId, name: 'Settings & Admin' }
     });
+
+    if (existing) {
+      console.log(`[PROVISIONER] 'Settings & Admin' already exists for tenant ${tenantId}. Skipping.`);
+      return existing;
+    }
 
     const adminApp = await db.consoleApp.create({
       data: {
@@ -115,7 +120,7 @@ export class TenantProvisioner {
               label: 'Platform Studio', icon: 'Layout', order: 2, actionType: 'plugin',
               children: {
                 create: [
-                  { label: 'Data Entities', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', componentKey: 'AdminEntityManager', actionType: 'plugin' },
+                  { label: 'Data Model', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', componentKey: 'AdminEntityManager', actionType: 'plugin' },
                   { label: 'Console Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 1, requiredCapability: 'system.apps.manage', componentKey: 'AdminAppManager', actionType: 'plugin' },
                   { label: 'Navigation Menus', icon: 'Menu', path: '/admin/menus', order: 2, requiredCapability: 'system.menus.manage', componentKey: 'AdminMenuManager', actionType: 'plugin' }
                 ]
@@ -163,66 +168,80 @@ export class TenantProvisioner {
   }
 
   async provisionBusinessApps(tenantId: string) {
-    await db.consoleApp.deleteMany({
-      where: { tenantId, name: { in: ['CRM', 'Sales', 'Dashboard'] } }
+    const appsToProvision = ['CRM', 'Sales', 'Dashboard'];
+    const existingApps = await db.consoleApp.findMany({
+      where: { tenantId, name: { in: appsToProvision } }
     });
+
+    if (existingApps.length === appsToProvision.length) {
+      console.log(`[PROVISIONER] All business apps already exist for tenant ${tenantId}. Skipping.`);
+      return;
+    }
+
+    const existingNames = existingApps.map(a => a.name);
 
     // Dashboard
-    await db.consoleApp.create({
-      data: {
-        tenantId, name: 'Dashboard', icon: 'LayoutDashboard', order: 0,
-        menus: { create: [{ label: 'Overview', icon: 'Activity', path: '/dashboard', order: 0, actionType: 'plugin' }] }
-      }
-    });
+    if (!existingNames.includes('Dashboard')) {
+      await db.consoleApp.create({
+        data: {
+          tenantId, name: 'Dashboard', icon: 'LayoutDashboard', order: 0,
+          menus: { create: [{ label: 'Overview', icon: 'Activity', path: '/dashboard', order: 0, actionType: 'plugin' }] }
+        }
+      });
+    }
 
     // CRM
-    await db.consoleApp.create({
-      data: {
-        tenantId, name: 'CRM', icon: 'Users', order: 1,
-        menus: {
-          create: [
-            {
-              label: 'Intelligence', icon: 'Zap', order: 0, actionType: 'plugin',
-              children: {
-                create: [
-                  { label: 'Leads', icon: 'Target', path: '/crm/leads', order: 0, actionType: 'table' },
-                  { label: 'Pipeline', icon: 'GitMerge', path: '/crm/pipeline', order: 1, actionType: 'plugin' }
-                ]
+    if (!existingNames.includes('CRM')) {
+      await db.consoleApp.create({
+        data: {
+          tenantId, name: 'CRM', icon: 'Users', order: 1,
+          menus: {
+            create: [
+              {
+                label: 'Intelligence', icon: 'Zap', order: 0, actionType: 'plugin',
+                children: {
+                  create: [
+                    { label: 'Leads', icon: 'Target', path: '/crm/leads', order: 0, actionType: 'table' },
+                    { label: 'Pipeline', icon: 'GitMerge', path: '/crm/pipeline', order: 1, actionType: 'plugin' }
+                  ]
+                }
+              },
+              {
+                label: 'Accounts', icon: 'Building', order: 1, actionType: 'plugin',
+                children: {
+                  create: [
+                    { label: 'Customers', icon: 'UserCheck', path: '/crm/customers', order: 0, actionType: 'table' },
+                    { label: 'Companies', icon: 'Briefcase', path: '/crm/companies', order: 1, actionType: 'table' }
+                  ]
+                }
               }
-            },
-            {
-              label: 'Accounts', icon: 'Building', order: 1, actionType: 'plugin',
-              children: {
-                create: [
-                  { label: 'Customers', icon: 'UserCheck', path: '/crm/customers', order: 0, actionType: 'table' },
-                  { label: 'Companies', icon: 'Briefcase', path: '/crm/companies', order: 1, actionType: 'table' }
-                ]
-              }
-            }
-          ]
+            ]
+          }
         }
-      }
-    });
+      });
+    }
 
     // Sales
-    await db.consoleApp.create({
-      data: {
-        tenantId, name: 'Sales', icon: 'DollarSign', order: 2,
-        menus: {
-          create: [
-            {
-              label: 'Transactions', icon: 'ShoppingCart', order: 0, actionType: 'plugin',
-              children: {
-                create: [
-                  { label: 'Orders', icon: 'sales/orders', order: 0, actionType: 'table' },
-                  { label: 'Invoices', icon: 'sales/invoices', order: 1, actionType: 'table' }
-                ]
+    if (!existingNames.includes('Sales')) {
+      await db.consoleApp.create({
+        data: {
+          tenantId, name: 'Sales', icon: 'DollarSign', order: 2,
+          menus: {
+            create: [
+              {
+                label: 'Transactions', icon: 'ShoppingCart', order: 0, actionType: 'plugin',
+                children: {
+                  create: [
+                    { label: 'Orders', icon: 'sales/orders', order: 0, actionType: 'table' },
+                    { label: 'Invoices', icon: 'sales/invoices', order: 1, actionType: 'table' }
+                  ]
+                }
               }
-            }
-          ]
+            ]
+          }
         }
-      }
-    });
+      });
+    }
 
     // Fix appId for all business apps
     await db.$executeRawUnsafe(`

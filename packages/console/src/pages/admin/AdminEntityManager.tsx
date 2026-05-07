@@ -1,14 +1,18 @@
 import React from 'react';
+import { Database } from 'lucide-react';
 
 const AdminEntityManager: React.FC = () => {
   return (
-    <div className="klao-card" style={{ textAlign: 'center', borderStyle: 'dashed', background: 'rgba(255,255,255,0.4)' }}>
-      <p style={{ color: 'var(--klao-text-muted)' }}>
-        This is the <strong>Data Entities</strong> plugin (Schema Manager). 
+    <div className="klao-admin-placeholder">
+      <div className="klao-admin-placeholder__icon">
+        <Database size={40} />
+      </div>
+      <p className="klao-admin-placeholder__text">
+        This is the <strong>Data Model</strong> plugin (Schema Manager). 
       </p>
-      <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '15px' }}>
-        {[1, 2, 3].map(i => (
-          <div key={i} style={{ height: '80px', background: 'rgba(0,0,0,0.03)', borderRadius: 'var(--klao-radius-md)', border: '1px solid var(--klao-border-color)' }} />
+      <div className="klao-entity-grid">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="klao-entity-item" />
         ))}
       </div>
     </div>

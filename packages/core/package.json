@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "cli": "bun src/cli/klao-cli.ts",
-    "test": "bun scripts/clean-db.ts && bun tests/test-engine.ts && bun tests/test-translator.ts",
+    "test": "bun tests/test-engine.ts && bun tests/test-translator.ts",
     "db:clean": "bun scripts/clean-db.ts",
     "platform:reset": "bun scripts/reset-platform.ts"
   },

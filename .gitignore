@@ -38,3 +38,7 @@ bun-debug.log*
 # Prisma
 /packages/core/prisma/dev.db
 /packages/core/prisma/dev.db-journal
+
+# Custom Assets & Docs
+/docs/_assets_references
+/docs/_docs_references

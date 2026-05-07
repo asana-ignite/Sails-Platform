@@ -3,9 +3,11 @@
 This document outlines the strategic security implementation plan for **KLAO** (`klao.app`), a No-Code CRM Platform.
 
 **Strategic Architecture:**
-1. **KLAO Core**: Headless Backend API (Server-side engine).
-2. **KLAO Console**: Frontend UI (PWA, ready for offline usage).
-3. **KLAO Admin (Strategic)**: Isolated CLI/Scripts for sensitive operations (tenant removal, global cleanup) — restricted to internal VPN/IP.
+1. **KLAO Core**: Headless Backend API (Owned by **Backend Engineer**).
+2. **KLAO Console**: Frontend UI (Owned by **Frontend Engineer**).
+3. **KLAO Shared**: Type Contracts & Shared Models (Owned by **Platform Architect**).
+4. **KLAO Database**: Metadata & Dynamic Schemas (Owned by **Database Engineer**).
+5. **KLAO QA**: Automated Verification Suite (Owned by **QA Tester**).
 
 ## Identity & Access Management (IAM)
 
@@ -17,12 +19,12 @@ This document outlines the strategic security implementation plan for **KLAO** (
 | **D — B2B2C** | 🔲 Pending | Client Portals with separate identity silos |
 
 ### Phase A — Completed Details
-- ✅ `src/lib/auth/session.ts` — lazy-loads `next-auth` (never fails in CLI/Docker); supports `TEST_SESSION_JSON` env-var override for integration tests.
-- ✅ `prisma/schema.prisma` — all 10 models in `@@schema("core")`. `User` extended with `tenantId`, `role`, `teamId`. `Account`, `Session`, `VerificationToken` added for NextAuth `PrismaAdapter`. Migration `20260502093918_auth_schema_core` applied.
-- ✅ `TransactionContext.ts` — injects `SET LOCAL app.current_user_id` / `app.current_tenant_id`. Fixed `resolvedRole` hoisting bug.
-- ✅ `AccessGuard.ts` — SUPER_ADMIN fast-path; Object-Level RBAC via `object_permissions`.
-- ✅ `QueryLayer.ts` — session resolved once per request → AccessGuard → TransactionContext → Audit Log (atomic). Fixed `executeSecureQuery` callback wiring bug.
-- ✅ `test-security.ts` — 8-scenario integration suite (all passing): no-session, SUPER_ADMIN fast-path, no-team, no-permission, wrong action, cross-tenant RLS, audit atomicity, and **Team Queue (Shared Ownership)**.
+- ✅ **Authentication**: `src/lib/auth/session.ts` — Resolved by **Backend Engineer**.
+- ✅ **Metadata Management**: `prisma/schema.prisma` — Managed by **Database Engineer**.
+- ✅ **Context Injection**: `TransactionContext.ts` — Owned by **Database Engineer**; injects `SET LOCAL app.current_user_id` / `app.current_tenant_id`.
+- ✅ **Access Control**: `AccessGuard.ts` — Implemented by **Backend Engineer**; Object-Level RBAC via `object_permissions`.
+- ✅ **Atomic Auditing**: `QueryLayer.ts` — Orchestrated by **Backend Engineer**; session → RBAC → RLS → Audit Log (atomic).
+- ✅ **Security Verification**: `test-security.ts` — 8-scenario suite maintained by **QA Tester** (all passing).
 
 ---
 

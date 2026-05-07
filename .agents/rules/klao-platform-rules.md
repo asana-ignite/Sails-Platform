@@ -43,3 +43,9 @@ All development, testing, and deployment activities MUST adhere to the following
 ## 5. Code Quality & Reliability
 - **Self-Documenting Code**: Complex logic (especially in `core/engine`) MUST include comments explaining the rationale.
 - **Robust Error Handling**: Wrap database queries and external API calls in `try/catch` blocks with standardized logging.
+
+## 6. Plugin Architecture Standards
+- **Lifted State for Persistence**: Plugin-specific UI states (Drawers, Modals) MUST be lifted to `ConsoleContext` to survive platform re-mounts during header action registration.
+- **Header Hit-Box Safety**: Header containers (`.klao-page-header__left`) MUST use `pointer-events: none` on the container and `pointer-events: auto` on children to prevent invisible click-blocking.
+- **Mandatory Portaling**: Use `React Portals` for all slide-over drawers to ensure they sit at the document root, bypassing shell `overflow` or `z-index` constraints.
+- **Standard Z-Index**: Administrative overlays must strictly use `z-index: 9999 !important` for deterministic visibility.
