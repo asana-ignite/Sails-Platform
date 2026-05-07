@@ -5,7 +5,7 @@
 - **Full Name**: Key Leads, Orders & Activities
 - **Domain**: `klao.app`
 - **This Project**: **KLAO Console** — The frontend UI
-- **Backend**: **KLAO Core** — Headless CRM Engine (`/klao-core`)
+- **Backend**: **KLAO Core** — Headless CRM Engine (`/packages/core`)
 
 ## Project Overview
 KLAO Console is the frontend application for the KLAO CRM platform. It connects to the KLAO Core backend API to provide a visual interface for managing tenants, configuring data schemas (Tables and Fields), and performing CRUD operations on dynamic data.
@@ -41,7 +41,7 @@ All primary pages (Data Tables, Admin Plugins, Dashboards) MUST follow this stru
    - **DO NOT** add internal padding to the page root, as the shell already provides it.
 
 ## Folder Structure
-/Users/asana/KLAO/klao-console/
+/Users/asana/Repo/Klao Platform/packages/console/
 ├── src/
 │   ├── components/
 │   │   ├── layout/          ← Core structural components (Sidebar, Topbar, etc.)
@@ -74,7 +74,7 @@ The console proxies requests through Vite to the core backend.
 
 
 ## Future Constraint: PWA Offline-First Architecture (DO NOT IMPLEMENT YET)
-> **See full spec:** [ROADMAP.md — Phase 4](file:///Users/asana/KLAO/klao-core/ROADMAP.md)
+> **See full spec:** [ROADMAP.md — Phase 4](file:///Users/asana/Repo/Klao Platform/packages/core/ROADMAP.md)
 
 The following constraints are **pre-declared** for the Console (UI Layer). AI agents MUST NOT make architectural decisions that would block the offline sync pipeline described below.
 

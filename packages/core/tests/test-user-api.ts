@@ -1,6 +1,6 @@
-import { GET as getMe } from './src/app/api/users/me/route';
-import { POST as createUser } from './src/app/api/tenant/users/route';
-import { db } from './src/lib/db';
+import { GET as getMe } from '../src/app/api/users/me/route';
+import { POST as createUser } from '../src/app/api/tenant/users/route';
+import { db } from '../src/lib/db';
 import { NextRequest } from 'next/server';
 
 async function runTests() {

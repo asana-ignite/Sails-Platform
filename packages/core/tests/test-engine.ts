@@ -1,9 +1,9 @@
 import { Pool } from 'pg';
-import { db } from './src/lib/db';
-import { AlchemaCore } from './src/core/engine/AlchemaCore';
-import { QueryLayer } from './src/core/engine/QueryLayer';
-import { TenantProvisioner } from './src/services/TenantProvisioner';
-import { ConnectionManager } from './src/core/engine/ConnectionManager';
+import { db } from '../src/lib/db';
+import { AlchemaCore } from '../src/core/engine/AlchemaCore';
+import { QueryLayer } from '../src/core/engine/QueryLayer';
+import { TenantProvisioner } from '../src/services/TenantProvisioner';
+import { ConnectionManager } from '../src/core/engine/ConnectionManager';
 
 // ─── Test Session Helpers ────────────────────────────────────────────────────
 function setTestSession(userId: string, tenantId: string, role = 'MEMBER', teams?: { teamId: string, isLeader: boolean }[]) {

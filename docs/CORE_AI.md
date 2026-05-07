@@ -4,8 +4,8 @@
 - **Product Name**: KLAO (pronounced "คลาว" / "cloud")
 - **Backronym**: "Key Leads, Orders & Activities" or "Keep Leads Organized & Aligned"
 - **Domain**: `klao.app`
-- **Backend Project**: **KLAO Core** (this repository — `/klao-core`)
-- **Frontend Project**: **KLAO Console** (separate repository — `/klao-console`, developed as a PWA and ready for offline usage)
+- **Backend Packages**: **KLAO Core** (this repository — `/packages/core`)
+- **Frontend Packages**: **KLAO Console** (this repository — `/packages/console`, developed as a PWA and ready for offline usage)
 
 ## Project Overview
 KLAO Core is a high-performance, multi-tenant No-Code CRM engine built with Bun, TypeScript, and PostgreSQL. It operates as a completely **Headless Backend API** — no UI code exists in this project. The frontend (KLAO Console) is fully decoupled. The system enables tenants to define custom data structures (Tables and Fields) which are dynamically translated into native PostgreSQL tables in real-time.
@@ -63,10 +63,21 @@ The following key endpoints provide the UI configuration and dynamic data necess
 - **Validation**: Zod (Dynamic generation from metadata via FieldRegistry plugins)
 
 ## Detailed Folder Structure
-/Users/asana/KLAO/klao-core/
+/Users/asana/Repo/Klao Platform/packages/core
 ├── prisma/                  ← Metadata Definition
 │   ├── schema.prisma        ← The "Schema of Schemas" — all models in @@schema("core")
 │   └── migrations/          ← Applied migrations (auth_schema_core)
+│
+│
+├── scripts/             ← Utility & Maintenance Scripts
+│   ├── clean-db.ts      ← Full DB wipe tool
+│   ├── reset-platform.ts← Phased API reset tool
+│   └── seed.ts          ← Basic tenant seeder
+│
+├── tests/               ← Integration Test Suite
+│   ├── test-engine.ts   ← AlchemaCore DDL tests
+│   ├── test-security.ts ← RBAC/RLS security scenarios
+│   └── ...              ← Other scenario tests
 │
 ├── src/
 │   ├── app/
@@ -100,22 +111,13 @@ The following key endpoints provide the UI configuration and dynamic data necess
 │   │   ├── security/        ← Enterprise Access Control
 │   │   │   └── registry.ts  ← Source of truth for all system capabilities
 │   │   ├── auth/
-
-│       │   ├── session.ts   ← getAppSession() — lazy next-auth import; TEST_SESSION_JSON override
-│       │   └── authOptions.ts ← NextAuth config (JWT strategy, CredentialsProvider)
-│       ├── db.ts            ← Prisma client singleton
-│       └── zodGenerator.ts  ← Dynamic Zod schema from FieldRegistry metadata
+│   │   │   ├── session.ts   ← getAppSession() — lazy next-auth import; TEST_SESSION_JSON override
+│   │   │   └── authOptions.ts ← NextAuth config (JWT strategy, CredentialsProvider)
+│   │   ├── db.ts            ← Prisma client singleton
+│   │   └── zodGenerator.ts  ← Dynamic Zod schema from FieldRegistry metadata
 │
-├── shared/                  ← Shared Contract
-│   └── types.ts             ← Interfaces used by both Core and Console
-│
-└── test-*.ts                ← Integration test scripts (run via Docker + Bun)
-    ├── test-engine.ts       ← AlchemaCore DDL + RLS + Audit
-    ├── test-translator.ts   ← Metadata ↔ DB sync
-    ├── test-provisioner.ts  ← TenantProvisioner modes
-    ├── test-validation.ts   ← Zod + DB CHECK constraints
-    ├── test-security.ts     ← Security pipeline (8 scenarios — all passing)
-    └── test-user-api.ts     ← User & Provisioning APIs (Session + RBAC)
+└── shared/                  ← Shared Contract
+    └── types.ts             ← Interfaces used by both Core and Console
 
 ## Key Architectural Files
 | File | Role |
@@ -169,9 +171,9 @@ docker-compose exec app bun x prisma generate
 
 ### 4. Running Integration Tests
 ```bash
-docker-compose exec app bun run test-security.ts
-docker-compose exec app bun run test-engine.ts
-docker-compose exec app bun run test-user-api.ts
+docker-compose exec app bun run tests/test-security.ts
+docker-compose exec app bun run tests/test-engine.ts
+docker-compose exec app bun run tests/test-user-api.ts
 ```
 
 ### 4. CLI Access

@@ -9,10 +9,8 @@ Files related to the environment, build system, and high-level documentation.
 | :--- | :--- | :--- |
 | `package.json` | Dependencies | Manages project metadata, scripts, and NPM packages. |
 | `vite.config.ts` | Build System | Configuration for Vite (HMR, build optimizations). |
-| `tsconfig.json` | TypeScript | Defines compiler options and type-checking rules. |
-| `README.md` | Entry Point | General project overview and setup instructions. |
-| `UI_SYSTEM.md` | Design Docs | Detailed documentation of the "Ghost Glass" UI system. |
-| `TEMPLATE_BLUEPRINT.md` | Research | Structural DNA extracted from the base "Aquiry" template. |
+| `scripts/` | Tooling | Utility scripts for database maintenance and resets. |
+| `tests/` | QA | Integration tests for the platform engine and security. |
 | `docker-compose.yml` | Infrastructure | Container orchestration for development environments. |
 
 ---

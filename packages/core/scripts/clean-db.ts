@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { db } from './src/lib/db';
+import { db } from '../src/lib/db';
 
 async function cleanDatabase() {
   console.log("Connecting to PostgreSQL and Prisma to clean all tenants and entities...");

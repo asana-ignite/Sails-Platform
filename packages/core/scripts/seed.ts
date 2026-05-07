@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { TenantProvisioner } from './src/services/TenantProvisioner';
+import { TenantProvisioner } from '../src/services/TenantProvisioner';
 
 async function seed() {
   const pool = new Pool({

@@ -1,10 +1,10 @@
 import { Pool } from 'pg';
-import { db } from './src/lib/db';
-import { AlchemaCore } from './src/core/engine/AlchemaCore';
-import { TranslatorLayer } from './src/services/TranslatorLayer';
-import { generateZodSchema } from './src/lib/zodGenerator';
-import { QueryLayer } from './src/core/engine/QueryLayer';
-import { TenantProvisioner } from './src/services/TenantProvisioner';
+import { db } from '../src/lib/db';
+import { AlchemaCore } from '../src/core/engine/AlchemaCore';
+import { TranslatorLayer } from '../src/services/TranslatorLayer';
+import { generateZodSchema } from '../src/lib/zodGenerator';
+import { QueryLayer } from '../src/core/engine/QueryLayer';
+import { TenantProvisioner } from '../src/services/TenantProvisioner';
 
 async function run() {
   console.log("🚀 Starting Complex Validation Test...");

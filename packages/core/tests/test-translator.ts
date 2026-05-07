@@ -1,8 +1,8 @@
 import { Pool } from 'pg';
-import { db } from './src/lib/db';
-import { AlchemaCore } from './src/core/engine/AlchemaCore';
-import { TranslatorLayer } from './src/services/TranslatorLayer';
-import { TenantProvisioner } from './src/services/TenantProvisioner';
+import { db } from '../src/lib/db';
+import { AlchemaCore } from '../src/core/engine/AlchemaCore';
+import { TranslatorLayer } from '../src/services/TranslatorLayer';
+import { TenantProvisioner } from '../src/services/TenantProvisioner';
 
 async function run() {
   console.log("Connecting to PostgreSQL and Prisma...");

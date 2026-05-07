@@ -12,13 +12,13 @@
  */
 
 import { Pool } from 'pg';
-import { db } from './src/lib/db';
-import { QueryLayer } from './src/core/engine/QueryLayer';
-import { AccessGuard } from './src/core/engine/AccessGuard';
-import { TransactionContext } from './src/core/engine/TransactionContext';
-import { AlchemaCore } from './src/core/engine/AlchemaCore';
-import { TenantProvisioner } from './src/services/TenantProvisioner';
-import { ConnectionManager } from './src/core/engine/ConnectionManager';
+import { db } from '../src/lib/db';
+import { QueryLayer } from '../src/core/engine/QueryLayer';
+import { AccessGuard } from '../src/core/engine/AccessGuard';
+import { TransactionContext } from '../src/core/engine/TransactionContext';
+import { AlchemaCore } from '../src/core/engine/AlchemaCore';
+import { TenantProvisioner } from '../src/services/TenantProvisioner';
+import { ConnectionManager } from '../src/core/engine/ConnectionManager';
 
 // ─── Session Helpers ──────────────────────────────────────────────────────────
 function setSession(userId: string, tenantId: string, role = 'MEMBER', teams?: { teamId: string, isLeader: boolean }[], activeTeamId?: string) {

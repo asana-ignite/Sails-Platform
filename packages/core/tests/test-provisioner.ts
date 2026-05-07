@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
-import { db } from './src/lib/db';
-import { TenantProvisioner } from './src/services/TenantProvisioner';
+import { db } from '../src/lib/db';
+import { TenantProvisioner } from '../src/services/TenantProvisioner';
 
 async function run() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });

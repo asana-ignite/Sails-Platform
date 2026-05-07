@@ -7,8 +7,9 @@
     "build": "next build",
     "start": "next start",
     "cli": "bun src/cli/klao-cli.ts",
-    "test": "bun clean-db.ts && bun test-engine.ts && bun test-translator.ts",
-    "db:clean": "bun clean-db.ts"
+    "test": "bun scripts/clean-db.ts && bun tests/test-engine.ts && bun tests/test-translator.ts",
+    "db:clean": "bun scripts/clean-db.ts",
+    "platform:reset": "bun scripts/reset-platform.ts"
   },
   "dependencies": {
     "@klao/shared": "workspace:*",
