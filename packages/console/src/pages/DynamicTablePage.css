@@ -1,0 +1,124 @@
+.klao-dynamic-table {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--klao-spacing-unit) * 3);
+}
+
+.klao-dynamic-table__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center; /* Same line */
+  margin-bottom: calc(var(--klao-spacing-unit) * 2);
+}
+
+.klao-page-header__left {
+  display: flex;
+  flex-direction: row; /* Horizontal layout: same line */
+  align-items: center;
+  gap: 16px;
+}
+
+.klao-page-header__icon-wrapper {
+  width: 42px;
+  height: 42px;
+  background-color: var(--klao-primary-light);
+  color: var(--klao-primary);
+  border-radius: var(--klao-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.klao-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--klao-radius-md);
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: var(--klao-transition);
+}
+
+.klao-btn--primary {
+  background-color: var(--klao-primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(157, 206, 224, 0.4);
+}
+
+.klao-btn--primary:hover {
+  background-color: var(--klao-primary-dark);
+  transform: translateY(-2px);
+}
+
+.klao-btn--ghost {
+  color: var(--klao-text-muted);
+  border: 1px solid var(--klao-border-color);
+}
+
+.klao-btn--ghost:hover {
+  background-color: var(--klao-bg-body);
+  color: var(--klao-primary);
+}
+
+.klao-dynamic-table__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px !important;
+}
+
+.klao-dynamic-table__search {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.klao-dynamic-table__search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--klao-text-muted);
+}
+
+.klao-dynamic-table__search-input {
+  width: 100%;
+  padding: 8px 12px 8px 40px;
+  background-color: var(--klao-bg-body);
+  border: 1px solid transparent;
+  border-radius: var(--klao-radius-md);
+  color: var(--klao-text-main);
+  font-size: 0.9rem;
+}
+
+.klao-dynamic-table__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.klao-dynamic-table__placeholder {
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.klao-dynamic-table__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: var(--klao-text-muted);
+}
+
+.klao-dynamic-table__empty-icon {
+  opacity: 0.3;
+}
+
+.klao-dynamic-table__empty-state h3 {
+  color: var(--klao-text-main);
+  font-size: 1.25rem;
+  font-weight: 700;
+}

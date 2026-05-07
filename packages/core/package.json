@@ -1,0 +1,35 @@
+{
+  "name": "klao-core",
+  "version": "1.0.0",
+  "description": "KLAO Core — Headless CRM Engine (klao.app)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "cli": "bun src/cli/klao-cli.ts",
+    "test": "bun clean-db.ts && bun test-engine.ts && bun test-translator.ts",
+    "db:clean": "bun clean-db.ts"
+  },
+  "dependencies": {
+    "@klao/shared": "workspace:*",
+    "@auth/prisma-adapter": "^2.11.2",
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
+    "next": "^14.0.0",
+    "next-auth": "^4.24.14",
+    "pg": "^8.11.3",
+    "pg-format": "^1.0.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.0",
+    "@types/pg-format": "^1.0.5",
+    "@types/react": "^18.2.0",
+    "prisma": "^6.19.3",
+    "typescript": "^5.0.0",
+    "zod": "^3.25.76"
+  }
+}

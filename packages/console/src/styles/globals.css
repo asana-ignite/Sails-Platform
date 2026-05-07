@@ -1,0 +1,76 @@
+@import './design-tokens.css';
+
+/* CSS Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--klao-font-family);
+  font-size: var(--klao-font-size-base);
+  background-color: var(--klao-bg-body);
+  color: var(--klao-text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: var(--klao-transition);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: var(--klao-transition);
+}
+
+input {
+  font: inherit;
+  outline: none;
+}
+
+/* Base Utility for BEM Cards */
+.klao-card {
+  background-color: var(--klao-bg-card);
+  border-radius: var(--klao-radius-md);
+  box-shadow: var(--klao-shadow-sm);
+  padding: calc(var(--klao-spacing-unit) * 3);
+  transition: var(--klao-transition);
+}
+
+.klao-card:hover {
+  box-shadow: var(--klao-shadow-md);
+}
+
+/* Global Page Header Styles */
+.klao-page-header {
+  margin-bottom: calc(var(--klao-spacing-unit) * 4);
+}
+
+.klao-page-header__title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--klao-text-main);
+  margin-bottom: 2px;
+  letter-spacing: -0.5px;
+}
+
+.klao-page-header__subtitle {
+  font-size: 0.85rem;
+  color: var(--klao-text-muted);
+}

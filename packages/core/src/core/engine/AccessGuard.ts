@@ -1,0 +1,115 @@
+import { db } from '../../lib/db';
+import { getAppSession } from '@/lib/auth/session';
+
+export type CrudAction = 'create' | 'read' | 'update' | 'delete';
+
+export class AccessGuard {
+  /**
+   * Checks if a user has the appropriate object-level permission for an action.
+   * Throws an error if unauthorized.
+   */
+  static async checkPermission(objectName: string, action: CrudAction, options?: { userId?: string, jwtRole?: string }): Promise<void> {
+    let resolvedUserId = options?.userId;
+    let resolvedRole = options?.jwtRole;
+
+    if (!resolvedUserId) {
+      const session = await getAppSession();
+      if (session?.user) {
+        resolvedUserId = (session.user as any).id;
+        resolvedRole = (session.user as any).role || resolvedRole;
+      }
+    }
+
+    if (!resolvedUserId) {
+      throw new Error(`Unauthorized: No active session or user context provided.`);
+    }
+
+    if (resolvedRole === 'SUPER_ADMIN') {
+      return; // Fast path for system admins based on JWT role
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: resolvedUserId },
+      select: { 
+        teams: {
+          select: { teamId: true }
+        }
+      }
+    });
+
+    if (!user) {
+      throw new Error(`Unauthorized: User ${resolvedUserId} not found.`);
+    }
+
+    const teamIds = user.teams.map(t => t.teamId);
+
+    if (teamIds.length === 0) {
+      throw new Error(`Unauthorized: User ${resolvedUserId} has no team assigned.`);
+    }
+
+    const permissions = await db.objectPermission.findMany({
+      where: {
+        teamId: { in: teamIds },
+        objectName: objectName
+      }
+    });
+
+    if (permissions.length === 0) {
+      throw new Error(`Unauthorized: No permissions found for object '${objectName}'.`);
+    }
+
+    // Check if ANY team has 'modifyAllData' (highest level)
+    if (permissions.some(p => p.modifyAllData)) {
+      return;
+    }
+
+    // If reading, check if ANY team has 'viewAllData'
+    if (action === 'read' && permissions.some(p => p.viewAllData)) {
+      return;
+    }
+
+    // Check specific CRUD action across all permissions (additive)
+    const actionMapField = {
+      'create': 'canCreate',
+      'read': 'canRead',
+      'update': 'canUpdate',
+      'delete': 'canDelete'
+    } as const;
+
+    const hasPermission = permissions.some(p => p[actionMapField[action]]);
+
+    if (!hasPermission) {
+      throw new Error(`Unauthorized: User lacks '${action}' permission for object '${objectName}'.`);
+    }
+  }
+
+  /**
+   * Checks if a user has a specific functional system capability.
+   * Used for filtering UI components and protecting admin API routes.
+   */
+  static async hasCapability(capability: string): Promise<boolean> {
+    const session = await getAppSession();
+    const caller = session?.user as any;
+
+    if (!caller) return false;
+
+    // Platform & Tenant Admins always have all capabilities
+    if (caller.role === 'SUPER_ADMIN' || caller.role === 'TENANT_ADMIN') {
+      return true;
+    }
+
+    // Regular users must have the capability assigned to one of their teams
+    const teamIds = (caller.teams || []).map((t: any) => t.teamId);
+    if (teamIds.length === 0) return false;
+
+    const permission = await db.systemPermission.findFirst({
+      where: {
+        teamId: { in: teamIds },
+        capability
+      }
+    });
+
+    return !!permission;
+  }
+}
+

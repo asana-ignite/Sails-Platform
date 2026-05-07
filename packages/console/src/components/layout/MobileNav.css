@@ -1,0 +1,198 @@
+.klao-mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: calc(75px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  width: calc(100% - 32px);
+  max-width: 340px;
+  background-color: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  z-index: 1000;
+  padding: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 85vh;
+  overflow-y: auto;
+  scrollbar-width: none; /* Hide scrollbar for clean look */
+}
+
+
+.klao-mobile-nav::-webkit-scrollbar {
+  display: none;
+}
+
+
+@media (max-width: 768px) {
+  .klao-mobile-nav {
+    display: block !important;
+  }
+
+  .klao-mobile-nav--visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+
+.klao-mobile-nav__container {
+  height: 100%;
+  position: relative;
+  min-height: 160px;
+}
+
+/* Grid Layout */
+.klao-mobile-nav__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  visibility: visible;
+}
+
+.klao-mobile-nav__grid--hidden {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.9);
+}
+
+.klao-mobile-nav__card {
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 4px;
+  border-radius: 16px;
+  transition: all 0.2s ease;
+  position: relative;
+  cursor: pointer;
+}
+
+.klao-mobile-nav__card:active {
+  background-color: rgba(157, 206, 224, 0.25);
+  transform: translateY(2px);
+}
+
+
+
+.klao-mobile-nav__card:active .klao-mobile-nav__icon-box {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.klao-mobile-nav__icon-box {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  color: var(--klao-primary);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+.klao-mobile-nav__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--klao-text-main);
+  text-align: center;
+}
+
+.klao-mobile-nav__folder-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  background-color: var(--klao-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--klao-primary);
+}
+
+/* Folder View */
+.klao-mobile-nav__folder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.klao-mobile-nav__folder--visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.klao-mobile-nav__folder-header {
+  margin-bottom: 16px;
+}
+
+.klao-mobile-nav__back {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--klao-text-main);
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.klao-mobile-nav__sub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.klao-mobile-nav__sub-card {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  color: var(--klao-text-main);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.klao-mobile-nav__sub-card:active {
+  transform: scale(0.96) translateY(1px);
+  background: rgba(157, 206, 224, 0.25);
+  border-color: rgba(157, 206, 224, 0.4);
+}
+
+
+
+.klao-mobile-nav__sub-icon {
+  color: var(--klao-primary);
+}
+
+.klao-mobile-nav__sub-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+}

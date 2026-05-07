@@ -1,0 +1,175 @@
+.klao-app-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.klao-app-manager__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.klao-app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.klao-app-card {
+  background: var(--klao-bg-card);
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-lg);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.klao-app-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--klao-shadow-md);
+  border-color: var(--klao-primary);
+}
+
+.klao-app-card__icon {
+  width: 48px;
+  height: 48px;
+  background: var(--klao-primary-light);
+  color: var(--klao-primary);
+  border-radius: var(--klao-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.klao-app-card__info {
+  flex: 1;
+}
+
+.klao-app-card__info h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.klao-app-card__info p {
+  font-size: 0.85rem;
+  color: var(--klao-text-muted);
+}
+
+.klao-app-card__capability {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--klao-primary);
+  background: rgba(157, 206, 224, 0.1);
+  padding: 2px 8px;
+  border-radius: 100px;
+  width: fit-content;
+}
+
+.klao-app-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.klao-app-card:hover .klao-app-card__actions {
+  opacity: 1;
+}
+
+.klao-app-card__actions button {
+  padding: 6px;
+  border-radius: var(--klao-radius-sm);
+  color: var(--klao-text-muted);
+  transition: all 0.2s;
+}
+
+.klao-app-card__actions button:hover {
+  background: var(--klao-bg-body);
+  color: var(--klao-primary);
+}
+
+.klao-app-card__actions button.delete:hover {
+  color: #ff4d4f;
+  background: #fff1f0;
+}
+
+/* Modal Styling */
+.klao-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.klao-modal {
+  background: white;
+  width: 100%;
+  max-width: 500px;
+  border-radius: var(--klao-radius-lg);
+  padding: 32px;
+  box-shadow: var(--klao-shadow-lg);
+  animation: modal-slide-up 0.3s ease-out;
+}
+
+.klao-modal h2 {
+  font-size: 1.5rem;
+  margin-bottom: 24px;
+}
+
+.klao-form-group {
+  margin-bottom: 20px;
+}
+
+.klao-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.klao-form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--klao-text-muted);
+  margin-bottom: 8px;
+}
+
+.klao-form-group input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-md);
+  font-size: 0.95rem;
+}
+
+.klao-form-group input:focus {
+  border-color: var(--klao-primary);
+  box-shadow: 0 0 0 3px var(--klao-primary-light);
+}
+
+.klao-modal__footer {
+  margin-top: 32px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@keyframes modal-slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

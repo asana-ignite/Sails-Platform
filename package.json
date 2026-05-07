@@ -1,0 +1,7 @@
+{
+  "name": "klao-platform",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ]
+}

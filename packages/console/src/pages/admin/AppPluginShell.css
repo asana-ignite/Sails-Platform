@@ -1,0 +1,55 @@
+.klao-admin-shell {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--klao-spacing-unit) * 3);
+  animation: klao-fade-in 0.4s ease-out;
+}
+
+.klao-admin-shell__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center; /* Same line */
+  margin-bottom: calc(var(--klao-spacing-unit) * 2);
+}
+
+.klao-page-header__left {
+  display: flex;
+  flex-direction: row; /* Horizontal layout: same line */
+  align-items: center;
+  gap: calc(var(--klao-spacing-unit) * 2);
+}
+
+/* Icon Wrapper for Admin Modules */
+.klao-page-header__icon-wrapper {
+  width: 42px;
+  height: 42px;
+  background-color: var(--klao-primary-light);
+  color: var(--klao-primary);
+  border-radius: var(--klao-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.klao-admin-shell__plugin-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--klao-text-muted);
+  background: rgba(0, 0, 0, 0.04);
+  padding: 6px 12px;
+  border-radius: 100px;
+  border: 1px solid var(--klao-border-color);
+}
+
+.klao-admin-shell__content {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--klao-spacing-unit) * 3);
+}
+
+@keyframes klao-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

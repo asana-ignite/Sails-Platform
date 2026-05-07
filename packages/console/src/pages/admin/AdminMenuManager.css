@@ -1,0 +1,141 @@
+.klao-menu-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.klao-menu-manager__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--klao-bg-card);
+  padding: 16px 24px;
+  border-radius: var(--klao-radius-lg);
+  border: 1px solid var(--klao-border-color);
+}
+
+.klao-app-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.klao-app-selector label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--klao-text-muted);
+}
+
+.klao-app-selector select {
+  padding: 8px 16px;
+  border-radius: var(--klao-radius-md);
+  border: 1px solid var(--klao-border-color);
+  background: var(--klao-bg-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.klao-menu-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.klao-menu-item {
+  background: var(--klao-bg-card);
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-md);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.2s;
+}
+
+.klao-menu-item:hover {
+  border-color: var(--klao-primary);
+  background: var(--klao-primary-light);
+}
+
+.klao-menu-item__handle {
+  color: var(--klao-text-muted);
+  cursor: grab;
+  display: flex;
+  align-items: center;
+}
+
+.klao-menu-item__icon {
+  width: 32px;
+  height: 32px;
+  background: white;
+  border-radius: var(--klao-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--klao-primary);
+  box-shadow: var(--klao-shadow-sm);
+}
+
+.klao-menu-item__info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.klao-menu-item__info .label {
+  font-weight: 700;
+  font-size: 0.95rem;
+  min-width: 150px;
+}
+
+.klao-menu-item__info .path {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--klao-text-muted);
+  background: rgba(0,0,0,0.03);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.klao-menu-item__info .badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.badge--table {
+  background: #e6f7ff;
+  color: #1890ff;
+  border: 1px solid #91d5ff;
+}
+
+.badge--plugin {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.klao-menu-item__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.klao-menu-item__actions button {
+  padding: 6px;
+  border-radius: var(--klao-radius-sm);
+  color: var(--klao-text-muted);
+  transition: all 0.2s;
+}
+
+.klao-menu-item__actions button:hover {
+  background: white;
+  color: var(--klao-primary);
+}
+
+.klao-menu-item__actions button.delete:hover {
+  color: #ff4d4f;
+  background: #fff1f0;
+}

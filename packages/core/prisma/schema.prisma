@@ -1,0 +1,320 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["core"]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TENANCY
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  schemaName String   @unique @map("schema_name") // e.g., 'tenant_acme'
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tables    TableDefinition[]
+  auditLogs AuditLog[]
+  teams     Team[]
+  users     User[]
+
+  consoleApps ConsoleApp[]
+
+  @@map("tenants")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// METADATA
+// ─────────────────────────────────────────────────────────────────────────────
+
+model TableDefinition {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String // UI friendly name, e.g., 'Lead Data'
+  tableName   String   @map("table_name") // DB physical name, e.g., 'leads'
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fields FieldDefinition[]
+  rules  ValidationRule[]
+
+  @@unique([tenantId, tableName]) // Table names must be unique per tenant
+  @@map("tables")
+  @@schema("core")
+}
+
+model FieldDefinition {
+  id        String @id @default(uuid()) @db.Uuid
+  tableId   String @map("table_id") @db.Uuid
+  name      String // UI friendly name, e.g., 'Email Address'
+  fieldName String @map("field_name") // DB physical name, e.g., 'email'
+
+  // 1. Physical DB Type
+  physicalType String @map("physical_type") // e.g., 'text', 'number', 'boolean', 'jsonb'
+
+  // 2. Logical UI Type
+  logicalType String @map("logical_type") // e.g., 'email', 'citizen_id', 'lookup', 'lat_lng'
+
+  // 3. UI/Feature Configuration
+  config Json? // e.g., { mask: "x-xxxx", targetTable: "..." }
+
+  isRequired   Boolean  @default(false) @map("is_required")
+  defaultValue String?  @map("default_value")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  table TableDefinition  @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  rules ValidationRule[]
+
+  @@unique([tableId, fieldName]) // Field names must be unique per table
+  @@map("fields")
+  @@schema("core")
+}
+
+model ValidationRule {
+  id             String  @id @default(uuid()) @db.Uuid
+  tableId        String  @map("table_id") @db.Uuid
+  fieldId        String? @map("field_id") @db.Uuid // Optional: null if table-level rule
+  ruleType       String // e.g., 'min', 'max', 'regex'
+  ruleDefinition String // Payload/value, e.g., '^[^@]+@[^@]+\.[^@]+$'
+  errorMessage   String? @map("error_message")
+
+  table TableDefinition  @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  field FieldDefinition? @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@map("validation_rules")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI METADATA
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ConsoleApp {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  icon      String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+  requiredCapability String?  @map("required_capability")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  menus  ConsoleMenu[]
+
+  @@unique([tenantId, name])
+  @@map("console_apps")
+  @@schema("core")
+}
+
+model ConsoleMenu {
+  id         String  @id @default(uuid()) @db.Uuid
+  appId      String? @map("app_id") @db.Uuid
+  label      String
+  icon       String?
+  path       String?
+  actionType String  @default("table") @map("action_type") // e.g., 'table', 'plugin'
+  parentId   String? @map("parent_id") @db.Uuid
+  order              Int     @default(0)
+  requiredCapability String? @map("required_capability")
+  componentKey       String? @map("component_key")
+
+  app      ConsoleApp?   @relation(fields: [appId], references: [id], onDelete: Cascade)
+  parent   ConsoleMenu?  @relation("MenuHierarchy", fields: [parentId], references: [id])
+  children ConsoleMenu[] @relation("MenuHierarchy")
+
+
+  @@map("console_menus")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RBAC
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Team {
+  id            String  @id @default(uuid()) @db.Uuid
+  tenantId      String  @map("tenant_id") @db.Uuid
+  name          String
+  isSystemAdmin Boolean @default(false) @map("is_system_admin")
+  parentId      String? @map("parent_id") @db.Uuid // For Role Hierarchy
+
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent      Team?              @relation("TeamHierarchy", fields: [parentId], references: [id])
+  children    Team[]             @relation("TeamHierarchy")
+  members           UserTeam[]
+  objectPermissions ObjectPermission[]
+  systemPermissions SystemPermission[]
+
+  @@map("teams")
+  @@schema("core")
+}
+
+model ObjectPermission {
+  id         String @id @default(uuid()) @db.Uuid
+  teamId     String @map("team_id") @db.Uuid
+  objectName String @map("object_name") // The physical table name (e.g., 'leads')
+
+  canCreate Boolean @default(false) @map("can_create")
+  canRead   Boolean @default(false) @map("can_read")
+  canUpdate Boolean @default(false) @map("can_update")
+  canDelete Boolean @default(false) @map("can_delete")
+
+  viewAllData   Boolean @default(false) @map("view_all_data") // Bypasses RLS
+  modifyAllData Boolean @default(false) @map("modify_all_data") // Bypasses RLS
+
+  team Team @relation(fields: [teamId], references: [id])
+
+  @@unique([teamId, objectName])
+  @@map("object_permissions")
+  @@schema("core")
+}
+
+model SystemPermission {
+  id         String @id @default(uuid()) @db.Uuid
+  teamId     String @map("team_id") @db.Uuid
+  capability String // e.g., 'system.users.manage'
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, capability])
+  @@map("system_permissions")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH / IDENTITY  (NextAuth + KLAO Identity)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Core identity record. Extended beyond the NextAuth default to carry
+/// KLAO multi-tenant context (tenantId, role, teamId) which are
+/// embedded in the JWT by `src/lib/auth/session.ts`.
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String?
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+
+  /// Hashed password — used only for the KLAO internal credential provider.
+  /// NULL when the user authenticates exclusively via OAuth (Google, Azure).
+  password String?
+
+  /// FK → core.tenants.  NULL only for SUPER_ADMIN accounts that are not
+  /// scoped to a single tenant.
+  tenantId String? @map("tenant_id") @db.Uuid
+
+  /// Top-level role fast-path used by AccessGuard:
+  ///   SUPER_ADMIN | TENANT_ADMIN | MEMBER
+  /// Fine-grained RBAC is delegated to ObjectPermission via teamId.
+  role String @default("MEMBER")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant    Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teams     UserTeam[]
+  accounts  Account[]
+  sessions  Session[]
+  auditLogs AuditLog[]
+
+  @@map("users")
+  @@schema("core")
+}
+
+model UserTeam {
+  userId   String  @map("user_id") @db.Uuid
+  teamId   String  @map("team_id") @db.Uuid
+  isLeader Boolean @default(false) @map("is_leader")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([userId, teamId])
+  @@map("user_teams")
+  @@schema("core")
+}
+
+/// OAuth / OIDC linked provider accounts (Google, Microsoft Entra ID, etc.).
+/// Follows the NextAuth PrismaAdapter contract exactly.
+model Account {
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @map("user_id") @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+  @@schema("core")
+}
+
+/// Database-backed sessions used when NextAuth `strategy = "database"`.
+/// When `strategy = "jwt"` (current default) this table is unused but kept
+/// for future Enterprise Federation (IAM Phase B).
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id") @db.Uuid
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@schema("core")
+}
+
+/// One-time tokens for email verification and magic-link sign-in.
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUDIT
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String  @id @default(uuid()) @db.Uuid
+  tenantId  String  @map("tenant_id") @db.Uuid
+  userId    String? @map("user_id") @db.Uuid
+  ipAddress String? @map("ip_address")
+
+  action     String // 'CREATE', 'UPDATE', 'DELETE', 'ALTER_SCHEMA'
+  objectName String  @map("object_name") // e.g., 'leads'
+  recordId   String? @map("record_id") @db.Uuid
+
+  oldValues Json? @map("old_values")
+  newValues Json? @map("new_values")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, objectName, recordId])
+  @@map("audit_logs")
+  @@schema("core")
+}
