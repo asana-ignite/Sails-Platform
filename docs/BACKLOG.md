@@ -99,3 +99,23 @@
 - [ ] **[BackEnd]** Implement/Verify API endpoints (`/api/tenant/users` and `/api/metadata/*`) ensuring the strict Security Pipeline (`getAppSession` -> `AccessGuard` -> `TransactionContext` -> `QueryLayer`) is enforced.
 - [ ] **[FrontEnd]** Build `UserManager.tsx` and `ObjectManager.tsx` in `packages/console/src/pages/custom/`. Apply strict BEM and "Ghost Glass" CSS. Register both in `src/features/admin/registry.tsx`.
 - [ ] **[QA]** Run `bun run tests/test-security.ts`, cross-package type checks (`tsc --noEmit`), and the frontend Vite `build`.
+
+## Phase 9: User Manager Refinement (Planned)
+- [ ] **[Architect/Backend]** Update Users API and Database Structure to include:
+    - First Name / Last Name
+    - Username
+    - Title
+    - Phone Number / Extension
+    - Mobile Phone
+    - Company
+- [ ] **[FrontEnd]** Update `UserManager.tsx` to reflect new user structure on screen.
+- [ ] **[FrontEnd]** Enhance "Add User" drawer:
+    - Include fields for the new columns.
+    - Implement a toggle to activate/deactivate user accounts.
+
+## Phase 10: Enterprise SSO Integration (Planned)
+- [ ] **[Architect/DBA]**: Update `prisma/schema.prisma` to add an `allowed_domains` (String[]) column to the `core.tenants` model.
+- [ ] **[BackEnd]**: Research and draft the `signIn` callback logic in `packages/core/src/lib/auth/authOptions.ts` to implement domain-to-tenant lookup and JIT provisioning.
+- [ ] **[FrontEnd]**: Design a "Tenant Domain Settings" UI within the Tenant Admin panel to allow admins to manage their whitelisted domains.
+- [ ] **[QA]**: Define test cases for cross-tenant domain leakage and unauthorized domain rejection scenarios.
+

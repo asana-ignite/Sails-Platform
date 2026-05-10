@@ -14,7 +14,7 @@ This document outlines the strategic security implementation plan for **KLAO** (
 | Phase | Status | Scope |
 |---|---|---|
 | **A — Foundation** | ✅ Complete | JWT session, RLS, RBAC, audit logs, Core-Console auth bridge, Prisma schema migration |
-| **B — Enterprise Federation** | 🔲 Pending | OAuth 2.0 / OIDC: Microsoft Entra ID (Azure AD), Google Workspace, SSO domain discovery |
+| **B — Enterprise Federation** | 🟡 In Progress | OAuth 2.0 / OIDC: Microsoft Entra ID (Azure AD), Google Workspace, SSO domain discovery |
 | **C — Advanced Governance** | 🔲 Pending | Field-Level Security (FLS), auth change audit logs |
 | **D — B2B2C** | 🔲 Pending | Client Portals with separate identity silos |
 
@@ -62,3 +62,12 @@ This document outlines the strategic security implementation plan for **KLAO** (
 | **Idempotent CREATE** | Inserting a record whose UUID already exists → no-op, not an error. |
 | **Conflict Resolution** | Last Write Wins: `clientUpdatedAt > serverUpdatedAt` → apply; otherwise → reject + return server state. |
 | **SyncQueue** | Offline mutations queued in IndexedDB, flushed via Background Sync API (Service Worker). |
+
+---
+
+## Phase 5: Enterprise SSO & Tenant Auto-Routing (🔲 Pending)
+**Vision:** Enable seamless onboarding for enterprise clients by mapping Google Workspace domains to specific Tenants.
+
+- **Domain Matching**: Automatically route users to the correct Tenant based on their email domain (e.g., @acme.com).
+- **Just-in-Time (JIT) Provisioning**: Automatically create a `core.users` record and assign the `MEMBER` role upon first successful Google login if the domain matches a whitelisted tenant.
+- **Security**: Strictly deny access to the platform if a user's Google domain is not associated with any active tenant.
