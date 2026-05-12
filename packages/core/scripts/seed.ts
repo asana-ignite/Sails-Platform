@@ -10,7 +10,7 @@ async function seed() {
   
   console.log('🌱 Seeding default tenant...');
   try {
-    const result = await provisioner.provisionTenant('KLAO Default', 'admin@klao.app');
+    const result = await provisioner.provisionTenant('INIDOS Default', 'admin@inidos.app');
     console.log('✅ Default tenant provisioned:', result.tenant.id);
   } catch (e: any) {
     if (e.message.includes('unique constraint')) {

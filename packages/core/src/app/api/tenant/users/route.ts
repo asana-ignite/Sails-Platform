@@ -59,3 +59,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
+
+/**
+ * GET /api/tenant/users
+ * Returns all users within the caller's tenant scope.
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getAppSession();
+    const caller = session?.user as any;
+
+    if (!caller) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify Admin role (SUPER_ADMIN or TENANT_ADMIN)
+    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN' && caller.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
+    }
+
+    const targetTenantId = caller.tenantId;
+
+    if (!targetTenantId) {
+       return NextResponse.json({ error: 'Could not determine tenant context.' }, { status: 400 });
+    }
+
+    const users = await db.user.findMany({
+      where: { tenantId: targetTenantId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return NextResponse.json(users);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  }
+}

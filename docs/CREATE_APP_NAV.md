@@ -1,86 +1,80 @@
-# Workspace Configuration: Apps & Navigation
+# Workspace Configuration: Modules & Navigation
 
-This document outlines the standard configuration for the KLAO Workspace, including core apps and their navigation structures. This set is designed to provide a comprehensive CRM experience.
+This document outlines the standard configuration for the **INIDOS** Workspace, including core modules and their navigation structures tailored for Ignite Idea operations.
 
-## 1. Sales App
-*Focus: Individual contributor pipeline management.*
+## 1. Sales Module
+*Focus: Pipeline management and lead tracking.*
 
-**App Definition:**
+**Module Definition:**
 - **Name**: `Sales`
-- **Icon**: `ShoppingBag`
+- **Icon**: `TrendingUp`
 - **Order**: 0
 
 **Navigation Items:**
 1. **Leads** (Icon: `Users`, Path: `/table/leads`)
-2. **Accounts** (Icon: `Building`, Path: `/table/accounts`)
-3. **Contacts** (Icon: `UserSquare`, Path: `/table/contacts`)
-4. **Opportunities** (Icon: `Target`, Path: `/table/opportunities`)
-5. **Quotes** (Icon: `FileText`, Path: `/table/quotes`)
+2. **Opportunities** (Icon: `Target`, Path: `/table/opportunities`)
+3. **Accounts** (Icon: `Building`, Path: `/table/accounts`)
+4. **Contacts** (Icon: `UserSquare`, Path: `/table/contacts`)
 
 ---
 
-## 2. Sales Manager App
-*Focus: Strategic oversight and team performance.*
+## 2. Project Management
+*Focus: Internal project tracking and task management.*
 
-**App Definition:**
-- **Name**: `Sales Manager`
+**Module Definition:**
+- **Name**: `Projects`
 - **Icon**: `Briefcase`
 - **Order**: 1
 
 **Navigation Items:**
-1. **Team Performance** (Icon: `BarChart3`, Path: `/dashboard/performance`)
-2. **Sales Forecast** (Icon: `LineChart`, Path: `/dashboard/forecast`)
-3. **Territory Management** (Icon: `Map`, Path: `/table/territories`)
-4. **Commission Reports** (Icon: `BadgeDollarSign`, Path: `/table/commissions`)
-5. **Approval Requests** (Icon: `ClipboardCheck`, Path: `/approvals`)
+1. **Active Projects** (Icon: `FolderKanban`, Path: `/table/projects`)
+2. **My Tasks** (Icon: `CheckCircle2`, Path: `/table/tasks`)
+3. **Milestones** (Icon: `Flag`, Path: `/table/milestones`)
+4. **Resource Allocation** (Icon: `Users2`, Path: `/table/resources`)
 
 ---
 
-## 3. Marketing App
-*Focus: Lead generation and campaign management.*
+## 3. Case Management
+*Focus: Issue tracking and support resolution.*
 
-**App Definition:**
-- **Name**: `Marketing`
-- **Icon**: `Megaphone`
+**Module Definition:**
+- **Name**: `Case Management`
+- **Icon**: `LifeBuoy`
 - **Order**: 2
 
 **Navigation Items:**
-1. **Campaigns** (Icon: `Flag`, Path: `/table/campaigns`)
-2. **Email Templates** (Icon: `Mail`, Path: `/table/templates`)
-3. **Content Library** (Icon: `Library`, Path: `/library`)
-4. **Social Analytics** (Icon: `Share2`, Path: `/dashboard/social`)
-5. **Customer Segments** (Icon: `Users2`, Path: `/table/segments`)
+1. **Open Cases** (Icon: `Inbox`, Path: `/table/cases`)
+2. **SLA Reports** (Icon: `ShieldCheck`, Path: `/dashboard/sla`)
+3. **Knowledge Base** (Icon: `BookOpen`, Path: `/table/kb`)
 
 ---
 
-## 4. Services App
-*Focus: Post-sales support and knowledge management.*
+## 4. Timesheets
+*Focus: Daily time logging and utilization.*
 
-**App Definition:**
-- **Name**: `Services`
-- **Icon**: `LifeBuoy`
+**Module Definition:**
+- **Name**: `Timesheets`
+- **Icon**: `Clock`
 - **Order**: 3
 
 **Navigation Items:**
-1. **Support Cases** (Icon: `Inbox`, Path: `/table/cases`)
-2. **Knowledge Base** (Icon: `BookOpen`, Path: `/kb`)
-3. **SLA Management** (Icon: `ShieldCheck`, Path: `/table/sla`)
-4. **Customer Feedback** (Icon: `MessageSquare`, Path: `/table/feedback`)
-5. **Resource Scheduling** (Icon: `Calendar`, Path: `/calendar/resources`)
+1. **My Timesheets** (Icon: `Calendar`, Path: `/table/timesheets`)
+2. **Approval Queue** (Icon: `ClipboardCheck`, Path: `/table/approvals`)
+3. **Utilization Dashboard** (Icon: `BarChart3`, Path: `/dashboard/utilization`)
 
 ---
 
 ## API Payloads Reference
 
-To provision these via the KLAO Core API, use the following patterns:
+To provision these via the **INIDOS Core** API, use the following patterns:
 
-### Create App
+### Create Module (App)
 ```http
 POST /api/console/apps
 {
-  "name": "Sales",
-  "icon": "ShoppingBag",
-  "order": 0
+  "name": "Projects",
+  "icon": "Briefcase",
+  "order": 1
 }
 ```
 
@@ -89,9 +83,9 @@ POST /api/console/apps
 POST /api/console/menus
 {
   "appId": "UUID_FROM_ABOVE",
-  "label": "Leads",
-  "icon": "Users",
-  "path": "/table/leads",
+  "label": "Active Projects",
+  "icon": "FolderKanban",
+  "path": "/table/projects",
   "actionType": "table",
   "order": 0
 }

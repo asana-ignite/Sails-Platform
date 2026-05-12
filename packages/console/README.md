@@ -1,4 +1,4 @@
-# KLAO Console Template
+# INIDOS Console Template
 
 This template provides a high-fidelity, agent-built admin console based on the "Aquiry" design system.
 

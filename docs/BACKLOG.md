@@ -1,4 +1,4 @@
-# Project Backlog: KLAO (klao.app)
+# Project Backlog: INIDOS (Ignite Idea Operating System)
 
 ## Phase 1: Core Engine & Metadata (100% Complete)
 - [x] Initialize Next.js App Router project.
@@ -17,12 +17,12 @@
 - [ ] Logic for complex validation rules (Regex, Range, Enum plugins).
 - [x] Interceptor-based Audit Trails within Database Transactions (`QueryLayer.ts`).
 
-## Phase 3: Dynamic UI Layer → KLAO Console (100% Complete)
+## Phase 3: Dynamic UI Layer → INIDOS Console (100% Complete)
 - [x] **Schema Provider**: Integrated into Admin UI components.
 - [x] **Dynamic Form Engine**: Component that generates forms from Zod schemas.
 - [x] **Dynamic Data Table**: Component that displays table data with server-side filtering/sorting.
 - [x] **Field Components**: Specialized inputs (Select, Date, etc.) implemented in Admin UI.
-- [x] **Migration**: Decoupled UI into `klao-console/` project.
+- [x] **Migration**: Decoupled UI into `inidos-console/` project.
 - [x] **Dynamic Metadata Integration**:
     - [x] Implemented hierarchical `ConsoleApp` and `ConsoleMenu` database models.
     - [x] Created `ConsoleProvider` context for global navigation state.
@@ -40,82 +40,76 @@
     - [x] `GET/PATCH/DELETE /api/console/menus/[id]`: Full nav management.
 
 ## Phase 4: Multi-Tenancy & Security (100% Complete)
-- [x] Tenant metadata definition.
-- [x] Automated Tenant Provisioning & Deduplication (`TenantProvisioner.ts`).
+- [x] Tenant metadata definition for Ignite Idea departments.
+- [x] Automated Provisioning & Deduplication (`TenantProvisioner.ts`).
 - [x] Row-level security (RLS) via `TransactionContext`.
 - [x] Relation Fields & Foreign Keys constraint management.
-- [x] `ConnectionManager` abstraction for future database-per-tenant migration.
+- [x] `ConnectionManager` abstraction for internal isolation.
 - [x] **Folder Structure Preparation**: Created auth logic directories.
 - [x] **Auth Schema Definition (Prisma)**: Updated `prisma/schema.prisma`.
 - [x] **API Surface Expansion**:
-    - [x] `POST /api/tenant/users`: Endpoint for Tenant Admins to provision new users.
-    - [x] `GET /api/users/me`: Endpoint to fetch current user's session, tenant, and permissions.
+    - [x] `POST /api/tenant/users`: Endpoint for Admins to provision staff.
+    - [x] `GET /api/users/me`: Endpoint to fetch current user's session and permissions.
 - [x] **Security Layer Integration**: Finalized Auth.js bridge, RBAC/RLS plumbing, and QueryLayer atomic transactions.
 
 ## Phase 5: Verification & Polish (90% Complete)
-- [x] Unit tests for `AlchemaCore` engine logic (`test-engine.ts`). Updated to match current `QueryLayer` API signatures.
-- [x] End-to-End integration test (Metadata Change → DB Sync) (`test-translator.ts`).
+- [x] Unit tests for `AlchemaCore` engine logic (`test-engine.ts`).
+- [x] End-to-End integration test (Metadata Change → DB Sync).
 - [x] **Security integration test suite** (`test-security.ts`) — 7 scenarios, all passing.
 - [x] **User Management API Tests** (`test-user-api.ts`) — Verified /me and /tenant/users.
-- [x] Transition Runtime Environment to **Bun** (native execution & binary compilation).
-- [x] **Docker-based Dev Environment**: Implemented `Dockerfile` and `docker-compose.yml` for unified development and testing.
+- [x] Transition Runtime Environment to **Bun**.
+- [x] **Docker-based Dev Environment**: Implemented `Dockerfile` and `docker compose` for unified development.
 - [ ] Performance benchmarking (DDL speed vs Metadata size).
-- [x] Decouple UI into **KLAO Console** (`/klao-console`) project.
-- [x] Generate `shared/types.ts` API contract for KLAO Console.
+- [x] Decouple UI into **INIDOS Console** (`/packages/console`) project.
+- [x] Generate `shared/types.ts` API contract for Console.
 - [x] Documentation and Deployment.
-- [x] **Refactoring (Profile → Team)**: Successfully renamed all references to Profile to Team across schema, DB, and code for better enterprise alignment. All security tests pass.
+- [x] **Refactoring (Profile → Team)**: Successfully renamed all references to Team for better organizational alignment.
 
-## Phase 6: Advanced Metadata & Enterprise Features (100% Complete)
+## Phase 6: Advanced Metadata & Internal Features (100% Complete)
 - [x] **Step 1: Database & Schema (Foundation)**
     - [x] Add `requiredCapability` to `ConsoleApp` and `ConsoleMenu` models.
     - [x] Implement `SystemPermission` model for Team-Capability mapping.
-    - [x] Run Prisma migration and regenerate client.
 - [x] **Step 2: Backend Security Layer (Logic)**
     - [x] Implement `hasCapability` security utility.
     - [x] Update `GET /api/console/config` with dynamic capability filtering.
-    - [x] Integrate capability checks into `AccessGuard` middleware.
 - [x] **Step 3: API Surface (Interface)**
     - [x] Create `GET /api/console/permissions` (Registry exposure).
     - [x] Create CRUD endpoints for `SystemPermission` assignments.
 - [x] **Step 4: Automated Provisioning (Content)**
     - [x] Define "Settings & Admin" metadata structure JSON.
     - [x] Update `TenantProvisioner` for automated system app injection.
-    - [x] Provision "Settings & Admin" for the Acme tenant.
+    - [x] Provision "Settings & Admin" for Ignite Idea.
 - [x] **Step 5: Frontend Integration (Experience)**
-    - [x] Create Admin UI route stubs in `klao-console`.
+    - [x] Create Admin UI route stubs in `inidos-console`.
     - [x] Implement Permission Toggle component in Admin settings.
-## Phase 7: Multi-Team & Enterprise Security (100% Complete)
-- [x] **N:M User-Team Relationship**: Migrated from 1:N to Many-to-Many join table (`UserTeam`).
-- [x] **Active Team Context**: Implemented `activeTeamId` in session and `app.current_team_id` in Postgres.
-- [x] **Team-Level Ownership**: Introduced `owner_team_id` to dynamic tables.
-- [x] **Hardened Tenant Isolation**: Updated RLS policies to prevent cross-tenant leaks for administrative users.
-- [x] **Additive Permission Model**: `AccessGuard` now aggregates capabilities across all team memberships.
-- [x] **System Admin Fast-Path**: Integrated `is_system_admin` check into database-level RLS policies.
 
-## Phase 8: System Plugins (User & Data Model Management) (In Progress)
-- [ ] **[PM]** Design JSON payloads for `ConsoleMenu` injection.
-- [ ] **[Architect]** Define shared interfaces (`KlaoUser`, `KlaoTableDefinition`, `KlaoFieldDefinition`) in `packages/shared/src/index.ts` enforcing offline-first ID generation rules.
-- [ ] **[Database]** Verify `prisma/schema.prisma` to ensure `users`, `tables`, and `fields` models are ready for UI consumption.
-- [ ] **[BackEnd]** Implement/Verify API endpoints (`/api/tenant/users` and `/api/metadata/*`) ensuring the strict Security Pipeline (`getAppSession` -> `AccessGuard` -> `TransactionContext` -> `QueryLayer`) is enforced.
-- [ ] **[FrontEnd]** Build `UserManager.tsx` and `ObjectManager.tsx` in `packages/console/src/pages/custom/`. Apply strict BEM and "Ghost Glass" CSS. Register both in `src/features/admin/registry.tsx`.
-- [ ] **[QA]** Run `bun run tests/test-security.ts`, cross-package type checks (`tsc --noEmit`), and the frontend Vite `build`.
+## Phase 7: Internal Ops & Team Security (100% Complete)
+- [x] **N:M User-Team Relationship**: Join table (`UserTeam`).
+- [x] **Active Team Context**: Implemented `activeTeamId` in session and `app.current_team_id`.
+- [x] **Team-Level Ownership**: Introduced `owner_team_id` to dynamic tables for shared projects.
+- [x] **Hardened Isolation**: Updated RLS policies to prevent internal data leakage.
+- [x] **Additive Permission Model**: Capabilities aggregated across all team memberships.
 
-## Phase 9: User Manager Refinement (Planned)
+## Phase 8: Internal Modules (User & Project Management) (In Progress)
+- [ ] **[PM]** Design JSON payloads for `ConsoleMenu` injection for Sales and Projects.
+- [ ] **[Architect]** Define shared interfaces (`InidosUser`, `InidosTableDefinition`) in `packages/shared/src/index.ts`.
+- [ ] **[Database]** Verify `prisma/schema.prisma` for `users`, `tables`, and `fields`.
+- [ ] **[BackEnd]** Implement/Verify API endpoints ensuring the strict Security Pipeline is enforced.
+- [ ] **[FrontEnd]** Build `UserManager.tsx` and `ObjectManager.tsx` in `packages/console/src/pages/custom/`. Register in `src/features/admin/registry.tsx`.
+- [ ] **[QA]** Run security tests and verify frontend build.
+
+## Phase 9: Staff Profile Refinement (Planned)
 - [ ] **[Architect/Backend]** Update Users API and Database Structure to include:
-    - First Name / Last Name
-    - Username
-    - Title
+    - Username / First Name / Last Name
+    - Title / Department
     - Phone Number / Extension
     - Mobile Phone
-    - Company
-- [ ] **[FrontEnd]** Update `UserManager.tsx` to reflect new user structure on screen.
-- [ ] **[FrontEnd]** Enhance "Add User" drawer:
-    - Include fields for the new columns.
-    - Implement a toggle to activate/deactivate user accounts.
+- [ ] **[FrontEnd]** Update `UserManager.tsx` to reflect new staff structure.
+- [ ] **[FrontEnd]** Enhance "Add User" drawer with activation toggle.
 
-## Phase 10: Enterprise SSO Integration (Planned)
-- [ ] **[Architect/DBA]**: Update `prisma/schema.prisma` to add an `allowed_domains` (String[]) column to the `core.tenants` model.
-- [ ] **[BackEnd]**: Research and draft the `signIn` callback logic in `packages/core/src/lib/auth/authOptions.ts` to implement domain-to-tenant lookup and JIT provisioning.
-- [ ] **[FrontEnd]**: Design a "Tenant Domain Settings" UI within the Tenant Admin panel to allow admins to manage their whitelisted domains.
-- [ ] **[QA]**: Define test cases for cross-tenant domain leakage and unauthorized domain rejection scenarios.
+## Phase 10: Google Workspace Integration (Planned)
+- [ ] **[Architect/DBA]**: Update `prisma/schema.prisma` to add an `allowed_domains` column to the `core.tenants` model.
+- [ ] **[BackEnd]**: Implement Google Workspace domain mapping and JIT provisioning in `authOptions.ts`.
+- [ ] **[FrontEnd]**: Design a "Workspace Settings" UI to manage whitelisted domains.
+- [ ] **[QA]**: Verify secure domain routing and unauthorized access rejection.
 

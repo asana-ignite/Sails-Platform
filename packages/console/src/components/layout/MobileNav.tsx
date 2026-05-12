@@ -46,52 +46,52 @@ const MobileNav: React.FC<MobileNavProps> = ({ isVisible }) => {
   return (
     <nav 
       ref={navRef}
-      className={`klao-mobile-nav ${isVisible ? 'klao-mobile-nav--visible' : ''} ${expandedId ? 'klao-mobile-nav--expanded' : ''}`}
+      className={`inidos-mobile-nav ${isVisible ? 'inidos-mobile-nav--visible' : ''} ${expandedId ? 'inidos-mobile-nav--expanded' : ''}`}
     >
-      <div className="klao-mobile-nav__container">
+      <div className="inidos-mobile-nav__container">
         {isLoading ? (
-          <div className="klao-mobile-nav__loading">Loading...</div>
+          <div className="inidos-mobile-nav__loading">Loading...</div>
         ) : (
           <>
             {/* Main Switcher Grid */}
-            <div className={`klao-mobile-nav__grid ${expandedId ? 'klao-mobile-nav__grid--hidden' : ''}`}>
+            <div className={`inidos-mobile-nav__grid ${expandedId ? 'inidos-mobile-nav__grid--hidden' : ''}`}>
               {navigationItems.map((item) => (
                 <NavLink 
                   key={item.id} 
                   to={getMenuPath(item)}
-                  className="klao-mobile-nav__card"
+                  className="inidos-mobile-nav__card"
                   onClick={(e) => handleItemClick(item, e)}
                 >
-                  <div className="klao-mobile-nav__icon-box">
+                  <div className="inidos-mobile-nav__icon-box">
                     <DynamicIcon name={item.icon || 'Circle'} size={24} />
                   </div>
 
-                  <span className="klao-mobile-nav__label">{item.label}</span>
-                  {item.children && item.children.length > 0 && <div className="klao-mobile-nav__folder-dot" />}
+                  <span className="inidos-mobile-nav__label">{item.label}</span>
+                  {item.children && item.children.length > 0 && <div className="inidos-mobile-nav__folder-dot" />}
                 </NavLink>
               ))}
             </div>
 
             {/* Smart Folder View */}
-            <div className={`klao-mobile-nav__folder ${expandedId ? 'klao-mobile-nav__folder--visible' : ''}`}>
-              <div className="klao-mobile-nav__folder-header">
-                <button className="klao-mobile-nav__back" onClick={() => setExpandedId(null)}>
+            <div className={`inidos-mobile-nav__folder ${expandedId ? 'inidos-mobile-nav__folder--visible' : ''}`}>
+              <div className="inidos-mobile-nav__folder-header">
+                <button className="inidos-mobile-nav__back" onClick={() => setExpandedId(null)}>
                   <ChevronLeft size={20} />
                   <span>{activeFolder?.label || 'Back'}</span>
                 </button>
               </div>
-              <div className="klao-mobile-nav__sub-grid">
+              <div className="inidos-mobile-nav__sub-grid">
                 {activeFolder?.children?.map((sub) => (
                   <NavLink 
                     key={sub.id} 
                     to={getMenuPath(sub)}
-                    className="klao-mobile-nav__sub-card"
+                    className="inidos-mobile-nav__sub-card"
                     onClick={() => setExpandedId(null)}
                   >
-                    <div className="klao-mobile-nav__sub-icon">
+                    <div className="inidos-mobile-nav__sub-icon">
                       <DynamicIcon name={sub.icon || 'Circle'} size={18} />
                     </div>
-                    <span className="klao-mobile-nav__sub-label">{sub.label}</span>
+                    <span className="inidos-mobile-nav__sub-label">{sub.label}</span>
                   </NavLink>
                 ))}
               </div>

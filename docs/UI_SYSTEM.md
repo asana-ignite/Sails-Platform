@@ -1,6 +1,6 @@
-# KLAO Console: UI & Navigation System
+# INIDOS Console: UI & Navigation System
 
-This document details the high-fidelity navigation architecture and UI standards implemented for the KLAO Console.
+This document details the high-fidelity navigation architecture and UI standards implemented for the **INIDOS** Console.
 
 ## 1. Navigation Architecture
 
@@ -9,16 +9,16 @@ The mobile interface uses a persistent "Ghost Glass" bottom dock with three dist
 
 | Panel | Trigger Position | Icon | Behavior |
 | :--- | :--- | :--- | :--- |
-| **App Switcher** | 1 (Far Left) | `LayoutGrid` (2x2) | 3x3 grid of major application modules. |
+| **App Switcher** | 1 (Far Left) | `LayoutGrid` (2x2) | Grid of major modules (Sales, Projects, Timesheets). |
 | **Search Bar** | 2 (Left) | `Search` | Quick access to global data search. |
-| **Main Nav (Tables)**| 3 (Middle) | `Menu` | Hierarchical navigation for tables and folders. |
+| **Main Nav (Tables)**| 3 (Middle) | `Menu` | Hierarchical navigation for internal data tables. |
 | **Notifications** | 4 (Right) | `Bell` | User alerts and system updates. |
 | **User Profile** | 5 (Far Right) | `User` | Account settings and session management. |
 
 ### Desktop: Hybrid Sidebar
 A responsive sidebar that transitions between two states:
 - **Expanded Mode**: Accordion-style navigation. Parent items expand to show children inline.
-- **Collapsed Mode**: Fixed-position "Flyouts". Sub-menus pop up precisely next to the icon, bypassing container clipping (`overflow: auto`) using dynamic coordinate tracking.
+- **Collapsed Mode**: Fixed-position "Flyouts". Sub-menus pop up precisely next to the icon, bypassing container clipping.
 
 ---
 
@@ -33,13 +33,13 @@ A responsive sidebar that transitions between two states:
 - **Main Panels**: `border-radius: 24px`.
 - **Icon Boxes / Cards**: `border-radius: 16px`.
 - **Sub-menu Items**: `border-radius: 12px`.
-- **Page Container**: All primary pages must wrap content in `.klao-page-container` to enforce a `max-width: 1400px` and centered alignment.
-- **Content Spacing**: Standard gutter is `32px` (calc(var(--klao-spacing-unit) * 4)).
+- **Page Container**: All primary pages wrap content in `.inidos-page-container` (max-width: 1400px).
+- **Content Spacing**: Standard gutter is `32px` (calc(var(--inidos-spacing-unit) * 4)).
 
 ### Iconography
 - **Library**: `lucide-react`.
 - **Standard Size**: `24px` for consistency across all grid and list levels.
-- **Active States**: Icons transition to `white` or `var(--klao-primary)` based on context.
+- **Active States**: Icons transition to `white` or `var(--inidos-primary)` based on context.
 
 ---
 
@@ -52,55 +52,51 @@ All interactive grid elements (App Switcher, Mobile Nav) use hardware-accelerate
 - **Highlight**: `rgba(157, 206, 224, 0.25)` (Steel Blue glow).
 
 ### Smart Dismissal
-- **Click-Away**: Any panel automatically closes when the user clicks outside (on the main content area).
-- **Mutual Exclusion**: Only one mobile panel (Nav, Search, or Switcher) can be open at a time; opening one automatically closes the others.
-- **Pointer-Events Isolation**: Hidden panels use `pointer-events: none` to prevent "ghost" blocking of underlying elements.
+- **Click-Away**: Any panel automatically closes when the user clicks outside.
+- **Mutual Exclusion**: Only one mobile panel (Nav, Search, or Switcher) can be open at a time.
+- **Pointer-Events Isolation**: Hidden panels use `pointer-events: none`.
 
 ---
 
 ## 4. Technical Implementation Notes
 
-- **Positioning**: Flyout sub-menus use `position: fixed` and `getBoundingClientRect()` to calculate screen coordinates, ensuring they never clip.
-- **Responsive Logic**: Breakpoints are managed via a mix of CSS `@media (max-width: 768px)` and React window listeners to ensure state sync.
-- **Scrolling**: `scrollbar-width: none` is used globally on navigation panels to maintain the minimal aesthetic while preserving full scrollability for high-density lists.
+- **Positioning**: Flyout sub-menus use `position: fixed` and `getBoundingClientRect()` to calculate screen coordinates.
+- **Responsive Logic**: Breakpoints are managed via a mix of CSS `@media (max-width: 768px)` and React window listeners.
+- **Scrolling**: `scrollbar-width: none` is used globally on navigation panels to maintain the minimal aesthetic.
 
 ---
 
 ## 5. Page Layout & Universal Shell
 
-Every page within the KLAO Console (Tables, Plugins, or Dashboards) follows a standardized layout structure to ensure visual cohesion across all app workspaces.
+Every page within the INIDOS Console (Tables, Plugins, or Dashboards) follows a standardized layout structure.
 
-### The Page Container (`.klao-page-container`)
-To maintain consistency on high-resolution displays, all pages must be centered with a maximum width of **1400px**. This prevents content from stretching excessively and keeps the "Identity Area" and "Action Area" within the user's primary field of view.
+### The Page Container (`.inidos-page-container`)
+All pages are centered with a maximum width of **1400px** to maintain consistency on high-resolution displays.
 
 ### The "Identity Area" (Header)
-All headers use the `.klao-page-header` class with a horizontal flex layout.
-- **Icon Wrapper**: A `42x42px` box with `var(--klao-primary-light)` background.
+All headers use the `.inidos-page-header` class with a horizontal flex layout.
+- **Icon Wrapper**: A `42x42px` box with `var(--inidos-primary-light)` background.
 - **Title Group**: Contains the main `h1` and an optional subtitle.
-- **Plugin Badge**: Custom modules (Plugins) automatically display their parent App name as a badge next to the title to provide workspace context.
-- **Action Area**: Located on the far right (`.klao-page-header__right`) for primary page actions (e.g., "Add New", "Save", "Export").
+- **Plugin Badge**: Custom modules automatically display their parent module name as a badge.
+- **Action Area**: Located on the far right (`.inidos-page-header__right`) for primary actions.
 
-### App-First Shell Architecture
+### Module-First Shell Architecture
 Custom modules are wrapped in the **`AppPluginShell`**, which automatically:
-1. Resolves the current app context (CRM, Sales, Admin).
+1. Resolves the current module context (Sales, Projects, Timesheets).
 2. Performs a metadata lookup to find the correct title and icon.
 3. Injects the custom React plugin into the main content area.
 4. Harmonizes the layout with the standard **`DynamicTablePage`**.
 
-### Dynamic Rendering Logic
-The system automatically chooses the rendering engine based on the **`actionType`** in the database:
-- `actionType: 'table'` → Renders the **DynamicTablePage** (Data Grid).
-- `actionType: 'plugin'` → Renders the **AppPluginShell** (Custom Module).
-
 ---
 
-## 6. Design References (Aquiry System)
+## 6. Design References (Ignite Idea Design System)
 
-To ensure "Ghost Glass" consistency while expanding functionality, all custom plugins should reference the **Aquiry** theme assets and documentation:
+To ensure "Ghost Glass" consistency, all internal modules should reference the design tokens and established patterns:
 
-- **Styles & Documentation**: [docs/_docs_references/index.html](file:///Users/asana/Repo/Klao%20Platform/docs/_docs_references/index.html)
-- **Live Templates**: [docs/_assets_references/](file:///Users/asana/Repo/Klao%20Platform/docs/_assets_references/)
+- **Styles & Documentation**: [docs/SITE_STRUCTURE.md](./SITE_STRUCTURE.md)
+- **Live Templates**: [docs/TEMPLATE_DOC.md](./TEMPLATE_DOC.md)
 
-### Recommended Mappings for Sprint Phase 8:
-- **User Manager**: Reference `apps-contacts.html` for list views and `pages-profile.html` for detail views.
-- **Data Model Manager**: Reference `datatable-base.html` for schema lists and `form-layout.html` for field configurations.
+### Recommended Mappings for Internal Ops:
+- **Sales Manager**: Use list views for Lead management and kanban views for Opportunity tracking.
+- **Timesheet Entry**: Use optimized form layouts for rapid daily time logging.
+- **Project Board**: Use interactive cards for task management and progress tracking.

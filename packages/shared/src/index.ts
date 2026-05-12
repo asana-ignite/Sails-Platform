@@ -1,13 +1,13 @@
 /**
- * KLAO Shared Types — API Contract
+ * INIDOS Shared Types — API Contract
  * 
  * This file defines all TypeScript interfaces used between
- * KLAO Core (Backend) and KLAO Console (Frontend).
+ * INIDOS Core (Backend) and INIDOS Console (Frontend).
  * 
  * Both projects should reference these types to ensure
  * type-safe communication across the API boundary.
  * 
- * Source of truth: klao-core/shared/types.ts
+ * Source of truth: inidos-core/shared/types.ts
  */
 
 // ─── Core Models ──────────────────────────────────────────────

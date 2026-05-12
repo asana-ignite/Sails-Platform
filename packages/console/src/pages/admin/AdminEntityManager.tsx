@@ -3,16 +3,16 @@ import { Database } from 'lucide-react';
 
 const AdminEntityManager: React.FC = () => {
   return (
-    <div className="klao-admin-placeholder">
-      <div className="klao-admin-placeholder__icon">
+    <div className="inidos-admin-placeholder">
+      <div className="inidos-admin-placeholder__icon">
         <Database size={40} />
       </div>
-      <p className="klao-admin-placeholder__text">
+      <p className="inidos-admin-placeholder__text">
         This is the <strong>Data Model</strong> plugin (Schema Manager). 
       </p>
-      <div className="klao-entity-grid">
+      <div className="inidos-entity-grid">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="klao-entity-item" />
+          <div key={i} className="inidos-entity-item" />
         ))}
       </div>
     </div>

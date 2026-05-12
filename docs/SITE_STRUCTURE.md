@@ -1,6 +1,6 @@
-# KLAO Console: Site Structure
+# INIDOS Console: Site Structure
 
-This document provides a comprehensive overview of the project's file structure, detailing the purpose and responsibility of each component within the KLAO Console architecture.
+This document provides a comprehensive overview of the project's file structure, detailing the purpose and responsibility of each component within the **INIDOS** Console architecture.
 
 ## 1. Project Root & Configuration
 Files related to the environment, build system, and high-level documentation.
@@ -19,7 +19,7 @@ Files related to the environment, build system, and high-level documentation.
 The platform uses a **Universal Metadata-Driven Router** to handle all application-level navigation.
 
 - **URL Pattern**: `/:appSlug/:path*`
-- **Dynamic Matching**: The system extracts the path and looks it up in the database for the active tenant.
+- **Dynamic Matching**: The system extracts the path and looks it up in the database for the active tenant (Ignite Idea).
 - **Component Resolution**:
     - If `actionType === 'table'`: Renders **`DynamicTablePage`** (Automatic Data Grid).
     - If `actionType === 'plugin'`: Renders **`AppPluginShell`** (Dynamic React Component).
@@ -28,10 +28,10 @@ The platform uses a **Universal Metadata-Driven Router** to handle all applicati
 ### Navigation Examples:
 | Goal | Browser URL | Resolution |
 | :--- | :--- | :--- |
-| **Leads Table** | `/crm/leads` | CRM App > Leads (Table) |
-| **Sales Orders** | `/sales/orders` | Sales App > Orders (Table) |
-| **User Management**| `/admin/users` | Admin App > Users (Plugin) |
-| **Custom Feature** | `/custom-app/tool`| Custom App > Tool (Plugin) |
+| **Sales Leads** | `/sales/leads` | Sales App > Leads (Table) |
+| **Project Tasks** | `/projects/tasks` | Projects App > Tasks (Table) |
+| **Timesheet Entry**| `/timesheets/my` | Timesheets App > Entry (Plugin) |
+| **Admin Panel** | `/admin/settings` | Admin App > Settings (Plugin) |
 
 ---
 
@@ -57,7 +57,7 @@ Primitive components that follow the "Ghost Glass" design system.
 
 | File | Purpose | Description |
 | :--- | :--- | :--- |
-| `Button.tsx` | UI Primitive | Standard KLAO button with multiple variants and sizes. |
+| `Button.tsx` | UI Primitive | Standard INIDOS button with multiple variants and sizes. |
 
 ### Layout Components (`src/components/layout/`)
 High-level structural components.

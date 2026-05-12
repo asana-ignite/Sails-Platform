@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ConsoleApp, ConsoleMenu } from '@klao/shared';
+import { ConsoleApp, ConsoleMenu } from '@inidos/shared';
 
 export type { ConsoleApp, ConsoleMenu };
+import { useAuth } from './AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-
-
 
 interface ConsoleContextType {
   apps: ConsoleApp[];
@@ -22,6 +21,7 @@ interface ConsoleContextType {
 const ConsoleContext = createContext<ConsoleContextType | undefined>(undefined);
 
 export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [apps, setApps] = useState<ConsoleApp[]>([]);
   const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,14 +41,28 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const result = await response.json();
         if (result.success) {
           const fetchedApps = result.data.apps;
-          setApps(fetchedApps);
+          
+          // ROLE-BASED FILTERING:
+          // Filter apps based on requiredCapability and user role.
+          const filteredApps = fetchedApps.filter((app: ConsoleApp) => {
+            if (!app.requiredCapability) return true;
+            
+            // ADMIN apps only for TENANT_ADMIN and SUPER_ADMIN
+            if (app.requiredCapability === 'ADMIN') {
+              return user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN' || user?.role === 'ADMIN';
+            }
+            
+            return true;
+          });
+          
+          setApps(filteredApps);
           
           // Try to find which app contains the current URL path
           const currentPath = location.pathname;
           let matchedAppId = null;
 
           if (currentPath !== '/') {
-            for (const app of fetchedApps) {
+            for (const app of filteredApps) {
               const hasMatchingMenu = (menus: ConsoleMenu[]): boolean => {
                 return menus.some(m => {
                   if (m.path && currentPath.startsWith(m.path)) return true;
@@ -65,8 +79,8 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
 
           // Default to the matched app, or the first app if none matched
-          if (fetchedApps.length > 0 && !activeAppId) {
-            setActiveAppId(matchedAppId || fetchedApps[0].id);
+          if (filteredApps.length > 0 && !activeAppId) {
+            setActiveAppId(matchedAppId || filteredApps[0].id);
           }
         } else {
           throw new Error(result.error || 'Unknown error');
@@ -78,8 +92,10 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     };
 
-    fetchConfig();
-  }, [location.pathname]); // Listen to pathname for deep linking on mount/refresh
+    if (user) {
+      fetchConfig();
+    }
+  }, [location.pathname, user]); 
 
   const activeApp = apps.find(app => app.id === activeAppId) || null;
   const navigationItems = activeApp?.menus || [];

@@ -9,7 +9,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://host.docker.internal:3000',
+        target: 'http://core:3000',
         changeOrigin: true,
       }
     }

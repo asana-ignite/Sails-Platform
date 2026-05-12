@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { useConsole } from '../../contexts/ConsoleContext';
-import { ConsoleMenu } from '@klao/shared';
+import { ConsoleMenu } from '@inidos/shared';
 import { AdminPluginRegistry } from '../../features/admin/registry';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import './AppPluginShell.css';
@@ -63,37 +63,37 @@ const AppPluginShell: React.FC = () => {
   }
 
   return (
-    <div className="klao-admin-shell klao-page-container">
-      <header className="klao-page-header klao-admin-shell__header">
-        <div className="klao-page-header__left">
-          <div className="klao-page-header__icon-wrapper">
+    <div className="inidos-admin-shell inidos-page-container">
+      <header className="inidos-page-header inidos-admin-shell__header">
+        <div className="inidos-page-header__left">
+          <div className="inidos-page-header__icon-wrapper">
              <DynamicIcon name={iconName} size={24} />
           </div>
-          <div className="klao-page-header__title-group">
-            <div className="klao-page-header__title-row">
-              <h1 className="klao-page-header__title">{title}</h1>
+          <div className="inidos-page-header__title-group">
+            <div className="inidos-page-header__title-row">
+              <h1 className="inidos-page-header__title">{title}</h1>
             </div>
-            <p className="klao-page-header__subtitle">{subtitle}</p>
+            <p className="inidos-page-header__subtitle">{subtitle}</p>
           </div>
         </div>
         
-        <div className="klao-page-header__right">
+        <div className="inidos-page-header__right">
            {headerActions}
         </div>
       </header>
 
-      <main className="klao-admin-shell__content">
+      <main className="inidos-admin-shell__content">
         {PluginComponent ? (
-          <React.Suspense fallback={<div className="klao-admin-loading">Loading Component...</div>}>
+          <React.Suspense fallback={<div className="inidos-admin-loading">Loading Component...</div>}>
             <PluginComponent />
           </React.Suspense>
         ) : (
-          <div className="klao-card" style={{ textAlign: 'center', padding: '60px' }}>
+          <div className="inidos-card" style={{ textAlign: 'center', padding: '60px' }}>
             <div style={{ opacity: 0.2, marginBottom: '16px' }}>
                <DynamicIcon name={iconName} size={64} />
             </div>
             <h2 style={{ marginBottom: '16px' }}>Custom Module Ready</h2>
-            <p style={{ color: 'var(--klao-text-muted)' }}>
+            <p style={{ color: 'var(--inidos-text-muted)' }}>
               This is a dynamic plugin slot for <strong>{title}</strong>.<br />
               Connect your React component in <code>registry.tsx</code> to display custom UI here.
             </p>

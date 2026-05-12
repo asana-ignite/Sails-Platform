@@ -155,7 +155,7 @@ model SystemPermission {
 }
 
 /// Core identity record. Extended beyond the NextAuth default to carry
-/// KLAO multi-tenant context (tenantId, role, teamId) which are
+/// INIDOS multi-tenant context (tenantId, role, teamId) which are
 /// embedded in the JWT by `src/lib/auth/session.ts`.
 model User {
   id            String     @id @default(uuid()) @db.Uuid
@@ -163,7 +163,7 @@ model User {
   email         String     @unique
   emailVerified DateTime?  @map("email_verified")
   image         String?
-  /// Hashed password — used only for the KLAO internal credential provider.
+  /// Hashed password — used only for the INIDOS internal credential provider.
   /// NULL when the user authenticates exclusively via OAuth (Google, Azure).
   password      String?
   /// FK → core.tenants.  NULL only for SUPER_ADMIN accounts that are not
@@ -176,6 +176,8 @@ model User {
   isActive      Boolean    @default(true) @map("is_active")
   phone         String?
   metadata      Json       @default("{}")
+  googleId      String?    @unique @map("google_id")
+  googleDomain  String?    @map("google_domain")
   lastLoginAt   DateTime?  @map("last_login_at")
   createdAt     DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @default(now()) @updatedAt @map("updated_at")

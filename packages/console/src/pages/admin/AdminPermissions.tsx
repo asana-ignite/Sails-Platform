@@ -31,27 +31,27 @@ const AdminPermissions: React.FC = () => {
     fetchRegistry();
   }, []);
 
-  if (loading) return <div className="klao-admin-loading">Loading Registry...</div>;
+  if (loading) return <div className="inidos-admin-loading">Loading Registry...</div>;
 
   const categories = Array.from(new Set(Object.values(registry).map(p => p.category)));
 
   return (
-    <div className="klao-admin-content">
+    <div className="inidos-admin-content">
       {categories.map(cat => (
-        <section key={cat} className="klao-permission-group">
-          <h3 className="klao-permission-category">{cat}</h3>
-          <div className="klao-permission-grid">
+        <section key={cat} className="inidos-permission-group">
+          <h3 className="inidos-permission-category">{cat}</h3>
+          <div className="inidos-permission-grid">
             {Object.entries(registry)
               .filter(([_, def]) => def.category === cat)
               .map(([key, def]) => (
-                <div key={key} className="klao-permission-card">
-                  <div className="klao-permission-info">
-                    <label className="klao-permission-label">{def.label}</label>
-                    <p className="klao-permission-desc">{def.description}</p>
+                <div key={key} className="inidos-permission-card">
+                  <div className="inidos-permission-info">
+                    <label className="inidos-permission-label">{def.label}</label>
+                    <p className="inidos-permission-desc">{def.description}</p>
                   </div>
-                  <div className="klao-permission-toggle">
+                  <div className="inidos-permission-toggle">
                     <input type="checkbox" id={key} />
-                    <label htmlFor={key} className="klao-switch"></label>
+                    <label htmlFor={key} className="inidos-switch"></label>
                   </div>
                 </div>
               ))}

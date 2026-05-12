@@ -3,14 +3,14 @@
     height: calc(100vh - 100px); /* Adjust based on layout header */
     padding: 24px;
     gap: 24px;
-    color: var(--klao-text-main);
+    color: var(--inidos-text-main);
 }
 
 .om-sidebar {
     width: 320px;
-    background: var(--klao-glass-bg);
-    border: 1px solid var(--klao-border-color);
-    border-radius: var(--klao-radius-lg);
+    background: var(--inidos-glass-bg);
+    border: 1px solid var(--inidos-border-color);
+    border-radius: var(--inidos-radius-lg);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -19,7 +19,7 @@
 
 .om-sidebar-header {
     padding: 20px;
-    border-bottom: 1px solid var(--klao-border-color);
+    border-bottom: 1px solid var(--inidos-border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -42,7 +42,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px;
-    border-radius: var(--klao-radius-md);
+    border-radius: var(--inidos-radius-md);
     cursor: pointer;
     transition: all 0.2s;
     margin-bottom: 4px;
@@ -53,21 +53,21 @@
 }
 
 .om-object-item.active {
-    background: var(--klao-primary-glow);
-    border: 1px solid var(--klao-primary);
+    background: var(--inidos-primary-glow);
+    border: 1px solid var(--inidos-primary);
 }
 
 .om-item-icon {
     width: 40px;
     height: 40px;
-    background: var(--klao-glass-bg);
-    border: 1px solid var(--klao-border-color);
+    background: var(--inidos-glass-bg);
+    border: 1px solid var(--inidos-border-color);
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    color: var(--klao-primary);
+    color: var(--inidos-primary);
 }
 
 .om-item-name {
@@ -77,7 +77,7 @@
 
 .om-item-meta {
     font-size: 11px;
-    color: var(--klao-text-muted);
+    color: var(--inidos-text-muted);
 }
 
 /* Main Content */
@@ -100,10 +100,10 @@
 }
 
 .om-detail-title code {
-    background: var(--klao-glass-bg);
+    background: var(--inidos-glass-bg);
     padding: 4px 12px;
     border-radius: 4px;
-    color: var(--klao-primary);
+    color: var(--inidos-primary);
     font-size: 13px;
 }
 
@@ -121,16 +121,16 @@
 
 .om-stat-card {
     padding: 20px;
-    border-radius: var(--klao-radius-lg);
-    background: var(--klao-glass-bg);
-    border: 1px solid var(--klao-border-color);
+    border-radius: var(--inidos-radius-lg);
+    background: var(--inidos-glass-bg);
+    border: 1px solid var(--inidos-border-color);
 }
 
 .om-stat-card label {
     display: block;
     font-size: 11px;
     text-transform: uppercase;
-    color: var(--klao-text-muted);
+    color: var(--inidos-text-muted);
     letter-spacing: 1px;
     margin-bottom: 8px;
 }
@@ -153,9 +153,9 @@
 }
 
 .om-fields-table {
-    border-radius: var(--klao-radius-lg);
-    background: var(--klao-glass-bg);
-    border: 1px solid var(--klao-border-color);
+    border-radius: var(--inidos-radius-lg);
+    background: var(--inidos-glass-bg);
+    border: 1px solid var(--inidos-border-color);
     overflow: hidden;
 }
 
@@ -169,20 +169,20 @@
     padding: 16px 20px;
     font-size: 11px;
     text-transform: uppercase;
-    color: var(--klao-text-muted);
-    border-bottom: 1px solid var(--klao-border-color);
+    color: var(--inidos-text-muted);
+    border-bottom: 1px solid var(--inidos-border-color);
     background: rgba(255,255,255,0.02);
 }
 
 .om-data-table td {
     padding: 16px 20px;
-    border-bottom: 1px solid var(--klao-border-color);
+    border-bottom: 1px solid var(--inidos-border-color);
     font-size: 14px;
 }
 
 .type-tag {
-    background: var(--klao-primary-glow);
-    color: var(--klao-primary);
+    background: var(--inidos-primary-glow);
+    color: var(--inidos-primary);
     padding: 2px 8px;
     border-radius: 4px;
     font-size: 12px;
@@ -191,14 +191,14 @@
 
 .physical-type {
     font-size: 12px;
-    color: var(--klao-text-muted);
+    color: var(--inidos-text-muted);
     margin-left: 8px;
 }
 
 .empty-row {
     text-align: center;
     padding: 40px !important;
-    color: var(--klao-text-muted);
+    color: var(--inidos-text-muted);
 }
 
 /* Modals */
@@ -219,9 +219,9 @@
 .om-modal {
     width: 480px;
     padding: 32px;
-    border-radius: var(--klao-radius-xl);
-    background: var(--klao-glass-bg);
-    border: 1px solid var(--klao-border-color);
+    border-radius: var(--inidos-radius-xl);
+    background: var(--inidos-glass-bg);
+    border: 1px solid var(--inidos-border-color);
 }
 
 .form-group {
@@ -237,7 +237,7 @@
 .form-group input {
     width: 100%;
     background: rgba(255,255,255,0.05);
-    border: 1px solid var(--klao-border-color);
+    border: 1px solid var(--inidos-border-color);
     padding: 12px;
     border-radius: 8px;
     color: white;
@@ -252,19 +252,19 @@
 
 /* Reusable buttons if not global */
 .btn-primary {
-    background: var(--klao-primary);
+    background: var(--inidos-primary);
     color: white;
     border: none;
     padding: 8px 20px;
-    border-radius: var(--klao-radius-md);
+    border-radius: var(--inidos-radius-md);
     cursor: pointer;
 }
 
 .btn-secondary {
     background: rgba(255,255,255,0.05);
-    border: 1px solid var(--klao-border-color);
+    border: 1px solid var(--inidos-border-color);
     color: white;
     padding: 8px 20px;
-    border-radius: var(--klao-radius-md);
+    border-radius: var(--inidos-radius-md);
     cursor: pointer;
 }

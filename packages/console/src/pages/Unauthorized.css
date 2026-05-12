@@ -1,0 +1,100 @@
+.inidos-unauthorized {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--inidos-bg-body);
+  padding: 24px;
+}
+
+.inidos-unauthorized__content {
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  background: white;
+  padding: 48px;
+  border-radius: var(--inidos-radius-xl);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.05);
+  animation: inidos-fade-in 0.5s ease-out;
+}
+
+.inidos-unauthorized__icon {
+  width: 100px;
+  height: 100px;
+  background-color: var(--inidos-danger-light);
+  color: var(--inidos-danger);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+}
+
+.inidos-unauthorized__title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--inidos-text-main);
+  margin-bottom: 16px;
+}
+
+.inidos-unauthorized__message {
+  font-size: 1.1rem;
+  color: var(--inidos-text-muted);
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.inidos-unauthorized__actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.inidos-unauthorized__btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: var(--inidos-radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--inidos-transition);
+  border: none;
+}
+
+.inidos-unauthorized__btn--primary {
+  background-color: var(--inidos-primary);
+  color: white;
+}
+
+.inidos-unauthorized__btn--primary:hover {
+  background-color: var(--inidos-primary-dark);
+  transform: translateY(-2px);
+}
+
+.inidos-unauthorized__btn--secondary {
+  background-color: var(--inidos-bg-body);
+  color: var(--inidos-text-main);
+  border: 1px solid var(--inidos-border-main);
+}
+
+.inidos-unauthorized__btn--secondary:hover {
+  background-color: white;
+  border-color: var(--inidos-primary);
+  color: var(--inidos-primary);
+}
+
+@media (max-width: 640px) {
+  .inidos-unauthorized__content {
+    padding: 32px 24px;
+  }
+  
+  .inidos-unauthorized__actions {
+    flex-direction: column;
+  }
+  
+  .inidos-unauthorized__btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -1,6 +1,8 @@
-# KLAO Platform Monorepo
+# INIDOS (Ignite Idea Operating System)
 
-Welcome to the KLAO Platform monorepo. This project is structured as a Bun Workspace to centralize backend, frontend, and shared logic.
+Welcome to **INIDOS**, a specialized fork of the Klao Platform tailored for internal operations at **Ignite Idea**. INIDOS serves as the central engine for managing Sales, Projects, Cases, and Timesheets.
+
+This project is structured as a Bun Workspace to centralize backend, frontend, and shared logic.
 
 ## Project Structure
 
@@ -15,9 +17,10 @@ For deep dives into the platform's design, please refer to the files in the [doc
 
 - [CORE_AI.md](./docs/CORE_AI.md) - Backend Overview
 - [CONSOLE_AI.md](./docs/CONSOLE_AI.md) - Frontend Overview
-- [ROADMAP.md](./docs/ROADMAP.md) - Strategic Security Roadmap
+- [ROADMAP.md](./docs/ROADMAP.md) - Strategic Strategic Roadmap
 - [DATABASE.md](./docs/DATABASE.md) - Database & RLS Architecture
 - [API_DOCUMENTATION.md](./docs/API_DOCUMENTATION.md) - REST API Reference
 
 ---
-*KLAO: Key Leads, Orders & Activities*
+*INIDOS: Built for Ignite Idea Operations*
+

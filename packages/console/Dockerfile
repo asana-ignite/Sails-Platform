@@ -1,17 +1,24 @@
-# Use node image for development
-FROM node:20-slim
+# Use the official Bun image
+FROM oven/bun:latest
 
 WORKDIR /app
 
-# Install dependencies first for better caching
-COPY package.json ./
-RUN npm install
+# Copy root package files
+COPY package.json bun.lockb* ./
 
-# Copy the rest of the application
+# Copy all workspace package files
+COPY packages/core/package.json ./packages/core/
+COPY packages/console/package.json ./packages/console/
+COPY packages/shared/package.json ./packages/shared/
+
+# Install dependencies
+RUN bun install
+
+# Copy the rest of the application code
 COPY . .
 
 # Expose the Vite dev port
 EXPOSE 5173
 
 # Run vite in host mode
-CMD ["npm", "run", "dev"]
+CMD ["sh", "-c", "cd packages/console && bun run dev -- --host"]

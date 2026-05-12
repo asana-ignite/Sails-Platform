@@ -1,6 +1,6 @@
-# KLAO Console: Template Blueprint
+# INIDOS Console: Template Blueprint
 
-This document outlines the structural and visual DNA extracted from the "Aquiry" Admin Template, which serves as the design foundation for the KLAO Console.
+This document outlines the structural and visual DNA for the **INIDOS Console**, serving as the design foundation for Ignite Idea's internal operating system.
 
 ## 1. High-Level Semantic Structure
 
@@ -9,9 +9,9 @@ The template follows a standard modern admin layout using a wrapper-based approa
 | Component | Semantic Tag / ID | Primary CSS Classes | Notes |
 | :--- | :--- | :--- | :--- |
 | **Main Wrapper** | `#layout-wrapper` | N/A | Contains the entire application layout. |
-| **Top Navbar** | `<header>` | `.topbar` | Includes search, notifications, and user profile. |
+| **Top Navbar** | `<header>` | `.topbar` | Includes search, notifications, and staff profile. |
 | **Sidebar (Nav)** | `<div>` | `.sidebar`, `.vertical-menu` | Managed by MetisMenu for nested navigation. |
-| **Main Content** | `<div>` | `.main-content` | Right-side container for all page data. |
+| **Main Content** | `<div>` | `.main-content` | Right-side container for all module data. |
 | **Inner Wrapper** | `<div>` | `.page-content` | Provides standard padding around content. |
 | **Grid System** | `<div>` | `.container-fluid`, `.row`, `.col-*` | Standard Bootstrap 5 Responsive Grid. |
 | **Page Header** | `<div>` | `.page-title-box` | Contains page titles and breadcrumbs. |

@@ -1,0 +1,220 @@
+.inidos-login-container {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--inidos-bg-body);
+  position: relative;
+  overflow: hidden;
+  font-family: var(--inidos-font-family);
+}
+
+.inidos-login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--inidos-radius-lg);
+  box-shadow: var(--inidos-shadow-md);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.inidos-login-header {
+  text-align: center;
+}
+
+.inidos-login-logo {
+  margin-bottom: 16px;
+}
+
+.logo-text {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--inidos-primary-dark);
+}
+
+.inidos-login-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--inidos-text-main);
+  margin-bottom: 8px;
+}
+
+.inidos-login-header p {
+  font-size: 14px;
+  color: var(--inidos-text-muted);
+}
+
+.inidos-login-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.google-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border: 1px solid var(--inidos-border-color);
+  border-radius: var(--inidos-radius-md);
+  color: var(--inidos-text-main);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--inidos-transition);
+}
+
+.google-login-button:hover {
+  background: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.google-login-button img {
+  width: 20px;
+  height: 20px;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--inidos-text-muted);
+  font-size: 12px;
+  margin: 8px 0;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--inidos-border-color);
+}
+
+.login-divider span {
+  padding: 0 10px;
+}
+
+.admin-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid var(--inidos-primary);
+  border-radius: var(--inidos-radius-md);
+  color: var(--inidos-primary-dark);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--inidos-transition);
+}
+
+.admin-login-button:hover {
+  background: var(--inidos-primary-light);
+}
+
+.inidos-login-footer {
+  text-align: center;
+}
+
+.inidos-login-footer p {
+  font-size: 12px;
+  color: var(--inidos-text-muted);
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--inidos-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  width: fit-content;
+}
+
+.back-button:hover {
+  color: var(--inidos-text-main);
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--inidos-border-color);
+  border-radius: var(--inidos-radius-md);
+  color: var(--inidos-text-muted);
+}
+
+.input-group input {
+  border: none;
+  background: transparent;
+  outline: none;
+  flex: 1;
+  font-size: 14px;
+  color: var(--inidos-text-main);
+}
+
+.login-error {
+  padding: 12px;
+  background: var(--inidos-danger-light);
+  color: var(--inidos-danger);
+  border-radius: var(--inidos-radius-md);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Background Decorations */
+.login-bg-blob {
+  position: absolute;
+  filter: blur(80px);
+  z-index: 1;
+  border-radius: 50%;
+  opacity: 0.4;
+}
+
+.blob-1 {
+  width: 400px;
+  height: 400px;
+  background: var(--inidos-primary);
+  top: -100px;
+  right: -100px;
+}
+
+.blob-2 {
+  width: 300px;
+  height: 300px;
+  background: var(--inidos-info);
+  bottom: -50px;
+  left: -50px;
+}
+
+[data-theme='dark'] .inidos-login-card {
+  background: rgba(37, 43, 59, 0.7);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .google-login-button {
+  background: #2d3436;
+  border-color: #3d4446;
+  color: white;
+}
+
+[data-theme='dark'] .google-login-button:hover {
+  background: #353b3c;
+}

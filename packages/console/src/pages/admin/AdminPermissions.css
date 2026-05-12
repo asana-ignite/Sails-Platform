@@ -1,74 +1,74 @@
-.klao-admin-page {
-  animation: klao-fade-in 0.5s ease-out;
+.inidos-admin-page {
+  animation: inidos-fade-in 0.5s ease-out;
 }
 
-.klao-permission-group {
+.inidos-permission-group {
   margin-bottom: 48px;
 }
 
-.klao-permission-category {
+.inidos-permission-category {
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 2px;
-  color: var(--klao-primary);
+  color: var(--inidos-primary);
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--klao-border-color);
+  border-bottom: 1px solid var(--inidos-border-color);
 }
 
-.klao-permission-grid {
+.inidos-permission-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 20px;
 }
 
-.klao-permission-card {
-  background: var(--klao-bg-card);
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-lg);
+.inidos-permission-card {
+  background: var(--inidos-bg-card);
+  border: 1px solid var(--inidos-border-color);
+  border-radius: var(--inidos-radius-lg);
   padding: 24px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   transition: all 0.3s ease;
-  box-shadow: var(--klao-shadow-sm);
+  box-shadow: var(--inidos-shadow-sm);
 }
 
-.klao-permission-card:hover {
+.inidos-permission-card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--klao-shadow-md);
-  border-color: var(--klao-primary);
+  box-shadow: var(--inidos-shadow-md);
+  border-color: var(--inidos-primary);
 }
 
-.klao-permission-info {
+.inidos-permission-info {
   padding-right: 20px;
 }
 
-.klao-permission-label {
+.inidos-permission-label {
   display: block;
   font-weight: 600;
   font-size: 1rem;
-  color: var(--klao-text-main);
+  color: var(--inidos-text-main);
   margin-bottom: 4px;
 }
 
-.klao-permission-desc {
+.inidos-permission-desc {
   font-size: 0.85rem;
-  color: var(--klao-text-muted);
+  color: var(--inidos-text-muted);
   line-height: 1.5;
 }
 
 /* Toggle Switch Styling */
-.klao-permission-toggle {
+.inidos-permission-toggle {
   padding-top: 4px;
 }
 
-.klao-permission-toggle input {
+.inidos-permission-toggle input {
   display: none;
 }
 
-.klao-switch {
+.inidos-switch {
   display: block;
   width: 44px;
   height: 24px;
@@ -79,7 +79,7 @@
   transition: background-color 0.3s ease;
 }
 
-.klao-switch::after {
+.inidos-switch::after {
   content: '';
   position: absolute;
   top: 2px;
@@ -92,18 +92,18 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.klao-permission-toggle input:checked + .klao-switch {
-  background-color: var(--klao-primary);
+.inidos-permission-toggle input:checked + .inidos-switch {
+  background-color: var(--inidos-primary);
 }
 
-.klao-permission-toggle input:checked + .klao-switch::after {
+.inidos-permission-toggle input:checked + .inidos-switch::after {
   transform: translateX(20px);
 }
 
-.klao-admin-loading {
+.inidos-admin-loading {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 300px;
-  color: var(--klao-text-muted);
+  color: var(--inidos-text-muted);
 }

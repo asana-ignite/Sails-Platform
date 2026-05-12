@@ -1,4 +1,4 @@
-.klao-mobile-nav {
+.inidos-mobile-nav {
   display: none;
   position: fixed;
   bottom: calc(75px + env(safe-area-inset-bottom));
@@ -25,17 +25,17 @@
 }
 
 
-.klao-mobile-nav::-webkit-scrollbar {
+.inidos-mobile-nav::-webkit-scrollbar {
   display: none;
 }
 
 
 @media (max-width: 768px) {
-  .klao-mobile-nav {
+  .inidos-mobile-nav {
     display: block !important;
   }
 
-  .klao-mobile-nav--visible {
+  .inidos-mobile-nav--visible {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
@@ -44,14 +44,14 @@
 }
 
 
-.klao-mobile-nav__container {
+.inidos-mobile-nav__container {
   height: 100%;
   position: relative;
   min-height: 160px;
 }
 
 /* Grid Layout */
-.klao-mobile-nav__grid {
+.inidos-mobile-nav__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
@@ -60,13 +60,13 @@
   visibility: visible;
 }
 
-.klao-mobile-nav__grid--hidden {
+.inidos-mobile-nav__grid--hidden {
   opacity: 0;
   visibility: hidden;
   transform: scale(0.9);
 }
 
-.klao-mobile-nav__card {
+.inidos-mobile-nav__card {
   background: none;
   border: none;
   display: flex;
@@ -80,20 +80,20 @@
   cursor: pointer;
 }
 
-.klao-mobile-nav__card:active {
+.inidos-mobile-nav__card:active {
   background-color: rgba(157, 206, 224, 0.25);
   transform: translateY(2px);
 }
 
 
 
-.klao-mobile-nav__card:active .klao-mobile-nav__icon-box {
+.inidos-mobile-nav__card:active .inidos-mobile-nav__icon-box {
   transform: scale(0.9);
   background: rgba(255, 255, 255, 0.7);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.klao-mobile-nav__icon-box {
+.inidos-mobile-nav__icon-box {
   width: 52px;
   height: 52px;
   display: flex;
@@ -101,32 +101,32 @@
   justify-content: center;
   background: rgba(255, 255, 255, 0.95);
   border-radius: 16px;
-  color: var(--klao-primary);
+  color: var(--inidos-primary);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 
-.klao-mobile-nav__label {
+.inidos-mobile-nav__label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--klao-text-main);
+  color: var(--inidos-text-main);
   text-align: center;
 }
 
-.klao-mobile-nav__folder-dot {
+.inidos-mobile-nav__folder-dot {
   position: absolute;
   top: 8px;
   right: 8px;
   width: 6px;
   height: 6px;
-  background-color: var(--klao-primary);
+  background-color: var(--inidos-primary);
   border-radius: 50%;
-  box-shadow: 0 0 8px var(--klao-primary);
+  box-shadow: 0 0 8px var(--inidos-primary);
 }
 
 /* Folder View */
-.klao-mobile-nav__folder {
+.inidos-mobile-nav__folder {
   position: absolute;
   top: 0;
   left: 0;
@@ -137,36 +137,36 @@
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.klao-mobile-nav__folder--visible {
+.inidos-mobile-nav__folder--visible {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
 }
 
-.klao-mobile-nav__folder-header {
+.inidos-mobile-nav__folder-header {
   margin-bottom: 16px;
 }
 
-.klao-mobile-nav__back {
+.inidos-mobile-nav__back {
   background: none;
   border: none;
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--klao-text-main);
+  color: var(--inidos-text-main);
   font-weight: 700;
   font-size: 0.95rem;
   padding: 4px 0;
   cursor: pointer;
 }
 
-.klao-mobile-nav__sub-grid {
+.inidos-mobile-nav__sub-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
 
-.klao-mobile-nav__sub-card {
+.inidos-mobile-nav__sub-card {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
@@ -174,13 +174,13 @@
   gap: 10px;
   padding: 12px;
   border-radius: 12px;
-  color: var(--klao-text-main);
+  color: var(--inidos-text-main);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-.klao-mobile-nav__sub-card:active {
+.inidos-mobile-nav__sub-card:active {
   transform: scale(0.96) translateY(1px);
   background: rgba(157, 206, 224, 0.25);
   border-color: rgba(157, 206, 224, 0.4);
@@ -188,11 +188,11 @@
 
 
 
-.klao-mobile-nav__sub-icon {
-  color: var(--klao-primary);
+.inidos-mobile-nav__sub-icon {
+  color: var(--inidos-primary);
 }
 
-.klao-mobile-nav__sub-label {
+.inidos-mobile-nav__sub-label {
   font-size: 0.8rem;
   font-weight: 500;
 }

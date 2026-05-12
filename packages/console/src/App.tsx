@@ -4,11 +4,43 @@ import AppLayout from './components/layout/AppLayout';
 import LoadingScreen from './components/common/LoadingScreen';
 import './styles/globals.css';
 import { ConsoleProvider, useConsole, ConsoleMenu } from './contexts/ConsoleContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Lazy load pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const DynamicTablePage = lazy(() => import('./pages/DynamicTablePage'));
 const AppPluginShell = lazy(() => import('./pages/admin/AppPluginShell'));
+const Login = lazy(() => import('./pages/Login'));
+const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const Unauthorized = lazy(() => import('./pages/Unauthorized'));
+
+/**
+ * ProtectedRoute
+ * Redirects to /login if not authenticated.
+ * Optional role check: redirects to /dashboard if role is not allowed.
+ */
+const ProtectedRoute: React.FC<{ 
+  children: React.ReactNode, 
+  allowedRoles?: string[] 
+}> = ({ children, allowedRoles }) => {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    console.warn(`Access denied for role: ${user.role}. Required: ${allowedRoles.join(', ')}`);
+    return <Unauthorized />;
+  }
+
+  return <>{children}</>;
+};
 
 /**
  * SmartPageRouter
@@ -18,10 +50,8 @@ const SmartPageRouter: React.FC = () => {
   const { navigationItems } = useConsole();
   const location = useLocation();
 
-  // Helper to normalize paths
   const normalizePath = (p: string | null) => p ? p.replace(/\/+$/, '').toLowerCase() : '';
 
-  // Recursive search to find the menu item for the current URL
   const findMenu = (menus: ConsoleMenu[]): ConsoleMenu | null => {
     const target = normalizePath(location.pathname);
     for (const menu of menus) {
@@ -36,39 +66,61 @@ const SmartPageRouter: React.FC = () => {
 
   const activeMenu = findMenu(navigationItems);
 
-  // If the metadata says it's a table, render the DynamicTablePage
+  const { user } = useAuth();
+  
+  // 1. Explicit path check for sensitive areas (e.g., /admin)
+  // This catches cases where the menu item was filtered out of navigationItems
+  if (location.pathname.startsWith('/admin')) {
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'TENANT_ADMIN' && user?.role !== 'ADMIN') {
+      return <Unauthorized />;
+    }
+  }
+
+  // 2. Extra layer of security: Check if the found menu item requires a capability
+  if (activeMenu?.requiredCapability === 'ADMIN') {
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'TENANT_ADMIN' && user?.role !== 'ADMIN') {
+      return <Unauthorized />;
+    }
+  }
+
   if (activeMenu?.actionType === 'table') {
     return <DynamicTablePage />;
   }
 
-  // Default to the AppPluginShell for everything else (Plugins, Dashboards, Custom)
   return <AppPluginShell />;
 };
 
 function App() {
   return (
     <BrowserRouter>
-      <ConsoleProvider>
-        <AppLayout>
-          <Suspense fallback={<LoadingScreen />}>
-            <Routes>
-              {/* Default Redirect to Dashboard */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <AuthProvider>
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/admin-login" element={<AdminLogin />} />
 
-              {/* CLEAN UNIVERSAL ROUTING (Metadata-Driven) */}
-              {/* 1. Dashboard is always specific */}
-              <Route path="/dashboard" element={<Dashboard />} />
-
-              {/* 2. Catch-all App Router (/:appSlug/*) */}
-              {/* This handles /crm/leads, /admin/profile, /sales/orders etc. */}
-              <Route path="/:appSlug/*" element={<SmartPageRouter />} />
-
-              {/* 404 Fallback */}
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </Suspense>
-        </AppLayout>
-      </ConsoleProvider>
+            {/* Protected Application Routes */}
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <ConsoleProvider>
+                    <AppLayout>
+                      <Routes>
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/:appSlug/*" element={<SmartPageRouter />} />
+                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                      </Routes>
+                    </AppLayout>
+                  </ConsoleProvider>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Suspense>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

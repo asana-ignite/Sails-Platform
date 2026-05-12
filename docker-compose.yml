@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: klao-db
+    container_name: inidos-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: mysecretpassword
@@ -17,9 +17,11 @@ services:
       retries: 5
 
   core:
-    image: oven/bun:latest
-    container_name: klao-core
-    working_dir: /app/packages/core
+    build:
+      context: .
+      dockerfile: packages/core/Dockerfile
+    image: inidos-core:latest
+    container_name: inidos-core
     depends_on:
       db:
         condition: service_healthy
@@ -28,20 +30,34 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:mysecretpassword@db:5432/postgres?schema=core
       - NEXTAUTH_SECRET=development-secret-only
-      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_URL=http://localhost:5173
+      - GOOGLE_CLIENT_ID=your-google-client-id
+      - GOOGLE_CLIENT_SECRET=your-google-client-secret
     volumes:
       - .:/app
-    command: sh -c "bun x prisma generate && bun run dev"
+      - /app/node_modules
+      - /app/packages/core/node_modules
+      - /app/packages/console/node_modules
+      - /app/packages/shared/node_modules
+    command: sh -c "cd packages/core && bun prisma generate && bun run dev"
 
   console:
-    image: oven/bun:latest
-    container_name: klao-console
-    working_dir: /app/packages/console
+    build:
+      context: .
+      dockerfile: packages/console/Dockerfile
+    image: inidos-console:latest
+    container_name: inidos-console
     ports:
       - "5173:5173"
     volumes:
       - .:/app
-    command: sh -c "bun run dev -- --host"
+      - /app/node_modules
+      - /app/packages/core/node_modules
+      - /app/packages/console/node_modules
+      - /app/packages/shared/node_modules
+    environment:
+      - VITE_CORE_URL=http://localhost:3000
+    command: sh -c "cd packages/console && bun run dev -- --host"
 
 volumes:
   pgdata:
