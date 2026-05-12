@@ -175,6 +175,7 @@ model User {
   role          String     @default("MEMBER")
   isActive      Boolean    @default(true) @map("is_active")
   phone         String?
+  title         String?
   metadata      Json       @default("{}")
   googleId      String?    @unique @map("google_id")
   googleDomain  String?    @map("google_domain")

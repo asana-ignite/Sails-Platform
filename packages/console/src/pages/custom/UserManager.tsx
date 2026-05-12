@@ -8,6 +8,8 @@ interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+  title?: string;
   role: 'Admin' | 'Member' | 'Guest';
   status: 'Active' | 'Inactive' | 'Pending';
   avatar?: string;
@@ -28,8 +30,9 @@ const UserManager: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState('Member');
   
   // Form State
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', role: 'MEMBER' });
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', title: '', role: 'MEMBER' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -41,6 +44,8 @@ const UserManager: React.FC = () => {
           id: u.id,
           name: u.name || 'Unknown User',
           email: u.email,
+          phone: u.phone || '',
+          title: u.title || '',
           role: u.role === 'TENANT_ADMIN' || u.role === 'ADMIN' ? 'Admin' : u.role === 'MEMBER' ? 'Member' : 'Guest',
           status: u.isActive ? 'Active' : 'Inactive',
           lastLogin: u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'Never',
@@ -90,27 +95,31 @@ const UserManager: React.FC = () => {
     return () => setHeaderActions(null);
   }, [setHeaderActions, memoizedHeaderActions]);
 
-  const handleCreateUser = async () => {
+  const handleSubmit = async () => {
     if (!formData.email) return alert('Email is required');
     try {
       setIsSubmitting(true);
-      const response = await fetch('/api/tenant/users', {
-        method: 'POST',
+      const url = editingUserId ? `/api/tenant/users/${editingUserId}` : '/api/tenant/users';
+      const method = editingUserId ? 'PATCH' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         setShowAddUserDrawer(false);
-        setFormData({ name: '', email: '', phone: '', role: 'MEMBER' });
+        setFormData({ name: '', email: '', phone: '', title: '', role: 'MEMBER' });
+        setEditingUserId(null);
         setSelectedRole('Member');
         fetchUsers(); // Refresh list
       } else {
         const err = await response.json();
-        alert(err.error || 'Failed to create user');
+        alert(err.error || 'Operation failed');
       }
     } catch (error) {
-      console.error('Error creating user:', error);
+      console.error('Error saving user:', error);
       alert('An unexpected error occurred');
     } finally {
       setIsSubmitting(false);
@@ -190,9 +199,44 @@ const UserManager: React.FC = () => {
     setSelectedUserIds(nextSelected);
   };
 
-  const handleAction = (action: string, user: User) => {
-    console.log(`${action} on user:`, user);
+  const handleAction = async (action: string, user: User) => {
     setActiveMenuUserId(null);
+    
+    if (action === 'edit') {
+      setEditingUserId(user.id);
+      setFormData({
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        title: user.title || '',
+        role: user.role === 'Admin' ? 'TENANT_ADMIN' : 'MEMBER'
+      });
+      setSelectedRole(user.role);
+      setShowAddUserDrawer(true);
+    } else if (action === 'remove') {
+      if (window.confirm(`Are you sure you want to remove ${user.name}?`)) {
+        try {
+          const response = await fetch(`/api/tenant/users/${user.id}`, { method: 'DELETE' });
+          if (response.ok) {
+            fetchUsers();
+          } else {
+            const err = await response.json();
+            alert(err.error || 'Delete failed');
+          }
+        } catch (error) {
+          console.error('Delete error:', error);
+        }
+      }
+    } else if (action === 'deactivate' || action === 'activate') {
+        try {
+          const response = await fetch(`/api/tenant/users/${user.id}`, { 
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isActive: action === 'activate' })
+          });
+          if (response.ok) fetchUsers();
+        } catch (e) { console.error(e); }
+    }
   };
 
   // Close menus on click away
@@ -322,8 +366,8 @@ const UserManager: React.FC = () => {
               </th>
               <th className="inidos-user-manager__th inidos-user-manager__th--sortable" onClick={() => handleSort('role')}>
                 <div className="inidos-user-manager__th-content">
-                  <span>Role</span>
-                  {getSortIcon('role')}
+                  <span>Name & Title</span>
+                  <ArrowUpDown size={14} className="inidos-user-manager__sort-icon--idle" />
                 </div>
               </th>
               <th className="inidos-user-manager__th inidos-user-manager__th--sortable" onClick={() => handleSort('status')}>
@@ -383,6 +427,7 @@ const UserManager: React.FC = () => {
                     </div>
                     <div className="inidos-user-manager__info">
                       <span className="inidos-user-manager__name">{user.name}</span>
+                      <span className="inidos-user-manager__title-label">{user.title || 'No position specified'}</span>
                       <span className="inidos-user-manager__email">{user.email}</span>
                     </div>
                   </div>
@@ -509,10 +554,19 @@ const UserManager: React.FC = () => {
           <div className="inidos-add-drawer__panel">
             <div className="inidos-add-drawer__header">
               <div className="inidos-add-drawer__header-info">
-                <h2 className="inidos-add-drawer__title">Add New User</h2>
-                <p className="inidos-add-drawer__subtitle">Create a new platform identity and assign roles.</p>
+                <h2 className="inidos-add-drawer__title">{editingUserId ? 'Edit User Details' : 'Add New User'}</h2>
+                <p className="inidos-add-drawer__subtitle">
+                  {editingUserId ? 'Update existing platform identity and permissions.' : 'Create a new platform identity and assign roles.'}
+                </p>
               </div>
-              <button className="inidos-add-drawer__close" onClick={() => setShowAddUserDrawer(false)}>
+              <button 
+                className="inidos-add-drawer__close" 
+                onClick={() => {
+                  setShowAddUserDrawer(false);
+                  setEditingUserId(null);
+                  setFormData({ name: '', email: '', phone: '', title: '', role: 'MEMBER' });
+                }}
+              >
                 <X size={20} />
               </button>
             </div>
@@ -553,6 +607,17 @@ const UserManager: React.FC = () => {
               </div>
 
               <div className="inidos-form-group">
+                <label className="inidos-label">Work Position / Title</label>
+                <input 
+                  type="text" 
+                  className="inidos-input" 
+                  placeholder="e.g. Senior Developer" 
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                />
+              </div>
+
+              <div className="inidos-form-group">
                 <label className="inidos-label">System Role</label>
                 <div className="inidos-role-selector">
                   {[
@@ -582,17 +647,21 @@ const UserManager: React.FC = () => {
             <div className="inidos-add-drawer__footer">
               <button 
                 className="inidos-btn inidos-btn--ghost" 
-                onClick={() => setShowAddUserDrawer(false)}
+                onClick={() => {
+                  setShowAddUserDrawer(false);
+                  setEditingUserId(null);
+                  setFormData({ name: '', email: '', phone: '', title: '', role: 'MEMBER' });
+                }}
                 disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button 
                 className="inidos-btn inidos-btn--primary" 
-                onClick={handleCreateUser}
+                onClick={handleSubmit}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Creating Account...' : 'Create User Account'}
+                {isSubmitting ? 'Saving...' : editingUserId ? 'Save Changes' : 'Create User Account'}
               </button>
             </div>
           </div>

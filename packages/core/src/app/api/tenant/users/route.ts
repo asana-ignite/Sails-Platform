@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { email, name, role, teamId } = body;
+    const { email, name, role, teamId, title, phone } = body;
 
     if (!email) {
       return NextResponse.json({ error: 'Missing required field: email.' }, { status: 400 });
@@ -40,6 +40,8 @@ export async function POST(req: NextRequest) {
         email,
         name,
         role: role || 'MEMBER',
+        title: title || '',
+        phone: phone || '',
         tenantId: targetTenantId,
         teams: teamId ? {
           create: {
