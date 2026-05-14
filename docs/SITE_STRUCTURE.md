@@ -1,99 +1,24 @@
-# INIDOS Console: Site Structure
+# Site Structure & Architecture
 
-This document provides a comprehensive overview of the project's file structure, detailing the purpose and responsibility of each component within the **INIDOS** Console architecture.
+## Universal Routing (`/:appSlug/:path*`)
+- Extracts path and looks it up in DB for active tenant.
+- **Rule:** `/` automatically redirects to `/dashboard`.
+- **Resolution:**
+  - `actionType === 'table'` → Renders `DynamicTablePage` (Automatic Data Grid).
+  - `actionType === 'plugin'` → Renders `AppPluginShell` (Dynamic React Component).
 
-## 1. Project Root & Configuration
-Files related to the environment, build system, and high-level documentation.
+## Monorepo Architecture
+- **`packages/core`**: API logic, authentication, database interactions (Next.js).
+- **`packages/console`**: Premium frontend interface (Vite).
+- **`packages/shared`**: Shared-First Logic. Any logic/types used by both `core` and `console` MUST go here.
 
-| File | Purpose | Description |
-| :--- | :--- | :--- |
-| `package.json` | Dependencies | Manages project metadata, scripts, and NPM packages. |
-| `vite.config.ts` | Build System | Configuration for Vite (HMR, build optimizations). |
-| `scripts/` | Tooling | Utility scripts for database maintenance and resets. |
-| `tests/` | QA | Integration tests for the platform engine and security. |
-| `docker-compose.yml` | Infrastructure | Container orchestration for development environments. |
+## Feature-Based Folder Structure (Frontend)
+- **Location:** `packages/console/src/features/`
+- **Rule:** Isolate domain logic. Each feature folder MUST contain its own `components/`, `hooks/`, `utils/`, and `types.ts`.
+- **Warning:** Avoid Spaghetti Imports. Do not import `../../../` across feature boundaries. Use Shared Kernel (`@inidos/shared`) for common types.
 
----
-
-## 2. Universal Routing & URL Structure
-The platform uses a **Universal Metadata-Driven Router** to handle all application-level navigation.
-
-- **URL Pattern**: `/:appSlug/:path*`
-- **Dynamic Matching**: The system extracts the path and looks it up in the database for the active tenant (Ignite Idea).
-- **Component Resolution**:
-    - If `actionType === 'table'`: Renders **`DynamicTablePage`** (Automatic Data Grid).
-    - If `actionType === 'plugin'`: Renders **`AppPluginShell`** (Dynamic React Component).
-- **Default Pathing**: The root `/` path automatically redirects to `/dashboard`.
-
-### Navigation Examples:
-| Goal | Browser URL | Resolution |
-| :--- | :--- | :--- |
-| **Sales Leads** | `/sales/leads` | Sales App > Leads (Table) |
-| **Project Tasks** | `/projects/tasks` | Projects App > Tasks (Table) |
-| **Timesheet Entry**| `/timesheets/my` | Timesheets App > Entry (Plugin) |
-| **Admin Panel** | `/admin/settings` | Admin App > Settings (Plugin) |
-
----
-
-## 3. Core Architecture (`src/`)
-The foundational layers of the enterprise-grade platform.
-
-| Directory | Purpose | Description |
-| :--- | :--- | :--- |
-| `api/` | Data Access | Centralized API clients and service wrappers (`client.ts`). |
-| `features/` | Business Logic | Modular feature implementations and registries (`registry.ts`). |
-| `hooks/` | Reusable Logic | Custom React hooks for shared behavior (`useClickOutside.ts`). |
-| `types/` | Type Safety | Global TypeScript interfaces and type definitions (`index.ts`). |
-| `utils/` | Utilities | Shared helper functions and formatting tools (`index.ts`). |
-| `constants/` | Data Models | Centralized constants like `navigation.tsx`. |
-
----
-
-## 3. UI System (`src/components/`)
-Modular and reusable interface components.
-
-### UI Components (`src/components/ui/`)
-Primitive components that follow the "Ghost Glass" design system.
-
-| File | Purpose | Description |
-| :--- | :--- | :--- |
-| `Button.tsx` | UI Primitive | Standard INIDOS button with multiple variants and sizes. |
-
-### Layout Components (`src/components/layout/`)
-High-level structural components.
-
-| File | Purpose | Description |
-| :--- | :--- | :--- |
-| `AppLayout.tsx` | Orchestrator | Coordinates the Topbar, Sidebar, and Mobile Dock panels. |
-| `Sidebar.tsx` | Desktop Nav | Multi-mode sidebar (Accordion / Collapsed Flyouts). |
-| `MobileGlobalBar.tsx` | System Dock | Persistent bottom bar for global navigation. |
-
-
----
-
-## 4. Design & Styles (`src/styles/`)
-The visual identity and token system.
-
-| File | Purpose | Description |
-| :--- | :--- | :--- |
-| `design-tokens.css` | Variables | Centralized CSS variables for colors, spacing, and glass effects. |
-| `globals.css` | Reset/Base | Global CSS resets and utility classes for typography and layout. |
-| `admin-common.css` | Admin Shared | Centralized patterns for admin modules (Modals, Forms, Placeholders). |
-
----
-
-## 5. Application Content (`src/pages/`)
-Specific view-level logic and styling.
-
-| File | Purpose | Description |
-| :--- | :--- | :--- |
-| `Dashboard.tsx` | Home View | Main administrative dashboard with stats and activity overviews. |
-| `Dashboard.css` | View Styles | Specific styling for dashboard widgets and grid layout. |
-
----
-
-## 6. Reference Assets (`_assets_references/`)
-These files are kept for design reference and original template functionality.
-
-- **`icons-fontawesome.html`**: Reference for FontAwesome icons.
-- **`assets/libs/`**: Original template libraries (ApexCharts, MetisMenu, etc.).
+## Core Architecture (`packages/core/src/`)
+- `api/`: API clients / wrappers.
+- `features/`: Business logic implementations.
+- `hooks/`: Reusable React hooks.
+- `types/` & `utils/`: Legacy structure. **Migrate common items to Shared Kernel.**
