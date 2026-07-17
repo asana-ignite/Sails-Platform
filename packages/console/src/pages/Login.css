@@ -1,16 +1,16 @@
-.inidos-login-container {
+.klao-login-container {
   height: 100vh;
   width: 100vw;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--inidos-bg-body);
+  background-color: var(--klao-bg-body);
   position: relative;
   overflow: hidden;
-  font-family: var(--inidos-font-family);
+  font-family: var(--klao-font-family);
 }
 
-.inidos-login-card {
+.klao-login-card {
   width: 100%;
   max-width: 400px;
   padding: 40px;
@@ -18,19 +18,19 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: var(--inidos-radius-lg);
-  box-shadow: var(--inidos-shadow-md);
+  border-radius: var(--klao-radius-lg);
+  box-shadow: var(--klao-shadow-md);
   z-index: 10;
   display: flex;
   flex-direction: column;
   gap: 32px;
 }
 
-.inidos-login-header {
+.klao-login-header {
   text-align: center;
 }
 
-.inidos-login-logo {
+.klao-login-logo {
   margin-bottom: 16px;
 }
 
@@ -38,22 +38,22 @@
   font-size: 32px;
   font-weight: 800;
   letter-spacing: -1px;
-  color: var(--inidos-primary-dark);
+  color: var(--klao-primary-dark);
 }
 
-.inidos-login-header h1 {
+.klao-login-header h1 {
   font-size: 20px;
   font-weight: 600;
-  color: var(--inidos-text-main);
+  color: var(--klao-text-main);
   margin-bottom: 8px;
 }
 
-.inidos-login-header p {
+.klao-login-header p {
   font-size: 14px;
-  color: var(--inidos-text-muted);
+  color: var(--klao-text-muted);
 }
 
-.inidos-login-content {
+.klao-login-content {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -66,12 +66,12 @@
   gap: 12px;
   padding: 12px;
   background: white;
-  border: 1px solid var(--inidos-border-color);
-  border-radius: var(--inidos-radius-md);
-  color: var(--inidos-text-main);
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-md);
+  color: var(--klao-text-main);
   font-weight: 500;
   cursor: pointer;
-  transition: var(--inidos-transition);
+  transition: var(--klao-transition);
 }
 
 .google-login-button:hover {
@@ -89,7 +89,7 @@
   display: flex;
   align-items: center;
   text-align: center;
-  color: var(--inidos-text-muted);
+  color: var(--klao-text-muted);
   font-size: 12px;
   margin: 8px 0;
 }
@@ -98,7 +98,7 @@
 .login-divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid var(--inidos-border-color);
+  border-bottom: 1px solid var(--klao-border-color);
 }
 
 .login-divider span {
@@ -112,25 +112,25 @@
   gap: 12px;
   padding: 12px;
   background: transparent;
-  border: 1px solid var(--inidos-primary);
-  border-radius: var(--inidos-radius-md);
-  color: var(--inidos-primary-dark);
+  border: 1px solid var(--klao-primary);
+  border-radius: var(--klao-radius-md);
+  color: var(--klao-primary-dark);
   font-weight: 500;
   cursor: pointer;
-  transition: var(--inidos-transition);
+  transition: var(--klao-transition);
 }
 
 .admin-login-button:hover {
-  background: var(--inidos-primary-light);
+  background: var(--klao-primary-light);
 }
 
-.inidos-login-footer {
+.klao-login-footer {
   text-align: center;
 }
 
-.inidos-login-footer p {
+.klao-login-footer p {
   font-size: 12px;
-  color: var(--inidos-text-muted);
+  color: var(--klao-text-muted);
 }
 
 .back-button {
@@ -139,7 +139,7 @@
   gap: 8px;
   background: transparent;
   border: none;
-  color: var(--inidos-text-muted);
+  color: var(--klao-text-muted);
   cursor: pointer;
   font-size: 14px;
   padding: 0;
@@ -147,7 +147,7 @@
 }
 
 .back-button:hover {
-  color: var(--inidos-text-main);
+  color: var(--klao-text-main);
 }
 
 .input-group {
@@ -156,9 +156,9 @@
   gap: 12px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.5);
-  border: 1px solid var(--inidos-border-color);
-  border-radius: var(--inidos-radius-md);
-  color: var(--inidos-text-muted);
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-md);
+  color: var(--klao-text-muted);
 }
 
 .input-group input {
@@ -167,14 +167,14 @@
   outline: none;
   flex: 1;
   font-size: 14px;
-  color: var(--inidos-text-main);
+  color: var(--klao-text-main);
 }
 
 .login-error {
   padding: 12px;
-  background: var(--inidos-danger-light);
-  color: var(--inidos-danger);
-  border-radius: var(--inidos-radius-md);
+  background: var(--klao-danger-light);
+  color: var(--klao-danger);
+  border-radius: var(--klao-radius-md);
   font-size: 13px;
   text-align: center;
 }
@@ -191,7 +191,7 @@
 .blob-1 {
   width: 400px;
   height: 400px;
-  background: var(--inidos-primary);
+  background: var(--klao-primary);
   top: -100px;
   right: -100px;
 }
@@ -199,12 +199,12 @@
 .blob-2 {
   width: 300px;
   height: 300px;
-  background: var(--inidos-info);
+  background: var(--klao-info);
   bottom: -50px;
   left: -50px;
 }
 
-[data-theme='dark'] .inidos-login-card {
+[data-theme='dark'] .klao-login-card {
   background: rgba(37, 43, 59, 0.7);
   border-color: rgba(255, 255, 255, 0.1);
 }

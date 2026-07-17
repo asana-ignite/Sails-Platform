@@ -1,19 +1,19 @@
-.inidos-admin-shell {
+.klao-admin-shell {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--inidos-spacing-unit) * 3);
-  animation: inidos-fade-in 0.4s ease-out;
+  gap: calc(var(--klao-spacing-unit) * 3);
+  animation: klao-fade-in 0.4s ease-out;
 }
 
-.inidos-admin-shell__header {
+.klao-admin-shell__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   /* Same line */
-  margin-bottom: calc(var(--inidos-spacing-unit) * 2);
+  margin-bottom: calc(var(--klao-spacing-unit) * 2);
 }
 
-.inidos-page-header__left {
+.klao-page-header__left {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -22,11 +22,11 @@
   pointer-events: none; /* Let clicks pass through the empty space */
 }
 
-.inidos-page-header__left > * {
+.klao-page-header__left > * {
   pointer-events: auto; /* Re-enable for title/icon */
 }
 
-.inidos-page-header__right {
+.klao-page-header__right {
   position: relative;
   z-index: 100; /* Force above the left side */
   display: flex;
@@ -35,25 +35,25 @@
   pointer-events: auto;
 }
 
-.inidos-admin-shell__plugin-badge {
+.klao-admin-shell__plugin-badge {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: var(--inidos-text-muted);
+  color: var(--klao-text-muted);
   background: rgba(0, 0, 0, 0.04);
   padding: 6px 12px;
   border-radius: 100px;
-  border: 1px solid var(--inidos-border-color);
+  border: 1px solid var(--klao-border-color);
 }
 
-.inidos-admin-shell__content {
+.klao-admin-shell__content {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--inidos-spacing-unit) * 3);
+  gap: calc(var(--klao-spacing-unit) * 3);
 }
 
-@keyframes inidos-fade-in {
+@keyframes klao-fade-in {
   from {
     opacity: 0;
     transform: translateY(8px);

@@ -1,20 +1,20 @@
-# INIDOS Console — Frontend UI
+# KLAO Console — Frontend UI
 
 ## Product Identity
-- **Product Name**: INIDOS (pronounced "ไอ-นิ-ดอส")
+- **Product Name**: KLAO (pronounced "ไอ-นิ-ดอส")
 - **Full Name**: Ignite Idea Operating System
 - **Domain**: Internal usage at Ignite Idea
-- **This Project**: **INIDOS Console** — The frontend UI
-- **Backend**: **INIDOS Core** — Headless Internal Engine (`/packages/core`)
+- **This Project**: **KLAO Console** — The frontend UI
+- **Backend**: **KLAO Core** — Headless Internal Engine (`/packages/core`)
 
 ## Project Overview
-INIDOS Console is the frontend application for the INIDOS platform. It connects to the INIDOS Core backend API to provide a visual interface for managing projects, sales leads, cases, and timesheets within Ignite Idea.
+KLAO Console is the frontend application for the KLAO platform. It connects to the KLAO Core backend API to provide a visual interface for managing projects, sales leads, cases, and timesheets within Ignite Idea.
 
 ## Technology Stack
 - **Framework**: React + TypeScript (Vite)
 - **Routing**: `react-router-dom` (v6+) with dynamic route registration
 - **State Management**: `ConsoleProvider` (React Context) for global App/Navigation state
-- **API Client**: Native Fetch with Vite Proxy to `inidos-core` (host.docker.internal:3000)
+- **API Client**: Native Fetch with Vite Proxy to `klao-core` (host.docker.internal:3000)
 - **Styling**: Vanilla CSS (BEM naming convention)
 - **Iconography**: `lucide-react` with a `DynamicIcon` mapper for DB-driven icons
 
@@ -29,19 +29,19 @@ INIDOS Console is the frontend application for the INIDOS platform. It connects 
 ## Standard Page Layout (Content Area)
 All primary pages (Data Tables, Admin Plugins, Dashboards) MUST follow this structural hierarchy to maintain design consistency:
 
-1. **Root Container**: Uses `display: flex; flex-direction: column; gap: var(--inidos-spacing-unit) * 3`.
-2. **Page Header (`.inidos-page-header`)**:
+1. **Root Container**: Uses `display: flex; flex-direction: column; gap: var(--klao-spacing-unit) * 3`.
+2. **Page Header (`.klao-page-header`)**:
    - **1. Icon Wrapper**: Dynamic icon representing the entity or module (Row).
    - **2 & 3. Title & Subtitle**: Stacked vertically, positioned to the right of the icon.
    - **4. Action Button Area (`__right`)**: Region for buttons, icons, or dropdowns.
    - **Layout**: The header uses `flex-direction: row` for the identity area.
 3. **Content Area**:
-   - Uses the global `inidos-main-content` padding (4 units).
-   - Content should be grouped in `.inidos-card` units.
+   - Uses the global `klao-main-content` padding (4 units).
+   - Content should be grouped in `.klao-card` units.
    - **DO NOT** add internal padding to the page root, as the shell already provides it.
 
 ## Folder Structure
-/Users/asana/Repo/INIDOS/packages/console/
+/Users/asana/Repo/KLAO/packages/console/
 ├── src/
 │   ├── components/
 │   │   ├── layout/          ← Core structural components (Sidebar, Topbar, etc.)
@@ -56,7 +56,7 @@ All primary pages (Data Tables, Admin Plugins, Dashboards) MUST follow this stru
 │   │   └── globals.css       ← Base resets and utility classes
 │   └── App.tsx               ← Router and Context Provider entry point
 
-## API Endpoints (INIDOS Core Proxy)
+## API Endpoints (KLAO Core Proxy)
 The console proxies requests through Vite to the core backend.
 
 ### UI Metadata
@@ -74,7 +74,7 @@ The console proxies requests through Vite to the core backend.
 
 
 ## Future Constraint: PWA Offline-First Architecture (DO NOT IMPLEMENT YET)
-> **See full spec:** [ROADMAP.md — Phase 4](file:///Users/asana/Repo/INIDOS/docs/ROADMAP.md)
+> **See full spec:** [ROADMAP.md — Phase 4](file:///Users/asana/Repo/KLAO/docs/ROADMAP.md)
 
 The following constraints are **pre-declared** for the Console (UI Layer). AI agents MUST NOT make architectural decisions that would block the offline sync pipeline described below.
 

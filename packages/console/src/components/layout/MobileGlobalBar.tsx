@@ -16,32 +16,32 @@ const MobileGlobalBar: React.FC<MobileGlobalBarProps> = ({
   onAppSwitcherToggle
 }) => {
   return (
-    <nav className="inidos-mobile-global-bar">
-      <ul className="inidos-mobile-global-bar__list">
-        <li className="inidos-mobile-global-bar__item">
-          <button className="inidos-mobile-global-bar__action" onClick={onAppSwitcherToggle}>
+    <nav className="klao-mobile-global-bar">
+      <ul className="klao-mobile-global-bar__list">
+        <li className="klao-mobile-global-bar__item">
+          <button className="klao-mobile-global-bar__action" onClick={onAppSwitcherToggle}>
             <LayoutGrid size={28} />
           </button>
         </li>
-        <li className="inidos-mobile-global-bar__item">
-          <button className="inidos-mobile-global-bar__action" onClick={onSearchToggle}>
+        <li className="klao-mobile-global-bar__item">
+          <button className="klao-mobile-global-bar__action" onClick={onSearchToggle}>
             <Search size={28} />
           </button>
         </li>
-        <li className="inidos-mobile-global-bar__item">
-          <button className="inidos-mobile-global-bar__action" onClick={onMenuToggle}>
+        <li className="klao-mobile-global-bar__item">
+          <button className="klao-mobile-global-bar__action" onClick={onMenuToggle}>
             <Menu size={28} />
           </button>
         </li>
 
 
-        <li className="inidos-mobile-global-bar__item">
-          <button className="inidos-mobile-global-bar__action">
+        <li className="klao-mobile-global-bar__item">
+          <button className="klao-mobile-global-bar__action">
             <Bell size={28} />
           </button>
         </li>
-        <li className="inidos-mobile-global-bar__item">
-          <button className="inidos-mobile-global-bar__action inidos-mobile-global-bar__action--profile">
+        <li className="klao-mobile-global-bar__item">
+          <button className="klao-mobile-global-bar__action klao-mobile-global-bar__action--profile">
             <User size={28} />
           </button>
         </li>

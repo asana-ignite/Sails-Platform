@@ -1,4 +1,4 @@
-.inidos-mobile-app-switcher {
+.klao-mobile-app-switcher {
   display: none;
   position: fixed;
   bottom: 70px; /* Floating slightly above dock */
@@ -22,27 +22,27 @@
 }
 
 @media (max-width: 768px) {
-  .inidos-mobile-app-switcher {
+  .klao-mobile-app-switcher {
     display: block !important;
     bottom: calc(75px + env(safe-area-inset-bottom));
   }
 }
 
-.inidos-mobile-app-switcher--visible {
+.klao-mobile-app-switcher--visible {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
 }
 
-.inidos-mobile-app-switcher__grid {
+.klao-mobile-app-switcher__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px 8px; /* More vertical gap, tighter horizontal */
   justify-items: center;
 }
 
-.inidos-mobile-app-switcher__item {
+.klao-mobile-app-switcher__item {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -55,23 +55,23 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.inidos-mobile-app-switcher__item:active {
+.klao-mobile-app-switcher__item:active {
   background-color: rgba(157, 206, 224, 0.25);
   transform: translateY(2px);
 }
 
 
-.inidos-mobile-app-switcher__item:active .inidos-mobile-app-switcher__icon-wrapper {
+.klao-mobile-app-switcher__item:active .klao-mobile-app-switcher__icon-wrapper {
   transform: scale(0.9);
   background: rgba(255, 255, 255, 0.7);
 }
 
-.inidos-mobile-app-switcher__item--active {
+.klao-mobile-app-switcher__item--active {
   background-color: rgba(157, 206, 224, 0.1);
   border-radius: 20px;
 }
 
-.inidos-mobile-app-switcher__icon-wrapper {
+.klao-mobile-app-switcher__icon-wrapper {
   width: 52px;
   height: 52px;
   display: flex;
@@ -80,20 +80,20 @@
   background-color: white;
   border-radius: 16px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-  color: var(--inidos-primary);
+  color: var(--klao-primary);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.inidos-mobile-app-switcher__item--active .inidos-mobile-app-switcher__icon-wrapper {
-  background-color: var(--inidos-primary);
+.klao-mobile-app-switcher__item--active .klao-mobile-app-switcher__icon-wrapper {
+  background-color: var(--klao-primary);
   color: white;
 }
 
-.inidos-mobile-app-switcher__name {
+.klao-mobile-app-switcher__name {
   font-size: 0.7rem;
   line-height: 1.2;
   font-weight: 600;
-  color: var(--inidos-text-main);
+  color: var(--klao-text-main);
   max-width: 80px; /* Prevent label from stretching the column */
   display: -webkit-box;
   -webkit-line-clamp: 2;

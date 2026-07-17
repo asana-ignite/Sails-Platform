@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KlaoTableDefinition } from '@inidos/shared';
+import { KlaoTableDefinition } from '@klao/shared';
 import './ObjectManager.css';
 
 // Mock data for demonstration

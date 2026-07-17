@@ -27,9 +27,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
   }, []);
 
   const sidebarClasses = [
-    'inidos-sidebar',
-    (isCollapsed || isMobileView) ? 'inidos-sidebar--collapsed' : '',
-    isMobileOpen ? 'inidos-sidebar--mobile-open' : ''
+    'klao-sidebar',
+    (isCollapsed || isMobileView) ? 'klao-sidebar--collapsed' : '',
+    isMobileOpen ? 'klao-sidebar--mobile-open' : ''
   ].filter(Boolean).join(' ');
 
   // Effectively collapsed if desktop-collapsed OR if on mobile
@@ -123,17 +123,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
 
   return (
     <aside className={sidebarClasses} ref={sidebarRef}>
-      <button className="inidos-sidebar__toggle" onClick={onToggle}>
+      <button className="klao-sidebar__toggle" onClick={onToggle}>
         {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
       </button>
 
-      <nav className="inidos-sidebar__nav">
+      <nav className="klao-sidebar__nav">
         {isLoading ? (
-          <div className="inidos-sidebar__loading">
+          <div className="klao-sidebar__loading">
             <Spinner size={20} label="Syncing..." />
           </div>
         ) : (
-          <ul className="inidos-sidebar__menu">
+          <ul className="klao-sidebar__menu">
             {navigationItems.map((item) => {
               const hasChildren = item.children && item.children.length > 0;
               const isOpen = openMenus[item.id];
@@ -143,25 +143,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
               return (
                 <li 
                   key={item.id} 
-                  className={`inidos-sidebar__item ${isOpen ? 'inidos-sidebar__item--open' : ''}`}
+                  className={`klao-sidebar__item ${isOpen ? 'klao-sidebar__item--open' : ''}`}
                   onMouseEnter={(e) => hasChildren && handleMouseEnter(item.id, e)}
                   onMouseLeave={() => hasChildren && handleMouseLeave(item.id)}
                 >
                   <NavLink 
                     to={hasChildren ? '#' : path} 
                     className={({ isActive }) => 
-                      `inidos-sidebar__link ${isActive && !hasChildren ? 'inidos-sidebar__link--active' : ''} ${hasChildren ? 'inidos-sidebar__link--has-children' : ''}`
+                      `klao-sidebar__link ${isActive && !hasChildren ? 'klao-sidebar__link--active' : ''} ${hasChildren ? 'klao-sidebar__link--has-children' : ''}`
                     }
                     onClick={(e) => hasChildren ? toggleSubMenu(item.id, e) : undefined}
                   >
-                    <span className="inidos-sidebar__icon">
+                    <span className="klao-sidebar__icon">
                       <DynamicIcon name={item.icon || 'Circle'} size={18} />
                     </span>
                     {!isEffectivelyCollapsed && (
                       <>
-                        <span className="inidos-sidebar__text">{item.label}</span>
+                        <span className="klao-sidebar__text">{item.label}</span>
                         {hasChildren && (
-                          <span className="inidos-sidebar__chevron">
+                          <span className="klao-sidebar__chevron">
                             <ChevronRight size={14} style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.3s' }} />
                           </span>
                         )}
@@ -171,21 +171,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
 
                   {hasChildren && (
                     <ul 
-                      className={`inidos-sidebar__submenu ${isEffectivelyCollapsed ? 'inidos-sidebar__submenu--flyout' : ''}`}
+                      className={`klao-sidebar__submenu ${isEffectivelyCollapsed ? 'klao-sidebar__submenu--flyout' : ''}`}
                       style={isEffectivelyCollapsed && isOpen ? { top: `${menuTop}px` } : {}}
                     >
                       {item.children?.map((sub) => (
-                        <li key={sub.id} className="inidos-sidebar__submenu-item">
+                        <li key={sub.id} className="klao-sidebar__submenu-item">
                           <NavLink 
                             to={getMenuPath(sub)} 
                             className={({ isActive }) => 
-                              `inidos-sidebar__submenu-link ${isActive ? 'inidos-sidebar__submenu-link--active' : ''}`
+                              `klao-sidebar__submenu-link ${isActive ? 'klao-sidebar__submenu-link--active' : ''}`
                             }
                           >
-                            <span className="inidos-sidebar__submenu-icon">
+                            <span className="klao-sidebar__submenu-icon">
                               <DynamicIcon name={sub.icon || 'Circle'} size={16} />
                             </span>
-                            <span className="inidos-sidebar__submenu-text">{sub.label}</span>
+                            <span className="klao-sidebar__submenu-text">{sub.label}</span>
                           </NavLink>
                         </li>
                       ))}
@@ -198,14 +198,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
         )}
       </nav>
 
-      <div className="inidos-sidebar__footer">
+      <div className="klao-sidebar__footer">
         <div 
-          className={`inidos-sidebar__status ${showStatus ? 'inidos-sidebar__status--active' : ''}`}
+          className={`klao-sidebar__status ${showStatus ? 'klao-sidebar__status--active' : ''}`}
           onClick={handleStatusClick}
         >
-          <div className="inidos-sidebar__status-indicator"></div>
+          <div className="klao-sidebar__status-indicator"></div>
           {(!isEffectivelyCollapsed || showStatus) && (
-            <span className="inidos-sidebar__status-text">Core System v1.0</span>
+            <span className="klao-sidebar__status-text">Core System v1.0</span>
           )}
         </div>
       </div>

@@ -1,5 +1,5 @@
 {
-  "name": "inidos-platform",
+  "name": "klao-platform",
   "private": true,
   "workspaces": [
     "packages/*"

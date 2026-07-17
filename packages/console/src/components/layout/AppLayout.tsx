@@ -60,15 +60,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="inidos-layout-wrapper">
+    <div className="klao-layout-wrapper">
       <Topbar onMenuToggle={toggleMobileMenu} />
-      <div className="inidos-layout-wrapper__container">
+      <div className="klao-layout-wrapper__container">
         <Sidebar 
           isCollapsed={isSidebarCollapsed} 
           onToggle={toggleSidebar} 
           isMobileOpen={isMobileMenuOpen}
         />
-        <main className="inidos-main-content" onClick={closeAllMobilePanels}>
+        <main className="klao-main-content" onClick={closeAllMobilePanels}>
           {children}
         </main>
       </div>

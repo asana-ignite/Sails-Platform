@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ConsoleApp, ConsoleMenu } from '@inidos/shared';
+import { ConsoleApp, ConsoleMenu } from '@klao/shared';
 
 export type { ConsoleApp, ConsoleMenu };
 import { useAuth } from './AuthContext';

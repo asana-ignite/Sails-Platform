@@ -2,7 +2,7 @@ import { db } from '../lib/db';
 import { AlchemaCore } from '../core/engine/AlchemaCore';
 import { Pool } from 'pg';
 import { ConnectionManager } from '../core/engine/ConnectionManager';
-import { ProvisionTenantResponse } from '@inidos/shared';
+import { ProvisionTenantResponse } from '@klao/shared';
 
 export class TenantProvisioner {
   private engine: AlchemaCore;

@@ -1,6 +1,6 @@
 /**
- * INIDOS Global Types
+ * KLAO Global Types
  */
 
-export * from '@inidos/shared';
+export * from '@klao/shared';
 

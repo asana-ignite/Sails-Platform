@@ -17,21 +17,21 @@ const MobileAppSwitcher: React.FC<MobileAppSwitcherProps> = ({ isVisible, onClos
   };
 
   return (
-    <div className={`inidos-mobile-app-switcher ${isVisible ? 'inidos-mobile-app-switcher--visible' : ''}`}>
+    <div className={`klao-mobile-app-switcher ${isVisible ? 'klao-mobile-app-switcher--visible' : ''}`}>
       {isLoading ? (
-        <div className="inidos-mobile-app-switcher__loading">Loading...</div>
+        <div className="klao-mobile-app-switcher__loading">Loading...</div>
       ) : (
-        <div className="inidos-mobile-app-switcher__grid">
+        <div className="klao-mobile-app-switcher__grid">
           {apps.map((app) => (
             <div 
               key={app.id} 
-              className={`inidos-mobile-app-switcher__item ${activeApp?.id === app.id ? 'inidos-mobile-app-switcher__item--active' : ''}`}
+              className={`klao-mobile-app-switcher__item ${activeApp?.id === app.id ? 'klao-mobile-app-switcher__item--active' : ''}`}
               onClick={() => handleAppClick(app.id)}
             >
-              <div className="inidos-mobile-app-switcher__icon-wrapper">
+              <div className="klao-mobile-app-switcher__icon-wrapper">
                 <DynamicIcon name={app.icon || 'Box'} size={24} />
               </div>
-              <span className="inidos-mobile-app-switcher__name">{app.name}</span>
+              <span className="klao-mobile-app-switcher__name">{app.name}</span>
             </div>
           ))}
         </div>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { TenantProvisioner } from '../../../../services/TenantProvisioner';
-import { ProvisionTenantRequest } from '@inidos/shared';
+import { ProvisionTenantRequest } from '@klao/shared';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL

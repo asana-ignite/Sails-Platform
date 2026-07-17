@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ConsoleApp, ConsoleMenu } from '@inidos/shared';
+import { ConsoleApp, ConsoleMenu } from '@klao/shared';
 
 
 

@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: inidos-db
+    container_name: klao-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: mysecretpassword
@@ -20,8 +20,8 @@ services:
     build:
       context: .
       dockerfile: packages/core/Dockerfile
-    image: inidos-core:latest
-    container_name: inidos-core
+    image: klao-core:latest
+    container_name: klao-core
     depends_on:
       db:
         condition: service_healthy
@@ -45,8 +45,8 @@ services:
     build:
       context: .
       dockerfile: packages/console/Dockerfile
-    image: inidos-console:latest
-    container_name: inidos-console
+    image: klao-console:latest
+    container_name: klao-console
     ports:
       - "5173:5173"
     volumes:

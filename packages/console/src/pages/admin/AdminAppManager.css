@@ -1,24 +1,24 @@
-.inidos-app-manager {
+.klao-app-manager {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-.inidos-app-manager__actions {
+.klao-app-manager__actions {
   display: flex;
   justify-content: flex-end;
 }
 
-.inidos-app-grid {
+.klao-app-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
 }
 
-.inidos-app-card {
-  background: var(--inidos-bg-card);
-  border: 1px solid var(--inidos-border-color);
-  border-radius: var(--inidos-radius-lg);
+.klao-app-card {
+  background: var(--klao-bg-card);
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-lg);
   padding: 20px;
   display: flex;
   align-items: center;
@@ -27,52 +27,52 @@
   transition: all 0.3s ease;
 }
 
-.inidos-app-card:hover {
+.klao-app-card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--inidos-shadow-md);
-  border-color: var(--inidos-primary);
+  box-shadow: var(--klao-shadow-md);
+  border-color: var(--klao-primary);
 }
 
-.inidos-app-card__icon {
+.klao-app-card__icon {
   width: 48px;
   height: 48px;
-  background: var(--inidos-primary-light);
-  color: var(--inidos-primary);
-  border-radius: var(--inidos-radius-md);
+  background: var(--klao-primary-light);
+  color: var(--klao-primary);
+  border-radius: var(--klao-radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.inidos-app-card__info {
+.klao-app-card__info {
   flex: 1;
 }
 
-.inidos-app-card__info h3 {
+.klao-app-card__info h3 {
   font-size: 1.1rem;
   font-weight: 700;
   margin-bottom: 4px;
 }
 
-.inidos-app-card__info p {
+.klao-app-card__info p {
   font-size: 0.85rem;
-  color: var(--inidos-text-muted);
+  color: var(--klao-text-muted);
 }
 
-.inidos-app-card__capability {
+.klao-app-card__capability {
   margin-top: 8px;
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 0.75rem;
-  color: var(--inidos-primary);
+  color: var(--klao-primary);
   background: rgba(157, 206, 224, 0.1);
   padding: 2px 8px;
   border-radius: 100px;
   width: fit-content;
 }
 
-.inidos-app-card__actions {
+.klao-app-card__actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -80,29 +80,29 @@
   transition: opacity 0.2s;
 }
 
-.inidos-app-card:hover .inidos-app-card__actions {
+.klao-app-card:hover .klao-app-card__actions {
   opacity: 1;
 }
 
-.inidos-app-card__actions button {
+.klao-app-card__actions button {
   padding: 6px;
-  border-radius: var(--inidos-radius-sm);
-  color: var(--inidos-text-muted);
+  border-radius: var(--klao-radius-sm);
+  color: var(--klao-text-muted);
   transition: all 0.2s;
 }
 
-.inidos-app-card__actions button:hover {
-  background: var(--inidos-bg-body);
-  color: var(--inidos-primary);
+.klao-app-card__actions button:hover {
+  background: var(--klao-bg-body);
+  color: var(--klao-primary);
 }
 
-.inidos-app-card__actions button.delete:hover {
+.klao-app-card__actions button.delete:hover {
   color: #ff4d4f;
   background: #fff1f0;
 }
 
 /* Modal Styling */
-.inidos-modal-overlay {
+.klao-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -116,53 +116,53 @@
   z-index: 1000;
 }
 
-.inidos-modal {
+.klao-modal {
   background: white;
   width: 100%;
   max-width: 500px;
-  border-radius: var(--inidos-radius-lg);
+  border-radius: var(--klao-radius-lg);
   padding: 32px;
-  box-shadow: var(--inidos-shadow-lg);
+  box-shadow: var(--klao-shadow-lg);
   animation: modal-slide-up 0.3s ease-out;
 }
 
-.inidos-modal h2 {
+.klao-modal h2 {
   font-size: 1.5rem;
   margin-bottom: 24px;
 }
 
-.inidos-form-group {
+.klao-form-group {
   margin-bottom: 20px;
 }
 
-.inidos-form-row {
+.klao-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.inidos-form-group label {
+.klao-form-group label {
   display: block;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--inidos-text-muted);
+  color: var(--klao-text-muted);
   margin-bottom: 8px;
 }
 
-.inidos-form-group input {
+.klao-form-group input {
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid var(--inidos-border-color);
-  border-radius: var(--inidos-radius-md);
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-md);
   font-size: 0.95rem;
 }
 
-.inidos-form-group input:focus {
-  border-color: var(--inidos-primary);
-  box-shadow: 0 0 0 3px var(--inidos-primary-light);
+.klao-form-group input:focus {
+  border-color: var(--klao-primary);
+  box-shadow: 0 0 0 3px var(--klao-primary-light);
 }
 
-.inidos-modal__footer {
+.klao-modal__footer {
   margin-top: 32px;
   display: flex;
   justify-content: flex-end;

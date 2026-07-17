@@ -1,6 +1,6 @@
 # Workspace Configuration: Modules & Navigation
 
-This document outlines the standard configuration for the **INIDOS** Workspace, including core modules and their navigation structures tailored for Ignite Idea operations.
+This document outlines the standard configuration for the **KLAO** Workspace, including core modules and their navigation structures tailored for Ignite Idea operations.
 
 ## 1. Sales Module
 *Focus: Pipeline management and lead tracking.*
@@ -66,7 +66,7 @@ This document outlines the standard configuration for the **INIDOS** Workspace, 
 
 ## API Payloads Reference
 
-To provision these via the **INIDOS Core** API, use the following patterns:
+To provision these via the **KLAO Core** API, use the following patterns:
 
 ### Create Module (App)
 ```http

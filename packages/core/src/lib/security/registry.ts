@@ -1,7 +1,7 @@
 /**
  * SYSTEM_PERMISSION_REGISTRY
  * 
- * This file is the Source of Truth for all functional capabilities in the INIDOS platform.
+ * This file is the Source of Truth for all functional capabilities in the KLAO platform.
  * It is used by the backend to verify access and by the Admin UI to render permission toggles.
  * 
  * Pattern: system.<module>.<action>

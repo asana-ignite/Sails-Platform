@@ -3,7 +3,7 @@ version: '3.8'
 services:
   db:
     image: postgres:16-alpine
-    container_name: inidos-db
+    container_name: klao-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: mysecretpassword
@@ -20,8 +20,8 @@ services:
 
   app:
     build: .
-    image: inidos-core:latest
-    container_name: inidos-app
+    image: klao-core:latest
+    container_name: klao-app
     depends_on:
       db:
         condition: service_healthy

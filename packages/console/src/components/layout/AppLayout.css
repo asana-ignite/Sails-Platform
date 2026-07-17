@@ -1,11 +1,11 @@
-.inidos-layout-wrapper {
+.klao-layout-wrapper {
   display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100%;
 }
 
-.inidos-layout-wrapper__container {
+.klao-layout-wrapper__container {
   flex: 1;
   display: flex;
   flex-direction: row;
@@ -13,9 +13,9 @@
   overflow: hidden;
 }
 
-.inidos-main-content {
+.klao-main-content {
   flex: 1;
-  padding: calc(var(--inidos-spacing-unit) * 4);
+  padding: calc(var(--klao-spacing-unit) * 4);
   overflow-y: auto;
-  background-color: var(--inidos-bg-body);
+  background-color: var(--klao-bg-body);
 }

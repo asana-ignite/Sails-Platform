@@ -1,13 +1,13 @@
 /**
- * INIDOS Shared Types — API Contract
+ * KLAO Shared Types — API Contract
  * 
  * This file defines all TypeScript interfaces used between
- * INIDOS Core (Backend) and INIDOS Console (Frontend).
+ * KLAO Core (Backend) and KLAO Console (Frontend).
  * 
  * Both projects should reference these types to ensure
  * type-safe communication across the API boundary.
  * 
- * Source of truth: inidos-core/shared/types.ts
+ * Source of truth: klao-core/shared/types.ts
  */
 
 // ─── Core Models ──────────────────────────────────────────────
@@ -114,7 +114,7 @@ export interface ProvisionTenantRequest {
 
 export interface ProvisionTenantResponse {
   tenant: Tenant;
-  user: User;
+  user: KlaoUser;
   adminTeam: Team;
 }
 

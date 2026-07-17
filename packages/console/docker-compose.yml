@@ -1,7 +1,7 @@
 services:
-  inidos-console:
-    container_name: inidos-console
-    image: inidos-console:latest
+  klao-console:
+    container_name: klao-console
+    image: klao-console:latest
     build: .
     ports:
       - "5173:5173"

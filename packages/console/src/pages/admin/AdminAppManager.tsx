@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, LayoutGrid, Shield, ArrowUp, ArrowDown } from 'lucide-react';
-import { ConsoleApp } from '@inidos/shared';
+import { ConsoleApp } from '@klao/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import './AdminAppManager.css';
 
@@ -52,13 +52,13 @@ const AdminAppManager: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="inidos-admin-loading">Syncing Apps...</div>;
+  if (loading) return <div className="klao-admin-loading">Syncing Apps...</div>;
 
   return (
-    <div className="inidos-app-manager">
-      <div className="inidos-app-manager__actions">
+    <div className="klao-app-manager">
+      <div className="klao-app-manager__actions">
         <button 
-          className="inidos-btn inidos-btn--primary"
+          className="klao-btn klao-btn--primary"
           onClick={() => setIsEditing({ id: 'new-' + Date.now(), name: '', icon: 'Box', order: apps.length, requiredCapability: null, tenantId: '', menus: [] })}
         >
           <Plus size={18} />
@@ -66,23 +66,23 @@ const AdminAppManager: React.FC = () => {
         </button>
       </div>
 
-      <div className="inidos-app-grid">
+      <div className="klao-app-grid">
         {apps.map(app => (
-          <div key={app.id} className="inidos-app-card">
-            <div className="inidos-app-card__icon">
+          <div key={app.id} className="klao-app-card">
+            <div className="klao-app-card__icon">
               <DynamicIcon name={app.icon || 'Box'} size={24} />
             </div>
-            <div className="inidos-app-card__info">
+            <div className="klao-app-card__info">
               <h3>{app.name}</h3>
               <p>{app._count?.menus || 0} Menu Items</p>
               {app.requiredCapability && (
-                <div className="inidos-app-card__capability">
+                <div className="klao-app-card__capability">
                   <Shield size={12} />
                   <span>{app.requiredCapability}</span>
                 </div>
               )}
             </div>
-            <div className="inidos-app-card__actions">
+            <div className="klao-app-card__actions">
               <button onClick={() => setIsEditing(app)} title="Edit App"><Edit2 size={16} /></button>
               <button className="delete" title="Delete App"><Trash2 size={16} /></button>
             </div>
@@ -91,11 +91,11 @@ const AdminAppManager: React.FC = () => {
       </div>
 
       {isEditing && (
-        <div className="inidos-modal-overlay">
-          <div className="inidos-modal">
+        <div className="klao-modal-overlay">
+          <div className="klao-modal">
             <h2>{isEditing.id.startsWith('new-') ? 'Create App' : 'Edit App'}</h2>
             <form onSubmit={handleSave}>
-              <div className="inidos-form-group">
+              <div className="klao-form-group">
                 <label>App Name</label>
                 <input 
                   type="text" 
@@ -104,8 +104,8 @@ const AdminAppManager: React.FC = () => {
                   required 
                 />
               </div>
-              <div className="inidos-form-row">
-                <div className="inidos-form-group">
+              <div className="klao-form-row">
+                <div className="klao-form-group">
                   <label>Icon Name (Lucide)</label>
                   <input 
                     type="text" 
@@ -113,7 +113,7 @@ const AdminAppManager: React.FC = () => {
                     onChange={e => setIsEditing({...isEditing, icon: e.target.value})}
                   />
                 </div>
-                <div className="inidos-form-group">
+                <div className="klao-form-group">
                   <label>Order</label>
                   <input 
                     type="number" 
@@ -122,7 +122,7 @@ const AdminAppManager: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="inidos-form-group">
+              <div className="klao-form-group">
                 <label>Required Capability (Optional)</label>
                 <input 
                   type="text" 
@@ -131,9 +131,9 @@ const AdminAppManager: React.FC = () => {
                   placeholder="e.g. system.admin"
                 />
               </div>
-              <div className="inidos-modal__footer">
-                <button type="button" className="inidos-btn" onClick={() => setIsEditing(null)}>Cancel</button>
-                <button type="submit" className="inidos-btn inidos-btn--primary">Save Changes</button>
+              <div className="klao-modal__footer">
+                <button type="button" className="klao-btn" onClick={() => setIsEditing(null)}>Cancel</button>
+                <button type="submit" className="klao-btn klao-btn--primary">Save Changes</button>
               </div>
             </form>
           </div>

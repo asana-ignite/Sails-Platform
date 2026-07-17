@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 /**
- * INIDOS CLI — Platform Administration Tool
+ * KLAO CLI — Platform Administration Tool
  * 
  * Usage:
- *   bun src/cli/inidos-cli.ts tenant:create "Acme Corp" admin@acme.com
- *   bun src/cli/inidos-cli.ts tenant:list
- *   bun src/cli/inidos-cli.ts db:clean
- *   bun src/cli/inidos-cli.ts db:check
+ *   bun src/cli/klao-cli.ts tenant:create "Acme Corp" admin@acme.com
+ *   bun src/cli/klao-cli.ts tenant:list
+ *   bun src/cli/klao-cli.ts db:clean
+ *   bun src/cli/klao-cli.ts db:check
  */
 
 import { Pool } from 'pg';
@@ -26,7 +26,7 @@ const COMMANDS: Record<string, string> = {
 
 function printHeader() {
   console.log('');
-  console.log('  ☁️  INIDOS CLI — Platform Administration');
+  console.log('  ☁️  KLAO CLI — Platform Administration');
   console.log('  ──────────────────────────────────────');
   console.log('');
 }

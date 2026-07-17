@@ -37,17 +37,17 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="inidos-login-container">
-      <div className="inidos-login-card">
-        <div className="inidos-login-header">
-          <div className="inidos-login-logo">
-            <span className="logo-text">INIDOS</span>
+    <div className="klao-login-container">
+      <div className="klao-login-card">
+        <div className="klao-login-header">
+          <div className="klao-login-logo">
+            <span className="logo-text">KLAO</span>
           </div>
           <h1>Internal Operating System</h1>
           <p>Secure access for Ignite Idea staff</p>
         </div>
 
-        <div className="inidos-login-content">
+        <div className="klao-login-content">
           <button className="google-login-button" onClick={handleGoogleLogin}>
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
             <span>Sign in with Google</span>
@@ -63,7 +63,7 @@ const Login: React.FC = () => {
           </button>
         </div>
 
-        <div className="inidos-login-footer">
+        <div className="klao-login-footer">
           <p>© 2026 Ignite Idea. Internal Use Only.</p>
         </div>
       </div>

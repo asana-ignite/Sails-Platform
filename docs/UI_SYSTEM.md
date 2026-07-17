@@ -13,7 +13,7 @@
 ## Interactions & Layout
 - **The Squeeze:** Active states use `transform: scale(0.9) translateY(2px)`.
 - **Smart Dismissal:** Click-away closes panels. Only one mobile panel open at a time.
-- **Page Container:** `.inidos-page-container` has `max-width: 1400px`.
+- **Page Container:** `.klao-page-container` has `max-width: 1400px`.
 - **Warning:** Header action hit-boxes MUST use `pointer-events: none` on container and `pointer-events: auto` on children to prevent invisible click-blocking.
 - **Rule:** Overlays and slide-over drawers MUST use React Portals to ensure they sit at the document root.
 

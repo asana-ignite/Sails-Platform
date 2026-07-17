@@ -16,10 +16,10 @@ body {
 }
 
 body {
-  font-family: var(--inidos-font-family);
-  font-size: var(--inidos-font-size-base);
-  background-color: var(--inidos-bg-body);
-  color: var(--inidos-text-main);
+  font-family: var(--klao-font-family);
+  font-size: var(--klao-font-size-base);
+  background-color: var(--klao-bg-body);
+  color: var(--klao-text-main);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -33,7 +33,7 @@ ol {
 a {
   text-decoration: none;
   color: inherit;
-  transition: var(--inidos-transition);
+  transition: var(--klao-transition);
 }
 
 button {
@@ -41,7 +41,7 @@ button {
   cursor: pointer;
   border: none;
   background: none;
-  transition: var(--inidos-transition);
+  transition: var(--klao-transition);
 }
 
 input {
@@ -50,117 +50,117 @@ input {
 }
 
 /* Base Utility for BEM Cards */
-.inidos-card {
-  background-color: var(--inidos-bg-card);
-  border-radius: var(--inidos-radius-md);
-  box-shadow: var(--inidos-shadow-sm);
-  padding: calc(var(--inidos-spacing-unit) * 3);
-  transition: var(--inidos-transition);
+.klao-card {
+  background-color: var(--klao-bg-card);
+  border-radius: var(--klao-radius-md);
+  box-shadow: var(--klao-shadow-sm);
+  padding: calc(var(--klao-spacing-unit) * 3);
+  transition: var(--klao-transition);
 }
 
-.inidos-card:hover {
-  box-shadow: var(--inidos-shadow-md);
+.klao-card:hover {
+  box-shadow: var(--klao-shadow-md);
 }
 
 /* Global Page Container */
-.inidos-page-container {
+.klao-page-container {
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
 }
 
 /* Global Page Header Styles */
-.inidos-page-header {
+.klao-page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: calc(var(--inidos-spacing-unit) * 4);
+  margin-bottom: calc(var(--klao-spacing-unit) * 4);
 }
 
-.inidos-page-header__left {
+.klao-page-header__left {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.inidos-page-header__icon-wrapper {
+.klao-page-header__icon-wrapper {
   width: 36px;
   height: 36px;
-  background-color: var(--inidos-primary-light);
-  color: var(--inidos-primary);
-  border-radius: var(--inidos-radius-md);
+  background-color: var(--klao-primary-light);
+  color: var(--klao-primary);
+  border-radius: var(--klao-radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--inidos-shadow-sm);
+  box-shadow: var(--klao-shadow-sm);
 }
 
-.inidos-page-header__title {
+.klao-page-header__title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--inidos-text-main);
+  color: var(--klao-text-main);
   margin-bottom: 1px;
   letter-spacing: -0.2px;
 }
 
-.inidos-page-header__subtitle {
+.klao-page-header__subtitle {
   font-size: 0.8rem;
-  color: var(--inidos-text-muted);
+  color: var(--klao-text-muted);
 }
 
 /* Global Button System */
-.inidos-btn {
+.klao-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   padding: 6px 12px;
-  border-radius: var(--inidos-radius-sm);
+  border-radius: var(--klao-radius-sm);
   font-weight: 600;
   font-size: 0.8rem;
   cursor: pointer;
-  transition: var(--inidos-transition);
+  transition: var(--klao-transition);
   border: 1px solid transparent;
   outline: none;
   white-space: nowrap;
 }
 
-.inidos-btn--primary {
-  background-color: var(--inidos-primary);
+.klao-btn--primary {
+  background-color: var(--klao-primary);
   color: white;
   box-shadow: 0 4px 10px rgba(157, 206, 224, 0.3);
 }
 
-.inidos-btn--primary:hover {
-  background-color: var(--inidos-primary-dark);
+.klao-btn--primary:hover {
+  background-color: var(--klao-primary-dark);
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(157, 206, 224, 0.5);
 }
 
-.inidos-btn--ghost {
+.klao-btn--ghost {
   background: transparent;
-  border-color: var(--inidos-border-color);
-  color: var(--inidos-text-main);
+  border-color: var(--klao-border-color);
+  color: var(--klao-text-main);
 }
 
-.inidos-btn--ghost:hover {
-  background-color: var(--inidos-bg-body);
-  color: var(--inidos-primary);
-  border-color: var(--inidos-primary);
+.klao-btn--ghost:hover {
+  background-color: var(--klao-bg-body);
+  color: var(--klao-primary);
+  border-color: var(--klao-primary);
 }
 
-.inidos-btn--danger {
-  color: var(--inidos-danger);
-  background-color: var(--inidos-danger-light);
+.klao-btn--danger {
+  color: var(--klao-danger);
+  background-color: var(--klao-danger-light);
 }
 
-.inidos-btn--danger:hover {
-  background-color: var(--inidos-danger);
+.klao-btn--danger:hover {
+  background-color: var(--klao-danger);
   color: white;
 }
 
 /* Global Modal System */
-.inidos-modal-overlay {
+.klao-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -172,16 +172,16 @@ input {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  animation: inidos-fade-in 0.2s ease-out;
+  animation: klao-fade-in 0.2s ease-out;
 }
 
 /* Premium Custom Checkbox */
-.inidos-checkbox {
+.klao-checkbox {
   appearance: none;
   -webkit-appearance: none;
   width: 18px;
   height: 18px;
-  border: 1px solid var(--inidos-border-color);
+  border: 1px solid var(--klao-border-color);
   border-radius: 4px;
   background: white;
   cursor: pointer;
@@ -193,17 +193,17 @@ input {
   vertical-align: middle;
 }
 
-.inidos-checkbox:hover {
-  border-color: var(--inidos-primary);
-  background: var(--inidos-primary-light);
+.klao-checkbox:hover {
+  border-color: var(--klao-primary);
+  background: var(--klao-primary-light);
 }
 
-.inidos-checkbox:checked {
-  background: var(--inidos-primary);
-  border-color: var(--inidos-primary);
+.klao-checkbox:checked {
+  background: var(--klao-primary);
+  border-color: var(--klao-primary);
 }
 
-.inidos-checkbox:checked::after {
+.klao-checkbox:checked::after {
   content: "";
   width: 5px;
   height: 10px;
@@ -213,12 +213,12 @@ input {
   margin-bottom: 2px;
 }
 
-.inidos-checkbox:indeterminate {
-  background: var(--inidos-primary);
-  border-color: var(--inidos-primary);
+.klao-checkbox:indeterminate {
+  background: var(--klao-primary);
+  border-color: var(--klao-primary);
 }
 
-.inidos-checkbox:indeterminate::after {
+.klao-checkbox:indeterminate::after {
   content: "";
   width: 10px;
   height: 2px;
@@ -226,26 +226,26 @@ input {
   border-radius: 1px;
 }
 
-.inidos-modal {
-  background: var(--inidos-bg-card);
+.klao-modal {
+  background: var(--klao-bg-card);
   width: 100%;
   max-width: 550px;
-  border-radius: var(--inidos-radius-lg);
+  border-radius: var(--klao-radius-lg);
   padding: 32px;
-  box-shadow: var(--inidos-shadow-lg);
-  border: 1px solid var(--inidos-border-color);
-  animation: inidos-modal-slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: var(--klao-shadow-lg);
+  border: 1px solid var(--klao-border-color);
+  animation: klao-modal-slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.inidos-modal h2 {
+.klao-modal h2 {
   font-size: 1.5rem;
   font-weight: 800;
   margin-bottom: 24px;
-  color: var(--inidos-text-main);
+  color: var(--klao-text-main);
   letter-spacing: -0.5px;
 }
 
-.inidos-modal__footer {
+.klao-modal__footer {
   margin-top: 32px;
   display: flex;
   justify-content: flex-end;
@@ -253,45 +253,45 @@ input {
 }
 
 /* Global Form System */
-.inidos-form-group {
+.klao-form-group {
   margin-bottom: 20px;
 }
 
-.inidos-form-row {
+.klao-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.inidos-form-group label {
+.klao-form-group label {
   display: block;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--inidos-text-muted);
+  color: var(--klao-text-muted);
   margin-bottom: 8px;
 }
 
-.inidos-form-group input,
-.inidos-form-group select,
-.inidos-form-group textarea {
+.klao-form-group input,
+.klao-form-group select,
+.klao-form-group textarea {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid var(--inidos-border-color);
-  border-radius: var(--inidos-radius-md);
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-md);
   font-size: 0.95rem;
-  background: var(--inidos-bg-body);
-  color: var(--inidos-text-main);
-  transition: var(--inidos-transition);
+  background: var(--klao-bg-body);
+  color: var(--klao-text-main);
+  transition: var(--klao-transition);
 }
 
-.inidos-form-group input:focus,
-.inidos-form-group select:focus {
-  border-color: var(--inidos-primary);
-  background: var(--inidos-bg-card);
-  box-shadow: 0 0 0 3px var(--inidos-primary-light);
+.klao-form-group input:focus,
+.klao-form-group select:focus {
+  border-color: var(--klao-primary);
+  background: var(--klao-bg-card);
+  box-shadow: 0 0 0 3px var(--klao-primary-light);
 }
 
-@keyframes inidos-fade-in {
+@keyframes klao-fade-in {
   from {
     opacity: 0;
   }
@@ -301,7 +301,7 @@ input {
   }
 }
 
-@keyframes inidos-modal-slide-up {
+@keyframes klao-modal-slide-up {
   from {
     opacity: 0;
     transform: translateY(20px) scale(0.95);

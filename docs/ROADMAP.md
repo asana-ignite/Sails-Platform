@@ -1,13 +1,13 @@
-# INIDOS — Internal Data Access & Security Roadmap
+# KLAO — Internal Data Access & Security Roadmap
 
-This document outlines the strategic security implementation plan for **INIDOS** (Ignite Idea Operating System).
+This document outlines the strategic security implementation plan for **KLAO** (Ignite Idea Operating System).
 
 **Strategic Architecture:**
-1. **INIDOS Core**: Headless Backend API (Owned by **Backend Engineer**).
-2. **INIDOS Console**: Frontend UI (Owned by **Frontend Engineer**).
-3. **INIDOS Shared**: Type Contracts & Shared Models (Owned by **Platform Architect**).
-4. **INIDOS Database**: Metadata & Dynamic Schemas (Owned by **Database Engineer**).
-5. **INIDOS QA**: Automated Verification Suite (Owned by **QA Tester**).
+1. **KLAO Core**: Headless Backend API (Owned by **Backend Engineer**).
+2. **KLAO Console**: Frontend UI (Owned by **Frontend Engineer**).
+3. **KLAO Shared**: Type Contracts & Shared Models (Owned by **Platform Architect**).
+4. **KLAO Database**: Metadata & Dynamic Schemas (Owned by **Database Engineer**).
+5. **KLAO QA**: Automated Verification Suite (Owned by **QA Tester**).
 
 ## Identity & Access Management (IAM)
 
@@ -54,7 +54,7 @@ This document outlines the strategic security implementation plan for **INIDOS**
 ---
 
 ## Phase 4: PWA — Offline-First Field Ops (🔲 Pending — DO NOT IMPLEMENT YET)
-> Constraints bind both INIDOS Console (UI) and INIDOS Core (API).
+> Constraints bind both KLAO Console (UI) and KLAO Core (API).
 
 | Constraint | Rule |
 |---|---|

@@ -42,22 +42,22 @@ const AdminLogin: React.FC = () => {
   };
 
   return (
-    <div className="inidos-login-container">
-      <div className="inidos-login-card">
+    <div className="klao-login-container">
+      <div className="klao-login-card">
         <button className="back-button" onClick={() => navigate('/login')}>
           <ArrowLeft size={18} />
           <span>Back</span>
         </button>
 
-        <div className="inidos-login-header">
-          <div className="inidos-login-logo">
-            <span className="logo-text">INIDOS</span>
+        <div className="klao-login-header">
+          <div className="klao-login-logo">
+            <span className="logo-text">KLAO</span>
           </div>
           <h1>System Administrator</h1>
           <p>Login with your internal credentials</p>
         </div>
 
-        <form className="inidos-login-content" onSubmit={handleLogin}>
+        <form className="klao-login-content" onSubmit={handleLogin}>
           {error && <div className="login-error">{error}</div>}
           
           <div className="input-group">
@@ -82,18 +82,18 @@ const AdminLogin: React.FC = () => {
             />
           </div>
 
-          <button className="google-login-button" type="submit" disabled={isLoading} style={{ backgroundColor: 'var(--inidos-primary-dark)', color: 'white' }}>
+          <button className="google-login-button" type="submit" disabled={isLoading} style={{ backgroundColor: 'var(--klao-primary-dark)', color: 'white' }}>
             <span>{isLoading ? 'Verifying...' : 'Sign In'}</span>
           </button>
         </form>
 
-        <div className="inidos-login-footer">
+        <div className="klao-login-footer">
           <p>© 2026 Ignite Idea. Admin Portal.</p>
         </div>
       </div>
       
-      <div className="login-bg-blob blob-1" style={{ background: 'var(--inidos-danger)' }}></div>
-      <div className="login-bg-blob blob-2" style={{ background: 'var(--inidos-primary-dark)' }}></div>
+      <div className="login-bg-blob blob-1" style={{ background: 'var(--klao-danger)' }}></div>
+      <div className="login-bg-blob blob-2" style={{ background: 'var(--klao-primary-dark)' }}></div>
     </div>
   );
 };

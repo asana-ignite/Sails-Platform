@@ -12,13 +12,13 @@ const AdminPlaceholder: React.FC = () => {
     .replace(/\b\w/g, l => l.toUpperCase());
 
   return (
-    <div className="inidos-admin-placeholder">
-      <div className="inidos-admin-placeholder__icon">
+    <div className="klao-admin-placeholder">
+      <div className="klao-admin-placeholder__icon">
         <Settings size={40} />
       </div>
-      <div className="inidos-admin-placeholder__content">
-        <h1 className="inidos-admin-placeholder__title">{formattedName}</h1>
-        <p className="inidos-admin-placeholder__text">
+      <div className="klao-admin-placeholder__content">
+        <h1 className="klao-admin-placeholder__title">{formattedName}</h1>
+        <p className="klao-admin-placeholder__text">
           This administrative module is part of the <strong>Phase 6 Roadmap</strong>.
           <br />
           Currently connected to the <code>{location.pathname}</code> endpoint.

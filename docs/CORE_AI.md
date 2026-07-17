@@ -1,14 +1,14 @@
-# INIDOS Core — Internal Operating System Engine
+# KLAO Core — Internal Operating System Engine
 
 ## Product Identity
-- **Product Name**: INIDOS (pronounced "ไอ-นิ-ดอส")
+- **Product Name**: KLAO (pronounced "ไอ-นิ-ดอส")
 - **Full Name**: Ignite Idea Operating System
 - **Domain**: Internal usage at Ignite Idea
-- **Backend Packages**: **INIDOS Core** (this repository — `/packages/core`)
-- **Frontend Packages**: **INIDOS Console** (this repository — `/packages/console`, developed as a PWA and ready for offline usage)
+- **Backend Packages**: **KLAO Core** (this repository — `/packages/core`)
+- **Frontend Packages**: **KLAO Console** (this repository — `/packages/console`, developed as a PWA and ready for offline usage)
 
 ## Project Overview
-INIDOS Core is a high-performance, multi-tenant internal operating system engine built with Bun, TypeScript, and PostgreSQL. It operates as a completely **Headless Backend API** — no UI code exists in this project. The frontend (INIDOS Console) is fully decoupled. The system enables Ignite Idea to define custom data structures (Sales Leads, Project Tasks, Cases, Timesheets) which are dynamically translated into native PostgreSQL tables in real-time.
+KLAO Core is a high-performance, multi-tenant internal operating system engine built with Bun, TypeScript, and PostgreSQL. It operates as a completely **Headless Backend API** — no UI code exists in this project. The frontend (KLAO Console) is fully decoupled. The system enables Ignite Idea to define custom data structures (Sales Leads, Project Tasks, Cases, Timesheets) which are dynamically translated into native PostgreSQL tables in real-time.
 
 ## Project Documentation
 | File | Purpose |
@@ -20,7 +20,7 @@ INIDOS Core is a high-performance, multi-tenant internal operating system engine
 | **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** | Detailed REST API reference for metadata and dynamic data endpoints. |
 
 ## Terminology
-| INIDOS Term | What It Means |
+| KLAO Term | What It Means |
 |---|---|
 | **Table** | A dynamic data structure defined by the platform (e.g., "Projects"). Prisma model: `TableDefinition`. |
 | **Field** | A column within a Table (e.g., "Deadline"). Prisma model: `FieldDefinition`. |
@@ -28,8 +28,8 @@ INIDOS Core is a high-performance, multi-tenant internal operating system engine
 | **Console App** | A high-level application entry for the App Switcher (e.g., Sales, Timesheets). Prisma model: `ConsoleApp`. |
 | **Console Menu** | A navigation item in the Sidebar, potentially nested. Prisma model: `ConsoleMenu`. |
 
-## API Endpoints (INIDOS Core)
-The following key endpoints provide the UI configuration and dynamic data necessary for the **INIDOS Console** frontend.
+## API Endpoints (KLAO Core)
+The following key endpoints provide the UI configuration and dynamic data necessary for the **KLAO Console** frontend.
 
 ### UI Metadata
 | Method | Endpoint | Description |
@@ -63,7 +63,7 @@ The following key endpoints provide the UI configuration and dynamic data necess
 - **Validation**: Zod (Dynamic generation from metadata via FieldRegistry plugins)
 
 ## Detailed Folder Structure
-/Users/asana/Repo/INIDOS/packages/core
+/Users/asana/Repo/KLAO/packages/core
 ├── prisma/                  ← Metadata Definition
 │   ├── schema.prisma        ← The "Schema of Schemas" — all models in @@schema("core")
 │   └── migrations/          ← Applied migrations (auth_schema_core)
@@ -89,10 +89,10 @@ The following key endpoints provide the UI configuration and dynamic data necess
 │   │       └── dynamic/     ← Data CRUD endpoints (GET/POST/PATCH/DELETE)
 │   │
 │   ├── cli/                 ← Internal Admin Tooling
-│   │   └── inidos-cli.ts    ← Script for provisioning, cleanup, and status checks
+│   │   └── klao-cli.ts    ← Script for provisioning, cleanup, and status checks
 │   │
 │   ├── core/
-│   │   ├── engine/          ← The Heart of INIDOS
+│   │   ├── engine/          ← The Heart of KLAO
 │   │   │   ├── AlchemaCore.ts       ← Raw DDL Generator (injection-proof via pg-format)
 │   │   │   ├── ConnectionManager.ts ← Central DB resolver (handles isolation modes)
 │   │   │   ├── QueryLayer.ts        ← Secure DML (Audit logs, RBAC, RLS — all atomic)
@@ -127,7 +127,7 @@ The following key endpoints provide the UI configuration and dynamic data necess
 | `AccessGuard.ts` | Enforces Object-Level Permissions. Auto-extracts JWT role from session; `SUPER_ADMIN` fast-path bypasses DB lookup entirely. |
 | `TransactionContext.ts` | Wraps every DB call in a transaction injected with `app.current_user_id` and `app.current_tenant_id` to activate PostgreSQL RLS policies. `resolvedRole` correctly hoisted for `finally`-block safety. |
 | `session.ts` | `getAppSession()` — lazy-loads `next-auth` so it never fails in CLI/Docker contexts. Supports `TEST_SESSION_JSON` env-var override for integration tests. |
-| `authOptions.ts` | NextAuth config: JWT strategy, INIDOS `CredentialsProvider` (bcrypt). Callbacks inject `tenantId`, `role`, and `teams` array into JWT token. |
+| `authOptions.ts` | NextAuth config: JWT strategy, KLAO `CredentialsProvider` (bcrypt). Callbacks inject `tenantId`, `role`, and `teams` array into JWT token. |
 | `ConnectionManager.ts` | Abstracts Postgres connection; enables switching to Database-per-tenant without touching business logic. |
 | `TranslatorLayer.ts` | High-level API ensuring Metadata and Database stay in sync. |
 | `FieldRegistry.ts` | Allows adding new field types (e.g., 'Signature', 'Address') without touching core logic. |
@@ -138,14 +138,14 @@ The following key endpoints provide the UI configuration and dynamic data necess
 ## CLI Tool Operations
 ```bash
 # provision initial tenant
-bun src/cli/inidos-cli.ts tenant:create "Ignite Idea" admin@igniteidea.ai
-bun src/cli/inidos-cli.ts tenant:list
-bun src/cli/inidos-cli.ts db:clean
-bun src/cli/inidos-cli.ts db:check
+bun src/cli/klao-cli.ts tenant:create "Ignite Idea" admin@igniteidea.ai
+bun src/cli/klao-cli.ts tenant:list
+bun src/cli/klao-cli.ts db:clean
+bun src/cli/klao-cli.ts db:check
 ```
 
 ## Development & Testing with Docker
-INIDOS Core uses Docker Compose to provide a unified development and testing environment.
+KLAO Core uses Docker Compose to provide a unified development and testing environment.
 
 ### 1. Start Development Environment
 ```bash
@@ -183,7 +183,7 @@ docker compose exec app bun run cli tenant:list
 ```
 
 ## Future Constraint: PWA Offline-First Architecture (DO NOT IMPLEMENT YET)
-> **See full spec:** [ROADMAP.md — Phase 4](file:///Users/asana/Repo/INIDOS/docs/ROADMAP.md)
+> **See full spec:** [ROADMAP.md — Phase 4](file:///Users/asana/Repo/KLAO/docs/ROADMAP.md)
 
 The following constraints are **pre-declared** to prevent architectural decisions today that would conflict with offline sync in the future. AI agents MUST be aware of these when touching data models, API design, or record IDs.
 

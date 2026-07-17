@@ -7,26 +7,26 @@ const Unauthorized: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="inidos-unauthorized">
-      <div className="inidos-unauthorized__content">
-        <div className="inidos-unauthorized__icon">
+    <div className="klao-unauthorized">
+      <div className="klao-unauthorized__content">
+        <div className="klao-unauthorized__icon">
           <ShieldAlert size={64} />
         </div>
-        <h1 className="inidos-unauthorized__title">Unauthorized Access</h1>
-        <p className="inidos-unauthorized__message">
+        <h1 className="klao-unauthorized__title">Unauthorized Access</h1>
+        <p className="klao-unauthorized__message">
           Oops! You don't have the necessary permissions to access this area. 
           Please contact your administrator if you believe this is a mistake.
         </p>
-        <div className="inidos-unauthorized__actions">
+        <div className="klao-unauthorized__actions">
           <button 
-            className="inidos-unauthorized__btn inidos-unauthorized__btn--secondary"
+            className="klao-unauthorized__btn klao-unauthorized__btn--secondary"
             onClick={() => navigate(-1)}
           >
             <ArrowLeft size={18} />
             <span>Go Back</span>
           </button>
           <button 
-            className="inidos-unauthorized__btn inidos-unauthorized__btn--primary"
+            className="klao-unauthorized__btn klao-unauthorized__btn--primary"
             onClick={() => navigate('/dashboard')}
           >
             <Home size={18} />

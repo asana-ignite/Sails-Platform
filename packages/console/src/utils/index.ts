@@ -1,5 +1,5 @@
 /**
- * INIDOS Utils
+ * KLAO Utils
  */
 
 /**

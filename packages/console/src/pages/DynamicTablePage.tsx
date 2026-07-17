@@ -2,7 +2,7 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { Layers, Database, Plus, Search } from 'lucide-react';
 import { useConsole } from '../contexts/ConsoleContext';
-import { ConsoleMenu } from '@inidos/shared';
+import { ConsoleMenu } from '@klao/shared';
 import DynamicIcon from '../components/common/DynamicIcon';
 import './DynamicTablePage.css';
 
@@ -32,46 +32,46 @@ const DynamicTablePage: React.FC = () => {
   const iconName = activeMenu?.icon || 'Database';
 
   return (
-    <div className="inidos-dynamic-table inidos-page-container">
-      <header className="inidos-page-header inidos-dynamic-table__header">
-        <div className="inidos-page-header__left">
-          <div className="inidos-page-header__icon-wrapper">
+    <div className="klao-dynamic-table klao-page-container">
+      <header className="klao-page-header klao-dynamic-table__header">
+        <div className="klao-page-header__left">
+          <div className="klao-page-header__icon-wrapper">
             <DynamicIcon name={iconName} size={24} />
           </div>
           <div>
-            <h1 className="inidos-page-header__title">{displayTitle}</h1>
-            <p className="inidos-page-header__subtitle">{displaySubtitle}</p>
+            <h1 className="klao-page-header__title">{displayTitle}</h1>
+            <p className="klao-page-header__subtitle">{displaySubtitle}</p>
           </div>
         </div>
-        <div className="inidos-page-header__right">
-          <button className="inidos-btn inidos-btn--primary">
+        <div className="klao-page-header__right">
+          <button className="klao-btn klao-btn--primary">
             <Plus size={18} />
             <span>Add New</span>
           </button>
         </div>
       </header>
 
-      <section className="inidos-dynamic-table__controls">
-        <div className="inidos-card inidos-dynamic-table__toolbar">
-          <div className="inidos-dynamic-table__search">
-            <Search size={18} className="inidos-dynamic-table__search-icon" />
+      <section className="klao-dynamic-table__controls">
+        <div className="klao-card klao-dynamic-table__toolbar">
+          <div className="klao-dynamic-table__search">
+            <Search size={18} className="klao-dynamic-table__search-icon" />
             <input 
               type="text" 
               placeholder={`Search ${displayTitle.toLowerCase()}...`} 
-              className="inidos-dynamic-table__search-input"
+              className="klao-dynamic-table__search-input"
             />
           </div>
-          <div className="inidos-dynamic-table__actions">
-            <button className="inidos-btn inidos-btn--ghost">Filter</button>
-            <button className="inidos-btn inidos-btn--ghost">Export</button>
+          <div className="klao-dynamic-table__actions">
+            <button className="klao-btn klao-btn--ghost">Filter</button>
+            <button className="klao-btn klao-btn--ghost">Export</button>
           </div>
         </div>
       </section>
 
-      <section className="inidos-dynamic-table__content">
-        <div className="inidos-card inidos-dynamic-table__placeholder">
-          <div className="inidos-dynamic-table__empty-state">
-            <Layers size={48} className="inidos-dynamic-table__empty-icon" />
+      <section className="klao-dynamic-table__content">
+        <div className="klao-card klao-dynamic-table__placeholder">
+          <div className="klao-dynamic-table__empty-state">
+            <Layers size={48} className="klao-dynamic-table__empty-icon" />
             <h3>No Records Found</h3>
             <p>You haven't added any data to the {displayTitle.toLowerCase()} table yet.</p>
           </div>

@@ -1,7 +1,7 @@
-# INIDOS Context Map
+# KLAO Context Map
 
 > **Core Architectural Principle:** 
-> - **Shared Kernel:** All shared logic/types belong in `@inidos/shared` (`packages/shared`).
+> - **Shared Kernel:** All shared logic/types belong in `@klao/shared` (`packages/shared`).
 > - **Feature-Based UI:** UI/Frontend logic is organized by feature in `packages/console/src/features/[feature]`.
 
 ## Navigation & Index

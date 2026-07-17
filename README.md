@@ -1,6 +1,6 @@
-# INIDOS (Ignite Idea Operating System)
+# KLAO (Ignite Idea Operating System)
 
-Welcome to **INIDOS**, a specialized fork of the Klao Platform tailored for internal operations at **Ignite Idea**. INIDOS serves as the central engine for managing Sales, Projects, Cases, and Timesheets.
+Welcome to **KLAO**, a specialized fork of the Klao Platform tailored for internal operations at **Ignite Idea**. KLAO serves as the central engine for managing Sales, Projects, Cases, and Timesheets.
 
 This project is structured as a Bun Workspace to centralize backend, frontend, and shared logic.
 
@@ -22,5 +22,5 @@ For deep dives into the platform's design, please refer to the files in the [doc
 - [API_DOCUMENTATION.md](./docs/API_DOCUMENTATION.md) - REST API Reference
 
 ---
-*INIDOS: Built for Ignite Idea Operations*
+*KLAO: Built for Ignite Idea Operations*
 

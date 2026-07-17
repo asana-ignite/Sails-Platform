@@ -40,13 +40,13 @@ async function resetPlatform() {
       console.log(`   - Deleted ${tenantResult.count} tenant records.`);
 
       // 3. Provision Default Test Tenant via API
-      console.log("🌱 [PHASE 1] Provisioning 'INIDOS Default' tenant via API...");
+      console.log("🌱 [PHASE 1] Provisioning 'KLAO Default' tenant via API...");
       const provisionResponse = await fetch(`${API_URL}/api/tenant/provision`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: 'INIDOS Default',
-          adminEmail: 'admin@inidos.app'
+          name: 'KLAO Default',
+          adminEmail: 'admin@klao.app'
         })
       });
 
@@ -73,7 +73,7 @@ async function resetPlatform() {
         console.log(`   - Updated DEFAULT_TENANT_ID to ${tenantId}`);
       }
 
-      console.log("\n✅ Phase 1 Complete. RESTART the 'inidos-core' service before running Phase 2.");
+      console.log("\n✅ Phase 1 Complete. RESTART the 'klao-core' service before running Phase 2.");
     }
 
     if (phase === 'all' || phase === '2') {
