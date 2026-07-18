@@ -40,14 +40,14 @@ export class AlchemaCore {
     
     // Base columns
     const columns = [
-      'id UUID PRIMARY KEY DEFAULT gen_random_uuid()',
-      `tenant_id UUID DEFAULT NULLIF(current_setting('app.current_tenant_id', true), '')::uuid NOT NULL`,
+      'id VARCHAR(30) PRIMARY KEY',
+      `tenant_id VARCHAR(30) DEFAULT NULLIF(current_setting('app.current_tenant_id', true), '') NOT NULL`,
       'created_at TIMESTAMPTZ DEFAULT NOW()',
       'updated_at TIMESTAMPTZ DEFAULT NOW()',
-      `owner_id UUID DEFAULT NULLIF(current_setting('app.current_user_id', true), '')::uuid NOT NULL`,
-      `owner_team_id UUID DEFAULT NULLIF(current_setting('app.current_team_id', true), '')::uuid`,
-      'created_by UUID NULL',
-      'updated_by UUID NULL'
+      `owner_id VARCHAR(30) DEFAULT NULLIF(current_setting('app.current_user_id', true), '') NOT NULL`,
+      `owner_team_id VARCHAR(30) DEFAULT NULLIF(current_setting('app.current_team_id', true), '')`,
+      'created_by VARCHAR(30) NULL',
+      'updated_by VARCHAR(30) NULL'
     ];
 
     const constraints: string[] = [];
@@ -85,15 +85,15 @@ export class AlchemaCore {
       `CREATE POLICY %I ON %I.%I 
        FOR ALL 
        USING (
-         tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid
+         tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')
          AND (
-           owner_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
-           OR owner_team_id = NULLIF(current_setting('app.current_team_id', true), '')::uuid
+           owner_id = NULLIF(current_setting('app.current_user_id', true), '')
+           OR owner_team_id = NULLIF(current_setting('app.current_team_id', true), '')
            OR EXISTS (
              SELECT 1 FROM core.user_teams ut
              LEFT JOIN core.object_permissions p ON ut.team_id = p.team_id AND p.object_name = %L
              LEFT JOIN core.teams t ON ut.team_id = t.id
-             WHERE ut.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
+             WHERE ut.user_id = NULLIF(current_setting('app.current_user_id', true), '')
              AND t.tenant_id = tenant_id
              AND (p.view_all_data = true OR t.is_system_admin = true)
            )
@@ -101,14 +101,14 @@ export class AlchemaCore {
              SELECT user_id FROM core.user_teams ut
              JOIN core.teams t ON ut.team_id = t.id
              WHERE t.parent_id IN (
-               SELECT team_id FROM core.user_teams WHERE user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
+               SELECT team_id FROM core.user_teams WHERE user_id = NULLIF(current_setting('app.current_user_id', true), '')
              )
              AND t.tenant_id = tenant_id
            )
            OR owner_team_id IN (
              SELECT id FROM core.teams 
              WHERE parent_id IN (
-               SELECT team_id FROM core.user_teams WHERE user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
+               SELECT team_id FROM core.user_teams WHERE user_id = NULLIF(current_setting('app.current_user_id', true), '')
              )
              AND tenant_id = tenant_id
            )

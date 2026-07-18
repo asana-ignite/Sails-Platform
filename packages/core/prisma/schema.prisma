@@ -9,7 +9,7 @@ datasource db {
 }
 
 model Tenant {
-  id          String            @id @default(uuid()) @db.Uuid
+  id          String            @id @default(cuid())
   name        String
   schemaName  String            @unique @map("schema_name")
   createdAt   DateTime          @default(now()) @map("created_at")
@@ -20,13 +20,14 @@ model Tenant {
   teams       Team[]
   users       User[]
 
+  @@index([createdAt])
   @@map("tenants")
   @@schema("core")
 }
 
 model TableDefinition {
-  id          String            @id @default(uuid()) @db.Uuid
-  tenantId    String            @map("tenant_id") @db.Uuid
+  id          String            @id @default(cuid())
+  tenantId    String            @map("tenant_id")
   name        String
   tableName   String            @map("table_name")
   description String?
@@ -36,13 +37,14 @@ model TableDefinition {
   rules       ValidationRule[]
 
   @@unique([tenantId, tableName])
+  @@index([tenantId])
   @@map("tables")
   @@schema("core")
 }
 
 model FieldDefinition {
-  id           String           @id @default(uuid()) @db.Uuid
-  tableId      String           @map("table_id") @db.Uuid
+  id           String           @id @default(cuid())
+  tableId      String           @map("table_id")
   name         String
   fieldName    String           @map("field_name")
   physicalType String           @map("physical_type")
@@ -55,27 +57,30 @@ model FieldDefinition {
   rules        ValidationRule[]
 
   @@unique([tableId, fieldName])
+  @@index([tableId])
   @@map("fields")
   @@schema("core")
 }
 
 model ValidationRule {
-  id             String           @id @default(uuid()) @db.Uuid
-  tableId        String           @map("table_id") @db.Uuid
-  fieldId        String?          @map("field_id") @db.Uuid
+  id             String           @id @default(cuid())
+  tableId        String           @map("table_id")
+  fieldId        String?          @map("field_id")
   ruleType       String
   ruleDefinition String
   errorMessage   String?          @map("error_message")
   field          FieldDefinition? @relation(fields: [fieldId], references: [id], onDelete: Cascade)
   table          TableDefinition  @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
+  @@index([tableId])
+  @@index([fieldId])
   @@map("validation_rules")
   @@schema("core")
 }
 
 model ConsoleApp {
-  id                 String        @id @default(uuid()) @db.Uuid
-  tenantId           String        @map("tenant_id") @db.Uuid
+  id                 String        @id @default(cuid())
+  tenantId           String        @map("tenant_id")
   name               String
   icon               String?
   order              Int           @default(0)
@@ -86,18 +91,19 @@ model ConsoleApp {
   menus              ConsoleMenu[]
 
   @@unique([tenantId, name])
+  @@index([tenantId])
   @@map("console_apps")
   @@schema("core")
 }
 
 model ConsoleMenu {
-  id                 String        @id @default(uuid()) @db.Uuid
-  appId              String?       @map("app_id") @db.Uuid
+  id                 String        @id @default(cuid())
+  appId              String?       @map("app_id")
   label              String
   icon               String?
   path               String?
   actionType         String        @default("table") @map("action_type")
-  parentId           String?       @map("parent_id") @db.Uuid
+  parentId           String?       @map("parent_id")
   order              Int           @default(0)
   requiredCapability String?       @map("required_capability")
   componentKey       String?       @map("component_key")
@@ -105,16 +111,18 @@ model ConsoleMenu {
   parent             ConsoleMenu?  @relation("MenuHierarchy", fields: [parentId], references: [id])
   children           ConsoleMenu[] @relation("MenuHierarchy")
 
+  @@index([appId])
+  @@index([parentId])
   @@map("console_menus")
   @@schema("core")
 }
 
 model Team {
-  id                String             @id @default(uuid()) @db.Uuid
-  tenantId          String             @map("tenant_id") @db.Uuid
+  id                String             @id @default(cuid())
+  tenantId          String             @map("tenant_id")
   name              String
   isSystemAdmin     Boolean            @default(false) @map("is_system_admin")
-  parentId          String?            @map("parent_id") @db.Uuid
+  parentId          String?            @map("parent_id")
   objectPermissions ObjectPermission[]
   systemPermissions SystemPermission[]
   parent            Team?              @relation("TeamHierarchy", fields: [parentId], references: [id])
@@ -122,13 +130,15 @@ model Team {
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   members           UserTeam[]
 
+  @@index([tenantId])
+  @@index([parentId])
   @@map("teams")
   @@schema("core")
 }
 
 model ObjectPermission {
-  id            String  @id @default(uuid()) @db.Uuid
-  teamId        String  @map("team_id") @db.Uuid
+  id            String  @id @default(cuid())
+  teamId        String  @map("team_id")
   objectName    String  @map("object_name")
   canCreate     Boolean @default(false) @map("can_create")
   canRead       Boolean @default(false) @map("can_read")
@@ -139,36 +149,38 @@ model ObjectPermission {
   team          Team    @relation(fields: [teamId], references: [id])
 
   @@unique([teamId, objectName])
+  @@index([teamId])
   @@map("object_permissions")
   @@schema("core")
 }
 
 model SystemPermission {
-  id         String @id @default(uuid()) @db.Uuid
-  teamId     String @map("team_id") @db.Uuid
+  id         String @id @default(cuid())
+  teamId     String @map("team_id")
   capability String
   team       Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, capability])
+  @@index([teamId])
   @@map("system_permissions")
   @@schema("core")
 }
 
 /// Core identity record. Extended beyond the NextAuth default to carry
-/// INIDOS multi-tenant context (tenantId, role, teamId) which are
+/// KLAO multi-tenant context (tenantId, role, teamId) which are
 /// embedded in the JWT by `src/lib/auth/session.ts`.
 model User {
-  id            String     @id @default(uuid()) @db.Uuid
+  id            String     @id @default(cuid())
   name          String?
   email         String     @unique
   emailVerified DateTime?  @map("email_verified")
   image         String?
-  /// Hashed password — used only for the INIDOS internal credential provider.
+  /// Hashed password — used only for the KLAO internal credential provider.
   /// NULL when the user authenticates exclusively via OAuth (Google, Azure).
   password      String?
   /// FK → core.tenants.  NULL only for SUPER_ADMIN accounts that are not
   /// scoped to a single tenant.
-  tenantId      String?    @map("tenant_id") @db.Uuid
+  tenantId      String?    @map("tenant_id")
   /// Top-level role fast-path used by AccessGuard:
   /// SUPER_ADMIN | TENANT_ADMIN | MEMBER
   /// Fine-grained RBAC is delegated to ObjectPermission via teamId.
@@ -188,18 +200,20 @@ model User {
   teams         UserTeam[]
   tenant        Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@map("users")
   @@schema("core")
 }
 
 model UserTeam {
-  userId   String  @map("user_id") @db.Uuid
-  teamId   String  @map("team_id") @db.Uuid
+  userId   String  @map("user_id")
+  teamId   String  @map("team_id")
   isLeader Boolean @default(false) @map("is_leader")
   team     Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, teamId])
+  @@index([teamId])
   @@map("user_teams")
   @@schema("core")
 }
@@ -207,8 +221,8 @@ model UserTeam {
 /// OAuth / OIDC linked provider accounts (Google, Microsoft Entra ID, etc.).
 /// Follows the NextAuth PrismaAdapter contract exactly.
 model Account {
-  id                String  @id @default(uuid()) @db.Uuid
-  userId            String  @map("user_id") @db.Uuid
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
   type              String
   provider          String
   providerAccountId String  @map("provider_account_id")
@@ -222,6 +236,7 @@ model Account {
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
   @@map("accounts")
   @@schema("core")
 }
@@ -230,12 +245,13 @@ model Account {
 /// When `strategy = "jwt"` (current default) this table is unused but kept
 /// for future Enterprise Federation (IAM Phase B).
 model Session {
-  id           String   @id @default(uuid()) @db.Uuid
+  id           String   @id @default(cuid())
   sessionToken String   @unique @map("session_token")
-  userId       String   @map("user_id") @db.Uuid
+  userId       String   @map("user_id")
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("sessions")
   @@schema("core")
 }
@@ -252,13 +268,13 @@ model VerificationToken {
 }
 
 model AuditLog {
-  id         String   @id @default(uuid()) @db.Uuid
-  tenantId   String   @map("tenant_id") @db.Uuid
-  userId     String?  @map("user_id") @db.Uuid
+  id         String   @id @default(cuid())
+  tenantId   String   @map("tenant_id")
+  userId     String?  @map("user_id")
   ipAddress  String?  @map("ip_address")
   action     String
   objectName String   @map("object_name")
-  recordId   String?  @map("record_id") @db.Uuid
+  recordId   String?  @map("record_id")
   oldValues  Json?    @map("old_values")
   newValues  Json?    @map("new_values")
   createdAt  DateTime @default(now()) @map("created_at")

@@ -1,8 +1,17 @@
 import { Pool, PoolClient } from 'pg';
 import format from 'pg-format';
+import crypto from 'crypto';
 import { AccessGuard, CrudAction } from './AccessGuard';
 import { TransactionContext } from './TransactionContext';
 import { getAppSession } from '@/lib/auth/session';
+
+/**
+ * Generates a time-ordered string ID (similar to CUID/UUIDv7)
+ * to prevent B-Tree fragmentation in PostgreSQL.
+ */
+function generateTimeOrderedId(): string {
+  return Date.now().toString(36) + crypto.randomBytes(8).toString('hex');
+}
 
 /**
  * Resolved session context from the Auth.js JWT.
@@ -47,26 +56,27 @@ export class QueryLayer {
     pool: Pool,
     objectName: string,
     action: CrudAction,
-    callback: (client: PoolClient, ctx: SessionContext) => Promise<T>
+    callback: (client: PoolClient, ctx: SessionContext) => Promise<T>,
+    ctx?: SessionContext
   ): Promise<T> {
-    // 1. Resolve session — single source of truth for the entire request
-    const ctx = await resolveSessionContext();
+    // 1. Resolve session if not provided by caller
+    const resolvedCtx = ctx ?? await resolveSessionContext();
 
     // 2. Enforce Object-Level Security via AccessGuard
     await AccessGuard.checkPermission(objectName, action, {
-      userId: ctx.userId,
-      jwtRole: ctx.role,
+      userId: resolvedCtx.userId,
+      jwtRole: resolvedCtx.role,
     });
 
     // 3. Enforce Record-Level Security via TransactionContext (DB-level RLS)
     return TransactionContext.executeWithUserContext(
       pool,
-      (client) => callback(client, ctx),
+      (client) => callback(client, resolvedCtx),
       {
-        userId: ctx.userId,
-        tenantId: ctx.tenantId,
-        role: ctx.role === 'SUPER_ADMIN' ? undefined : 'rls_user',
-        activeTeamId: ctx.activeTeamId
+        userId: resolvedCtx.userId,
+        tenantId: resolvedCtx.tenantId,
+        role: resolvedCtx.role === 'SUPER_ADMIN' ? undefined : 'rls_user',
+        activeTeamId: resolvedCtx.activeTeamId
       }
     );
   }
@@ -79,25 +89,28 @@ export class QueryLayer {
     pool: Pool,
     schemaName: string,
     tableName: string,
-    payload: Record<string, any>
+    payload: Record<string, any>,
+    ctx?: SessionContext
   ): Promise<any> {
-    const ctx = await resolveSessionContext();
+    const resolvedCtx = ctx ?? await resolveSessionContext();
 
     await AccessGuard.checkPermission(tableName, 'create', {
-      userId: ctx.userId,
-      jwtRole: ctx.role,
+      userId: resolvedCtx.userId,
+      jwtRole: resolvedCtx.role,
     });
 
-    return TransactionContext.executeWithUserContext(
+    const result = await TransactionContext.executeWithUserContext(
       pool,
       async (client) => {
-        // 1. Add standard audit columns
+        // 1. Add standard audit columns & generate ID
+        const generatedId = generateTimeOrderedId();
         const dataToInsert = { 
+          id: generatedId,
           ...payload, 
-          owner_id: ctx.userId, 
-          owner_team_id: ctx.activeTeamId,
-          created_by: ctx.userId, 
-          updated_by: ctx.userId 
+          owner_id: resolvedCtx.userId, 
+          owner_team_id: resolvedCtx.activeTeamId,
+          created_by: resolvedCtx.userId, 
+          updated_by: resolvedCtx.userId 
         };
         const columns = Object.keys(dataToInsert);
         const values = Object.values(dataToInsert);
@@ -113,27 +126,32 @@ export class QueryLayer {
         const result = await client.query(insertSql);
         const newRecord = result.rows[0];
 
-        // 3. Write Audit Log in the SAME pg transaction (atomic)
+        // 3. Prepare Audit Log (executed outside of transaction)
         const auditSql = format(
           `INSERT INTO core.audit_logs (id, tenant_id, user_id, action, object_name, record_id, new_values) 
-           VALUES (gen_random_uuid(), %L, %L, 'CREATE', %L, %L, %L)`,
-          ctx.tenantId,
-          ctx.userId,
+           VALUES (%L, %L, %L, 'CREATE', %L, %L, %L)`,
+          generateTimeOrderedId(),
+          resolvedCtx.tenantId,
+          resolvedCtx.userId,
           tableName,
           newRecord.id,
           JSON.stringify(newRecord)
         );
-        await client.query(auditSql);
 
-        return newRecord;
+        return { newRecord, auditSql };
       },
       { 
-        userId: ctx.userId, 
-        tenantId: ctx.tenantId, 
-        role: ctx.role === 'SUPER_ADMIN' ? undefined : 'rls_user',
-        activeTeamId: ctx.activeTeamId
+        userId: resolvedCtx.userId, 
+        tenantId: resolvedCtx.tenantId, 
+        role: resolvedCtx.role === 'SUPER_ADMIN' ? undefined : 'rls_user',
+        activeTeamId: resolvedCtx.activeTeamId
       }
     );
+
+    // 4. Dispatch Audit Log Asynchronously (Fire and forget)
+    pool.query(result.auditSql).catch(err => console.error('[AuditLog] Failed to write audit log:', err));
+
+    return result.newRecord;
   }
 
   /**
@@ -145,16 +163,17 @@ export class QueryLayer {
     schemaName: string,
     tableName: string,
     recordId: string,
-    payload: Record<string, any>
+    payload: Record<string, any>,
+    ctx?: SessionContext
   ): Promise<any> {
-    const ctx = await resolveSessionContext();
+    const resolvedCtx = ctx ?? await resolveSessionContext();
 
     await AccessGuard.checkPermission(tableName, 'update', {
-      userId: ctx.userId,
-      jwtRole: ctx.role,
+      userId: resolvedCtx.userId,
+      jwtRole: resolvedCtx.role,
     });
 
-    return TransactionContext.executeWithUserContext(
+    const result = await TransactionContext.executeWithUserContext(
       pool,
       async (client) => {
         // 1. Capture old values first
@@ -166,7 +185,7 @@ export class QueryLayer {
         const oldRecord = oldResult.rows[0];
 
         // 2. Build SET clauses with audit columns
-        const dataToUpdate = { ...payload, updated_by: ctx.userId, updated_at: new Date().toISOString() };
+        const dataToUpdate = { ...payload, updated_by: resolvedCtx.userId, updated_at: new Date().toISOString() };
         const setClauses = Object.keys(dataToUpdate).map((key) =>
           format('%I = %L', key, dataToUpdate[key])
         );
@@ -182,28 +201,33 @@ export class QueryLayer {
         const result = await client.query(updateSql);
         const newRecord = result.rows[0];
 
-        // 4. Write Audit Log in the SAME pg transaction (atomic)
+        // 4. Prepare Audit Log (executed outside of transaction)
         const auditSql = format(
           `INSERT INTO core.audit_logs (id, tenant_id, user_id, action, object_name, record_id, old_values, new_values) 
-           VALUES (gen_random_uuid(), %L, %L, 'UPDATE', %L, %L, %L, %L)`,
-          ctx.tenantId,
-          ctx.userId,
+           VALUES (%L, %L, %L, 'UPDATE', %L, %L, %L, %L)`,
+          generateTimeOrderedId(),
+          resolvedCtx.tenantId,
+          resolvedCtx.userId,
           tableName,
           recordId,
           JSON.stringify(oldRecord),
           JSON.stringify(newRecord)
         );
-        await client.query(auditSql);
 
-        return newRecord;
+        return { newRecord, auditSql };
       },
       { 
-        userId: ctx.userId, 
-        tenantId: ctx.tenantId, 
-        role: ctx.role === 'SUPER_ADMIN' ? undefined : 'rls_user',
-        activeTeamId: ctx.activeTeamId
+        userId: resolvedCtx.userId, 
+        tenantId: resolvedCtx.tenantId, 
+        role: resolvedCtx.role === 'SUPER_ADMIN' ? undefined : 'rls_user',
+        activeTeamId: resolvedCtx.activeTeamId
       }
     );
+
+    // 5. Dispatch Audit Log Asynchronously (Fire and forget)
+    pool.query(result.auditSql).catch(err => console.error('[AuditLog] Failed to write audit log:', err));
+
+    return result.newRecord;
   }
 
   /**
@@ -214,16 +238,17 @@ export class QueryLayer {
     pool: Pool,
     schemaName: string,
     tableName: string,
-    recordId: string
+    recordId: string,
+    ctx?: SessionContext
   ): Promise<void> {
-    const ctx = await resolveSessionContext();
+    const resolvedCtx = ctx ?? await resolveSessionContext();
 
     await AccessGuard.checkPermission(tableName, 'delete', {
-      userId: ctx.userId,
-      jwtRole: ctx.role,
+      userId: resolvedCtx.userId,
+      jwtRole: resolvedCtx.role,
     });
 
-    return TransactionContext.executeWithUserContext(
+    const result = await TransactionContext.executeWithUserContext(
       pool,
       async (client) => {
         // 1. Capture old values first
@@ -238,24 +263,28 @@ export class QueryLayer {
         const deleteSql = format('DELETE FROM %I.%I WHERE id = %L', schemaName, tableName, recordId);
         await client.query(deleteSql);
 
-        // 3. Write Audit Log in the SAME pg transaction (atomic)
+        // 3. Prepare Audit Log (executed outside of transaction)
         const auditSql = format(
           `INSERT INTO core.audit_logs (id, tenant_id, user_id, action, object_name, record_id, old_values) 
-           VALUES (gen_random_uuid(), %L, %L, 'DELETE', %L, %L, %L)`,
-          ctx.tenantId,
-          ctx.userId,
+           VALUES (%L, %L, %L, 'DELETE', %L, %L, %L)`,
+          generateTimeOrderedId(),
+          resolvedCtx.tenantId,
+          resolvedCtx.userId,
           tableName,
           recordId,
           JSON.stringify(oldRecord)
         );
-        await client.query(auditSql);
+        return { auditSql };
       },
       { 
-        userId: ctx.userId, 
-        tenantId: ctx.tenantId, 
-        role: ctx.role === 'SUPER_ADMIN' ? undefined : 'rls_user',
-        activeTeamId: ctx.activeTeamId
+        userId: resolvedCtx.userId, 
+        tenantId: resolvedCtx.tenantId, 
+        role: resolvedCtx.role === 'SUPER_ADMIN' ? undefined : 'rls_user',
+        activeTeamId: resolvedCtx.activeTeamId
       }
     );
+
+    // 4. Dispatch Audit Log Asynchronously (Fire and forget)
+    pool.query(result.auditSql).catch(err => console.error('[AuditLog] Failed to write audit log:', err));
   }
 }
