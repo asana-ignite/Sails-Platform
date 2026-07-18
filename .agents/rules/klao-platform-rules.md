@@ -26,3 +26,10 @@ description: Mandatory development and deployment rules for the Klao Platform.
 - **Warning (Hit-Box Safety)**: Header containers (`.klao-page-header__left`) MUST use `pointer-events: none` on container and `pointer-events: auto` on children.
 - **Rule (Portaling)**: Use `React Portals` for ALL slide-over drawers to sit at document root.
 - **Rule (Z-Index)**: Administrative overlays MUST use `z-index: 9999 !important`.
+
+## 5. High-Performance Architecture (10k OPS)
+- **Rule (Primary Keys)**: ALWAYS use CUID (`@default(cuid())`) or time-ordered string IDs for primary keys and foreign keys. NEVER use UUIDv4 (`@default(uuid())` or `@db.Uuid`) to avoid B-Tree fragmentation in PostgreSQL.
+- **Rule (Dynamic Tables)**: All dynamically generated tables MUST use `VARCHAR(30)` or `TEXT` for IDs. NEVER use `gen_random_uuid()`. Use `generateTimeOrderedId()` from `QueryLayer.ts`.
+- **Rule (Audit Logging)**: Audit logs MUST be dispatched asynchronously (fire-and-forget) OUTSIDE the main database transaction to prevent locking contention. NEVER perform synchronous inserts to `core.audit_logs` inside a CRUD transaction.
+- **Rule (Database Indexes)**: ALL foreign key columns heavily queried (e.g., `tenantId`, `parentId`, `teamId`) MUST have explicit `@@index` annotations in `schema.prisma`.
+- **Rule (Session Context)**: Always pass a pre-resolved `SessionContext` throughout `QueryLayer` methods to avoid redundant JWT decoding during multi-step transactions.
