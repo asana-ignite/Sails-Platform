@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useConsole } from '../../contexts/ConsoleContext';
 import DynamicIcon from '../common/DynamicIcon';
@@ -15,6 +15,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }) => {
   const { navigationItems, isLoading } = useConsole();
+  const location = useLocation();
   const [showStatus, setShowStatus] = React.useState(false);
   const [isMobileView, setIsMobileView] = React.useState(window.innerWidth <= 768);
   const statusTimeoutRef = React.useRef<any>(null);
@@ -139,6 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
               const isOpen = openMenus[item.id];
               const menuTop = menuTops[item.id];
               const path = getMenuPath(item);
+              const hasActiveChild = hasChildren && item.children?.some((sub: any) => getMenuPath(sub) === location.pathname);
 
               return (
                 <li 
@@ -150,7 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
                   <NavLink 
                     to={hasChildren ? '#' : path} 
                     className={({ isActive }) => 
-                      `klao-sidebar__link ${isActive && !hasChildren ? 'klao-sidebar__link--active' : ''} ${hasChildren ? 'klao-sidebar__link--has-children' : ''}`
+                      `klao-sidebar__link ${(isActive && !hasChildren) || (isEffectivelyCollapsed && hasActiveChild) ? 'klao-sidebar__link--active' : ''} ${hasChildren ? 'klao-sidebar__link--has-children' : ''} ${(!isEffectivelyCollapsed && hasActiveChild) ? 'klao-sidebar__link--has-active-child' : ''}`
                     }
                     onClick={(e) => hasChildren ? toggleSubMenu(item.id, e) : undefined}
                   >

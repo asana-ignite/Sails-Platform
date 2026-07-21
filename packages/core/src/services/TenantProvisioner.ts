@@ -60,6 +60,7 @@ export class TenantProvisioner {
         data: {
           email: adminEmail!,
           tenantId: tenant.id,
+          role: 'TENANT_ADMIN',
           teams: { create: { teamId: adminTeam.id, isLeader: true } }
         }
       });
@@ -161,8 +162,8 @@ export class TenantProvisioner {
 
     await db.$executeRawUnsafe(`
       UPDATE core.console_menus 
-      SET app_id = '${adminApp.id}'::uuid 
-      WHERE parent_id IN (SELECT id FROM core.console_menus WHERE app_id = '${adminApp.id}'::uuid)
+      SET app_id = '${adminApp.id}' 
+      WHERE parent_id IN (SELECT id FROM core.console_menus WHERE app_id = '${adminApp.id}')
     `);
 
     return adminApp;

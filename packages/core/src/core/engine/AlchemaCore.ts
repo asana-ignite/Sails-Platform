@@ -6,6 +6,8 @@ import format from 'pg-format';
 import { Pool } from 'pg';
 import { FieldRegistry } from '../registry/FieldRegistry';
 import { ConnectionManager } from './ConnectionManager';
+import { SchemaLogger } from './SchemaLogger';
+import { getAppSession } from '@/lib/auth/session';
 
 export interface FieldDefinition {
   name: string;
@@ -23,12 +25,36 @@ export class AlchemaCore {
     this.pool = pool || ConnectionManager.getInstance().getCorePool();
   }
 
+  private async logDdlAction(schemaName: string, tableName: string | null, action: string, sql: string) {
+    try {
+      const session = await getAppSession();
+      const caller = session?.user as any;
+      SchemaLogger.logDdl({
+        tenantId: caller?.tenantId || null,
+        userId: caller?.id || null,
+        schemaName,
+        tableName,
+        action,
+        sqlExecuted: sql
+      });
+    } catch (e) {
+      SchemaLogger.logDdl({
+        schemaName,
+        tableName,
+        action,
+        sqlExecuted: sql
+      });
+    }
+  }
+
   /**
    * Creates a dedicated schema for a new tenant.
    */
   async createTenantSchema(schemaName: string) {
     const sql = format('CREATE SCHEMA IF NOT EXISTS %I', schemaName);
-    return this.pool.query(sql);
+    const result = await this.pool.query(sql);
+    await this.logDdlAction(schemaName, null, 'CREATE_SCHEMA', sql);
+    return result;
   }
 
   /**
@@ -75,11 +101,12 @@ export class AlchemaCore {
       tableName
     );
     await this.pool.query(sql);
-
+    await this.logDdlAction(schemaName, tableName, 'CREATE_TABLE', sql);
+ 
     // Enable and Force RLS
     await this.pool.query(format('ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY', schemaName, tableName));
     await this.pool.query(format('ALTER TABLE %I.%I FORCE ROW LEVEL SECURITY', schemaName, tableName));
-
+ 
     // Create the Advanced Enterprise RLS policy
     const policySql = format(
       `CREATE POLICY %I ON %I.%I 
@@ -119,7 +146,9 @@ export class AlchemaCore {
       tableName,
       tableName
     );
-    return this.pool.query(policySql);
+    const policyResult = await this.pool.query(policySql);
+    await this.logDdlAction(schemaName, tableName, 'CREATE_POLICY', policySql);
+    return policyResult;
   }
 
   /**
@@ -133,13 +162,15 @@ export class AlchemaCore {
 
     // %s is safe here ONLY because it's sourced from a registered plugin
     let sql = format('ALTER TABLE %I.%I ADD COLUMN %I %s', schemaName, tableName, field.name, pgDef);
-
+ 
     if (field.type === 'relation' && field.relationTarget) {
       const fkName = `fk_${tableName}_${field.name}`;
       sql += format(', ADD CONSTRAINT %I FOREIGN KEY (%I) REFERENCES %I.%I(id) ON DELETE SET NULL', fkName, field.name, schemaName, field.relationTarget);
     }
-
-    return this.pool.query(sql);
+ 
+    const result = await this.pool.query(sql);
+    await this.logDdlAction(schemaName, tableName, 'ADD_COLUMN', sql);
+    return result;
   }
 
   /**
@@ -173,7 +204,9 @@ export class AlchemaCore {
       checkCondition
     );
     
-    return this.pool.query(sql);
+    const result = await this.pool.query(sql);
+    await this.logDdlAction(schemaName, tableName, 'ADD_CONSTRAINT', sql);
+    return result;
   }
 
   /**
@@ -181,7 +214,9 @@ export class AlchemaCore {
    */
   async removeColumn(schemaName: string, tableName: string, columnName: string) {
     const sql = format('ALTER TABLE %I.%I DROP COLUMN %I CASCADE', schemaName, tableName, columnName);
-    return this.pool.query(sql);
+    const result = await this.pool.query(sql);
+    await this.logDdlAction(schemaName, tableName, 'DROP_COLUMN', sql);
+    return result;
   }
 
   /**
@@ -189,6 +224,8 @@ export class AlchemaCore {
    */
   async renameColumn(schemaName: string, tableName: string, oldColumnName: string, newColumnName: string) {
     const sql = format('ALTER TABLE %I.%I RENAME COLUMN %I TO %I', schemaName, tableName, oldColumnName, newColumnName);
-    return this.pool.query(sql);
+    const result = await this.pool.query(sql);
+    await this.logDdlAction(schemaName, tableName, 'RENAME_COLUMN', sql);
+    return result;
   }
 }

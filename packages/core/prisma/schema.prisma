@@ -9,16 +9,18 @@ datasource db {
 }
 
 model Tenant {
-  id          String            @id @default(cuid())
-  name        String
-  schemaName  String            @unique @map("schema_name")
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @default(now()) @updatedAt @map("updated_at")
-  auditLogs   AuditLog[]
-  consoleApps ConsoleApp[]
-  tables      TableDefinition[]
-  teams       Team[]
-  users       User[]
+  id              String            @id @default(cuid())
+  name            String
+  schemaName      String            @unique @map("schema_name")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at")
+  dataAuditLogs   DataAuditLog[]
+  systemEventLogs SystemEventLog[]
+  ddlLogs         DdlLog[]
+  consoleApps     ConsoleApp[]
+  tables          TableDefinition[]
+  teams           Team[]
+  users           User[]
 
   @@index([createdAt])
   @@map("tenants")
@@ -170,35 +172,37 @@ model SystemPermission {
 /// KLAO multi-tenant context (tenantId, role, teamId) which are
 /// embedded in the JWT by `src/lib/auth/session.ts`.
 model User {
-  id            String     @id @default(cuid())
-  name          String?
-  email         String     @unique
-  emailVerified DateTime?  @map("email_verified")
-  image         String?
+  id              String           @id @default(cuid())
+  name            String?
+  email           String           @unique
+  emailVerified   DateTime?        @map("email_verified")
+  image           String?
   /// Hashed password — used only for the KLAO internal credential provider.
   /// NULL when the user authenticates exclusively via OAuth (Google, Azure).
-  password      String?
+  password        String?
   /// FK → core.tenants.  NULL only for SUPER_ADMIN accounts that are not
   /// scoped to a single tenant.
-  tenantId      String?    @map("tenant_id")
+  tenantId        String?          @map("tenant_id")
   /// Top-level role fast-path used by AccessGuard:
   /// SUPER_ADMIN | TENANT_ADMIN | MEMBER
   /// Fine-grained RBAC is delegated to ObjectPermission via teamId.
-  role          String     @default("MEMBER")
-  isActive      Boolean    @default(true) @map("is_active")
-  phone         String?
-  title         String?
-  metadata      Json       @default("{}")
-  googleId      String?    @unique @map("google_id")
-  googleDomain  String?    @map("google_domain")
-  lastLoginAt   DateTime?  @map("last_login_at")
-  createdAt     DateTime   @default(now()) @map("created_at")
-  updatedAt     DateTime   @default(now()) @updatedAt @map("updated_at")
-  accounts      Account[]
-  auditLogs     AuditLog[]
-  sessions      Session[]
-  teams         UserTeam[]
-  tenant        Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role            String           @default("MEMBER")
+  isActive        Boolean          @default(true) @map("is_active")
+  phone           String?
+  title           String?
+  metadata        Json             @default("{}")
+  googleId        String?          @unique @map("google_id")
+  googleDomain    String?          @map("google_domain")
+  lastLoginAt     DateTime?        @map("last_login_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at")
+  accounts        Account[]
+  dataAuditLogs   DataAuditLog[]
+  systemEventLogs SystemEventLog[]
+  ddlLogs         DdlLog[]
+  sessions        Session[]
+  teams           UserTeam[]
+  tenant          Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@map("users")
@@ -267,7 +271,7 @@ model VerificationToken {
   @@schema("core")
 }
 
-model AuditLog {
+model DataAuditLog {
   id         String   @id @default(cuid())
   tenantId   String   @map("tenant_id")
   userId     String?  @map("user_id")
@@ -282,6 +286,46 @@ model AuditLog {
   user       User?    @relation(fields: [userId], references: [id])
 
   @@index([tenantId, objectName, recordId])
-  @@map("audit_logs")
+  @@index([userId])
+  @@index([createdAt])
+  @@map("data_audit_logs")
+  @@schema("core")
+}
+
+model SystemEventLog {
+  id         String   @id @default(cuid())
+  tenantId   String   @map("tenant_id")
+  userId     String?  @map("user_id")
+  ipAddress  String?  @map("ip_address")
+  category   String   // e.g. "METADATA", "USER_MANAGEMENT", "SETTINGS"
+  action     String   // e.g. "CREATE", "UPDATE", "DELETE"
+  eventName  String   @map("event_name")
+  details    Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, category])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("system_event_logs")
+  @@schema("core")
+}
+
+model DdlLog {
+  id          String   @id @default(cuid())
+  tenantId    String?  @map("tenant_id")
+  userId      String?  @map("user_id")
+  schemaName  String   @map("schema_name")
+  tableName   String?  @map("table_name")
+  action      String
+  sqlExecuted String   @map("sql_executed")
+  createdAt   DateTime @default(now()) @map("created_at")
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([schemaName])
+  @@index([createdAt])
+  @@map("ddl_logs")
   @@schema("core")
 }

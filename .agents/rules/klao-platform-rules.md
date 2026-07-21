@@ -33,3 +33,5 @@ description: Mandatory development and deployment rules for the Klao Platform.
 - **Rule (Audit Logging)**: Audit logs MUST be dispatched asynchronously (fire-and-forget) OUTSIDE the main database transaction to prevent locking contention. NEVER perform synchronous inserts to `core.audit_logs` inside a CRUD transaction.
 - **Rule (Database Indexes)**: ALL foreign key columns heavily queried (e.g., `tenantId`, `parentId`, `teamId`) MUST have explicit `@@index` annotations in `schema.prisma`.
 - **Rule (Session Context)**: Always pass a pre-resolved `SessionContext` throughout `QueryLayer` methods to avoid redundant JWT decoding during multi-step transactions.
+- **Rule (Network Latency & RLS)**: When injecting RLS session context via `set_config`, you MUST bundle all variables into a single chained SQL query (`SELECT set_config(...), set_config(...)`) to eliminate redundant network round-trips. Do the same for `RESET`.
+- **Rule (Connection Pooling)**: Database instantiations (Prisma or `pg`) MUST enforce PgBouncer context (`pgbouncer=true` and `connection_limit`) in production environments to prevent `max_connections` exhaustion at 10,000 OPS.

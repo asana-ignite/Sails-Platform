@@ -39,17 +39,25 @@ export class TransactionContext {
         await client.query(`SET ROLE ${resolvedRole}`);
       }
 
-      // Inject the user context into the PostgreSQL session
+      // Inject the user context into the PostgreSQL session in a single round-trip
+      const configQueries: string[] = [];
+      const configValues: string[] = [];
+      
       if (resolvedUserId) {
-        await client.query('SELECT set_config($1, $2, true)', ['app.current_user_id', resolvedUserId]);
+        configQueries.push(`set_config('app.current_user_id', $${configValues.length + 1}, true)`);
+        configValues.push(resolvedUserId);
       }
-
       if (resolvedTenantId) {
-        await client.query('SELECT set_config($1, $2, true)', ['app.current_tenant_id', resolvedTenantId]);
+        configQueries.push(`set_config('app.current_tenant_id', $${configValues.length + 1}, true)`);
+        configValues.push(resolvedTenantId);
+      }
+      if (resolvedActiveTeamId) {
+        configQueries.push(`set_config('app.current_team_id', $${configValues.length + 1}, true)`);
+        configValues.push(resolvedActiveTeamId);
       }
 
-      if (resolvedActiveTeamId) {
-        await client.query('SELECT set_config($1, $2, true)', ['app.current_team_id', resolvedActiveTeamId]);
+      if (configQueries.length > 0) {
+        await client.query(`SELECT ${configQueries.join(', ')}`, configValues);
       }
 
       // Yield execution back to the caller for actual data queries
@@ -61,13 +69,14 @@ export class TransactionContext {
       await client.query('ROLLBACK');
       throw error;
     } finally {
-      // Clean up the session context before returning the client to the pool
-      try { await client.query("RESET app.current_user_id"); } catch (e) {}
-      try { await client.query("RESET app.current_tenant_id"); } catch (e) {}
-      try { await client.query("RESET app.current_team_id"); } catch (e) {}
-      if (options?.role || resolvedRole) {
-        try { await client.query('RESET ROLE'); } catch (e) {}
-      }
+      // Clean up the session context before returning the client to the pool in a single round-trip
+      try {
+        let resetQuery = "RESET app.current_user_id; RESET app.current_tenant_id; RESET app.current_team_id;";
+        if (options?.role || resolvedRole) {
+          resetQuery += " RESET ROLE;";
+        }
+        await client.query(resetQuery);
+      } catch (e) {}
       client.release();
     }
   }

@@ -1,27 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { translator } from '@/lib/services';
+import { getTranslator } from '@/lib/services';
+import { getAppSession } from '@/lib/auth/session';
+import { SchemaLogger } from '@/core/engine/SchemaLogger';
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, tableName, description } = await req.json();
-
-    // 1. Get the first tenant for now (simulating multi-tenancy)
-    let tenant = await db.tenant.findFirst();
-
-    if (!tenant) {
-      // Create a default tenant if none exists
-      // @ts-ignore - This logic is legacy and needs refactoring to use TenantProvisioner
-      tenant = await translator.createTable('Default Tenant', 'tenant_default');
+    const session = await getAppSession();
+    const caller = session?.user as any;
+    
+    if (!caller) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Create the table via the translator (handles DDL and Metadata)
-    const table = await translator.createTable(
-      tenant.id,
+    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
+    }
+
+    const { name, tableName, description } = await req.json();
+
+    // Create the table via the translator (handles DDL and Metadata)
+    const table = await getTranslator().createTable(
+      caller.tenantId,
       name,
       tableName,
       description
     );
+
+    // Log Logical Metadata Event
+    SchemaLogger.logSystemEvent({
+      tenantId: caller.tenantId,
+      userId: caller.id,
+      category: 'METADATA',
+      action: 'CREATE',
+      eventName: 'Create Table Definition',
+      details: { id: table.id, name, tableName, description }
+    });
 
     return NextResponse.json(table, { status: 201 });
   } catch (error: any) {
@@ -33,10 +47,26 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const session = await getAppSession();
+    const caller = session?.user as any;
+    
+    if (!caller) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
+    }
+
     const tables = await db.tableDefinition.findMany({
+      where: {
+        tenantId: caller.tenantId
+      },
       include: {
+        tenant: true,
+        fields: true,
         _count: {
           select: { fields: true }
         }
@@ -44,6 +74,7 @@ export async function GET() {
     });
     return NextResponse.json(tables);
   } catch (error: any) {
+    console.error('Error fetching tables:', error);
     return NextResponse.json(
       { error: 'Failed to fetch tables' },
       { status: 500 }

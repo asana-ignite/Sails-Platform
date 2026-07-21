@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAppSession } from '@/lib/auth/session';
+import { SchemaLogger } from '@/core/engine/SchemaLogger';
 
 /**
  * PATCH /api/tenant/users/[id]
@@ -54,6 +55,26 @@ export async function PATCH(
       },
     });
 
+    SchemaLogger.logSystemEvent({
+      tenantId: existingUser.tenantId || caller.tenantId,
+      userId: caller.id,
+      category: 'USER_MANAGEMENT',
+      action: 'UPDATE',
+      eventName: 'Update User',
+      details: {
+        id,
+        changes: { email, name, role, title, phone, isActive },
+        before: {
+          email: existingUser.email,
+          name: existingUser.name,
+          role: existingUser.role,
+          title: existingUser.title,
+          phone: existingUser.phone,
+          isActive: existingUser.isActive
+        }
+      }
+    });
+
     return NextResponse.json(updatedUser);
   } catch (error: any) {
     if (error.code === 'P2002') {
@@ -97,6 +118,15 @@ export async function DELETE(
     }
 
     await db.user.delete({ where: { id } });
+
+    SchemaLogger.logSystemEvent({
+      tenantId: userToDelete.tenantId || caller.tenantId,
+      userId: caller.id,
+      category: 'USER_MANAGEMENT',
+      action: 'DELETE',
+      eventName: 'Delete User',
+      details: { id, email: userToDelete.email, name: userToDelete.name }
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

@@ -18,6 +18,7 @@
  */
 
 import { Pool } from 'pg';
+import { pool as defaultPool } from '@/lib/knex';
 
 export type IsolationStrategy = 'SCHEMA_PER_TENANT' | 'DATABASE_PER_TENANT';
 
@@ -43,11 +44,11 @@ export class ConnectionManager {
   }
 
   /**
-   * Returns the singleton instance. Throws if not initialized.
+   * Returns the singleton instance.
    */
   static getInstance(): ConnectionManager {
     if (!ConnectionManager.instance) {
-      throw new Error('ConnectionManager has not been initialized. Call ConnectionManager.initialize() first.');
+      ConnectionManager.initialize(defaultPool, 'SCHEMA_PER_TENANT');
     }
     return ConnectionManager.instance;
   }

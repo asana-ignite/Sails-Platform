@@ -128,8 +128,8 @@ export class QueryLayer {
 
         // 3. Prepare Audit Log (executed outside of transaction)
         const auditSql = format(
-          `INSERT INTO core.audit_logs (id, tenant_id, user_id, action, object_name, record_id, new_values) 
-           VALUES (%L, %L, %L, 'CREATE', %L, %L, %L)`,
+          `INSERT INTO core.data_audit_logs (id, tenant_id, user_id, action, object_name, record_id, new_values) 
+            VALUES (%L, %L, %L, 'CREATE', %L, %L, %L)`,
           generateTimeOrderedId(),
           resolvedCtx.tenantId,
           resolvedCtx.userId,
@@ -203,8 +203,8 @@ export class QueryLayer {
 
         // 4. Prepare Audit Log (executed outside of transaction)
         const auditSql = format(
-          `INSERT INTO core.audit_logs (id, tenant_id, user_id, action, object_name, record_id, old_values, new_values) 
-           VALUES (%L, %L, %L, 'UPDATE', %L, %L, %L, %L)`,
+          `INSERT INTO core.data_audit_logs (id, tenant_id, user_id, action, object_name, record_id, old_values, new_values) 
+            VALUES (%L, %L, %L, 'UPDATE', %L, %L, %L, %L)`,
           generateTimeOrderedId(),
           resolvedCtx.tenantId,
           resolvedCtx.userId,
@@ -265,8 +265,8 @@ export class QueryLayer {
 
         // 3. Prepare Audit Log (executed outside of transaction)
         const auditSql = format(
-          `INSERT INTO core.audit_logs (id, tenant_id, user_id, action, object_name, record_id, old_values) 
-           VALUES (%L, %L, %L, 'DELETE', %L, %L, %L)`,
+          `INSERT INTO core.data_audit_logs (id, tenant_id, user_id, action, object_name, record_id, old_values) 
+            VALUES (%L, %L, %L, 'DELETE', %L, %L, %L)`,
           generateTimeOrderedId(),
           resolvedCtx.tenantId,
           resolvedCtx.userId,

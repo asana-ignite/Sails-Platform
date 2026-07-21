@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAppSession } from '@/lib/auth/session';
+import { SchemaLogger } from '@/core/engine/SchemaLogger';
 
 /**
  * POST /api/tenant/users
@@ -50,6 +51,15 @@ export async function POST(req: NextRequest) {
           }
         } : undefined
       }
+    });
+
+    SchemaLogger.logSystemEvent({
+      tenantId: targetTenantId,
+      userId: caller.id,
+      category: 'USER_MANAGEMENT',
+      action: 'CREATE',
+      eventName: 'Create User',
+      details: { id: newUser.id, email, name, role, title, phone }
     });
 
     return NextResponse.json(newUser, { status: 201 });

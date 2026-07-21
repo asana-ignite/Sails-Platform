@@ -76,7 +76,7 @@ async function tenantList() {
     const tenants = await db.tenant.findMany({
       include: {
         _count: {
-          select: { tables: true, users: true, auditLogs: true }
+          select: { tables: true, users: true, dataAuditLogs: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -93,7 +93,7 @@ async function tenantList() {
 
     for (const t of tenants) {
       console.log(
-        `  ${t.id.padEnd(38)} ${t.name.padEnd(24)} ${t.schemaName.padEnd(24)} ${String(t._count.tables).padEnd(8)} ${String(t._count.users).padEnd(8)} ${t._count.auditLogs}`
+        `  ${t.id.padEnd(38)} ${t.name.padEnd(24)} ${t.schemaName.padEnd(24)} ${String(t._count.tables).padEnd(8)} ${String(t._count.users).padEnd(8)} ${t._count.dataAuditLogs}`
       );
     }
     console.log('');

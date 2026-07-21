@@ -4,7 +4,7 @@ FROM oven/bun:latest
 WORKDIR /app
 
 # Copy root package files
-COPY package.json bun.lockb* ./
+COPY package.json bun.lock* bun.lockb* ./
 
 # Copy all workspace package files
 COPY packages/core/package.json ./packages/core/
