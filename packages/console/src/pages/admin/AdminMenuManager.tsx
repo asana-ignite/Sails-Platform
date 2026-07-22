@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { ConsoleApp, ConsoleMenu } from '@klao/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
+import { CustomSelect } from '../../components/common/CustomSelect';
 import './AdminMenuManager.css';
 
 
@@ -107,9 +108,12 @@ const AdminMenuManager: React.FC = () => {
       <div className="klao-menu-manager__header">
         <div className="klao-app-selector">
           <label>Selected Application:</label>
-          <select value={selectedAppId} onChange={e => setSelectedAppId(e.target.value)}>
-            {apps.map(app => <option key={app.id} value={app.id}>{app.name}</option>)}
-          </select>
+          <CustomSelect
+            value={selectedAppId}
+            options={apps.map(app => ({ value: app.id, label: app.name }))}
+            onChange={val => setSelectedAppId(String(val))}
+            style={{ minWidth: '220px' }}
+          />
         </div>
         <button 
           className="klao-btn klao-btn--primary"
@@ -140,10 +144,14 @@ const AdminMenuManager: React.FC = () => {
                 </div>
                 <div className="klao-form-group">
                   <label>Action Type</label>
-                  <select value={isEditing.actionType} onChange={e => setIsEditing({...isEditing, actionType: e.target.value})}>
-                    <option value="table">Data Table</option>
-                    <option value="plugin">Custom Plugin</option>
-                  </select>
+                  <CustomSelect
+                    value={isEditing.actionType}
+                    options={[
+                      { value: 'table', label: 'Data Table' },
+                      { value: 'plugin', label: 'Custom Plugin' }
+                    ]}
+                    onChange={val => setIsEditing({ ...isEditing, actionType: String(val) })}
+                  />
                 </div>
               </div>
               <div className="klao-form-group">

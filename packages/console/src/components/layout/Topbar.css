@@ -173,12 +173,12 @@
   top: calc(100% + 10px);
   right: -50px;
   width: 330px;
-  background-color: rgba(255, 255, 255, 0.85);
+  background-color: var(--klao-bg-card);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--klao-border-color);
   border-radius: var(--klao-radius-lg);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
   padding: 20px;
   z-index: 1000;
   animation: klao-fade-in 0.3s ease-out forwards;
