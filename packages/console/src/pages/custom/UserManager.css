@@ -134,7 +134,7 @@
 
 /* Table Styles */
 .klao-user-manager__table-wrapper {
-  overflow: hidden;
+  overflow: visible;
   padding: 0 !important;
 }
 
@@ -291,7 +291,7 @@
   border-radius: var(--klao-radius-md);
   box-shadow: var(--klao-shadow-lg);
   padding: 4px;
-  z-index: 100;
+  z-index: 9999 !important;
   animation: klao-fade-in 0.2s ease-out;
 }
 
@@ -428,7 +428,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 9999;
+  z-index: 9999 !important;
   display: flex;
   justify-content: flex-end;
 }

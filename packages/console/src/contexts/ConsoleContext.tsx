@@ -14,6 +14,10 @@ interface ConsoleContextType {
   setActiveApp: (appId: string) => void;
   headerActions: React.ReactNode | null;
   setHeaderActions: (actions: React.ReactNode | null) => void;
+  pageTitle: string | null;
+  setPageTitle: (title: string | null) => void;
+  pageSubtitle: string | null;
+  setPageSubtitle: (subtitle: string | null) => void;
   showAddUserDrawer: boolean;
   setShowAddUserDrawer: (show: boolean) => void;
 }
@@ -126,11 +130,15 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const [headerActions, setHeaderActions] = useState<React.ReactNode | null>(null);
+  const [pageTitle, setPageTitle] = useState<string | null>(null);
+  const [pageSubtitle, setPageSubtitle] = useState<string | null>(null);
   const [showAddUserDrawer, setShowAddUserDrawer] = useState(false);
 
   useEffect(() => {
-    // Clear header actions on any route change to prevent leakage
+    // Clear header actions & title overrides on route change
     setHeaderActions(null);
+    setPageTitle(null);
+    setPageSubtitle(null);
     setShowAddUserDrawer(false);
   }, [location.pathname]);
 
@@ -144,6 +152,10 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setActiveApp,
       headerActions,
       setHeaderActions,
+      pageTitle,
+      setPageTitle,
+      pageSubtitle,
+      setPageSubtitle,
       showAddUserDrawer,
       setShowAddUserDrawer
     }}>

@@ -42,6 +42,7 @@ export interface KlaoFieldDefinition {
   config?: Record<string, any> | null;
   isRequired: boolean;
   defaultValue?: string | null;
+  description?: string | null;
   createdAt: string;
   rules?: ValidationRule[];
 }

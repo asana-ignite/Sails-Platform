@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, MoreHorizontal, Shield, Circle, UserPlus, Filter, ChevronUp, ChevronDown, ArrowUpDown, ChevronLeft, ChevronRight, Edit2, UserX, UserCheck, Key, Trash2, Copy, X } from 'lucide-react';
 import { useConsole } from '../../contexts/ConsoleContext';
+import { CustomSelect } from '../../components/common/CustomSelect';
 import './UserManager.css';
 
 interface User {
@@ -504,20 +505,20 @@ const UserManager: React.FC = () => {
             </span>
             <div className="klao-user-manager__page-size">
               <span className="klao-user-manager__page-size-label">Records per page:</span>
-              <select
-                className="klao-select-sm"
+              <CustomSelect
+                size="sm"
                 value={pageSize === totalCount ? 'all' : pageSize}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setPageSize(val === 'all' ? totalCount || 1000 : parseInt(val));
+                options={[
+                  { value: 10, label: '10' },
+                  { value: 25, label: '25' },
+                  { value: 50, label: '50' },
+                  { value: 'all', label: 'ALL' }
+                ]}
+                onChange={(val) => {
+                  setPageSize(val === 'all' ? (totalCount || 1000) : Number(val));
                   setCurrentPage(1);
                 }}
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value="all">ALL</option>
-              </select>
+              />
             </div>
           </div>
           <div className="klao-user-manager__pagination-controls">

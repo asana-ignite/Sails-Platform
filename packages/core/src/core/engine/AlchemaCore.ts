@@ -220,6 +220,16 @@ export class AlchemaCore {
   }
 
   /**
+   * Drops a physical table from a tenant's schema.
+   */
+  async dropTable(schemaName: string, tableName: string) {
+    const sql = format('DROP TABLE IF EXISTS %I.%I CASCADE', schemaName, tableName);
+    const result = await this.pool.query(sql);
+    await this.logDdlAction(schemaName, tableName, 'DROP_TABLE', sql);
+    return result;
+  }
+
+  /**
    * Renames an existing column in a table.
    */
   async renameColumn(schemaName: string, tableName: string, oldColumnName: string, newColumnName: string) {

@@ -28,9 +28,41 @@ export class TranslatorLayer {
   }
 
   /**
+   * Removes a Data Model table and its physical table definition.
+   */
+  async removeTable(tableId: string) {
+    const tableDef = await db.tableDefinition.findUniqueOrThrow({
+      where: { id: tableId },
+      include: { tenant: true }
+    });
+
+    try {
+      await this.alchemaCore.dropTable(tableDef.tenant.schemaName, tableDef.tableName);
+    } catch (e) {
+      console.warn('Physical table drop skipped or failed:', e);
+    }
+
+    await db.tableDefinition.delete({
+      where: { id: tableId }
+    });
+
+    return true;
+  }
+
+  /**
+   * Updates a Data Model name and description.
+   */
+  async updateTable(tableId: string, name: string, description?: string) {
+    return await db.tableDefinition.update({
+      where: { id: tableId },
+      data: { name, description }
+    });
+  }
+
+  /**
    * Translates a UI request to add a new Field into DB operations.
    */
-  async addFieldDef(tableId: string, name: string, fieldName: string, physicalType: string, logicalType: string, config: any = null, isRequired: boolean = false) {
+  async addFieldDef(tableId: string, name: string, fieldName: string, physicalType: string, logicalType: string, config: any = null, isRequired: boolean = false, description: string | null = null) {
     const tableDef = await db.tableDefinition.findUniqueOrThrow({
       where: { id: tableId },
       include: { tenant: true }
@@ -59,7 +91,8 @@ export class TranslatorLayer {
         physicalType,
         logicalType,
         config: config ? config : undefined,
-        isRequired
+        isRequired,
+        description
       },
     });
 

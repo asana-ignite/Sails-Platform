@@ -11,7 +11,7 @@ import './AppPluginShell.css';
  * Resolves metadata and dynamic components for ANY application workspace.
  */
 const AppPluginShell: React.FC = () => {
-  const { navigationItems, activeApp, headerActions } = useConsole();
+  const { navigationItems, activeApp, headerActions, pageTitle, pageSubtitle } = useConsole();
   const location = useLocation();
   const { appSlug } = useParams<{ appSlug: string }>();
 
@@ -49,17 +49,19 @@ const AppPluginShell: React.FC = () => {
   const componentKey = activeMenu?.componentKey;
   const PluginComponent = componentKey ? (AdminPluginRegistry as any)[componentKey] : null;
 
-  // Header Data with App-level defaults
-  const title = activeMenu?.label || activeApp?.name || 'Workspace';
+  // Header Data with App-level defaults & Component overrides
+  const title = pageTitle || activeMenu?.label || activeApp?.name || 'Workspace';
   const iconName = activeMenu?.icon || activeApp?.icon || 'Box';
   
   // High-fidelity subtitle resolution
-  let subtitle = `Managing all records and configuration for the ${activeMenu?.label?.toLowerCase() || activeApp?.name?.toLowerCase() || 'module'}.`;
+  let subtitle = pageSubtitle || `Managing all records and configuration for the ${activeMenu?.label?.toLowerCase() || activeApp?.name?.toLowerCase() || 'module'}.`;
   
-  if (componentKey === 'AdminUserManager') {
-    subtitle = 'Manage platform access, assigned roles, and security permissions for all system members.';
-  } else if (activeMenu?.requiredCapability) {
-    subtitle = `Secured access module requiring ${activeMenu.requiredCapability} authorization.`;
+  if (!pageSubtitle) {
+    if (componentKey === 'AdminUserManager') {
+      subtitle = 'Manage platform access, assigned roles, and security permissions for all system members.';
+    } else if (activeMenu?.requiredCapability) {
+      subtitle = `Secured access module requiring ${activeMenu.requiredCapability} authorization.`;
+    }
   }
 
   return (

@@ -54,6 +54,7 @@ model FieldDefinition {
   config       Json?
   isRequired   Boolean          @default(false) @map("is_required")
   defaultValue String?          @map("default_value")
+  description  String?          @map("description")
   createdAt    DateTime         @default(now()) @map("created_at")
   table        TableDefinition  @relation(fields: [tableId], references: [id], onDelete: Cascade)
   rules        ValidationRule[]

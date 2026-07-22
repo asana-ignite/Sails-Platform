@@ -24,7 +24,8 @@ export async function POST(req: NextRequest) {
         physicalType, 
         logicalType, 
         config, 
-        isRequired 
+        isRequired,
+        description
     } = await req.json();
 
     // Verify the table belongs to the user's tenant
@@ -44,7 +45,8 @@ export async function POST(req: NextRequest) {
         physicalType,
         logicalType,
         config,
-        isRequired
+        isRequired,
+        description
     );
 
     // Log Logical Metadata Event
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
       category: 'METADATA',
       action: 'CREATE',
       eventName: 'Create Field Definition',
-      details: { id: field.id, tableId, name, fieldName, physicalType, logicalType, isRequired }
+      details: { id: field.id, tableId, name, fieldName, physicalType, logicalType, isRequired, description }
     });
 
     return NextResponse.json(field, { status: 201 });
