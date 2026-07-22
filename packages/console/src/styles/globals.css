@@ -38,14 +38,18 @@ a {
 
 button {
   font: inherit;
+  font-family: var(--klao-font-family);
   cursor: pointer;
   border: none;
   background: none;
   transition: var(--klao-transition);
 }
 
-input {
+input,
+select,
+textarea {
   font: inherit;
+  font-family: var(--klao-font-family);
   outline: none;
 }
 
@@ -137,16 +141,18 @@ input {
   box-shadow: 0 6px 16px rgba(157, 206, 224, 0.5);
 }
 
-.klao-btn--ghost {
-  background: transparent;
-  border-color: var(--klao-border-color);
+.klao-btn--ghost,
+.klao-btn--secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--klao-border-color);
   color: var(--klao-text-main);
 }
 
-.klao-btn--ghost:hover {
-  background-color: var(--klao-bg-body);
-  color: var(--klao-primary);
-  border-color: var(--klao-primary);
+.klao-btn--ghost:hover,
+.klao-btn--secondary:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--klao-text-main);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .klao-btn--danger {
@@ -273,19 +279,24 @@ input {
 
 .klao-form-group input,
 .klao-form-group select,
-.klao-form-group textarea {
+.klao-form-group textarea,
+textarea {
   width: 100%;
   padding: 12px 16px;
   border: 1px solid var(--klao-border-color);
   border-radius: var(--klao-radius-md);
+  font-family: var(--klao-font-family);
   font-size: 0.95rem;
+  line-height: 1.5;
   background: var(--klao-bg-body);
   color: var(--klao-text-main);
   transition: var(--klao-transition);
 }
 
 .klao-form-group input:focus,
-.klao-form-group select:focus {
+.klao-form-group select:focus,
+.klao-form-group textarea:focus,
+textarea:focus {
   border-color: var(--klao-primary);
   background: var(--klao-bg-card);
   box-shadow: 0 0 0 3px var(--klao-primary-light);

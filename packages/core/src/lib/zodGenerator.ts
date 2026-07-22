@@ -7,7 +7,7 @@ export function generateZodSchema(fields: any[]) {
 
   fields.forEach((field) => {
     // 1. Base Type mapping via Plugin Registry
-    const plugin = registry.getPlugin(field.physicalType);
+    const plugin = registry.getPlugin(field.logicalType || field.physicalType || field.type);
     let fieldSchema = plugin.getZodSchema ? plugin.getZodSchema(field.isRequired) : z.any();
 
     // 2. Handle Optionality

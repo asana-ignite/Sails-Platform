@@ -46,7 +46,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
     }
 
-    await getTranslator().removeTable(params.id);
+    const isDeveloperBypass = req.headers.get('x-klao-system-bypass') === 'true'
+      || (process.env.NODE_ENV === 'development' && process.env.KLAO_DEVELOPER_MODE === 'true');
+
+    await getTranslator().removeTable(params.id, isDeveloperBypass);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error deleting table:', error);

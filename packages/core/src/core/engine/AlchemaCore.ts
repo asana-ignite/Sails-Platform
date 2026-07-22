@@ -25,6 +25,10 @@ export class AlchemaCore {
     this.pool = pool || ConnectionManager.getInstance().getCorePool();
   }
 
+  public getPool(): Pool {
+    return this.pool;
+  }
+
   private async logDdlAction(schemaName: string, tableName: string | null, action: string, sql: string) {
     try {
       const session = await getAppSession();
@@ -236,6 +240,25 @@ export class AlchemaCore {
     const sql = format('ALTER TABLE %I.%I RENAME COLUMN %I TO %I', schemaName, tableName, oldColumnName, newColumnName);
     const result = await this.pool.query(sql);
     await this.logDdlAction(schemaName, tableName, 'RENAME_COLUMN', sql);
+    return result;
+  }
+
+  /**
+   * Alters an existing column's data type using an explicit USING cast expression.
+   */
+  async alterColumnType(schemaName: string, tableName: string, columnName: string, newPgDataType: string) {
+    const rawType = newPgDataType.replace(/\s+NOT\s+NULL/gi, '').replace(/\s+NULL/gi, '').trim();
+    const sql = format(
+      'ALTER TABLE %I.%I ALTER COLUMN %I TYPE %s USING %I::%s',
+      schemaName,
+      tableName,
+      columnName,
+      rawType,
+      columnName,
+      rawType
+    );
+    const result = await this.pool.query(sql);
+    await this.logDdlAction(schemaName, tableName, 'ALTER_COLUMN_TYPE', sql);
     return result;
   }
 }

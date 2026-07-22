@@ -4,6 +4,24 @@ import { FieldTypePlugin } from '../FieldTypePlugin';
 
 export const RelationType: FieldTypePlugin = {
   type: 'relation',
+  label: 'Relation',
+  description: 'Foreign key link to records in another data model',
+  iconName: 'Link',
+  physicalType: 'relation',
+  parametersSchema: [
+    { name: 'targetTable', label: 'Target Data Model', type: 'model_select', required: true },
+    {
+      name: 'relationType',
+      label: 'Relation Type',
+      type: 'select',
+      defaultValue: 'many_to_one',
+      options: [
+        { label: 'Many-to-One (Lookup Foreign Key)', value: 'many_to_one' },
+        { label: 'One-to-Many', value: 'one_to_many' },
+        { label: 'One-to-One', value: 'one_to_one' }
+      ]
+    }
+  ],
   getPostgresColumnDefinition: (isRequired?: boolean) => {
     return `UUID${isRequired ? ' NOT NULL' : ''}`;
   },
@@ -29,3 +47,4 @@ export const RelationType: FieldTypePlugin = {
     );
   }
 };
+

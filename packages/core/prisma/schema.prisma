@@ -33,6 +33,7 @@ model TableDefinition {
   name        String
   tableName   String            @map("table_name")
   description String?
+  isSystem    Boolean           @default(false) @map("is_system")
   createdAt   DateTime          @default(now()) @map("created_at")
   fields      FieldDefinition[]
   tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -53,6 +54,7 @@ model FieldDefinition {
   logicalType  String           @map("logical_type")
   config       Json?
   isRequired   Boolean          @default(false) @map("is_required")
+  isSystem     Boolean          @default(false) @map("is_system")
   defaultValue String?          @map("default_value")
   description  String?          @map("description")
   createdAt    DateTime         @default(now()) @map("created_at")
