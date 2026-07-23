@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Users, GitBranch, Shield, Database, Plus, Search, 
-  Trash2, UserPlus, Check, X, ChevronRight, ChevronDown, MoreHorizontal, AlertCircle 
+  Trash2, UserPlus, Check, X, ChevronRight, ChevronDown, MoreHorizontal, AlertCircle, Award, Sliders, Save 
 } from 'lucide-react';
 import Spinner from '../../components/common/Spinner';
 import { useConsole } from '../../contexts/ConsoleContext';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 interface User {
   id: string;
@@ -21,18 +22,41 @@ interface TeamMember {
   user: User;
 }
 
+interface PositionSlot {
+  id: string;
+  userId: string | null;
+  user?: {
+    name: string | null;
+    email: string;
+  } | null;
+}
+
+interface Position {
+  id: string;
+  name: string;
+  prefix: string;
+  description: string | null;
+  headCount: number;
+  slots?: PositionSlot[];
+}
+
+interface TeamPosition {
+  teamId: string;
+  positionId: string;
+  position: Position;
+}
+
 interface SystemPermission {
   capability: string;
 }
 
 interface ObjectPermission {
+  id?: string;
   objectName: string;
   canCreate: boolean;
-  canRead: boolean;
-  canUpdate: boolean;
   canDelete: boolean;
-  viewAllData: boolean;
-  modifyAllData: boolean;
+  readScope: 'NONE' | 'OWNER' | 'TEAM' | 'HIERARCHY' | 'ALL';
+  modifyScope: 'NONE' | 'OWNER' | 'TEAM' | 'HIERARCHY' | 'ALL';
 }
 
 interface Team {
@@ -41,8 +65,279 @@ interface Team {
   parentId: string | null;
   isSystemAdmin: boolean;
   members: TeamMember[];
+  positions?: TeamPosition[];
   systemPermissions: SystemPermission[];
   objectPermissions: ObjectPermission[];
+}
+
+function ContextMenuPortal({ anchorEl, onClose, children }: { anchorEl: HTMLElement | null; onClose: () => void; children: React.ReactNode }) {
+  if (!anchorEl) return null;
+  const rect = anchorEl.getBoundingClientRect();
+  const top = rect.bottom + 4;
+  const left = Math.max(10, rect.right - 180);
+
+  return createPortal(
+    <div
+      className="klao-user-manager__context-menu"
+      style={{
+        position: 'fixed',
+        top: `${top}px`,
+        left: `${left}px`,
+        width: '180px',
+        zIndex: 10000,
+        boxShadow: 'var(--klao-shadow-lg, 0 10px 25px -5px rgba(0,0,0,0.25))'
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {children}
+    </div>,
+    document.body
+  );
+}
+
+interface ManageDataAccessModalProps {
+  targetType: 'user' | 'position';
+  targetId: string;
+  targetName: string;
+  allObjects: any[];
+  onClose: () => void;
+  onSaveSuccess?: () => void;
+}
+
+function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, onClose, onSaveSuccess }: ManageDataAccessModalProps) {
+  const [permissions, setPermissions] = useState<ObjectPermission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetchPermissions();
+  }, [targetId, targetType]);
+
+  const fetchPermissions = async () => {
+    setLoading(true);
+    try {
+      const endpoint = targetType === 'user' 
+        ? `/api/tenant/users/${targetId}/object-permissions`
+        : `/api/tenant/positions/${targetId}/object-permissions`;
+      const res = await fetch(endpoint);
+      if (res.ok) {
+        const fetched: ObjectPermission[] = await res.json();
+        const initialPerms: ObjectPermission[] = allObjects.map(obj => {
+          const objApiName = obj.tableName || obj.apiName || obj.name;
+          const existing = fetched.find(p => p.objectName === objApiName);
+          return existing || {
+            objectName: objApiName,
+            canCreate: false,
+            canDelete: false,
+            readScope: 'NONE' as const,
+            modifyScope: 'NONE' as const
+          };
+        });
+        setPermissions(initialPerms);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePermDraft = (objectName: string, updates: Partial<ObjectPermission>) => {
+    setPermissions(prev => {
+      const existing = prev.find(p => p.objectName === objectName) || {
+        objectName,
+        canCreate: false,
+        canDelete: false,
+        readScope: 'NONE',
+        modifyScope: 'NONE'
+      };
+
+      const updated = { ...existing, ...updates };
+      return [...prev.filter(p => p.objectName !== objectName), updated as ObjectPermission];
+    });
+  };
+
+  const handleSaveChanges = async () => {
+    setSaving(true);
+    try {
+      const endpoint = targetType === 'user' 
+        ? `/api/tenant/users/${targetId}/object-permissions`
+        : `/api/tenant/positions/${targetId}/object-permissions`;
+      
+      for (const perm of permissions) {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            objectName: perm.objectName,
+            canCreate: perm.canCreate,
+            canDelete: perm.canDelete,
+            readScope: perm.readScope,
+            modifyScope: perm.modifyScope
+          })
+        });
+        if (!res.ok) {
+          const errJson = await res.json();
+          throw new Error(errJson.error || 'Failed to save individual object permission');
+        }
+      }
+
+      if (onSaveSuccess) onSaveSuccess();
+      onClose();
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message || 'Failed to save data access permissions.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filteredObjects = allObjects.filter(obj => {
+    const name = (obj.name || obj.displayName || obj.tableName || '').toLowerCase();
+    const apiName = (obj.tableName || obj.apiName || obj.name || '').toLowerCase();
+    return name.includes(searchQuery.toLowerCase()) || apiName.includes(searchQuery.toLowerCase());
+  });
+
+  return createPortal(
+    <div className="klao-modal-overlay" style={{ zIndex: 10000, justifyContent: 'center', alignItems: 'center' }}>
+      <div
+        className="klao-card"
+        style={{
+          width: '840px',
+          maxHeight: '85vh',
+          borderRadius: '20px',
+          padding: '24px 28px',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: 'var(--klao-shadow-lg)',
+          animation: 'klao-modal-slide-up 0.2s ease-out'
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid var(--klao-border-color)' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--klao-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Database size={18} color="var(--klao-primary)" />
+              Manage Data Access — {targetName}
+            </h3>
+            <p style={{ margin: '2px 0 0', fontSize: '0.825rem', color: 'var(--klao-text-muted)' }}>
+              Configure granular visibility and modify scopes for {targetType === 'user' ? 'Member' : 'Position'}
+            </p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer', padding: '4px' }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div style={{ position: 'relative', marginBottom: '12px', maxWidth: '300px' }}>
+          <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--klao-text-muted)' }} />
+          <input
+            type="text"
+            className="klao-input"
+            style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
+            placeholder="Search data object..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', marginBottom: '16px' }}>
+          {loading ? (
+            <div style={{ padding: '60px', textAlign: 'center' }}><Spinner /></div>
+          ) : (
+            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--klao-border-color)' }}>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>OBJECT</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', textAlign: 'center' }}>CREATE</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', minWidth: '240px' }}>VISIBILITY SCOPE</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', minWidth: '240px' }}>MODIFY SCOPE</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', textAlign: 'center' }}>DELETE</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredObjects.map((obj) => {
+                  const objApiName = obj.tableName || obj.apiName || obj.name;
+                  const objDisplayName = obj.name || obj.displayName || obj.tableName;
+
+                  const perm = permissions.find((p) => p.objectName === objApiName) || {
+                    objectName: objApiName,
+                    canCreate: false,
+                    canDelete: false,
+                    readScope: 'NONE',
+                    modifyScope: 'NONE'
+                  };
+
+                  return (
+                    <tr key={objApiName} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '10px' }}>{objDisplayName}</td>
+                      <td style={{ padding: '10px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          className="klao-checkbox"
+                          checked={perm.canCreate}
+                          onChange={(e) => handleUpdatePermDraft(objApiName, { canCreate: e.target.checked })}
+                        />
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <CustomSelect
+                          size="sm"
+                          style={{ width: '100%' }}
+                          value={perm.readScope || 'NONE'}
+                          options={[
+                            { value: 'NONE', label: '-- None --' },
+                            { value: 'OWNER', label: 'Owner' },
+                            { value: 'ALL', label: 'View All' },
+                            { value: 'HIERARCHY', label: 'View Hierarchy' }
+                          ]}
+                          onChange={(val) => handleUpdatePermDraft(objApiName, { readScope: String(val) as any })}
+                        />
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <CustomSelect
+                          size="sm"
+                          style={{ width: '100%' }}
+                          value={perm.modifyScope || 'NONE'}
+                          options={[
+                            { value: 'NONE', label: '-- None --' },
+                            { value: 'OWNER', label: 'Owner' },
+                            { value: 'ALL', label: 'Modify All' },
+                            { value: 'HIERARCHY', label: 'Modify Hierarchy' }
+                          ]}
+                          onChange={(val) => handleUpdatePermDraft(objApiName, { modifyScope: String(val) as any })}
+                        />
+                      </td>
+                      <td style={{ padding: '10px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          className="klao-checkbox"
+                          checked={perm.canDelete}
+                          onChange={(e) => handleUpdatePermDraft(objApiName, { canDelete: e.target.checked })}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+                {allObjects.length === 0 && (
+                  <tr><td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--klao-text-muted)' }}>No data models defined in system.</td></tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div style={{ paddingTop: '14px', borderTop: '1px solid var(--klao-border-color)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <button className="klao-btn klao-btn--secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="klao-btn klao-btn--primary" onClick={handleSaveChanges} disabled={saving}>
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 export default function AdminTeamManager() {
@@ -50,10 +345,47 @@ export default function AdminTeamManager() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'members' | 'capabilities' | 'objects'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'positions' | 'capabilities' | 'objects'>('members');
   const [tenantUsers, setTenantUsers] = useState<User[]>([]);
+  const [tenantPositions, setTenantPositions] = useState<Position[]>([]);
   const [allCapabilities, setAllCapabilities] = useState<Record<string, any>>({});
   const [allObjects, setAllObjects] = useState<any[]>([]);
+  const [teamObjectSearchQuery, setTeamObjectSearchQuery] = useState('');
+
+  // Draft Team Object Permissions State
+  const [teamObjectPermsDraft, setTeamObjectPermsDraft] = useState<ObjectPermission[]>([]);
+  const [savingTeamObjectPerms, setSavingTeamObjectPerms] = useState(false);
+
+  const selectedTeam = teams.find(t => t.id === selectedTeamId);
+
+  // Sync draft team object permissions when selected team updates
+  useEffect(() => {
+    if (selectedTeam && allObjects.length > 0) {
+      const initialPerms: ObjectPermission[] = allObjects.map(obj => {
+        const objApiName = obj.tableName || obj.apiName || obj.name;
+        const existing = (selectedTeam.objectPermissions || []).find(p => p.objectName === objApiName);
+        return existing || {
+          objectName: objApiName,
+          canCreate: false,
+          canDelete: false,
+          readScope: 'NONE' as const,
+          modifyScope: 'NONE' as const
+        };
+      });
+      setTeamObjectPermsDraft(initialPerms);
+    }
+  }, [selectedTeamId, teams, allObjects]);
+
+  // Portaled Context Menu Anchors
+  const [activeMemberAnchor, setActiveMemberAnchor] = useState<{ id: string; el: HTMLElement } | null>(null);
+  const [activePositionAnchor, setActivePositionAnchor] = useState<{ id: string; el: HTMLElement } | null>(null);
+
+  // Manage Data Access Modal State
+  const [manageModalState, setManageModalState] = useState<{
+    targetType: 'user' | 'position';
+    targetId: string;
+    targetName: string;
+  } | null>(null);
 
   // Create Team Modal State
   const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
@@ -67,23 +399,30 @@ export default function AdminTeamManager() {
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
   const [selectedUserIdsForAdd, setSelectedUserIdsForAdd] = useState<string[]>([]);
   const [submittingAddMembers, setSubmittingAddMembers] = useState(false);
+
+  // Add Positions Modal State & Multi-Select
+  const [showAddPositionsModal, setShowAddPositionsModal] = useState(false);
+  const [positionSearchQuery, setPositionSearchQuery] = useState('');
+  const [selectedPositionIdsForAdd, setSelectedPositionIdsForAdd] = useState<string[]>([]);
+  const [submittingAddPositions, setSubmittingAddPositions] = useState(false);
+
   const [isTeamActionMenuOpen, setIsTeamActionMenuOpen] = useState(false);
   const actionMenuRef = React.useRef<HTMLDivElement>(null);
 
-  // Click-outside listener for Team Action Menu
+  // Click-outside listener for Team Action Menu & Row Context Menus
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
         setIsTeamActionMenuOpen(false);
       }
+      setActiveMemberAnchor(null);
+      setActivePositionAnchor(null);
     };
-    if (isTeamActionMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('click', handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
-  }, [isTeamActionMenuOpen]);
+  }, []);
 
   // Themed Confirmation & Notification Modal States
   const [deleteConfirmTeam, setDeleteConfirmTeam] = useState<{ id: string; name: string } | null>(null);
@@ -99,25 +438,25 @@ export default function AdminTeamManager() {
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      const [teamsRes, usersRes, capsRes, objsRes] = await Promise.all([
+      const [teamsRes, usersRes, capsRes, objsRes, positionsRes] = await Promise.all([
         fetch('/api/tenant/teams'),
         fetch('/api/tenant/users'),
         fetch('/api/console/permissions'),
-        fetch('/api/metadata/objects')
+        fetch('/api/metadata/objects'),
+        fetch('/api/tenant/positions')
       ]);
 
       if (teamsRes.ok) setTeams(await teamsRes.json());
       if (usersRes.ok) setTenantUsers(await usersRes.json());
       if (capsRes.ok) setAllCapabilities((await capsRes.json()).data || {});
       if (objsRes.ok) setAllObjects(await objsRes.json());
+      if (positionsRes.ok) setTenantPositions(await positionsRes.json());
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
   };
-
-  const selectedTeam = teams.find(t => t.id === selectedTeamId);
 
   // Handlers for Teams
   const handleOpenCreateModal = () => {
@@ -139,109 +478,48 @@ export default function AdminTeamManager() {
       </button>
     );
     return () => setHeaderActions(null);
-  }, [selectedTeamId, teams]);
+  }, [setHeaderActions, selectedTeamId, teams]);
 
-  const toggleNode = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const renderTeamTree = (parentId: string | null = null, depth: number = 0) => {
-    const children = teams
-      .filter(t => (t.parentId || null) === parentId)
-      .sort((a, b) => {
-        if (a.isSystemAdmin && !b.isSystemAdmin) return -1;
-        if (!a.isSystemAdmin && b.isSystemAdmin) return 1;
-        return a.name.localeCompare(b.name);
-      });
-
-    if (children.length === 0) return null;
-
-    return children.map(team => {
-      const hasChildren = teams.some(t => t.parentId === team.id);
-      const isExpanded = expandedNodes[team.id] !== false; // Default expanded
-
-      return (
-        <div key={team.id} style={{ display: 'flex', flexDirection: 'column' }}>
-          <div 
-            onClick={() => setSelectedTeamId(team.id)}
-            style={{
-              padding: '8px 12px',
-              paddingLeft: `${12 + depth * 18}px`,
-              margin: '2px 0',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              background: selectedTeamId === team.id ? 'var(--klao-bg-hover, rgba(255,255,255,0.08))' : 'transparent',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              border: selectedTeamId === team.id ? '1px solid var(--klao-border-color, rgba(255,255,255,0.15))' : '1px solid transparent',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {hasChildren ? (
-                <span onClick={(e) => toggleNode(team.id, e)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--klao-text-muted, #64748b)' }}>
-                  {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                </span>
-              ) : (
-                <span style={{ width: '15px', display: 'inline-block' }} />
-              )}
-              <span style={{ fontWeight: selectedTeamId === team.id ? 600 : 400, fontSize: '0.9rem' }}>{team.name}</span>
-            </div>
-            {team.isSystemAdmin && <Shield size={14} color="var(--klao-primary)" title="System Admin Team" />}
-          </div>
-
-          {hasChildren && isExpanded && renderTeamTree(team.id, depth + 1)}
-        </div>
-      );
-    });
-  };
-
-  const getHierarchicalTeamOptions = () => {
-    const options: { id: string; name: string; depth: number }[] = [];
-
-    // Exclude System Admin team from business parent hierarchy options
-    const businessTeams = teams.filter(t => !t.isSystemAdmin);
-
-    const buildOptions = (parentId: string | null = null, depth: number = 0) => {
-      const children = businessTeams
-        .filter(t => (t.parentId || null) === parentId)
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      for (const child of children) {
-        options.push({ id: child.id, name: child.name, depth });
-        buildOptions(child.id, depth + 1);
-      }
-    };
-
-    buildOptions(null, 0);
-    return options;
-  };
-
-  const submitCreateTeam = async () => {
+  const handleCreateTeamSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!newTeamName.trim()) return;
+
     setSubmittingTeam(true);
     try {
       const res = await fetch('/api/tenant/teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newTeamName.trim(), parentId: modalParentTeamId || null })
+        body: JSON.stringify({
+          name: newTeamName.trim(),
+          parentId: modalParentTeamId
+        })
       });
+
       if (res.ok) {
-        const newTeam = await res.json();
-        setTeams([...teams, newTeam]);
-        setSelectedTeamId(newTeam.id);
+        const createdTeam = await res.json();
         setShowCreateTeamModal(false);
         setNewTeamName('');
         setModalParentTeamId(null);
+        await fetchInitialData();
+        setSelectedTeamId(createdTeam.id);
+        if (createdTeam.parentId) {
+          setExpandedNodes(prev => ({ ...prev, [createdTeam.parentId]: true }));
+        }
       } else {
-        const err = await res.json();
-        setNotificationMsg({ title: 'Create Team Failed', message: err.error || 'Failed to create team', type: 'error' });
+        const errData = await res.json();
+        setNotificationMsg({
+          title: 'Create Team Failed',
+          message: errData.error || 'Failed to create team.',
+          type: 'error'
+        });
       }
     } catch (e: any) {
       console.error(e);
-      setNotificationMsg({ title: 'Create Team Failed', message: e.message || 'An unexpected error occurred', type: 'error' });
+      setNotificationMsg({
+        title: 'Error',
+        message: e.message || 'An unexpected error occurred.',
+        type: 'error'
+      });
     } finally {
       setSubmittingTeam(false);
     }
@@ -252,27 +530,35 @@ export default function AdminTeamManager() {
   };
 
   const executeDeleteTeam = async (id: string) => {
-    setDeleteConfirmTeam(null);
     try {
       const res = await fetch(`/api/tenant/teams/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        setTeams(teams.filter(t => t.id !== id));
         if (selectedTeamId === id) setSelectedTeamId(null);
+        setDeleteConfirmTeam(null);
+        fetchInitialData();
       } else {
-        const err = await res.json();
-        setNotificationMsg({ title: 'Delete Team Failed', message: err.error || 'Failed to delete team', type: 'error' });
+        const errData = await res.json();
+        setDeleteConfirmTeam(null);
+        setNotificationMsg({
+          title: 'Delete Failed',
+          message: errData.error || 'Failed to delete team.',
+          type: 'error'
+        });
       }
     } catch (e: any) {
-      console.error(e);
-      setNotificationMsg({ title: 'Delete Team Failed', message: e.message || 'An unexpected error occurred', type: 'error' });
+      setDeleteConfirmTeam(null);
+      setNotificationMsg({
+        title: 'Error',
+        message: e.message || 'An unexpected error occurred.',
+        type: 'error'
+      });
     }
   };
 
   // Handlers for Members
   const handleOpenAddMembersModal = () => {
-    setMemberSearchQuery('');
     setSelectedUserIdsForAdd([]);
-    setIsTeamActionMenuOpen(false);
+    setMemberSearchQuery('');
     setShowAddMembersModal(true);
   };
 
@@ -282,15 +568,7 @@ export default function AdminTeamManager() {
     );
   };
 
-  const handleSelectAllUsers = (availableUsers: User[]) => {
-    if (selectedUserIdsForAdd.length === availableUsers.length) {
-      setSelectedUserIdsForAdd([]);
-    } else {
-      setSelectedUserIdsForAdd(availableUsers.map(u => u.id));
-    }
-  };
-
-  const submitBatchAddMembers = async () => {
+  const handleAddMembersSubmit = async () => {
     if (!selectedTeamId || selectedUserIdsForAdd.length === 0) return;
     setSubmittingAddMembers(true);
     try {
@@ -299,88 +577,250 @@ export default function AdminTeamManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userIds: selectedUserIdsForAdd })
       });
+
       if (res.ok) {
         setShowAddMembersModal(false);
         setSelectedUserIdsForAdd([]);
-        setMemberSearchQuery('');
         fetchInitialData();
       } else {
-        const err = await res.json();
-        setNotificationMsg({ title: 'Add Members Failed', message: err.error || 'Failed to add members', type: 'error' });
+        const errData = await res.json();
+        setNotificationMsg({
+          title: 'Add Members Failed',
+          message: errData.error || 'Failed to add selected members.',
+          type: 'error'
+        });
       }
     } catch (e: any) {
       console.error(e);
-      setNotificationMsg({ title: 'Add Members Failed', message: e.message || 'An unexpected error occurred', type: 'error' });
+      setNotificationMsg({
+        title: 'Error',
+        message: e.message || 'An unexpected error occurred.',
+        type: 'error'
+      });
     } finally {
       setSubmittingAddMembers(false);
     }
   };
 
-  const handleToggleLeader = async (userId: string, currentLeaderState: boolean) => {
+  const handleRemoveMember = async (userId: string) => {
     if (!selectedTeamId) return;
     try {
-      const res = await fetch(`/api/tenant/teams/${selectedTeamId}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, isLeader: !currentLeaderState })
+      const res = await fetch(`/api/tenant/teams/${selectedTeamId}/members?userId=${userId}`, {
+        method: 'DELETE'
       });
-      if (res.ok) {
-        fetchInitialData();
-      } else {
-        const err = await res.json();
-        setNotificationMsg({ title: 'Update Role Failed', message: err.error || 'Failed to update team leader role', type: 'error' });
-      }
-    } catch (e: any) {
+      if (res.ok) fetchInitialData();
+    } catch (e) {
       console.error(e);
-      setNotificationMsg({ title: 'Update Role Failed', message: e.message || 'An unexpected error occurred', type: 'error' });
     }
   };
 
-  const handleRemoveMember = async (userId: string) => {
+  const handleToggleLeader = async (userId: string, currentIsLeader: boolean) => {
     if (!selectedTeamId) return;
-    const res = await fetch(`/api/tenant/teams/${selectedTeamId}/members/${userId}`, {
-      method: 'DELETE'
-    });
-    if (res.ok) fetchInitialData();
+    try {
+      const res = await fetch(`/api/tenant/teams/${selectedTeamId}/members`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, isLeader: !currentIsLeader })
+      });
+      if (res.ok) fetchInitialData();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Handlers for Positions
+  const handleOpenAddPositionsModal = () => {
+    setSelectedPositionIdsForAdd([]);
+    setPositionSearchQuery('');
+    setShowAddPositionsModal(true);
+  };
+
+  const handleTogglePositionSelection = (posId: string) => {
+    setSelectedPositionIdsForAdd(prev => 
+      prev.includes(posId) ? prev.filter(id => id !== posId) : [...prev, posId]
+    );
+  };
+
+  const handleAddPositionsSubmit = async () => {
+    if (!selectedTeamId || selectedPositionIdsForAdd.length === 0) return;
+    setSubmittingAddPositions(true);
+    try {
+      await Promise.all(
+        selectedPositionIdsForAdd.map(posId =>
+          fetch(`/api/tenant/teams/${selectedTeamId}/positions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ positionId: posId })
+          })
+        )
+      );
+      setShowAddPositionsModal(false);
+      setSelectedPositionIdsForAdd([]);
+      fetchInitialData();
+    } catch (e: any) {
+      console.error(e);
+      setNotificationMsg({
+        title: 'Error',
+        message: e.message || 'Failed to add positions to team.',
+        type: 'error'
+      });
+    } finally {
+      setSubmittingAddPositions(false);
+    }
+  };
+
+  const handleUnlinkPosition = async (positionId: string) => {
+    if (!selectedTeamId) return;
+    try {
+      const res = await fetch(`/api/tenant/teams/${selectedTeamId}/positions?positionId=${positionId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) fetchInitialData();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   // Handlers for System Capabilities
-  const handleToggleCapability = async (capability: string, hasCap: boolean) => {
+  const handleToggleCapability = async (capabilityCode: string, isChecked: boolean) => {
     if (!selectedTeamId) return;
-    const method = hasCap ? 'DELETE' : 'POST';
-    const res = await fetch('/api/console/permissions', {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ teamId: selectedTeamId, capability })
-    });
-    if (res.ok) fetchInitialData();
+    try {
+      const endpoint = `/api/tenant/teams/${selectedTeamId}/system-permissions`;
+      const method = isChecked ? 'POST' : 'DELETE';
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ capability: capabilityCode })
+      });
+      if (res.ok) fetchInitialData();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  // Handlers for Object Permissions
-  const handleUpdateObjectPerm = async (objectName: string, field: string, value: boolean) => {
-    if (!selectedTeam) return;
-    const existing = selectedTeam.objectPermissions.find(o => o.objectName === objectName) || {
-      canCreate: false, canRead: false, canUpdate: false, canDelete: false, viewAllData: false, modifyAllData: false
-    };
-    
-    const payload = {
-      objectName,
-      ...existing,
-      [field]: value
-    };
-
-    const res = await fetch(`/api/tenant/teams/${selectedTeamId}/object-permissions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+  // Handlers for Main Team Object Permissions (Draft Local State & Save Button)
+  const handleToggleTeamObjectPermDraft = (objectName: string, updates: Partial<ObjectPermission>) => {
+    setTeamObjectPermsDraft(prev => {
+      const existing = prev.find(p => p.objectName === objectName) || {
+        objectName,
+        canCreate: false,
+        canDelete: false,
+        readScope: 'NONE',
+        modifyScope: 'NONE'
+      };
+      const updated = { ...existing, ...updates };
+      return [...prev.filter(p => p.objectName !== objectName), updated as ObjectPermission];
     });
-    if (res.ok) fetchInitialData();
+  };
+
+  const handleSaveTeamObjectPerms = async () => {
+    if (!selectedTeamId) return;
+    setSavingTeamObjectPerms(true);
+    try {
+      for (const perm of teamObjectPermsDraft) {
+        const res = await fetch(`/api/tenant/teams/${selectedTeamId}/object-permissions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            objectName: perm.objectName,
+            canCreate: perm.canCreate,
+            canDelete: perm.canDelete,
+            readScope: perm.readScope,
+            modifyScope: perm.modifyScope
+          })
+        });
+        if (!res.ok) {
+          const errJson = await res.json();
+          throw new Error(errJson.error || 'Failed to save team object permission');
+        }
+      }
+
+      await fetchInitialData();
+      setNotificationMsg({
+        title: 'Permissions Saved',
+        message: `Object permissions for ${selectedTeam?.name} saved successfully.`,
+        type: 'success'
+      });
+    } catch (e: any) {
+      console.error(e);
+      setNotificationMsg({
+        title: 'Save Failed',
+        message: e.message || 'Failed to save team object permissions.',
+        type: 'error'
+      });
+    } finally {
+      setSavingTeamObjectPerms(false);
+    }
+  };
+
+  // Tree Renderer & Hierarchy Calculation
+  const toggleNodeExpand = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const renderTeamTree = (parentId: string | null = null, depth = 0) => {
+    const children = teams
+      .filter(t => t.parentId === parentId)
+      .sort((a, b) => {
+        if (a.isSystemAdmin && !b.isSystemAdmin) return -1;
+        if (!a.isSystemAdmin && b.isSystemAdmin) return 1;
+        return a.name.localeCompare(b.name);
+      });
+    if (children.length === 0) return null;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginLeft: depth > 0 ? '16px' : '0' }}>
+        {children.map(team => {
+          const isSelected = team.id === selectedTeamId;
+          const hasChildren = teams.some(t => t.parentId === team.id);
+          const isExpanded = expandedNodes[team.id] ?? true;
+
+          return (
+            <div key={team.id}>
+              <div 
+                onClick={() => setSelectedTeamId(team.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
+                  background: isSelected ? 'rgba(59,130,246,0.15)' : 'transparent',
+                  color: isSelected ? 'var(--klao-primary)' : 'var(--klao-text-main)',
+                  fontWeight: isSelected ? 600 : 400
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                  {hasChildren ? (
+                    <span onClick={(e) => toggleNodeExpand(team.id, e)} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '2px' }}>
+                      {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </span>
+                  ) : (
+                    <span style={{ width: '14px' }} />
+                  )}
+                  {team.isSystemAdmin ? <Shield size={16} color="var(--klao-warning, #f59e0b)" /> : <Users size={16} />}
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.9rem' }}>
+                    {team.name}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: '10px', color: 'var(--klao-text-muted)' }}>
+                    {team.members.length}
+                  </span>
+                </div>
+              </div>
+
+              {hasChildren && isExpanded && renderTeamTree(team.id, depth + 1)}
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   if (loading) return <Spinner />;
 
   return (
-    <div style={{ display: 'flex', height: '100%', gap: 'var(--klao-spacing-md)' }}>
+    <div style={{ display: 'flex', height: '100%', gap: 'var(--klao-spacing-md)', fontFamily: 'var(--klao-font-family)' }}>
       {/* LEFT PANE: Team Tree */}
       <div className="klao-card" style={{ width: '300px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid var(--klao-border-color, rgba(255,255,255,0.1))' }}>
@@ -395,7 +835,7 @@ export default function AdminTeamManager() {
       </div>
 
       {/* RIGHT PANE: Team Details */}
-      <div className="klao-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="klao-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {!selectedTeam ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--klao-text-muted)' }}>
             Select a team from the sidebar to view details.
@@ -438,17 +878,31 @@ export default function AdminTeamManager() {
                         <span>Add Member</span>
                       </button>
 
+                      <button 
+                        className="klao-context-item"
+                        onClick={() => {
+                          setIsTeamActionMenuOpen(false);
+                          handleOpenAddPositionsModal();
+                        }}
+                      >
+                        <Award size={14} />
+                        <span>Add Position</span>
+                      </button>
+
                       {!selectedTeam.isSystemAdmin && (
-                        <button 
-                          className="klao-context-item klao-context-item--danger"
-                          onClick={() => {
-                            setIsTeamActionMenuOpen(false);
-                            handleDeleteTeamClick({ id: selectedTeam.id, name: selectedTeam.name });
-                          }}
-                        >
-                          <Trash2 size={14} />
-                          <span>Delete Team</span>
-                        </button>
+                        <>
+                          <div className="klao-context-divider" />
+                          <button 
+                            className="klao-context-item klao-context-item--danger"
+                            onClick={() => {
+                              setIsTeamActionMenuOpen(false);
+                              handleDeleteTeamClick({ id: selectedTeam.id, name: selectedTeam.name });
+                            }}
+                          >
+                            <Trash2 size={14} />
+                            <span>Delete Team</span>
+                          </button>
+                        </>
                       )}
                     </div>
                   )}
@@ -458,7 +912,8 @@ export default function AdminTeamManager() {
 
             {/* TABS */}
             <div style={{ display: 'flex', gap: '20px', borderBottom: '1px solid var(--klao-border-color)', marginBottom: '15px' }}>
-              <TabBtn active={activeTab === 'members'} onClick={() => setActiveTab('members')} icon={<Users size={16} />} label="Members" />
+              <TabBtn active={activeTab === 'members'} onClick={() => setActiveTab('members')} icon={<Users size={16} />} label={`Members (${selectedTeam.members.length})`} />
+              <TabBtn active={activeTab === 'positions'} onClick={() => setActiveTab('positions')} icon={<Award size={16} />} label={`Positions (${(selectedTeam.positions || []).length})`} />
               <TabBtn active={activeTab === 'capabilities'} onClick={() => setActiveTab('capabilities')} icon={<Shield size={16} />} label="System Capabilities" />
               <TabBtn active={activeTab === 'objects'} onClick={() => setActiveTab('objects')} icon={<Database size={16} />} label="Data Access" />
             </div>
@@ -469,13 +924,22 @@ export default function AdminTeamManager() {
               {/* MEMBERS TAB */}
               {activeTab === 'members' && (
                 <div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                    <button 
+                      className="klao-btn klao-btn--secondary klao-btn--sm"
+                      onClick={handleOpenAddMembersModal}
+                    >
+                      <UserPlus size={14} />
+                      <span>Add Member</span>
+                    </button>
+                  </div>
                   <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid var(--klao-border-color)' }}>
-                        <th style={{ padding: '10px' }}>Name</th>
-                        <th style={{ padding: '10px' }}>Email</th>
-                        <th style={{ padding: '10px' }}>Role</th>
-                        <th style={{ padding: '10px' }}></th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>NAME</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>EMAIL</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>ROLE</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', textAlign: 'right' }}>ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -508,8 +972,14 @@ export default function AdminTeamManager() {
                             </button>
                           </td>
                           <td style={{ padding: '10px', textAlign: 'right' }}>
-                            <button onClick={() => handleRemoveMember(m.userId)} style={{ background: 'none', border: 'none', color: 'var(--klao-error-color)', cursor: 'pointer' }}>
-                              <X size={16} />
+                            <button
+                              className={`klao-user-manager__action-btn ${activeMemberAnchor?.id === m.userId ? 'active' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMemberAnchor(activeMemberAnchor?.id === m.userId ? null : { id: m.userId, el: e.currentTarget });
+                              }}
+                            >
+                              <MoreHorizontal size={16} />
                             </button>
                           </td>
                         </tr>
@@ -522,234 +992,549 @@ export default function AdminTeamManager() {
                 </div>
               )}
 
-              {/* SYSTEM CAPABILITIES TAB */}
-              {activeTab === 'capabilities' && (
+              {/* POSITIONS TAB */}
+              {activeTab === 'positions' && (
                 <div>
-                  {selectedTeam.isSystemAdmin ? (
-                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--klao-text-muted)' }}>
-                      System Admin team implicitly has all capabilities.
-                    </div>
-                  ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                      {Object.keys(allCapabilities).map(cap => {
-                        const hasCap = selectedTeam.systemPermissions.some(p => p.capability === cap);
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--klao-text-muted)' }}>
+                      Positions mapped to {selectedTeam.name} determine role structures and slot occupancies.
+                    </p>
+                    <button 
+                      className="klao-btn klao-btn--secondary klao-btn--sm"
+                      onClick={handleOpenAddPositionsModal}
+                    >
+                      <Plus size={14} />
+                      <span>Add Position to Team</span>
+                    </button>
+                  </div>
+
+                  <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--klao-border-color)' }}>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>PREFIX</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>POSITION NAME</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>HEADCOUNT / SLOTS</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', textAlign: 'right' }}>ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(selectedTeam.positions || []).map(tp => {
+                        const pos = tp.position;
+                        const occupiedSlots = (pos.slots || []).filter(s => s.userId).length;
                         return (
-                          <div key={cap} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--klao-border-color)' }}>
-                            <input 
-                              type="checkbox" 
-                              className="klao-checkbox"
-                              checked={hasCap} 
-                              onChange={() => handleToggleCapability(cap, hasCap)}
-                              style={{ marginTop: '5px' }}
-                            />
-                            <div>
-                              <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{allCapabilities[cap].label}</div>
-                              <div style={{ fontSize: '0.8rem', color: 'var(--klao-text-muted)' }}>{cap}</div>
-                              <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>{allCapabilities[cap].description}</div>
-                            </div>
-                          </div>
+                          <tr key={pos.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            <td style={{ padding: '10px' }}>
+                              <span style={{
+                                background: 'rgba(59,130,246,0.15)',
+                                color: 'var(--klao-primary, #3b82f6)',
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                fontWeight: 700,
+                                fontSize: '0.8rem'
+                              }}>
+                                {pos.prefix}
+                              </span>
+                            </td>
+                            <td style={{ padding: '10px', fontWeight: 600 }}>{pos.name}</td>
+                            <td style={{ padding: '10px' }}>
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '3px 8px',
+                                borderRadius: '12px',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                background: 'rgba(34,197,94,0.1)',
+                                color: '#16a34a',
+                                border: '1px solid rgba(34,197,94,0.2)'
+                              }}>
+                                {occupiedSlots} / {pos.headCount} Occupied
+                              </span>
+                            </td>
+                            <td style={{ padding: '10px', textAlign: 'right' }}>
+                              <button
+                                className={`klao-user-manager__action-btn ${activePositionAnchor?.id === pos.id ? 'active' : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActivePositionAnchor(activePositionAnchor?.id === pos.id ? null : { id: pos.id, el: e.currentTarget });
+                                }}
+                              >
+                                <MoreHorizontal size={16} />
+                              </button>
+                            </td>
+                          </tr>
                         );
                       })}
+                      {(!selectedTeam.positions || selectedTeam.positions.length === 0) && (
+                        <tr><td colSpan={4} style={{ padding: '30px', textAlign: 'center', color: 'var(--klao-text-muted)' }}>No positions mapped to this team yet.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* CAPABILITIES TAB */}
+              {activeTab === 'capabilities' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {Object.entries(allCapabilities).map(([category, items]) => (
+                    <div key={category} style={{ background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '8px', border: '1px solid var(--klao-border-color)' }}>
+                      <h4 style={{ margin: '0 0 10px 0', textTransform: 'capitalize', color: 'var(--klao-primary)' }}>{category}</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        {(items as any[]).map(item => {
+                          const isChecked = selectedTeam.systemPermissions.some(p => p.capability === item.code);
+                          return (
+                            <label key={item.code} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', padding: '8px', borderRadius: '6px', background: isChecked ? 'rgba(59,130,246,0.1)' : 'transparent' }}>
+                              <input 
+                                type="checkbox" 
+                                className="klao-checkbox"
+                                checked={isChecked} 
+                                onChange={(e) => handleToggleCapability(item.code, e.target.checked)}
+                                style={{ marginTop: '3px' }}
+                              />
+                              <div>
+                                <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>{item.name}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)' }}>{item.description}</div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
               )}
 
               {/* OBJECT PERMISSIONS TAB */}
               {activeTab === 'objects' && (
                 <div>
-                  {selectedTeam.isSystemAdmin ? (
-                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--klao-text-muted)' }}>
-                      System Admin team implicitly has full data access.
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ position: 'relative', width: '300px' }}>
+                      <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--klao-text-muted)' }} />
+                      <input
+                        type="text"
+                        className="klao-input"
+                        style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
+                        placeholder="Search data object..."
+                        value={teamObjectSearchQuery}
+                        onChange={(e) => setTeamObjectSearchQuery(e.target.value)}
+                      />
                     </div>
-                  ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', textAlign: 'center', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid var(--klao-border-color)' }}>
-                            <th style={{ padding: '10px', textAlign: 'left' }}>Object</th>
-                            <th style={{ padding: '10px' }}>Read</th>
-                            <th style={{ padding: '10px' }}>Create</th>
-                            <th style={{ padding: '10px' }}>Update</th>
-                            <th style={{ padding: '10px' }}>Delete</th>
-                            <th style={{ padding: '10px' }}>View All</th>
-                            <th style={{ padding: '10px' }}>Modify All</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {allObjects.map(obj => {
-                            const perm = selectedTeam.objectPermissions.find(p => p.objectName === obj.tableName) || {} as ObjectPermission;
-                            return (
-                              <tr key={obj.tableName} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                <td style={{ padding: '10px', textAlign: 'left', fontWeight: 'bold' }}>{obj.name}</td>
-                                <td style={{ padding: '10px' }}><input type="checkbox" className="klao-checkbox" checked={!!perm.canRead} onChange={e => handleUpdateObjectPerm(obj.tableName, 'canRead', e.target.checked)} /></td>
-                                <td style={{ padding: '10px' }}><input type="checkbox" className="klao-checkbox" checked={!!perm.canCreate} onChange={e => handleUpdateObjectPerm(obj.tableName, 'canCreate', e.target.checked)} /></td>
-                                <td style={{ padding: '10px' }}><input type="checkbox" className="klao-checkbox" checked={!!perm.canUpdate} onChange={e => handleUpdateObjectPerm(obj.tableName, 'canUpdate', e.target.checked)} /></td>
-                                <td style={{ padding: '10px' }}><input type="checkbox" className="klao-checkbox" checked={!!perm.canDelete} onChange={e => handleUpdateObjectPerm(obj.tableName, 'canDelete', e.target.checked)} /></td>
-                                <td style={{ padding: '10px' }}><input type="checkbox" className="klao-checkbox" checked={!!perm.viewAllData} onChange={e => handleUpdateObjectPerm(obj.tableName, 'viewAllData', e.target.checked)} /></td>
-                                <td style={{ padding: '10px' }}><input type="checkbox" className="klao-checkbox" checked={!!perm.modifyAllData} onChange={e => handleUpdateObjectPerm(obj.tableName, 'modifyAllData', e.target.checked)} /></td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+
+                    <button
+                      className="klao-btn klao-btn--primary klao-btn--sm"
+                      onClick={handleSaveTeamObjectPerms}
+                      disabled={savingTeamObjectPerms}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Save size={14} />
+                      <span>{savingTeamObjectPerms ? 'Saving...' : 'Save Changes'}</span>
+                    </button>
+                  </div>
+
+                  <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--klao-border-color)' }}>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>OBJECT</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', textAlign: 'center' }}>CREATE</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', minWidth: '240px' }}>VISIBILITY SCOPE</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', minWidth: '240px' }}>MODIFY SCOPE</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', textAlign: 'center' }}>DELETE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allObjects
+                        .filter(obj => {
+                          const name = (obj.name || obj.displayName || obj.tableName || '').toLowerCase();
+                          const apiName = (obj.tableName || obj.apiName || obj.name || '').toLowerCase();
+                          return name.includes(teamObjectSearchQuery.toLowerCase()) || apiName.includes(teamObjectSearchQuery.toLowerCase());
+                        })
+                        .map(obj => {
+                          const objApiName = obj.tableName || obj.apiName || obj.name;
+                          const objDisplayName = obj.name || obj.displayName || obj.tableName;
+
+                          const perm = teamObjectPermsDraft.find(p => p.objectName === objApiName) || {
+                            objectName: objApiName,
+                            canCreate: false,
+                            canDelete: false,
+                            readScope: 'NONE',
+                            modifyScope: 'NONE'
+                          };
+                          return (
+                            <tr key={objApiName} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              <td style={{ padding: '10px' }}>{objDisplayName}</td>
+                              <td style={{ padding: '10px', textAlign: 'center' }}>
+                                <input
+                                  type="checkbox"
+                                  className="klao-checkbox"
+                                  checked={perm.canCreate}
+                                  onChange={(e) => handleToggleTeamObjectPermDraft(objApiName, { canCreate: e.target.checked })}
+                                />
+                              </td>
+                              <td style={{ padding: '10px' }}>
+                                <CustomSelect
+                                  size="sm"
+                                  style={{ width: '100%' }}
+                                  value={perm.readScope || 'NONE'}
+                                  options={[
+                                    { value: 'NONE', label: '-- None --' },
+                                    { value: 'OWNER', label: 'Owner' },
+                                    { value: 'ALL', label: 'View All' },
+                                    { value: 'HIERARCHY', label: 'View Hierarchy' }
+                                  ]}
+                                  onChange={(val) => handleToggleTeamObjectPermDraft(objApiName, { readScope: String(val) as any })}
+                                />
+                              </td>
+                              <td style={{ padding: '10px' }}>
+                                <CustomSelect
+                                  size="sm"
+                                  style={{ width: '100%' }}
+                                  value={perm.modifyScope || 'NONE'}
+                                  options={[
+                                    { value: 'NONE', label: '-- None --' },
+                                    { value: 'OWNER', label: 'Owner' },
+                                    { value: 'ALL', label: 'Modify All' },
+                                    { value: 'HIERARCHY', label: 'Modify Hierarchy' }
+                                  ]}
+                                  onChange={(val) => handleToggleTeamObjectPermDraft(objApiName, { modifyScope: String(val) as any })}
+                                />
+                              </td>
+                              <td style={{ padding: '10px', textAlign: 'center' }}>
+                                <input
+                                  type="checkbox"
+                                  className="klao-checkbox"
+                                  checked={perm.canDelete}
+                                  onChange={(e) => handleToggleTeamObjectPermDraft(objApiName, { canDelete: e.target.checked })}
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      {allObjects.length === 0 && (
+                        <tr><td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--klao-text-muted)' }}>No data models defined in system.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               )}
+
             </div>
           </>
         )}
       </div>
 
-      {/* CREATE TEAM MODAL (Standard Platform Theme) */}
+      {/* MEMBER ROW PORTAL CONTEXT MENU */}
+      {activeMemberAnchor && (
+        <ContextMenuPortal anchorEl={activeMemberAnchor.el} onClose={() => setActiveMemberAnchor(null)}>
+          <button
+            className="klao-context-item"
+            onClick={() => {
+              const m = selectedTeam?.members.find(mem => mem.userId === activeMemberAnchor.id);
+              setActiveMemberAnchor(null);
+              if (m) {
+                setManageModalState({
+                  targetType: 'user',
+                  targetId: m.userId,
+                  targetName: m.user.name || m.user.email
+                });
+              }
+            }}
+          >
+            <Database size={14} />
+            <span>Manage Data Access</span>
+          </button>
+          <div className="klao-context-divider" />
+          <button
+            className="klao-context-item klao-context-item--danger"
+            onClick={() => {
+              const id = activeMemberAnchor.id;
+              setActiveMemberAnchor(null);
+              handleRemoveMember(id);
+            }}
+          >
+            <X size={14} />
+            <span>Unlink Member</span>
+          </button>
+        </ContextMenuPortal>
+      )}
+
+      {/* POSITION ROW PORTAL CONTEXT MENU */}
+      {activePositionAnchor && (
+        <ContextMenuPortal anchorEl={activePositionAnchor.el} onClose={() => setActivePositionAnchor(null)}>
+          <button
+            className="klao-context-item"
+            onClick={() => {
+              const tp = (selectedTeam?.positions || []).find(p => p.position.id === activePositionAnchor.id);
+              setActivePositionAnchor(null);
+              if (tp) {
+                setManageModalState({
+                  targetType: 'position',
+                  targetId: tp.position.id,
+                  targetName: `${tp.position.prefix} — ${tp.position.name}`
+                });
+              }
+            }}
+          >
+            <Database size={14} />
+            <span>Manage Data Access</span>
+          </button>
+          <div className="klao-context-divider" />
+          <button
+            className="klao-context-item klao-context-item--danger"
+            onClick={() => {
+              const id = activePositionAnchor.id;
+              setActivePositionAnchor(null);
+              handleUnlinkPosition(id);
+            }}
+          >
+            <X size={14} />
+            <span>Unlink Position</span>
+          </button>
+        </ContextMenuPortal>
+      )}
+
+      {/* INDIVIDUAL MANAGE DATA ACCESS MODAL */}
+      {manageModalState && (
+        <ManageDataAccessModal
+          targetType={manageModalState.targetType}
+          targetId={manageModalState.targetId}
+          targetName={manageModalState.targetName}
+          allObjects={allObjects}
+          onClose={() => setManageModalState(null)}
+          onSaveSuccess={() => {
+            fetchInitialData();
+            setNotificationMsg({
+              title: 'Permissions Saved',
+              message: `Data access permissions for ${manageModalState.targetName} saved successfully.`,
+              type: 'success'
+            });
+          }}
+        />
+      )}
+
+      {/* CREATE TEAM MODAL */}
       {showCreateTeamModal && createPortal(
         <div className="klao-modal-overlay">
-          <div className="klao-card" style={{ width: '460px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <GitBranch size={20} color="var(--klao-primary)" />
-                Create New Team
-              </h3>
-              <button 
-                onClick={() => setShowCreateTeamModal(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-              >
-                <X size={20} />
+          <div className="klao-card" style={{ width: '450px', padding: '24px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Create New Team</h3>
+              <button onClick={() => setShowCreateTeamModal(false)} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer' }}>
+                <X size={18} />
               </button>
             </div>
 
-            <div className="klao-form-group" style={{ marginBottom: '20px' }}>
-              <label className="klao-label" style={{ display: 'block', marginBottom: '8px' }}>
-                Team Name
-              </label>
+            <form onSubmit={handleCreateTeamSubmit}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>Team Name</label>
+                <input 
+                  type="text" 
+                  className="klao-input" 
+                  style={{ width: '100%' }} 
+                  placeholder="e.g. Frontend Engineering" 
+                  value={newTeamName}
+                  onChange={e => setNewTeamName(e.target.value)}
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>Parent Team (Optional)</label>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    className="klao-input"
+                    style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', cursor: 'pointer' }}
+                    onClick={() => setIsParentSelectOpen(!isParentSelectOpen)}
+                  >
+                    <span>
+                      {modalParentTeamId ? (teams.find(t => t.id === modalParentTeamId)?.name || 'Select Parent Team') : '-- No Parent (Top Level) --'}
+                    </span>
+                    <ChevronDown size={16} />
+                  </button>
+
+                  {isParentSelectOpen && (
+                    <div className="klao-card" style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', maxHeight: '180px', overflowY: 'auto', zIndex: 100, padding: '4px' }}>
+                      <div 
+                        style={{ padding: '8px 12px', cursor: 'pointer', borderRadius: '6px', fontSize: '0.85rem' }}
+                        onClick={() => { setModalParentTeamId(null); setIsParentSelectOpen(false); }}
+                      >
+                        -- No Parent (Top Level) --
+                      </div>
+                      {teams.filter(t => !t.isSystemAdmin).map(t => (
+                        <div 
+                          key={t.id}
+                          style={{ padding: '8px 12px', cursor: 'pointer', borderRadius: '6px', fontSize: '0.85rem', background: modalParentTeamId === t.id ? 'rgba(59,130,246,0.1)' : 'transparent' }}
+                          onClick={() => { setModalParentTeamId(t.id); setIsParentSelectOpen(false); }}
+                        >
+                          {t.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="klao-btn klao-btn--secondary" onClick={() => setShowCreateTeamModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="klao-btn klao-btn--primary" disabled={submittingTeam}>
+                  {submittingTeam ? 'Creating...' : 'Create Team'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ADD MEMBERS MODAL */}
+      {showAddMembersModal && createPortal(
+        <div className="klao-modal-overlay">
+          <div className="klao-card" style={{ width: '480px', maxHeight: '80vh', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Add Members to {selectedTeam?.name}</h3>
+              <button onClick={() => setShowAddMembersModal(false)} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ position: 'relative', marginBottom: '12px' }}>
+              <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--klao-text-muted)' }} />
               <input 
-                type="text" 
-                placeholder="e.g. Sales Department, Product Engineering..."
-                value={newTeamName}
-                onChange={(e) => setNewTeamName(e.target.value)}
+                type="text"
+                className="klao-input"
+                style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
+                placeholder="Search user by name or email..."
+                value={memberSearchQuery}
+                onChange={e => setMemberSearchQuery(e.target.value)}
                 autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter') submitCreateTeam(); }}
               />
             </div>
 
-            <div className="klao-form-group" style={{ marginBottom: '24px', position: 'relative' }}>
-              <label className="klao-label" style={{ display: 'block', marginBottom: '8px' }}>
-                Parent Team (Optional)
-              </label>
-              <button
-                type="button"
-                onClick={() => setIsParentSelectOpen(!isParentSelectOpen)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: 'var(--klao-bg-card, rgba(255,255,255,0.05))',
-                  border: '1px solid var(--klao-border-color, rgba(255,255,255,0.15))',
-                  borderRadius: 'var(--klao-radius-md, 10px)',
-                  color: 'var(--klao-text-main, inherit)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  textAlign: 'left'
-                }}
-              >
-                <span>
-                  {teams.find(t => t.id === modalParentTeamId)?.name || 'None (Top-Level Team)'}
-                </span>
-                <ChevronDown size={16} style={{ color: 'var(--klao-text-muted)', transform: isParentSelectOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-              </button>
-
-              {isParentSelectOpen && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    marginTop: '6px',
-                    maxHeight: '220px',
-                    overflowY: 'auto',
-                    background: 'var(--klao-bg-card, rgba(30, 41, 59, 0.95))',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
-                    border: '1px solid var(--klao-border-color, rgba(255, 255, 255, 0.15))',
-                    borderRadius: 'var(--klao-radius-md, 12px)',
-                    boxShadow: 'var(--klao-shadow-lg, 0 10px 25px rgba(0,0,0,0.3))',
-                    zIndex: 100,
-                    padding: '6px'
-                  }}
-                >
-                  <div
-                    onClick={() => {
-                      setModalParentTeamId(null);
-                      setIsParentSelectOpen(false);
-                    }}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      background: modalParentTeamId === null ? 'var(--klao-bg-hover, rgba(255,255,255,0.08))' : 'transparent',
-                      color: modalParentTeamId === null ? 'var(--klao-primary, #3b82f6)' : 'inherit',
-                      fontWeight: modalParentTeamId === null ? 600 : 400,
-                      fontSize: '0.88rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: '2px'
-                    }}
-                  >
-                    <span>None (Top-Level Team)</span>
-                    {modalParentTeamId === null && <Check size={14} />}
-                  </div>
-
-                  {getHierarchicalTeamOptions().map(opt => {
-                    const isSelected = modalParentTeamId === opt.id;
-                    return (
-                      <div
-                        key={opt.id}
-                        onClick={() => {
-                          setModalParentTeamId(opt.id);
-                          setIsParentSelectOpen(false);
-                        }}
-                        style={{
-                          padding: '8px 12px',
-                          paddingLeft: `${12 + opt.depth * 16}px`,
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          background: isSelected ? 'var(--klao-bg-hover, rgba(255,255,255,0.08))' : 'transparent',
-                          color: isSelected ? 'var(--klao-primary, #3b82f6)' : 'inherit',
-                          fontWeight: isSelected ? 600 : 400,
-                          fontSize: '0.88rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          margin: '2px 0'
-                        }}
-                      >
-                        <span>{opt.depth > 0 ? '└─ ' : ''}{opt.name}</span>
-                        {isSelected && <Check size={14} />}
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+              {tenantUsers
+                .filter(u => !selectedTeam?.members.some(m => m.userId === u.id))
+                .filter(u => (u.name || '').toLowerCase().includes(memberSearchQuery.toLowerCase()) || u.email.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+                .map(u => {
+                  const isSelected = selectedUserIdsForAdd.includes(u.id);
+                  return (
+                    <div
+                      key={u.id}
+                      onClick={() => handleToggleUserSelection(u.id)}
+                      style={{
+                        padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        background: isSelected ? 'rgba(59,130,246,0.1)' : 'transparent',
+                        border: '1px solid ' + (isSelected ? 'var(--klao-primary)' : 'transparent')
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{u.name || u.email}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)' }}>{u.email}</div>
                       </div>
-                    );
-                  })}
+                      {isSelected && <Check size={16} color="var(--klao-primary)" />}
+                    </div>
+                  );
+                })}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button className="klao-btn klao-btn--secondary" onClick={() => setShowAddMembersModal(false)}>
+                Cancel
+              </button>
+              <button 
+                className="klao-btn klao-btn--primary" 
+                onClick={handleAddMembersSubmit}
+                disabled={submittingAddMembers || selectedUserIdsForAdd.length === 0}
+              >
+                {submittingAddMembers ? 'Adding...' : `Add Selected (${selectedUserIdsForAdd.length})`}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ADD POSITIONS MODAL */}
+      {showAddPositionsModal && createPortal(
+        <div className="klao-modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="klao-card" style={{ width: '480px', maxHeight: '80vh', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Add Positions to {selectedTeam?.name}</h3>
+              <button onClick={() => setShowAddPositionsModal(false)} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ position: 'relative', marginBottom: '12px' }}>
+              <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--klao-text-muted)' }} />
+              <input 
+                type="text"
+                className="klao-input"
+                style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
+                placeholder="Search position by name or prefix..."
+                value={positionSearchQuery}
+                onChange={e => setPositionSearchQuery(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
+              {tenantPositions
+                .filter(p => !(selectedTeam?.positions || []).some(tp => tp.positionId === p.id))
+                .filter(p => p.name.toLowerCase().includes(positionSearchQuery.toLowerCase()) || p.prefix.toLowerCase().includes(positionSearchQuery.toLowerCase()))
+                .map(p => {
+                  const isSelected = selectedPositionIdsForAdd.includes(p.id);
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => handleTogglePositionSelection(p.id)}
+                      style={{
+                        padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        background: isSelected ? 'rgba(59,130,246,0.1)' : 'transparent',
+                        border: '1px solid ' + (isSelected ? 'var(--klao-primary)' : 'var(--klao-border-color)')
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{
+                          background: 'rgba(59,130,246,0.15)',
+                          color: 'var(--klao-primary, #3b82f6)',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontWeight: 700,
+                          fontSize: '0.75rem'
+                        }}>
+                          {p.prefix}
+                        </span>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)' }}>{p.headCount} Headcount Slots</div>
+                        </div>
+                      </div>
+                      {isSelected && <Check size={16} color="var(--klao-primary)" />}
+                    </div>
+                  );
+                })}
+              {tenantPositions.filter(p => !(selectedTeam?.positions || []).some(tp => tp.positionId === p.id)).length === 0 && (
+                <div style={{ padding: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--klao-text-muted)' }}>
+                  All positions have been added to this team.
                 </div>
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button 
-                className="klao-btn klao-btn--secondary"
-                onClick={() => setShowCreateTeamModal(false)}
-              >
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button className="klao-btn klao-btn--secondary" onClick={() => setShowAddPositionsModal(false)}>
                 Cancel
               </button>
               <button 
-                className="klao-btn klao-btn--primary"
-                onClick={submitCreateTeam}
-                disabled={!newTeamName.trim() || submittingTeam}
+                className="klao-btn klao-btn--primary" 
+                onClick={handleAddPositionsSubmit}
+                disabled={submittingAddPositions || selectedPositionIdsForAdd.length === 0}
               >
-                {submittingTeam ? 'Creating...' : 'Create Team'}
+                {submittingAddPositions ? 'Adding...' : `Add Selected (${selectedPositionIdsForAdd.length})`}
               </button>
             </div>
           </div>
@@ -757,146 +1542,17 @@ export default function AdminTeamManager() {
         document.body
       )}
 
-      {/* SEARCHABLE MULTI-SELECT ADD MEMBERS MODAL */}
-      {showAddMembersModal && selectedTeam && createPortal(
-        <div className="klao-modal-overlay">
-          <div className="klao-card" style={{ width: '520px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <UserPlus size={20} color="var(--klao-primary)" />
-                Add Members to {selectedTeam.name}
-              </h3>
-              <button 
-                onClick={() => setShowAddMembersModal(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* SEARCH BOX */}
-            <div className="klao-form-group" style={{ marginBottom: '16px', position: 'relative' }}>
-              <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--klao-text-muted)' }} />
-              <input 
-                type="text"
-                className="klao-input"
-                style={{ paddingLeft: '38px', width: '100%' }}
-                placeholder="Search by user name, email, or title..."
-                value={memberSearchQuery}
-                onChange={(e) => setMemberSearchQuery(e.target.value)}
-                autoFocus
-              />
-            </div>
-
-            {/* USERS LIST WITH MULTI SELECT */}
-            {(() => {
-              const availableUsers = tenantUsers
-                .filter(u => !selectedTeam.members.some(m => m.userId === u.id))
-                .filter(u => {
-                  if (!memberSearchQuery.trim()) return true;
-                  const q = memberSearchQuery.toLowerCase();
-                  return (
-                    (u.name && u.name.toLowerCase().includes(q)) ||
-                    u.email.toLowerCase().includes(q) ||
-                    (u.title && u.title.toLowerCase().includes(q))
-                  );
-                });
-
-              const allSelected = availableUsers.length > 0 && selectedUserIdsForAdd.length === availableUsers.length;
-
-              return (
-                <div style={{ marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', padding: '0 4px', fontSize: '0.85rem', color: 'var(--klao-text-muted)' }}>
-                    <span>Available Users ({availableUsers.length})</span>
-                    {availableUsers.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => handleSelectAllUsers(availableUsers)}
-                        style={{ background: 'none', border: 'none', color: 'var(--klao-primary)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}
-                      >
-                        {allSelected ? 'Deselect All' : 'Select All'}
-                      </button>
-                    )}
-                  </div>
-
-                  <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid var(--klao-border-color)', borderRadius: '12px', padding: '6px', background: 'var(--klao-bg-hover, rgba(0,0,0,0.02))' }}>
-                    {availableUsers.map(u => {
-                      const isChecked = selectedUserIdsForAdd.includes(u.id);
-                      return (
-                        <div
-                          key={u.id}
-                          onClick={() => handleToggleUserSelection(u.id)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '10px 12px',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            background: isChecked ? 'var(--klao-bg-hover, rgba(255,255,255,0.08))' : 'transparent',
-                            transition: 'background 0.15s ease',
-                            margin: '2px 0'
-                          }}
-                        >
-                          <input 
-                            type="checkbox"
-                            className="klao-checkbox"
-                            checked={isChecked}
-                            onChange={() => {}} // Handled by div click
-                          />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--klao-text-main)' }}>{u.name || 'Unnamed User'}</div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--klao-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email}</div>
-                          </div>
-                          {u.title && (
-                            <span style={{ fontSize: '0.75rem', background: 'var(--klao-bg-hover)', padding: '2px 8px', borderRadius: '10px', color: 'var(--klao-text-muted)' }}>
-                              {u.title}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                    {availableUsers.length === 0 && (
-                      <div style={{ padding: '30px', textAlign: 'center', color: 'var(--klao-text-muted)', fontSize: '0.85rem' }}>
-                        {memberSearchQuery ? 'No users matching your search.' : 'All users are already in this team.'}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button 
-                className="klao-btn klao-btn--secondary"
-                onClick={() => setShowAddMembersModal(false)}
-              >
-                Cancel
-              </button>
-              <button 
-                className="klao-btn klao-btn--primary"
-                onClick={submitBatchAddMembers}
-                disabled={selectedUserIdsForAdd.length === 0 || submittingAddMembers}
-              >
-                {submittingAddMembers ? 'Saving...' : `Save (${selectedUserIdsForAdd.length} Selected)`}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* THEMED DELETE TEAM CONFIRMATION MODAL */}
+      {/* THEMED CONFIRMATION MODAL */}
       {deleteConfirmTeam && createPortal(
         <div className="klao-modal-overlay">
-          <div className="klao-card" style={{ width: '440px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)' }}>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', marginBottom: '20px' }}>
+          <div className="klao-card" style={{ width: '440px', padding: '24px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
               <div style={{
-                background: 'rgba(239, 68, 68, 0.12)',
-                color: 'var(--klao-danger, #ef4444)',
-                padding: '12px',
+                width: '44px',
+                height: '44px',
                 borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.1)',
+                color: 'var(--klao-danger, #ef4444)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

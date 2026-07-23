@@ -21,7 +21,7 @@ export async function getAppSession(): Promise<AppSession | null> {
     const { getServerSession } = await import('next-auth/next');
     const { authOptions } = await import('@/lib/auth/authOptions');
     const session = await getServerSession(authOptions);
-    return session;
+    return session as any as AppSession;
   } catch (error) {
     // Fails gracefully in non-Next.js environments (like CLI)
     return null;

@@ -121,27 +121,17 @@ export class AlchemaCore {
            owner_id = NULLIF(current_setting('app.current_user_id', true), '')
            OR owner_team_id = NULLIF(current_setting('app.current_team_id', true), '')
            OR EXISTS (
-             SELECT 1 FROM core.user_teams ut
-             LEFT JOIN core.object_permissions p ON ut.team_id = p.team_id AND p.object_name = %L
-             LEFT JOIN core.teams t ON ut.team_id = t.id
-             WHERE ut.user_id = NULLIF(current_setting('app.current_user_id', true), '')
-             AND t.tenant_id = tenant_id
-             AND (p.view_all_data = true OR t.is_system_admin = true)
-           )
-           OR owner_id IN (
-             SELECT user_id FROM core.user_teams ut
-             JOIN core.teams t ON ut.team_id = t.id
-             WHERE t.parent_id IN (
-               SELECT team_id FROM core.user_teams WHERE user_id = NULLIF(current_setting('app.current_user_id', true), '')
+             SELECT 1 FROM core.object_permissions p
+             WHERE p.object_name = %L
+             AND (
+               p.team_id IN (SELECT team_id FROM core.user_teams WHERE user_id = NULLIF(current_setting('app.current_user_id', true), ''))
+               OR p.team_id IN (SELECT tp.team_id FROM core.position_slots ps JOIN core.team_positions tp ON ps.position_id = tp.position_id WHERE ps.user_id = NULLIF(current_setting('app.current_user_id', true), ''))
+               OR p.user_id = NULLIF(current_setting('app.current_user_id', true), '')
+               OR p.position_id IN (SELECT position_id FROM core.position_slots WHERE user_id = NULLIF(current_setting('app.current_user_id', true), ''))
              )
-             AND t.tenant_id = tenant_id
-           )
-           OR owner_team_id IN (
-             SELECT id FROM core.teams 
-             WHERE parent_id IN (
-               SELECT team_id FROM core.user_teams WHERE user_id = NULLIF(current_setting('app.current_user_id', true), '')
+             AND (
+               p.read_scope = 'TEAM' OR p.read_scope = 'HIERARCHY'
              )
-             AND tenant_id = tenant_id
            )
          )
        )`,

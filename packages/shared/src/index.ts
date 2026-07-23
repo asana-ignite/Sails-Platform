@@ -149,6 +149,7 @@ export interface ConsoleMenu {
   actionType: string;
   componentKey?: string;
   order: number;
+  isSystem?: boolean;
   requiredCapability?: string | null;
   children?: ConsoleMenu[];
 }
@@ -159,6 +160,7 @@ export interface ConsoleApp {
   name: string;
   icon: string | null;
   order: number;
+  isSystem?: boolean;
   requiredCapability?: string | null;
   menus: ConsoleMenu[];
   _count?: { menus: number };

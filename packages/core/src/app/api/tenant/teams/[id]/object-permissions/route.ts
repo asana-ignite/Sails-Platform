@@ -19,8 +19,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const targetTenantId = caller.tenantId;
 
-    const body = await req.json();
-    const { objectName, canCreate, canRead, canUpdate, canDelete, viewAllData, modifyAllData } = body;
+    const { objectName, canCreate, canDelete, readScope, modifyScope } = await req.json();
 
     if (!objectName) {
       return NextResponse.json({ error: 'objectName is required' }, { status: 400 });
@@ -37,29 +36,27 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         teamId_objectName: { teamId, objectName }
       },
       update: {
+        tenantId: targetTenantId,
         canCreate: canCreate ?? false,
-        canRead: canRead ?? false,
-        canUpdate: canUpdate ?? false,
         canDelete: canDelete ?? false,
-        viewAllData: viewAllData ?? false,
-        modifyAllData: modifyAllData ?? false
+        readScope: readScope ?? 'NONE',
+        modifyScope: modifyScope ?? 'NONE'
       },
       create: {
+        tenantId: targetTenantId,
         teamId,
         objectName,
         canCreate: canCreate ?? false,
-        canRead: canRead ?? false,
-        canUpdate: canUpdate ?? false,
         canDelete: canDelete ?? false,
-        viewAllData: viewAllData ?? false,
-        modifyAllData: modifyAllData ?? false
+        readScope: readScope ?? 'NONE',
+        modifyScope: modifyScope ?? 'NONE'
       }
     });
 
     SchemaLogger.logSystemEvent({
       tenantId: targetTenantId,
       userId: caller.id,
-      category: 'SECURITY',
+      category: 'SETTINGS',
       action: 'UPDATE',
       eventName: 'Update Object Permission',
       details: { teamId, objectName, permissions: permission }

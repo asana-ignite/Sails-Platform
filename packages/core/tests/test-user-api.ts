@@ -15,7 +15,7 @@ async function runTests() {
     data: { name: 'Test Team', tenantId: tenant.id }
   });
   await db.objectPermission.create({
-    data: { teamId: team.id, objectName: 'leads', canRead: true }
+    data: { tenantId: tenant.id, teamId: team.id, objectName: 'users', readScope: 'TEAM', modifyScope: 'TEAM', canCreate: true }
   });
 
   const adminUser = await db.user.create({

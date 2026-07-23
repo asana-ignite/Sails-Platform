@@ -30,7 +30,7 @@ async function resetPlatform() {
 
       // 2. Clean Metadata (Prisma)
       console.log("🗑️  [PHASE 1] Deleting all metadata from core schema...");
-      await db.auditLog.deleteMany({});
+      await db.dataAuditLog.deleteMany({});
       await db.objectPermission.deleteMany({});
       await db.user.deleteMany({});
       await db.team.deleteMany({});

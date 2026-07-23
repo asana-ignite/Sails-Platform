@@ -86,7 +86,7 @@ async function run() {
     await pool.query('GRANT INSERT ON core.audit_logs TO rls_user');
 
     console.log("Setting up Users and Permissions in Prisma...");
-    await db.auditLog.deleteMany({});
+    await db.dataAuditLog.deleteMany({});
     await db.objectPermission.deleteMany({});
     await db.user.deleteMany({});
     await db.team.deleteMany({});
@@ -120,10 +120,10 @@ async function run() {
     // Set Permissions
     await db.objectPermission.createMany({
       data: [
-        { teamId: teamA.id, objectName: 'accounts', canCreate: true, canRead: true },
-        { teamId: teamA.id, objectName: 'contacts', canCreate: true, canRead: true, canUpdate: true },
-        { teamId: teamB.id, objectName: 'accounts', canCreate: false, canRead: true },
-        { teamId: teamB.id, objectName: 'contacts', canCreate: false, canRead: true }
+        { tenantId: tenant.id, teamId: teamA.id, objectName: 'accounts', canCreate: true, readScope: 'TEAM', },
+        { tenantId: tenant.id, teamId: teamA.id, objectName: 'contacts', canCreate: true, readScope: 'TEAM', modifyScope: 'TEAM', },
+        { tenantId: tenant.id, teamId: teamB.id, objectName: 'accounts', canCreate: false, readScope: 'TEAM', },
+        { tenantId: tenant.id, teamId: teamB.id, objectName: 'contacts', canCreate: false, readScope: 'TEAM', }
       ]
     });
 
@@ -167,7 +167,7 @@ async function run() {
     });
 
     console.log(`13.5. Checking Audit Logs...`);
-    const logs = await db.auditLog.findMany({ where: { tenantId: tenant.id }, orderBy: { createdAt: 'asc' } });
+    const logs = await db.dataAuditLog.findMany({ where: { tenantId: tenant.id }, orderBy: { createdAt: 'asc' } });
     console.log(`   ✅ Found ${logs.length} audit logs!`);
     logs.forEach(log => {
       console.log(`      -> [${log.action}] on ${log.objectName} (Record: ${log.recordId})`);

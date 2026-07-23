@@ -27,7 +27,7 @@ async function cleanDatabase() {
 
     // 2. Delete all metadata (cascade deletes EntityDefinitions, Columns, Rules)
     console.log("Deleting all metadata from Prisma...");
-    await db.auditLog.deleteMany({});
+    await db.dataAuditLog.deleteMany({});
     await db.objectPermission.deleteMany({});
     await db.user.deleteMany({});
     await db.team.deleteMany({});

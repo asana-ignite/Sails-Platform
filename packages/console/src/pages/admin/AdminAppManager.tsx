@@ -121,7 +121,7 @@ const AdminAppManager: React.FC = () => {
       </div>
 
       {isEditing && createPortal(
-        <div className="klao-modal-overlay">
+        <div className="klao-modal-overlay" style={{ zIndex: 9999 }}>
           <div className="klao-card" style={{ width: '460px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>

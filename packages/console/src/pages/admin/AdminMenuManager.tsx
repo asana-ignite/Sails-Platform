@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Plus, Edit2, Trash2, ChevronRight, ChevronDown, 
-  Database, Layers, Move, GripVertical 
+  Database, Layers, Move, GripVertical, X
 } from 'lucide-react';
 import { ConsoleApp, ConsoleMenu } from '@klao/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
@@ -134,7 +135,7 @@ const AdminMenuManager: React.FC = () => {
       </div>
 
       {isEditing && createPortal(
-        <div className="klao-modal-overlay">
+        <div className="klao-modal-overlay" style={{ zIndex: 9999 }}>
           <div className="klao-card" style={{ width: '460px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>

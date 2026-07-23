@@ -98,6 +98,13 @@ export async function GET(req: NextRequest) {
 
     const users = await db.user.findMany({
       where: { tenantId: targetTenantId },
+      include: {
+        positionSlots: {
+          include: {
+            position: true
+          }
+        }
+      },
       orderBy: { createdAt: 'desc' }
     });
 

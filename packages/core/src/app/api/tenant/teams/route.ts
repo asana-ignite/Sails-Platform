@@ -40,6 +40,19 @@ export async function GET(req: NextRequest) {
             }
           }
         },
+        positions: {
+          include: {
+            position: {
+              include: {
+                slots: {
+                  include: {
+                    user: true
+                  }
+                }
+              }
+            }
+          }
+        },
         systemPermissions: true,
         objectPermissions: true
       },

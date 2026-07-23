@@ -11,6 +11,7 @@ interface User {
   email: string;
   phone?: string;
   title?: string;
+  positionText?: string;
   role: 'Admin' | 'Member' | 'Guest';
   status: 'Active' | 'Inactive' | 'Pending';
   avatar?: string;
@@ -30,10 +31,14 @@ const UserManager: React.FC = () => {
   const [activeFilters, setActiveFilters] = useState<{ role?: string; status?: string }>({});
   const [selectedRole, setSelectedRole] = useState('Member');
   
-  // Form State
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', title: '', role: 'MEMBER' });
+  // Form & Modal State
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', title: '', positionText: '', role: 'MEMBER' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+
+  // Themed Confirmation & Notification Modal States
+  const [deleteConfirmUser, setDeleteConfirmUser] = useState<{ id: string; name: string } | null>(null);
+  const [notificationMsg, setNotificationMsg] = useState<{ title: string; message: string; type: 'error' | 'success' } | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -41,17 +46,22 @@ const UserManager: React.FC = () => {
       const response = await fetch('/api/tenant/users');
       if (response.ok) {
         const data = await response.json();
-        const mappedUsers = data.map((u: any) => ({
-          id: u.id,
-          name: u.name || 'Unknown User',
-          email: u.email,
-          phone: u.phone || '',
-          title: u.title || '',
-          role: u.role === 'TENANT_ADMIN' || u.role === 'ADMIN' ? 'Admin' : u.role === 'MEMBER' ? 'Member' : 'Guest',
-          status: u.isActive ? 'Active' : 'Inactive',
-          lastLogin: u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'Never',
-          avatar: u.image
-        }));
+        const mappedUsers = data.map((u: any) => {
+          const slots = (u.positionSlots || []).map((ps: any) => `${ps.id} (${ps.position?.name || 'Position'})`);
+          const posText = slots.length > 0 ? slots.join(', ') : 'Unassigned Position';
+          return {
+            id: u.id,
+            name: u.name || 'Unknown User',
+            email: u.email,
+            phone: u.phone || '',
+            title: u.title || '',
+            positionText: posText,
+            role: u.role === 'TENANT_ADMIN' || u.role === 'ADMIN' ? 'Admin' : u.role === 'MEMBER' ? 'Member' : 'Guest',
+            status: u.isActive ? 'Active' : 'Inactive',
+            lastLogin: u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'Never',
+            avatar: u.image
+          };
+        });
         setUsers(mappedUsers);
       }
     } catch (error) {
@@ -111,17 +121,17 @@ const UserManager: React.FC = () => {
 
       if (response.ok) {
         setShowAddUserDrawer(false);
-        setFormData({ name: '', email: '', phone: '', title: '', role: 'MEMBER' });
+        setFormData({ name: '', email: '', phone: '', title: '', positionText: '', role: 'MEMBER' });
         setEditingUserId(null);
         setSelectedRole('Member');
         fetchUsers(); // Refresh list
       } else {
         const err = await response.json();
-        alert(err.error || 'Operation failed');
+        setNotificationMsg({ title: 'Save Failed', message: err.error || 'Operation failed', type: 'error' });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving user:', error);
-      alert('An unexpected error occurred');
+      setNotificationMsg({ title: 'Save Failed', message: error.message || 'An unexpected error occurred', type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -212,24 +222,13 @@ const UserManager: React.FC = () => {
         email: user.email,
         phone: user.phone || '',
         title: user.title || '',
+        positionText: user.positionText || 'Unassigned Position',
         role: user.role === 'Admin' ? 'TENANT_ADMIN' : 'MEMBER'
       });
       setSelectedRole(user.role);
       setShowAddUserDrawer(true);
     } else if (action === 'remove') {
-      if (window.confirm(`Are you sure you want to remove ${user.name}?`)) {
-        try {
-          const response = await fetch(`/api/tenant/users/${user.id}`, { method: 'DELETE' });
-          if (response.ok) {
-            fetchUsers();
-          } else {
-            const err = await response.json();
-            alert(err.error || 'Delete failed');
-          }
-        } catch (error) {
-          console.error('Delete error:', error);
-        }
-      }
+      setDeleteConfirmUser({ id: user.id, name: user.name });
     } else if (action === 'deactivate' || action === 'activate') {
         try {
           const response = await fetch(`/api/tenant/users/${user.id}`, { 
@@ -406,8 +405,10 @@ const UserManager: React.FC = () => {
               <tr
                 key={user.id}
                 className={`klao-user-manager__tr ${selectedUserIds.has(user.id) ? 'klao-user-manager__tr--selected' : ''}`}
+                onClick={() => handleAction('edit', user)}
+                style={{ cursor: 'pointer' }}
               >
-                <td className="klao-user-manager__td klao-user-manager__td--checkbox">
+                <td className="klao-user-manager__td klao-user-manager__td--checkbox" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
                     className="klao-checkbox"
@@ -430,7 +431,7 @@ const UserManager: React.FC = () => {
                     </div>
                     <div className="klao-user-manager__info">
                       <span className="klao-user-manager__name">{user.name}</span>
-                      <span className="klao-user-manager__title-label">{user.title || 'No position specified'}</span>
+                      <span className="klao-user-manager__title-label">{user.positionText || 'Unassigned Position'}</span>
                       <span className="klao-user-manager__email">{user.email}</span>
                     </div>
                   </div>
@@ -550,93 +551,102 @@ const UserManager: React.FC = () => {
           </div>
         </div>
       </div>
-      {/* 4. Add User Slide-over Drawer (Total Restoration with Portal) */}
+      {/* 4. Add/Edit User Ghost Glass Modal */}
       {showAddUserDrawer && createPortal(
-        <div className="klao-add-drawer" id="klao-user-add-drawer">
-          <div className="klao-add-drawer__overlay" onClick={() => setShowAddUserDrawer(false)}></div>
-          <div className="klao-add-drawer__panel">
-            <div className="klao-add-drawer__header">
-              <div className="klao-add-drawer__header-info">
-                <h2 className="klao-add-drawer__title">{editingUserId ? 'Edit User Details' : 'Add New User'}</h2>
-                <p className="klao-add-drawer__subtitle">
-                  {editingUserId ? 'Update existing platform identity and permissions.' : 'Create a new platform identity and assign roles.'}
-                </p>
-              </div>
+        <div className="klao-modal-overlay">
+          <div className="klao-card" style={{ width: '460px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <UserPlus size={20} color="var(--klao-primary)" />
+                {editingUserId ? 'Edit User Details' : 'Add New User'}
+              </h3>
               <button 
-                className="klao-add-drawer__close" 
                 onClick={() => {
                   setShowAddUserDrawer(false);
                   setEditingUserId(null);
-                  setFormData({ name: '', email: '', phone: '', title: '', role: 'MEMBER' });
+                  setFormData({ name: '', email: '', phone: '', title: '', positionText: '', role: 'MEMBER' });
                 }}
+                style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="klao-add-drawer__body">
-              <div className="klao-form-group">
-                <label className="klao-label">Full Name</label>
+            <div style={{ marginBottom: '24px' }}>
+              <div className="klao-form-group" style={{ marginBottom: '16px' }}>
+                <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Full Name</label>
                 <input 
                   type="text" 
                   className="klao-input" 
                   placeholder="e.g. John Doe" 
                   autoFocus 
+                  style={{ width: '100%' }}
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 />
               </div>
 
-              <div className="klao-form-group">
-                <label className="klao-label">Email Address</label>
+              <div className="klao-form-group" style={{ marginBottom: '16px' }}>
+                <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Email Address</label>
                 <input 
                   type="email" 
                   className="klao-input" 
                   placeholder="john@example.com" 
+                  style={{ width: '100%' }}
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 />
               </div>
 
-              <div className="klao-form-group">
-                <label className="klao-label">Phone Number</label>
-                <input 
-                  type="tel" 
-                  className="klao-input" 
-                  placeholder="+1 (555) 000-0000" 
-                  value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                <div className="klao-form-group">
+                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Phone Number</label>
+                  <input 
+                    type="tel" 
+                    className="klao-input" 
+                    placeholder="+1 (555) 000-0000" 
+                    style={{ width: '100%' }}
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  />
+                </div>
+
+                <div className="klao-form-group">
+                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Mapped Position (Slot)</label>
+                  <div 
+                    className="klao-input" 
+                    style={{ 
+                      width: '100%',
+                      background: 'var(--klao-bg-body)',
+                      color: 'var(--klao-primary, #3b82f6)',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    {(formData as any).positionText || 'Unassigned Position'}
+                  </div>
+                </div>
               </div>
 
               <div className="klao-form-group">
-                <label className="klao-label">Work Position / Title</label>
-                <input 
-                  type="text" 
-                  className="klao-input" 
-                  placeholder="e.g. Senior Developer" 
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                />
-              </div>
-
-              <div className="klao-form-group">
-                <label className="klao-label">System Role</label>
+                <label className="klao-label" style={{ display: 'block', marginBottom: '8px' }}>System Role</label>
                 <div className="klao-role-selector">
                   {[
                     { name: 'Admin', code: 'TENANT_ADMIN', desc: 'Full administrative access to tenant settings' },
                     { name: 'Member', code: 'MEMBER', desc: 'Standard access to platform features' },
-                    { name: 'Guest', code: 'GUEST', desc: 'Limited read-only or shared access' }
+                    { name: 'Guest', code: 'GUEST', desc: 'Limited read-only access' }
                   ].map(role => (
                     <button 
                       key={role.name} 
+                      type="button"
                       className={`klao-role-option ${selectedRole === role.name ? 'active' : ''}`}
                       onClick={() => {
                         setSelectedRole(role.name);
                         setFormData(prev => ({ ...prev, role: role.code }));
                       }}
                     >
-                      <Shield size={24} />
+                      <Shield size={22} />
                       <div className="klao-role-info">
                         <span className="klao-role-name">{role.name}</span>
                         <span className="klao-role-desc">{role.desc}</span>
@@ -647,13 +657,13 @@ const UserManager: React.FC = () => {
               </div>
             </div>
 
-            <div className="klao-add-drawer__footer">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               <button 
-                className="klao-btn klao-btn--ghost" 
+                className="klao-btn klao-btn--secondary" 
                 onClick={() => {
                   setShowAddUserDrawer(false);
                   setEditingUserId(null);
-                  setFormData({ name: '', email: '', phone: '', title: '', role: 'MEMBER' });
+                  setFormData({ name: '', email: '', phone: '', title: '', positionText: '', role: 'MEMBER' });
                 }}
                 disabled={isSubmitting}
               >
@@ -665,6 +675,91 @@ const UserManager: React.FC = () => {
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'Saving...' : editingUserId ? 'Save Changes' : 'Create User Account'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* THEMED DELETE USER CONFIRMATION MODAL */}
+      {deleteConfirmUser && createPortal(
+        <div className="klao-modal-overlay">
+          <div className="klao-card" style={{ width: '440px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)' }}>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.12)',
+                color: 'var(--klao-danger, #ef4444)',
+                padding: '12px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Trash2 size={24} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.2rem', fontWeight: 600, color: 'var(--klao-text-main)' }}>
+                  Remove User Account
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--klao-text-muted)', lineHeight: 1.5 }}>
+                  Are you sure you want to remove <strong>"{deleteConfirmUser.name}"</strong> from the platform? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button 
+                className="klao-btn klao-btn--secondary"
+                onClick={() => setDeleteConfirmUser(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="klao-btn klao-btn--danger"
+                onClick={async () => {
+                  const targetId = deleteConfirmUser.id;
+                  setDeleteConfirmUser(null);
+                  try {
+                    const response = await fetch(`/api/tenant/users/${targetId}`, { method: 'DELETE' });
+                    if (response.ok) {
+                      fetchUsers();
+                    } else {
+                      const err = await response.json();
+                      setNotificationMsg({ title: 'Delete Failed', message: err.error || 'Delete failed', type: 'error' });
+                    }
+                  } catch (error: any) {
+                    setNotificationMsg({ title: 'Delete Failed', message: error.message || 'Delete failed', type: 'error' });
+                  }
+                }}
+              >
+                Remove User
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* THEMED NOTIFICATION / ERROR MODAL */}
+      {notificationMsg && createPortal(
+        <div className="klao-modal-overlay">
+          <div className="klao-card" style={{ width: '400px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)', textAlign: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: notificationMsg.type === 'error' ? 'var(--klao-danger, #ef4444)' : 'var(--klao-primary)' }}>
+              {notificationMsg.type === 'error' ? <Trash2 size={44} /> : <Shield size={44} />}
+            </div>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '1.15rem', fontWeight: 600 }}>{notificationMsg.title}</h3>
+            <p style={{ fontSize: '0.88rem', color: 'var(--klao-text-muted)', margin: '0 0 20px 0', lineHeight: 1.5 }}>
+              {notificationMsg.message}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button 
+                className="klao-btn klao-btn--primary"
+                onClick={() => setNotificationMsg(null)}
+                style={{ minWidth: '120px' }}
+              >
+                Dismiss
               </button>
             </div>
           </div>

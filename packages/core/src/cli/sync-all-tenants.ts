@@ -6,7 +6,8 @@ async function syncAllTenants() {
   console.log("🚀 Starting Global App & Metadata synchronization...");
   
   // Initialize connection manager
-  ConnectionManager.initialize();
+  const { Pool } = require('pg');
+  ConnectionManager.initialize(new Pool());
   
   const provisioner = new TenantProvisioner();
   const tenants = await db.tenant.findMany({

@@ -13,6 +13,7 @@ export const AdminPluginRegistry: Record<string, any> = {
   // Users & Team
   AdminUserManager: lazy(() => import('../../pages/custom/UserManager')),
   AdminTeamManager: lazy(() => import('../../pages/admin/AdminTeamManager')),
+  AdminPositionManager: lazy(() => import('../../pages/admin/AdminPositionManager')),
   AdminPermissions: lazy(() => import('../../pages/admin/AdminPermissions')),
 
   // Platform Studio

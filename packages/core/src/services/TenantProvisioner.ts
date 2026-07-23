@@ -3,6 +3,7 @@ import { AlchemaCore } from '../core/engine/AlchemaCore';
 import { Pool } from 'pg';
 import { ConnectionManager } from '../core/engine/ConnectionManager';
 import { ProvisionTenantResponse } from '@klao/shared';
+import { TranslatorLayer } from './TranslatorLayer';
 
 export class TenantProvisioner {
   private engine: AlchemaCore;
@@ -56,9 +57,12 @@ export class TenantProvisioner {
         data: { tenantId: tenant.id, teams: { create: { teamId: adminTeam.id, isLeader: true } } }
       });
     } else {
+      const bcrypt = require('bcryptjs');
+      const hash = await bcrypt.hash('Welcome2Ignite', 10);
       user = await db.user.create({
         data: {
           email: adminEmail!,
+          password: hash,
           tenantId: tenant.id,
           role: 'TENANT_ADMIN',
           teams: { create: { teamId: adminTeam.id, isLeader: true } }
@@ -68,6 +72,7 @@ export class TenantProvisioner {
 
     await this.provisionSystemApps(tenant.id);
     await this.provisionBusinessApps(tenant.id);
+    await this.provisionStandardDataModels(tenant.id);
     
     return {
       tenant: tenant as any,
@@ -113,8 +118,9 @@ export class TenantProvisioner {
               children: {
                 create: [
                   { label: 'Users', icon: 'UserPlus', path: '/admin/users', order: 0, requiredCapability: 'system.users.manage', componentKey: 'AdminUserManager', actionType: 'plugin' },
-                  { label: 'Teams', icon: 'GitBranch', path: '/admin/teams', order: 1, requiredCapability: 'system.teams.manage', componentKey: 'AdminTeamManager', actionType: 'plugin' },
-                  { label: 'Access Roles', icon: 'ShieldCheck', path: '/admin/roles', order: 2, requiredCapability: 'system.roles.assign', componentKey: 'AdminPermissions', actionType: 'plugin' }
+                  { label: 'Positions', icon: 'Award', path: '/admin/positions', order: 1, requiredCapability: 'system.users.manage', componentKey: 'AdminPositionManager', actionType: 'plugin' },
+                  { label: 'Teams', icon: 'GitBranch', path: '/admin/teams', order: 2, requiredCapability: 'system.teams.manage', componentKey: 'AdminTeamManager', actionType: 'plugin' },
+                  { label: 'Access Roles', icon: 'ShieldCheck', path: '/admin/roles', order: 3, requiredCapability: 'system.roles.assign', componentKey: 'AdminPermissions', actionType: 'plugin' }
                 ]
               }
             },
@@ -253,5 +259,30 @@ export class TenantProvisioner {
       WHERE core.console_menus.parent_id = parent_id_table.id
       AND core.console_menus.app_id IS NULL
     `);
+  }
+
+  async provisionStandardDataModels(tenantId: string) {
+    const translator = new TranslatorLayer(this.engine);
+    const standardModels = [
+      { name: 'Leads', tableName: 'leads', description: 'Sales leads and prospective clients' },
+      { name: 'Customers', tableName: 'customers', description: 'Active client accounts' },
+      { name: 'Companies', tableName: 'companies', description: 'Business entities and organizations' },
+      { name: 'Orders', tableName: 'orders', description: 'Customer purchase orders' },
+      { name: 'Invoices', tableName: 'invoices', description: 'Billing and payment invoices' },
+    ];
+
+    for (const model of standardModels) {
+      const existing = await db.tableDefinition.findFirst({
+        where: { tenantId, tableName: model.tableName }
+      });
+      if (!existing) {
+        try {
+          await translator.createTable(tenantId, model.name, model.tableName, model.description, true);
+          console.log(`[PROVISIONER] Provisioned standard data model: ${model.name}`);
+        } catch (e: any) {
+          console.warn(`[PROVISIONER] Could not provision standard model ${model.name}:`, e?.message);
+        }
+      }
+    }
   }
 }

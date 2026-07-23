@@ -1,0 +1,39 @@
+/* KLAO Position Manager Styles */
+
+.klao-position-manager {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--klao-spacing-unit) * 3);
+  width: 100%;
+  height: 100%;
+  font-family: var(--klao-font-family);
+}
+
+.klao-position-manager * {
+  font-family: var(--klao-font-family);
+}
+
+.klao-position-manager mark {
+  background: rgba(250, 204, 21, 0.45);
+  color: var(--klao-text-main, #344759);
+  border-radius: 3px;
+  padding: 1px 3px;
+  font-weight: 600;
+}
+
+.klao-slot-card {
+  padding: 10px 14px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--klao-bg-body);
+  border: 1px solid var(--klao-border-color);
+  transition: all 0.15s ease;
+}
+
+.klao-slot-card--occupied {
+  background: rgba(34, 197, 94, 0.04);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}

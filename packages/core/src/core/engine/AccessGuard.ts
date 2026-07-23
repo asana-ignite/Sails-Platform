@@ -33,6 +33,16 @@ export class AccessGuard {
       select: { 
         teams: {
           select: { teamId: true }
+        },
+        positionSlots: {
+          select: {
+            position: {
+              select: {
+                id: true,
+                teamLinks: { select: { teamId: true } }
+              }
+            }
+          }
         }
       }
     });
@@ -41,16 +51,20 @@ export class AccessGuard {
       throw new Error(`Unauthorized: User ${resolvedUserId} not found.`);
     }
 
-    const teamIds = user.teams.map(t => t.teamId);
-
-    if (teamIds.length === 0) {
-      throw new Error(`Unauthorized: User ${resolvedUserId} has no team assigned.`);
-    }
+    const explicitTeamIds = user.teams.map(t => t.teamId);
+    const positionIds = user.positionSlots.map(ps => ps.position.id);
+    const positionTeamIds = user.positionSlots.flatMap(ps => ps.position.teamLinks.map(tl => tl.teamId));
+    
+    const allTeamIds = Array.from(new Set([...explicitTeamIds, ...positionTeamIds]));
 
     const permissions = await db.objectPermission.findMany({
       where: {
-        teamId: { in: teamIds },
-        objectName: objectName
+        objectName: objectName,
+        OR: [
+          { teamId: { in: allTeamIds } },
+          { positionId: { in: positionIds } },
+          { userId: resolvedUserId }
+        ]
       }
     });
 
@@ -58,25 +72,18 @@ export class AccessGuard {
       throw new Error(`Unauthorized: No permissions found for object '${objectName}'.`);
     }
 
-    // Check if ANY team has 'modifyAllData' (highest level)
-    if (permissions.some(p => p.modifyAllData)) {
-      return;
-    }
-
-    // If reading, check if ANY team has 'viewAllData'
-    if (action === 'read' && permissions.some(p => p.viewAllData)) {
-      return;
-    }
-
     // Check specific CRUD action across all permissions (additive)
-    const actionMapField = {
-      'create': 'canCreate',
-      'read': 'canRead',
-      'update': 'canUpdate',
-      'delete': 'canDelete'
-    } as const;
-
-    const hasPermission = permissions.some(p => p[actionMapField[action]]);
+    let hasPermission = false;
+    
+    if (action === 'read') {
+      hasPermission = permissions.some(p => p.readScope !== 'NONE');
+    } else if (action === 'update') {
+      hasPermission = permissions.some(p => p.modifyScope !== 'NONE');
+    } else if (action === 'create') {
+      hasPermission = permissions.some(p => p.canCreate);
+    } else if (action === 'delete') {
+      hasPermission = permissions.some(p => p.canDelete);
+    }
 
     if (!hasPermission) {
       throw new Error(`Unauthorized: User lacks '${action}' permission for object '${objectName}'.`);

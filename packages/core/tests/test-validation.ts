@@ -19,7 +19,7 @@ async function run() {
     console.log("--- CLEANUP ---");
     await pool.query('DROP SCHEMA IF EXISTS tenant_val_test CASCADE');
     await db.tenant.deleteMany({ where: { schemaName: 'tenant_val_test' } });
-    await db.auditLog.deleteMany({});
+    await db.dataAuditLog.deleteMany({});
     await db.objectPermission.deleteMany({});
     await db.user.deleteMany({});
     await db.team.deleteMany({});
@@ -40,14 +40,14 @@ async function run() {
     await translator.addValidationRule(field.id, 'enum', JSON.stringify(enumValues), "Invalid Status");
     console.log(`   ✅ Physical constraint added to 'tasks.status'.`);
 
-    // 3. Test DB-level Enforcement
+    // 3. Testing Database Enforcement
     console.log("\n3. Testing Database Enforcement...");
     
     const user = provResult.user;
     const team = provResult.adminTeam;
     await db.objectPermission.create({
-      data: { teamId: team.id, objectName: 'tasks', canCreate: true }
-    });
+    data: { tenantId: tenant.id, teamId: team.id, objectName: 'invoices', canCreate: true, readScope: 'TEAM', modifyScope: 'TEAM' }
+  });
 
     try {
       console.log("   Attempting to insert 'InvalidStatus' into DB...");

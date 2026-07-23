@@ -64,6 +64,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .klao-custom-select__placeholder {
@@ -126,6 +127,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .klao-custom-select__check {

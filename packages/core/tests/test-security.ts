@@ -73,7 +73,7 @@ async function run() {
   for (const row of oldSchemas.rows) {
     await pool.query(`DROP SCHEMA IF EXISTS "${row.schema_name}" CASCADE`);
   }
-  await db.auditLog.deleteMany({});
+  await db.dataAuditLog.deleteMany({});
   await db.objectPermission.deleteMany({});
   await db.account.deleteMany({});
   await db.session.deleteMany({});
@@ -114,7 +114,7 @@ async function run() {
     }
   });
   await db.objectPermission.create({
-    data: { teamId: readOnlyTeam.id, objectName: 'leads', canRead: true, canCreate: false }
+    data: { tenantId: tenantA.id, teamId: readOnlyTeam.id, objectName: 'leads', readScope: 'TEAM', canCreate: false }
   });
 
   // Create a leads table in Tenant A's schema using the dynamic engine
@@ -212,8 +212,8 @@ async function run() {
     // Ensure Tenant A admin has create permission
     await db.objectPermission.upsert({
       where: { teamId_objectName: { teamId: profA.id, objectName: 'leads' } },
-      update: { canCreate: true, canRead: true },
-      create: { teamId: profA.id, objectName: 'leads', canCreate: true, canRead: true }
+      update: { canCreate: true, readScope: 'TEAM' },
+      create: { tenantId: tenantA.id, teamId: profA.id, objectName: 'leads', canCreate: true, readScope: 'TEAM' }
     });
 
     // User A inserts a lead (runs as superuser, owner_id = userA.id)
@@ -295,7 +295,7 @@ async function run() {
   try {
     const teamQ = await db.team.create({ data: { name: 'QueueTeam', tenantId: tenantA.id } });
     await db.objectPermission.create({
-      data: { teamId: teamQ.id, objectName: 'leads', canRead: true, canCreate: true }
+      data: { tenantId: tenantA.id, teamId: teamQ.id, objectName: 'leads', readScope: 'TEAM', modifyScope: 'TEAM', canCreate: true }
     });
     const userA_q = await db.user.create({ data: { email: 'queue-a@sec.com', tenantId: tenantA.id } });
     await db.userTeam.create({ data: { userId: userA_q.id, teamId: teamQ.id } });
