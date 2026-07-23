@@ -114,6 +114,11 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: false, error: 'Menu item not found or access denied' }, { status: 404 });
     }
 
+    const callerRole = (session?.user as any)?.role;
+    if (existing.isSystem && callerRole !== 'SUPER_ADMIN') {
+      return NextResponse.json({ success: false, error: 'System menu items are protected and can only be modified by Super Admins' }, { status: 403 });
+    }
+
     const updatedMenu = await db.consoleMenu.update({
       where: { id },
       data: updateData
@@ -151,6 +156,11 @@ export async function DELETE(req: Request) {
 
     if (!existing) {
       return NextResponse.json({ success: false, error: 'Menu item not found or access denied' }, { status: 404 });
+    }
+
+    const callerRole = (session?.user as any)?.role;
+    if (existing.isSystem && callerRole !== 'SUPER_ADMIN') {
+      return NextResponse.json({ success: false, error: 'System menu items are protected and can only be deleted by Super Admins' }, { status: 403 });
     }
 
     await db.consoleMenu.delete({

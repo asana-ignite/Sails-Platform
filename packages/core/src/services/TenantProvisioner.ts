@@ -134,7 +134,7 @@ export class TenantProvisioner {
                 create: [
                   { label: 'SSO Configuration', icon: 'Key', path: '/admin/sso', order: 0, requiredCapability: 'system.security.sso', componentKey: 'AdminSSOConfig', actionType: 'plugin' },
                   { label: 'API Tokens', icon: 'FileDigit', path: '/admin/tokens', order: 1, requiredCapability: 'system.security.tokens', componentKey: 'AdminApiTokens', actionType: 'plugin' },
-                  { label: 'Connected Apps', icon: 'Link', path: '/admin/apps', order: 2, requiredCapability: 'system.security.apps', componentKey: 'AdminConnectedApps', actionType: 'plugin' }
+                  { label: 'Connected Apps', icon: 'Link', path: '/admin/connected-apps', order: 2, requiredCapability: 'system.security.apps', componentKey: 'AdminConnectedApps', actionType: 'plugin' }
                 ]
               }
             },

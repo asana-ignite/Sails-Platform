@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAppSession } from '@/lib/auth/session';
+import { SYSTEM_PERMISSION_REGISTRY } from '@/lib/security/registry';
 
 /**
  * GET /api/console/config
@@ -39,31 +40,48 @@ export async function GET() {
       apps = getMockData();
     }
 
-    // 3. Filter by Required Capability
+    // 3. Filter Apps and Menus by Role & System Capability
     const user = session?.user as any;
-    // TEMPORARY: Force Admin mode to true for structure verification
-    const isSystemAdmin = true; // user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
-
-    console.log(`[CONFIG] User: ${user?.email || 'Anonymous'}, Tenant: ${tenantId}, Admin: ${isSystemAdmin}, AppCount: ${apps.length}`);
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN'; 
+    const isTenantAdmin = user?.role === 'TENANT_ADMIN';
+    const isSystemAdmin = isSuperAdmin || isTenantAdmin; // Both Super Admin & Tenant Admin see Admin & Settings menu
 
     let userCapabilities: string[] = [];
-    if (!isSystemAdmin && user?.teamId) {
-      const perms = await db.systemPermission.findMany({
-        where: { teamId: user.teamId },
+
+    if (isSystemAdmin) {
+      // Super Admin & Tenant Admin get full access to Admin & Settings apps and menus
+      userCapabilities = Object.keys(SYSTEM_PERMISSION_REGISTRY);
+    } else {
+      // Regular End-Users get ONLY business capabilities explicitly assigned to their active teams
+      const userTeamMemberships = user?.id ? await db.userTeam.findMany({
+        where: { userId: user.id },
+        select: { teamId: true }
+      }) : [];
+      const teamIds = userTeamMemberships.map(t => t.teamId);
+
+      const assignedPerms = teamIds.length > 0 ? await db.systemPermission.findMany({
+        where: { teamId: { in: teamIds } },
         select: { capability: true }
-      });
-      userCapabilities = perms.map(p => p.capability);
+      }) : [];
+      userCapabilities = assignedPerms.map(p => p.capability);
     }
 
+    console.log(`[CONFIG] User: ${user?.email || 'Anonymous'}, Role: ${user?.role || 'NONE'}, IsAdmin: ${isSystemAdmin}, Capabilities: ${userCapabilities.length}`);
+
     const filteredApps = apps.filter(app => {
-      if (!app.requiredCapability || isSystemAdmin) return true;
-      return userCapabilities.includes(app.requiredCapability);
+      // If app has a required capability, user must possess it (unless isSystemAdmin)
+      if (app.requiredCapability && !userCapabilities.includes(app.requiredCapability) && !isSystemAdmin) {
+        return false;
+      }
+      return true;
     }).map(app => {
-      // Create a recursive filter for menus
+      // Filter child menus based on capabilities
       const filterMenus = (menuList: any[]) => {
         return menuList.filter(menu => {
-          if (!menu.requiredCapability || isSystemAdmin) return true;
-          return userCapabilities.includes(menu.requiredCapability);
+          if (menu.requiredCapability && !userCapabilities.includes(menu.requiredCapability) && !isSystemAdmin) {
+            return false;
+          }
+          return true;
         }).map(menu => ({
           ...menu,
           children: menu.children ? filterMenus(menu.children) : []
@@ -75,9 +93,8 @@ export async function GET() {
         menus: filterMenus(app.menus || [])
       };
     }).filter(app => {
-      // Only show apps that have at least one visible menu OR are explicitly marked as public
-      const hasVisibleMenus = app.menus.length > 0;
-      return hasVisibleMenus || !app.requiredCapability;
+      // Only return apps that contain visible menus or are marked public
+      return (app.menus && app.menus.length > 0) || !app.requiredCapability;
     });
 
     console.log(`[CONFIG] Returning ${filteredApps.length} apps`);
@@ -160,9 +177,9 @@ function getMockData() {
           icon: 'Sliders',
           order: 0,
           children: [
-            { id: 'm-prof', label: 'Company Profile', icon: 'Building', path: '/settings/profile', order: 0, requiredCapability: 'system.settings.profile' },
-            { id: 'm-gen', label: 'General Settings', icon: 'Settings', path: '/settings/general', order: 1, requiredCapability: 'system.settings.edit' },
-            { id: 'm-bill', label: 'Subscription & Billing', icon: 'CreditCard', path: '/settings/billing', order: 2, requiredCapability: 'system.billing.manage' }
+            { id: 'm-prof', label: 'Company Profile', icon: 'Building', path: '/admin/profile', order: 0, requiredCapability: 'system.settings.profile', actionType: 'plugin', componentKey: 'AdminCompanyProfile' },
+            { id: 'm-gen', label: 'General Settings', icon: 'Settings', path: '/admin/general', order: 1, requiredCapability: 'system.settings.edit', actionType: 'plugin', componentKey: 'AdminGeneralSettings' },
+            { id: 'm-bill', label: 'Subscription & Billing', icon: 'CreditCard', path: '/admin/billing', order: 2, requiredCapability: 'system.billing.manage', actionType: 'plugin', componentKey: 'AdminBilling' }
           ]
         },
         {
@@ -171,9 +188,9 @@ function getMockData() {
           icon: 'Users',
           order: 1,
           children: [
-            { id: 'm-users', label: 'Users', icon: 'UserPlus', path: '/settings/users', order: 0, requiredCapability: 'system.users.manage' },
-            { id: 'm-teams', label: 'Teams', icon: 'GitBranch', path: '/settings/teams', order: 1, requiredCapability: 'system.teams.manage' },
-            { id: 'm-roles', label: 'Access Roles', icon: 'ShieldCheck', path: '/settings/roles', order: 2, requiredCapability: 'system.roles.assign' }
+            { id: 'm-users', label: 'Users', icon: 'UserPlus', path: '/admin/users', order: 0, requiredCapability: 'system.users.manage', actionType: 'plugin', componentKey: 'AdminUserManager' },
+            { id: 'm-teams', label: 'Teams', icon: 'GitBranch', path: '/admin/teams', order: 1, requiredCapability: 'system.teams.manage', actionType: 'plugin', componentKey: 'AdminTeamManager' },
+            { id: 'm-roles', label: 'Access Roles', icon: 'ShieldCheck', path: '/admin/roles', order: 2, requiredCapability: 'system.roles.assign', actionType: 'plugin', componentKey: 'AdminPermissions' }
           ]
         },
         {
@@ -182,9 +199,9 @@ function getMockData() {
           icon: 'Layout',
           order: 2,
           children: [
-            { id: 'm-schema', label: 'Data Model', icon: 'Database', path: '/settings/schema', order: 0, requiredCapability: 'system.schema.manage' },
-            { id: 'm-apps', label: 'Console Apps', icon: 'LayoutGrid', path: '/settings/apps', order: 1, requiredCapability: 'system.apps.manage' },
-            { id: 'm-menus', label: 'Navigation Menus', icon: 'Menu', path: '/settings/menus', order: 2, requiredCapability: 'system.menus.manage' }
+            { id: 'm-schema', label: 'Data Model', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminEntityManager' },
+            { id: 'm-apps', label: 'Console Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 1, requiredCapability: 'system.apps.manage', actionType: 'plugin', componentKey: 'AdminAppManager' },
+            { id: 'm-menus', label: 'Navigation Menus', icon: 'Menu', path: '/admin/menus', order: 2, requiredCapability: 'system.menus.manage', actionType: 'plugin', componentKey: 'AdminMenuManager' }
           ]
         }
       ]

@@ -94,6 +94,11 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: false, error: 'App not found or access denied' }, { status: 404 });
     }
 
+    const callerRole = (session?.user as any)?.role;
+    if (existing.isSystem && callerRole !== 'SUPER_ADMIN') {
+      return NextResponse.json({ success: false, error: 'System applications are protected and can only be modified by Super Admins' }, { status: 403 });
+    }
+
     const updatedApp = await db.consoleApp.update({
       where: { id },
       data: updateData
@@ -129,6 +134,11 @@ export async function DELETE(req: Request) {
 
     if (!existing) {
       return NextResponse.json({ success: false, error: 'App not found or access denied' }, { status: 404 });
+    }
+
+    const callerRole = (session?.user as any)?.role;
+    if (existing.isSystem && callerRole !== 'SUPER_ADMIN') {
+      return NextResponse.json({ success: false, error: 'System applications are protected and can only be deleted by Super Admins' }, { status: 403 });
     }
 
     await db.consoleApp.delete({

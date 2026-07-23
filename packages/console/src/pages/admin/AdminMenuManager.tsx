@@ -92,11 +92,16 @@ const AdminMenuManager: React.FC = () => {
           <span className="label">{menu.label}</span>
           <span className="path">{menu.path || 'No Path'}</span>
           <span className={`badge badge--${menu.actionType}`}>{menu.actionType}</span>
+          {menu.isSystem && (
+            <span style={{ fontSize: '0.7rem', background: 'rgba(59,130,246,0.15)', color: 'var(--klao-primary, #3b82f6)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, marginLeft: '6px' }}>
+              System
+            </span>
+          )}
         </div>
         <div className="klao-menu-item__actions">
-          <button onClick={() => setIsEditing({...menu})}><Edit2 size={14} /></button>
-          <button onClick={() => setIsEditing({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: menu.id, order: 0 } as any)}><Plus size={14} /></button>
-          <button className="delete"><Trash2 size={14} /></button>
+          <button onClick={() => setIsEditing({...menu})} title="Edit Menu"><Edit2 size={14} /></button>
+          <button onClick={() => setIsEditing({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: menu.id, order: 0 } as any)} title="Add Submenu"><Plus size={14} /></button>
+          {!menu.isSystem && <button className="delete" title="Delete Menu"><Trash2 size={14} /></button>}
         </div>
       </div>
       {menu.children?.map(child => renderMenuItem(child, depth + 1))}
@@ -107,7 +112,7 @@ const AdminMenuManager: React.FC = () => {
     <div className="klao-menu-manager">
       <div className="klao-menu-manager__header">
         <div className="klao-app-selector">
-          <label>Selected Application:</label>
+          <label className="klao-label" style={{ marginRight: '10px' }}>Selected Application:</label>
           <CustomSelect
             value={selectedAppId}
             options={apps.map(app => ({ value: app.id, label: app.name }))}
@@ -128,22 +133,42 @@ const AdminMenuManager: React.FC = () => {
         {loading ? <div className="klao-admin-loading">Loading Menu Structure...</div> : menus.map(m => renderMenuItem(m))}
       </div>
 
-      {isEditing && (
+      {isEditing && createPortal(
         <div className="klao-modal-overlay">
-          <div className="klao-modal">
-            <h2>{isEditing.id.startsWith('new-') ? 'New Menu Item' : 'Edit Menu Item'}</h2>
+          <div className="klao-card" style={{ width: '460px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
+                {isEditing.id.startsWith('new-') ? 'New Menu Item' : 'Edit Menu Item'}
+              </h3>
+              <button onClick={() => setIsEditing(null)} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
             <form onSubmit={handleSave}>
-              <div className="klao-form-group">
-                <label>Label</label>
-                <input type="text" value={isEditing.label} onChange={e => setIsEditing({...isEditing, label: e.target.value})} required />
+              <div className="klao-form-group" style={{ marginBottom: '16px' }}>
+                <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Label</label>
+                <input 
+                  type="text" 
+                  className="klao-input"
+                  style={{ width: '100%' }}
+                  value={isEditing.label} 
+                  onChange={e => setIsEditing({...isEditing, label: e.target.value})} 
+                  required 
+                />
               </div>
-              <div className="klao-form-row">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div className="klao-form-group">
-                  <label>Icon</label>
-                  <input type="text" value={isEditing.icon || ''} onChange={e => setIsEditing({...isEditing, icon: e.target.value})} />
+                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Icon</label>
+                  <input 
+                    type="text" 
+                    className="klao-input"
+                    style={{ width: '100%' }}
+                    value={isEditing.icon || ''} 
+                    onChange={e => setIsEditing({...isEditing, icon: e.target.value})} 
+                  />
                 </div>
                 <div className="klao-form-group">
-                  <label>Action Type</label>
+                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Action Type</label>
                   <CustomSelect
                     value={isEditing.actionType}
                     options={[
@@ -154,23 +179,38 @@ const AdminMenuManager: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="klao-form-group">
-                <label>Browser Path</label>
-                <input type="text" value={isEditing.path || ''} onChange={e => setIsEditing({...isEditing, path: e.target.value})} placeholder="/crm/leads" />
+              <div className="klao-form-group" style={{ marginBottom: '16px' }}>
+                <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Browser Path</label>
+                <input 
+                  type="text" 
+                  className="klao-input"
+                  style={{ width: '100%' }}
+                  value={isEditing.path || ''} 
+                  onChange={e => setIsEditing({...isEditing, path: e.target.value})} 
+                  placeholder="/crm/leads" 
+                />
               </div>
               {isEditing.actionType === 'plugin' && (
-                <div className="klao-form-group">
-                  <label>Component Key (Registry)</label>
-                  <input type="text" value={isEditing.componentKey || ''} onChange={e => setIsEditing({...isEditing, componentKey: e.target.value})} placeholder="AdminUserManager" />
+                <div className="klao-form-group" style={{ marginBottom: '20px' }}>
+                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Component Key (Registry)</label>
+                  <input 
+                    type="text" 
+                    className="klao-input"
+                    style={{ width: '100%' }}
+                    value={isEditing.componentKey || ''} 
+                    onChange={e => setIsEditing({...isEditing, componentKey: e.target.value})} 
+                    placeholder="AdminUserManager" 
+                  />
                 </div>
               )}
-              <div className="klao-modal__footer">
-                <button type="button" className="klao-btn" onClick={() => setIsEditing(null)}>Cancel</button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                <button type="button" className="klao-btn klao-btn--secondary" onClick={() => setIsEditing(null)}>Cancel</button>
                 <button type="submit" className="klao-btn klao-btn--primary">Save Menu</button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

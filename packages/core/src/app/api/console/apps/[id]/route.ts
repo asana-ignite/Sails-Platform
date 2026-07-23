@@ -49,6 +49,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    if (app.isSystem && caller.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'System applications are protected and can only be modified by Super Admins' }, { status: 403 });
+    }
+
     const body = await req.json();
     const updated = await db.consoleApp.update({
       where: { id: params.id },
@@ -82,6 +86,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     if (caller.role !== 'SUPER_ADMIN' && app.tenantId !== caller.tenantId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    if (app.isSystem && caller.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'System applications are protected and can only be deleted by Super Admins' }, { status: 403 });
     }
 
     await db.consoleApp.delete({ where: { id: params.id } });
