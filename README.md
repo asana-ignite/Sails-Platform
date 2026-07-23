@@ -15,11 +15,10 @@ This project is structured as a Bun Workspace to centralize backend, frontend, a
 
 For deep dives into the platform's design, please refer to the files in the [docs/](./docs) directory:
 
+- [DEVELOPMENT_STANDARDS.md](./docs/DEVELOPMENT_STANDARDS.md) - Centralized Architecture & Standards
 - [CORE_AI.md](./docs/CORE_AI.md) - Backend Overview
 - [CONSOLE_AI.md](./docs/CONSOLE_AI.md) - Frontend Overview
-- [ROADMAP.md](./docs/ROADMAP.md) - Strategic Strategic Roadmap
-- [DATABASE.md](./docs/DATABASE.md) - Database & RLS Architecture
-- [API_DOCUMENTATION.md](./docs/API_DOCUMENTATION.md) - REST API Reference
+- [ROADMAP.md](./docs/ROADMAP.md) - Strategic Roadmap
 
 ---
 *KLAO: Built for Ignite Idea Operations*

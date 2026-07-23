@@ -66,6 +66,9 @@ This document outlines the standard configuration for the **KLAO** Workspace, in
 
 ## API Payloads Reference
 
+> [!WARNING]
+> Creating a dynamic table in the database is NOT enough to make it visible in the UI. You MUST create a corresponding `ConsoleMenu` item and link it to an existing `ConsoleApp` using the APIs below.
+
 To provision these via the **KLAO Core** API, use the following patterns:
 
 ### Create Module (App)

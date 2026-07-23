@@ -74,15 +74,9 @@ The console proxies requests through Vite to the core backend.
 
 
 ## Future Constraint: PWA Offline-First Architecture (DO NOT IMPLEMENT YET)
-> **See full spec:** [ROADMAP.md — Phase 4](file:///Users/asana/Repo/KLAO/docs/ROADMAP.md)
 
-The following constraints are **pre-declared** for the Console (UI Layer). AI agents MUST NOT make architectural decisions that would block the offline sync pipeline described below.
+> **See full spec:** [DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md)
 
-| Constraint | Rule |
-|---|---|
-| **Client-Side ID Generation** | New records MUST have their `id` (UUIDv4) generated client-side (e.g., via `crypto.randomUUID()`) *before* any save action — online or offline. Never rely on the server to generate the ID. |
-| **Local Storage (IndexedDB)** | Use **Dexie.js** as the in-browser database for caching schemas and records. No other mechanism should be used for structured data. |
-| **Mutation Queue (`SyncQueue`)** | Every Create/Update/Delete action MUST be written to a local `SyncQueue` table in IndexedDB first. The queue is flushed to the API via the **Background Sync API**. |
-| **Conflict Resolution** | On sync, the server uses **Last Write Wins** based on `updatedAt`. The client must supply the `updatedAt` timestamp (set at mutation time) when pushing queue entries to the API. |
+AI agents MUST NOT make architectural decisions that would block the offline sync pipeline. Please refer to `DEVELOPMENT_STANDARDS.md` for all constraints regarding client-side ID generation, IndexedDB usage, and SyncQueues.
 
 

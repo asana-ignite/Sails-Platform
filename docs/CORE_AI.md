@@ -16,8 +16,7 @@ KLAO Core is a high-performance, multi-tenant internal operating system engine b
 | **[AI.md](AI.md)** | Main architectural overview and system entry point for developers/AI. |
 | **[BACKLOG.md](BACKLOG.md)** | Tactical To-Do list. Contains specific tasks, bugs, and feature progress. |
 | **[ROADMAP.md](ROADMAP.md)** | Strategic high-level vision. Outlines the long-term security and isolation phases. |
-| **[DATABASE.md](DATABASE.md)** | Deep dive into the schema-per-tenant isolation and DDL/DML strategies. |
-| **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** | Detailed REST API reference for metadata and dynamic data endpoints. |
+| **[DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md)** | Single source of truth for architecture, UI standards, security pipelines, and PWA constraints. |
 
 ## Terminology
 | KLAO Term | What It Means |
@@ -183,13 +182,7 @@ docker compose exec app bun run cli tenant:list
 ```
 
 ## Future Constraint: PWA Offline-First Architecture (DO NOT IMPLEMENT YET)
-> **See full spec:** [ROADMAP.md — Phase 4](file:///Users/asana/Repo/KLAO/docs/ROADMAP.md)
 
-The following constraints are **pre-declared** to prevent architectural decisions today that would conflict with offline sync in the future. AI agents MUST be aware of these when touching data models, API design, or record IDs.
+> **See full spec:** [DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md)
 
-| Constraint | Rule |
-|---|---|
-| **Primary Keys** | The database MUST NOT be the sole ID generator. Client-generated UUIDv4 IDs MUST be accepted on all `dynamic` record endpoints. |
-| **`updatedAt` Field** | Must be **writable by the client** during sync. The API must allow the client to supply `updatedAt` when flushing the SyncQueue. |
-| **Conflict Resolution** | `AlchemaCore` will implement **Last Write Wins (LWW)**: `clientUpdatedAt > serverUpdatedAt` → apply; otherwise → reject and return current server state. |
-| **SyncQueue Protocol** | Offline mutations are queued client-side and pushed sequentially. The API must handle idempotent `CREATE` operations (i.e., inserting a record whose UUID already exists must be a no-op, not an error). |
+AI agents MUST consult the `DEVELOPMENT_STANDARDS.md` file before touching data models, API design, or record IDs to ensure compliance with our PWA offline-first architecture.

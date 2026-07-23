@@ -56,13 +56,7 @@ This document outlines the strategic security implementation plan for **KLAO** (
 ## Phase 4: PWA — Offline-First Field Ops (🔲 Pending — DO NOT IMPLEMENT YET)
 > Constraints bind both KLAO Console (UI) and KLAO Core (API).
 
-| Constraint | Rule |
-|---|---|
-| **Primary Keys** | Client generates UUIDv4 before saving to IndexedDB. DB must accept client-supplied IDs. |
-| **`updatedAt`** | Must be writable by the client during SyncQueue flush. |
-| **Idempotent CREATE** | Inserting a record whose UUID already exists → no-op, not an error. |
-| **Conflict Resolution** | Last Write Wins: `clientUpdatedAt > serverUpdatedAt` → apply; otherwise → reject + return server state. |
-| **SyncQueue** | Offline mutations queued in IndexedDB, flushed via Background Sync API (Service Worker). |
+Please see [DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md) for the consolidated list of pre-declared constraints regarding client-side ID generation, IndexedDB usage, and SyncQueues.
 
 ---
 
