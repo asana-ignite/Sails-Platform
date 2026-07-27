@@ -70,6 +70,8 @@
   font-weight: 800;
   letter-spacing: -1px;
   color: var(--klao-text-main);
+  background: none !important;
+  -webkit-text-fill-color: initial !important;
 }
 
 /* Form Titles */
@@ -78,12 +80,16 @@
   font-weight: 700;
   color: var(--klao-text-main);
   margin-bottom: 4px;
+  background: none !important;
+  -webkit-text-fill-color: initial !important;
 }
 
 .klao-auth-subtitle {
   font-size: 0.85rem;
   color: var(--klao-text-muted);
   line-height: 1.4;
+  background: none !important;
+  -webkit-text-fill-color: initial !important;
 }
 
 /* SSO Buttons & Icons Sizing Fix */

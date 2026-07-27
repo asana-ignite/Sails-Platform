@@ -41,9 +41,11 @@
 }
 
 .klao-company-profile__tab--active {
-  color: var(--klao-primary-dark, #6b8ba4);
-  border-bottom-color: var(--klao-primary-dark, #6b8ba4);
-  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.12);
+  color: var(--klao-primary-dark, var(--klao-primary));
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
+  border-bottom: 2px solid transparent;
+  border-image: var(--klao-primary-bg) 1;
+  box-shadow: none;
 }
 
 .klao-company-profile__card {

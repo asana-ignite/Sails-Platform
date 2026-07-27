@@ -827,6 +827,9 @@
 }
 
 .klao-btn--primary {
+  background-color: var(--klao-primary);
+  background-image: var(--klao-primary-bg);
+  color: var(--klao-text-light, #ffffff);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 

@@ -92,12 +92,14 @@
 
 .klao-sidebar__link--active {
   background-color: var(--klao-primary);
+  background-image: var(--klao-primary-bg);
   color: var(--klao-text-light);
   box-shadow: 0 4px 12px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.4);
 }
 
 .klao-sidebar__link--active:hover {
   background-color: var(--klao-primary);
+  background-image: var(--klao-primary-bg);
   color: var(--klao-text-light);
 }
 

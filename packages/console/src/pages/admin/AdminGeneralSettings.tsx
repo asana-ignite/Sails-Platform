@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { HexColorPicker } from 'react-colorful';
-import { hexToHSL, hslToHex, computeBackgroundTint } from '../../utils/colorUtils';
+import { hexToHSL, hslToHex, computeBackgroundTint, computeMatchingPalette, ColorMatchingTechnique } from '../../utils/colorUtils';
 import { 
   Settings, 
   Palette, 
@@ -249,9 +249,23 @@ const ColorAccentField: React.FC<ColorAccentFieldProps> = ({
   );
 };
 
+const PALETTE_TECHNIQUE_OPTIONS = [
+  { value: 'monochromatic', label: 'Monochromatic (Unified & Sleek)' },
+  { value: 'complementary', label: 'Complementary (High Contrast Opposite)' },
+  { value: 'analogous', label: 'Analogous (Harmonious Neighbor)' }
+];
+
 const AdminGeneralSettings: React.FC = () => {
-  const { primaryAccentColor, setPrimaryAccentColor, secondaryAccentColor, setSecondaryAccentColor, backgroundAccentColor, setBackgroundAccentColor, fontAccentColor, setFontAccentColor, setLogoLightUrl, setLogoDarkUrl, saveBrandingToServer, commitTheme } = useTheme();
+  const { primaryAccentColor, setPrimaryAccentColor, secondaryAccentColor, setSecondaryAccentColor, backgroundAccentColor, setBackgroundAccentColor, fontAccentColor, setFontAccentColor, enableGradient, setLogoLightUrl, setLogoDarkUrl, saveBrandingToServer, commitTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<'branding' | 'localization' | 'security' | 'maintenance'>('branding');
+  const [paletteTechnique, setPaletteTechnique] = useState<ColorMatchingTechnique>('monochromatic');
+  const [enableGradientAccent, setEnableGradientAccent] = useState<boolean>(enableGradient !== false);
+
+  // Local state for custom color overrides (null means Auto mode)
+  const [customSecondary, setCustomSecondary] = useState<string | null>(secondaryAccentColor || null);
+  const [customBackground, setCustomBackground] = useState<string | null>(backgroundAccentColor || null);
+  const [customFont, setCustomFont] = useState<string | null>(fontAccentColor || null);
+
   const [formData, setFormData] = useState<GeneralSettingsData>({
     ...DEFAULT_SETTINGS_DATA,
     primaryAccentColor,
@@ -259,28 +273,24 @@ const AdminGeneralSettings: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccessMsg, setSavedSuccessMsg] = useState<string | null>(null);
 
-  const resetToAuto = (field: 'secondary' | 'background' | 'font') => {
-    if (field === 'secondary') setSecondaryAccentColor(null);
-    if (field === 'background') setBackgroundAccentColor(null);
-    if (field === 'font') setFontAccentColor(null);
-  };
-
   const computedPalette = useMemo(() => {
-    const hex = formData.primaryAccentColor;
-    if (!hex || !hex.startsWith('#') || hex.length < 4) return { secondary: '', background: '', font: '' };
-    try {
-      const hsl = hexToHSL(hex);
-      const h = hsl.h;
-      const tint = computeBackgroundTint(h);
-      return {
-        secondary: hslToHex(h, 35, 55),
-        background: hslToHex(h + tint.hueShift, tint.sat, 97),
-        font: hslToHex(h, 8, 22),
-      };
-    } catch {
-      return { secondary: '', background: '', font: '' };
+    return computeMatchingPalette(formData.primaryAccentColor, paletteTechnique, false);
+  }, [formData.primaryAccentColor, paletteTechnique]);
+
+  const resetToAuto = (field: 'secondary' | 'background' | 'font') => {
+    if (field === 'secondary') {
+      setSecondaryAccentColor(null);
+      setCustomSecondary(null);
     }
-  }, [formData.primaryAccentColor]);
+    if (field === 'background') {
+      setBackgroundAccentColor(null);
+      setCustomBackground(null);
+    }
+    if (field === 'font') {
+      setFontAccentColor(null);
+      setCustomFont(null);
+    }
+  };
 
   const handleInputChange = (field: keyof GeneralSettingsData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -315,16 +325,22 @@ const AdminGeneralSettings: React.FC = () => {
     setIsSaving(true);
     setSavedSuccessMsg(null);
 
-    // Apply theme now — primary from form, secondary/bg/font already in context state
+    const themeOverrides = {
+      primaryAccentColor: formData.primaryAccentColor,
+      secondaryAccentColor: customSecondary,
+      backgroundAccentColor: customBackground,
+      fontAccentColor: customFont,
+      paletteTechnique,
+      enableGradient: enableGradientAccent,
+      logoLightUrl: formData.logoLightUrl,
+      logoDarkUrl: formData.logoDarkUrl,
+    };
+
     setPrimaryAccentColor(formData.primaryAccentColor);
     setLogoLightUrl(formData.logoLightUrl);
     setLogoDarkUrl(formData.logoDarkUrl);
-    commitTheme({
-      primaryAccentColor: formData.primaryAccentColor,
-      logoLightUrl: formData.logoLightUrl,
-      logoDarkUrl: formData.logoDarkUrl,
-    });
-    await saveBrandingToServer();
+    commitTheme(themeOverrides);
+    await saveBrandingToServer(themeOverrides);
 
     // Simulate API call persistence for non-branding fields
     await new Promise(resolve => setTimeout(resolve, 600));
@@ -489,8 +505,40 @@ const AdminGeneralSettings: React.FC = () => {
                   <span className="klao-gs-help">Recommended Dimensions: <strong>200 × 50 px</strong> (Max 2MB)</span>
                 </div>
 
+                {/* Gradient Theme Toggle Row */}
+                <div className="klao-gs-toggle-row" style={{ gridColumn: '1 / -1', marginBottom: '8px' }}>
+                  <div>
+                    <div className="klao-gs-toggle-title">Enable Gradient Theme Accents</div>
+                    <div className="klao-gs-toggle-desc">
+                      Apply smooth dual-tone gradients across primary action buttons, page header accents, and site backgrounds.
+                    </div>
+                  </div>
+                  <label className="klao-gs-switch">
+                    <input
+                      type="checkbox"
+                      checked={enableGradientAccent}
+                      onChange={e => setEnableGradientAccent(e.target.checked)}
+                    />
+                    <span className="klao-gs-slider" />
+                  </label>
+                </div>
+
+                {/* Color Palette Matching Technique Dropdown */}
+                <div className="klao-gs-group" style={{ gridColumn: '1 / -1', marginBottom: '4px' }}>
+                  <label className="klao-gs-label">Color Palette Matching Technique</label>
+                  <CustomSelect
+                    size="md"
+                    value={paletteTechnique}
+                    options={PALETTE_TECHNIQUE_OPTIONS}
+                    onChange={val => setPaletteTechnique(val as ColorMatchingTechnique)}
+                  />
+                  <span className="klao-gs-help">
+                    Color theory algorithm used to calculate auto-suggested secondary, background, and font contrast.
+                  </span>
+                </div>
+
                 {/* Primary — Secondary — Background — Font Accent Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '20px', gridColumn: '1 / -1' }}>
                   <ColorAccentField
                     label="Primary Accent"
                     help="Main brand color"
@@ -500,30 +548,39 @@ const AdminGeneralSettings: React.FC = () => {
                   />
                   <ColorAccentField
                     label="Secondary Accent"
-                    help="Monochromatic auto-derived"
-                    value={secondaryAccentColor || ''}
+                    help={`${paletteTechnique.charAt(0).toUpperCase() + paletteTechnique.slice(1)} derived`}
+                    value={customSecondary || ''}
                     autoValue={computedPalette.secondary}
-                    onChange={setSecondaryAccentColor}
+                    onChange={val => {
+                      setCustomSecondary(val);
+                      setSecondaryAccentColor(val);
+                    }}
                     onReset={() => resetToAuto('secondary')}
-                    showPicker={false}
+                    showPicker={true}
                   />
                   <ColorAccentField
                     label="Background Accent"
-                    help="Page body & nav hover"
-                    value={backgroundAccentColor || ''}
+                    help="Warm / cool greyed-white tint"
+                    value={customBackground || ''}
                     autoValue={computedPalette.background}
-                    onChange={setBackgroundAccentColor}
+                    onChange={val => {
+                      setCustomBackground(val);
+                      setBackgroundAccentColor(val);
+                    }}
                     onReset={() => resetToAuto('background')}
-                    showPicker={false}
+                    showPicker={true}
                   />
                   <ColorAccentField
                     label="Font Accent"
-                    help="Main text color"
-                    value={fontAccentColor || ''}
+                    help="Auto contrast text color"
+                    value={customFont || ''}
                     autoValue={computedPalette.font}
-                    onChange={setFontAccentColor}
+                    onChange={val => {
+                      setCustomFont(val);
+                      setFontAccentColor(val);
+                    }}
                     onReset={() => resetToAuto('font')}
-                    showPicker={false}
+                    showPicker={true}
                   />
                 </div>
 

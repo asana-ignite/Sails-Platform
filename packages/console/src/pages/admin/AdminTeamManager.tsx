@@ -352,6 +352,23 @@ export default function AdminTeamManager() {
   const [allObjects, setAllObjects] = useState<any[]>([]);
   const [teamObjectSearchQuery, setTeamObjectSearchQuery] = useState('');
 
+  // Group permissions registry by category cleanly
+  const capabilityCategories = React.useMemo(() => {
+    const categories: Record<string, Array<{ code: string; label: string; description: string }>> = {};
+    if (allCapabilities && typeof allCapabilities === 'object') {
+      Object.entries(allCapabilities).forEach(([code, def]: [string, any]) => {
+        const cat = def?.category || 'General';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push({
+          code,
+          label: def?.label || code,
+          description: def?.description || '',
+        });
+      });
+    }
+    return categories;
+  }, [allCapabilities]);
+
   // Draft Team Object Permissions State
   const [teamObjectPermsDraft, setTeamObjectPermsDraft] = useState<ObjectPermission[]>([]);
   const [savingTeamObjectPerms, setSavingTeamObjectPerms] = useState(false);
@@ -1077,31 +1094,37 @@ export default function AdminTeamManager() {
               {/* CAPABILITIES TAB */}
               {activeTab === 'capabilities' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {Object.entries(allCapabilities).map(([category, items]) => (
-                    <div key={category} style={{ background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '8px', border: '1px solid var(--klao-border-color)' }}>
-                      <h4 style={{ margin: '0 0 10px 0', textTransform: 'capitalize', color: 'var(--klao-primary)' }}>{category}</h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                        {(items as any[]).map(item => {
-                          const isChecked = selectedTeam.systemPermissions.some(p => p.capability === item.code);
-                          return (
-                            <label key={item.code} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', padding: '8px', borderRadius: '6px', background: isChecked ? 'rgba(59,130,246,0.1)' : 'transparent' }}>
-                              <input 
-                                type="checkbox" 
-                                className="klao-checkbox"
-                                checked={isChecked} 
-                                onChange={(e) => handleToggleCapability(item.code, e.target.checked)}
-                                style={{ marginTop: '3px' }}
-                              />
-                              <div>
-                                <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>{item.name}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)' }}>{item.description}</div>
-                              </div>
-                            </label>
-                          );
-                        })}
-                      </div>
+                  {Object.keys(capabilityCategories).length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--klao-text-muted)' }}>
+                      No system capabilities available.
                     </div>
-                  ))}
+                  ) : (
+                    Object.entries(capabilityCategories).map(([category, items]) => (
+                      <div key={category} style={{ background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '8px', border: '1px solid var(--klao-border-color)' }}>
+                        <h4 style={{ margin: '0 0 10px 0', textTransform: 'capitalize', color: 'var(--klao-primary)', fontSize: '0.9rem', fontWeight: 700 }}>{category}</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                          {items.map(item => {
+                            const isChecked = (selectedTeam?.systemPermissions || []).some(p => p.capability === item.code);
+                            return (
+                              <label key={item.code} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--klao-border-color)', background: isChecked ? 'rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1)' : 'transparent', transition: 'all 0.2s' }}>
+                                <input 
+                                  type="checkbox" 
+                                  className="klao-checkbox"
+                                  checked={isChecked} 
+                                  onChange={(e) => handleToggleCapability(item.code, e.target.checked)}
+                                  style={{ marginTop: '3px' }}
+                                />
+                                <div>
+                                  <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--klao-text-main)' }}>{item.label}</div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)', marginTop: '2px' }}>{item.description}</div>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
 

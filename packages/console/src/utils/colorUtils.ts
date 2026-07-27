@@ -102,3 +102,94 @@ export function computeBackgroundTint(h: number): { sat: number; hueShift: numbe
 
   return { sat: WARM_SAT, hueShift: 0 };
 }
+
+export type ColorMatchingTechnique = 'monochromatic' | 'complementary' | 'analogous';
+
+export interface MatchingPalette {
+  secondary: string;
+  background: string;
+  font: string;
+}
+
+export function computeWarmCoolGreyBackground(primaryHex: string, isDark: boolean = false): string {
+  try {
+    const hsl = hexToHSL(primaryHex);
+    const h = hsl.h;
+    const isWarm = (h >= 0 && h <= 60) || (h >= 300 && h <= 360);
+
+    if (isWarm) {
+      // Slightly warm grey (near white)
+      const warmHue = (h >= 0 && h <= 60) ? h : (h >= 300 ? 350 : 30);
+      const bgSat = 6;
+      const bgLight = isDark ? 9 : 98;
+      return hslToHex(warmHue, bgSat, bgLight);
+    } else {
+      // Cool tone slate grey (near white)
+      const coolHue = 215;
+      const bgSat = 5;
+      const bgLight = isDark ? 9 : 98;
+      return hslToHex(coolHue, bgSat, bgLight);
+    }
+  } catch {
+    return isDark ? '#16181a' : '#f8fafc';
+  }
+}
+
+export function computeMatchingPalette(
+  primaryHex: string,
+  technique: ColorMatchingTechnique = 'monochromatic',
+  isDark: boolean = false
+): MatchingPalette {
+  if (!primaryHex || !primaryHex.startsWith('#') || primaryHex.length < 4) {
+    return { secondary: '#6d38a0', background: isDark ? '#16181a' : '#f8fafc', font: isDark ? '#f8fafc' : '#1e293b' };
+  }
+
+  try {
+    const hsl = hexToHSL(primaryHex);
+    const h = hsl.h;
+    const s = hsl.s;
+    const l = hsl.l;
+
+    // 1. Dynamic Secondary Lightness & Contrast:
+    // If Primary is Light (l > 50%), Secondary should be Darker (l - 30%..35%).
+    // If Primary is Dark (l <= 50%), Secondary should be Lighter/Bright (l + 35%..45%).
+    let secLight = l > 50
+      ? Math.max(22, Math.min(42, Math.round(l - 32)))
+      : Math.min(85, Math.max(65, Math.round(l + 38)));
+
+    let secSat = Math.max(45, Math.min(s, 80));
+    let secHue = h;
+
+    switch (technique) {
+      case 'complementary':
+        secHue = (h + 180) % 360;
+        break;
+
+      case 'analogous':
+        secHue = (h + 30) % 360;
+        break;
+
+      case 'monochromatic':
+      default:
+        secHue = h;
+        break;
+    }
+
+    const secondary = hslToHex(secHue, secSat, secLight);
+
+    // 2. Warm vs Cool Greyed-White Background Accent:
+    const background = computeWarmCoolGreyBackground(primaryHex, isDark);
+
+    // 3. Dynamic Font Accent Auto-Contrast:
+    const font = l > 60
+      ? hslToHex(h, 15, 12)
+      : isDark
+        ? hslToHex(h, 5, 95)
+        : hslToHex(h, 8, 20);
+
+    return { secondary, background, font };
+  } catch {
+    return { secondary: '#6d38a0', background: isDark ? '#16181a' : '#f8fafc', font: isDark ? '#f8fafc' : '#1e293b' };
+  }
+}
+

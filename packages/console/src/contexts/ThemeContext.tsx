@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { hexToRgbChannels, hexToHSL, hslToHex, computeBackgroundTint } from '../utils/colorUtils';
+import { hexToRgbChannels, hexToHSL, hslToHex, computeBackgroundTint, computeMatchingPalette, ColorMatchingTechnique } from '../utils/colorUtils';
 
 interface ThemeState {
   themeMode: 'light' | 'dark';
@@ -7,6 +7,8 @@ interface ThemeState {
   secondaryAccentColor: string | null;
   backgroundAccentColor: string | null;
   fontAccentColor: string | null;
+  paletteTechnique?: ColorMatchingTechnique;
+  enableGradient?: boolean;
   logoLightUrl: string;
   logoDarkUrl: string;
 }
@@ -17,6 +19,8 @@ interface ThemeContextType {
   secondaryAccentColor: string | null;
   backgroundAccentColor: string | null;
   fontAccentColor: string | null;
+  paletteTechnique?: ColorMatchingTechnique;
+  enableGradient?: boolean;
   logoLightUrl: string;
   logoDarkUrl: string;
   setThemeMode: (mode: 'light' | 'dark') => void;
@@ -27,40 +31,48 @@ interface ThemeContextType {
   setLogoLightUrl: (url: string) => void;
   setLogoDarkUrl: (url: string) => void;
   commitTheme: (overrides?: Partial<ThemeState>) => void;
-  saveBrandingToServer: () => Promise<void>;
+  saveBrandingToServer: (overrides?: Partial<ThemeState>) => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'klao-theme';
 
-function computeAutoSecondary(h: number): string {
-  return hslToHex(h, 35, 55);
-}
-
-function computeAutoBackground(h: number): string {
-  const tint = computeBackgroundTint(h);
-  return hslToHex(h + tint.hueShift, tint.sat, 97);
-}
-
-function computeAutoFont(h: number, isDark: boolean): string {
-  if (isDark) return hslToHex(h, 0, 95);
-  return hslToHex(h, 8, 22);
-}
-
 function generatePalette(state: ThemeState): Record<string, string> {
   const hexAccent = state.primaryAccentColor;
-  const hsl = hexToHSL(hexAccent);
-  const h = hsl.h;
   const isDark = state.themeMode === 'dark';
   const { r, g, b } = hexToRgbChannels(hexAccent);
+  const hsl = hexToHSL(hexAccent);
+  const h = hsl.h;
 
-  const secondary = state.secondaryAccentColor || computeAutoSecondary(h);
-  const backgroundBody = state.backgroundAccentColor || computeAutoBackground(h);
-  const textMain = state.fontAccentColor || computeAutoFont(h, isDark);
+  const matching = computeMatchingPalette(hexAccent, state.paletteTechnique || 'monochromatic', isDark);
+
+  const secondary = state.secondaryAccentColor || matching.secondary;
+  const backgroundBody = state.backgroundAccentColor || matching.background;
+  const textMain = state.fontAccentColor || matching.font;
+
+  const enableGrad = state.enableGradient !== false; // default true
+
+  // Subtle 15-degree hue & slight lightness shift for ultra-sleek micro-gradient
+  const subtleShiftHex = hslToHex(
+    (h + 15) % 360,
+    Math.min(100, hsl.s + 4),
+    Math.max(15, hsl.l > 50 ? hsl.l - 8 : hsl.l + 8)
+  );
+
+  const primaryBg = enableGrad
+    ? `linear-gradient(135deg, ${hexAccent} 0%, ${subtleShiftHex} 100%)`
+    : hexAccent;
+
+  const bgGrad = enableGrad
+    ? (isDark
+        ? `linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, ${backgroundBody} 100%)`
+        : `linear-gradient(180deg, #ffffff 0%, ${backgroundBody} 100%)`)
+    : 'none';
 
   return {
     '--klao-primary': hexAccent,
+    '--klao-primary-bg': primaryBg,
     '--klao-primary-r': String(r),
     '--klao-primary-g': String(g),
     '--klao-primary-b': String(b),
@@ -76,6 +88,7 @@ function generatePalette(state: ThemeState): Record<string, string> {
       : hslToHex(h, 45, 38),
 
     '--klao-bg-body': backgroundBody,
+    '--klao-bg-gradient': bgGrad,
 
     '--klao-bg-sidebar': isDark
       ? hslToHex(h, 3, 14)
@@ -131,6 +144,7 @@ const DEFAULT_THEME: ThemeState = {
   secondaryAccentColor: null,
   backgroundAccentColor: null,
   fontAccentColor: null,
+  enableGradient: true,
   logoLightUrl: '/assets/logo-standard.jpg',
   logoDarkUrl: '/assets/logo-standard.jpg',
 };
@@ -158,6 +172,7 @@ function loadFromStorage(): ThemeState {
           typeof parsed.fontAccentColor === 'string' && parsed.fontAccentColor.startsWith('#')
             ? parsed.fontAccentColor
             : null,
+        enableGradient: typeof parsed.enableGradient === 'boolean' ? parsed.enableGradient : true,
         logoLightUrl:
           typeof parsed.logoLightUrl === 'string' ? parsed.logoLightUrl : DEFAULT_THEME.logoLightUrl,
         logoDarkUrl:
@@ -182,10 +197,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [state, setState] = useState<ThemeState>(loadFromStorage);
 
   const commitTheme = useCallback((overrides?: Partial<ThemeState>) => {
-    const merged = { ...state, ...overrides };
-    const palette = generatePalette(merged);
-    applyPaletteToDOM(palette, merged.themeMode);
-  }, [state]);
+    setState((prev) => {
+      const merged = { ...prev, ...overrides };
+      const palette = generatePalette(merged);
+      applyPaletteToDOM(palette, merged.themeMode);
+      saveToStorage(merged);
+      return merged;
+    });
+  }, []);
 
   // Apply on initial mount only
   useEffect(() => {
@@ -213,6 +232,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             next.backgroundAccentColor = serverBranding.backgroundAccentColor.startsWith('#') ? serverBranding.backgroundAccentColor : null;
           if (typeof serverBranding.fontAccentColor === 'string')
             next.fontAccentColor = serverBranding.fontAccentColor.startsWith('#') ? serverBranding.fontAccentColor : null;
+          if (typeof serverBranding.paletteTechnique === 'string')
+            next.paletteTechnique = serverBranding.paletteTechnique as ColorMatchingTechnique;
+          if (typeof serverBranding.enableGradient === 'boolean')
+            next.enableGradient = serverBranding.enableGradient;
           if (serverBranding.logoLightUrl) next.logoLightUrl = serverBranding.logoLightUrl;
           if (serverBranding.logoDarkUrl) next.logoDarkUrl = serverBranding.logoDarkUrl;
           // Apply merged branding immediately
@@ -230,26 +253,28 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => { cancelled = true; };
   }, []);
 
-  const saveBrandingToServerFn = useCallback(async () => {
-    try {
-      await fetch('/api/console/company-profile', {
+  const saveBrandingToServerFn = useCallback(async (overrides?: Partial<ThemeState>) => {
+    setState((prev) => {
+      const merged = { ...prev, ...overrides };
+      fetch('/api/console/company-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           branding: {
-            primaryAccentColor: state.primaryAccentColor,
-            secondaryAccentColor: state.secondaryAccentColor,
-            backgroundAccentColor: state.backgroundAccentColor,
-            fontAccentColor: state.fontAccentColor,
-            logoLightUrl: state.logoLightUrl,
-            logoDarkUrl: state.logoDarkUrl,
+            primaryAccentColor: merged.primaryAccentColor,
+            secondaryAccentColor: merged.secondaryAccentColor,
+            backgroundAccentColor: merged.backgroundAccentColor,
+            fontAccentColor: merged.fontAccentColor,
+            paletteTechnique: merged.paletteTechnique,
+            enableGradient: merged.enableGradient,
+            logoLightUrl: merged.logoLightUrl,
+            logoDarkUrl: merged.logoDarkUrl,
           },
         }),
-      });
-    } catch {
-      // localStorage already saved
-    }
-  }, [state]);
+      }).catch(() => {});
+      return merged;
+    });
+  }, []);
 
   const setThemeMode = useCallback((mode: 'light' | 'dark') => {
     setState((prev) => { const next = { ...prev, themeMode: mode }; saveToStorage(next); return next; });
