@@ -43,7 +43,7 @@
 .klao-company-profile__tab--active {
   color: var(--klao-primary-dark, #6b8ba4);
   border-bottom-color: var(--klao-primary-dark, #6b8ba4);
-  background: rgba(157, 206, 224, 0.12);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.12);
 }
 
 .klao-company-profile__card {
@@ -67,7 +67,7 @@
   width: 36px;
   height: 36px;
   border-radius: var(--klao-radius-md, 8px);
-  background: rgba(157, 206, 224, 0.15);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.15);
   color: var(--klao-primary-dark, #6b8ba4);
   display: flex;
   align-items: center;

@@ -17,7 +17,7 @@ import {
   Cpu, 
   Building 
 } from 'lucide-react';
-import logo from '../assets/logo.png';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface SSOConfigState {
   googleEnabled: boolean;
@@ -78,6 +78,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [rememberedName, setRememberedName] = useState<string | null>(null);
   const [selectedBenefits, setSelectedBenefits] = useState<Benefit[]>([]);
+  const { logoLightUrl, logoDarkUrl, themeMode } = useTheme();
 
   useEffect(() => {
     const name = getRememberedName();
@@ -178,7 +179,7 @@ const Login: React.FC = () => {
       <div className="klao-auth-form-side">
         <div className="klao-auth-form-wrapper">
           <div className="klao-auth-brand">
-            <img src={logo} alt="KLAO Logo" className="klao-auth-logo-img" />
+            <img src={themeMode === 'dark' ? logoDarkUrl : logoLightUrl} alt="KLAO Logo" className="klao-auth-logo-img" />
             <span className="klao-auth-logo-text">KLAO</span>
           </div>
 

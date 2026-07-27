@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 import { useConsole } from '../../contexts/ConsoleContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import DynamicIcon from '../common/DynamicIcon';
-import logo from '../../assets/logo.png';
 import './Topbar.css';
 import Spinner from '../common/Spinner';
 
@@ -19,6 +19,7 @@ interface TopbarProps {
 const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) => {
   const { apps, activeApp, setActiveApp, isLoading } = useConsole();
   const { user, logout } = useAuth();
+  const { logoLightUrl, logoDarkUrl, themeMode } = useTheme();
   const navigate = useNavigate();
   
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
@@ -97,7 +98,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
           <Menu size={20} />
         </button>
         <div className="klao-topbar__logo">
-          <img src={logo} alt="KLAO Logo" className="klao-topbar__logo-icon" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+          <img src={themeMode === 'dark' ? logoDarkUrl : logoLightUrl} alt="KLAO Logo" className="klao-topbar__logo-icon" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
           <span className="klao-topbar__logo-text">KLAO</span>
         </div>
       </div>

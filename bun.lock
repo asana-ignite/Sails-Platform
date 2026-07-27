@@ -9,11 +9,12 @@
       "name": "@klao/console",
       "version": "0.1.0",
       "dependencies": {
-        "@inidos/shared": "workspace:*",
+        "@klao/shared": "workspace:*",
         "dexie": "^4.0.1",
         "dexie-react-hooks": "^1.1.7",
         "lucide-react": "^0.378.0",
         "react": "^18.2.0",
+        "react-colorful": "^5.8.0",
         "react-dom": "^18.2.0",
         "react-router-dom": "^6.22.3",
       },
@@ -31,7 +32,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@auth/prisma-adapter": "^2.11.2",
-        "@inidos/shared": "workspace:*",
+        "@klao/shared": "workspace:*",
         "@prisma/client": "^6.19.3",
         "bcryptjs": "^3.0.3",
         "next": "^14.0.0",
@@ -53,7 +54,7 @@
       },
     },
     "packages/shared": {
-      "name": "@inidos/shared",
+      "name": "@klao/shared",
       "version": "1.0.0",
     },
   },
@@ -160,7 +161,7 @@
 
     "@klao/console": ["@klao/console@workspace:packages/console"],
 
-    "@inidos/shared": ["@inidos/shared@workspace:packages/shared"],
+    "@klao/shared": ["@klao/shared@workspace:packages/shared"],
 
     "@next/env": ["@next/env@14.2.35", "", {}, "sha512-DuhvCtj4t9Gwrx80dmz2F4t/zKQ4ktN8WrMwOuVzkJfBilwAwGr6v16M5eI8yCuZ63H9TTuEU09Iu2HqkzFPVQ=="],
 
@@ -447,6 +448,8 @@
     "rc9": ["rc9@2.1.2", "", { "dependencies": { "defu": "^6.1.4", "destr": "^2.0.3" } }, "sha512-btXCnMmRIBINM2LDZoEmOogIZU7Qe7zn4BpomSKZ/ykbLObuBdvG+mFq11DL6fjH1DRwHhrlgtYWG96bJiC7Cg=="],
 
     "react": ["react@18.3.1", "", { "dependencies": { "loose-envify": "^1.1.0" } }, "sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ=="],
+
+    "react-colorful": ["react-colorful@5.8.0", "", { "peerDependencies": { "react": ">=16.8.0", "react-dom": ">=16.8.0" } }, "sha512-Wy9OzPfjSN9bF12OB8N7UQvlsZ0I+7wHxpN+bV5BjNQGxOj6IiwkRjevJK9yOBjJWGQvAaf1OXtn8rUeEatAng=="],
 
     "react-dom": ["react-dom@18.3.1", "", { "dependencies": { "loose-envify": "^1.1.0", "scheduler": "^0.23.2" }, "peerDependencies": { "react": "^18.3.1" } }, "sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw=="],
 

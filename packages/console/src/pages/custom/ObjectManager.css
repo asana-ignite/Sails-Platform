@@ -44,7 +44,7 @@
 
 .om-search-input:focus {
     border-color: var(--klao-primary);
-    box-shadow: 0 0 0 3px rgba(var(--klao-primary-rgb), 0.1);
+    box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
     outline: none;
 }
 
@@ -103,7 +103,7 @@
     justify-content: center;
     width: 36px;
     height: 36px;
-    background: rgba(var(--klao-primary-rgb), 0.1);
+    background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
     color: var(--klao-primary);
     border-radius: var(--klao-radius-md);
 }
@@ -135,9 +135,9 @@
     border-radius: 100px;
     font-size: 0.75rem;
     font-weight: 500;
-    background: rgba(var(--klao-primary-rgb), 0.1);
+    background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
     color: var(--klao-primary);
-    border: 1px solid rgba(var(--klao-primary-rgb), 0.2);
+    border: 1px solid rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.2);
 }
 
 .om-date-cell {

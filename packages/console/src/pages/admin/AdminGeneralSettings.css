@@ -43,7 +43,7 @@
 .klao-general-settings__tab--active {
   color: var(--klao-primary-dark, #6b8ba4);
   border-bottom-color: var(--klao-primary-dark, #6b8ba4);
-  background: rgba(157, 206, 224, 0.12);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.12);
 }
 
 .klao-general-settings__card {
@@ -67,8 +67,8 @@
   width: 36px;
   height: 36px;
   border-radius: var(--klao-radius-md, 8px);
-  background: rgba(157, 206, 224, 0.15);
-  color: var(--klao-primary-dark, #6b8ba4);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.15);
+  color: var(--klao-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -145,7 +145,7 @@
 
 .klao-gs-swatch--active {
   border-color: var(--klao-primary-dark, #6b8ba4);
-  background: rgba(157, 206, 224, 0.12);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.12);
   color: var(--klao-text-main, #344759);
   font-weight: 600;
 }
@@ -175,7 +175,7 @@
 
 .klao-gs-logo-dropzone:hover {
   border-color: var(--klao-primary-dark, #6b8ba4);
-  background: rgba(157, 206, 224, 0.05);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.05);
 }
 
 .klao-gs-logo-preview-box {
@@ -203,31 +203,61 @@
   color: var(--klao-text-muted, #6b8ba4);
 }
 
-/* Hex Code Color Selector */
+/* Color Picker — react-colorful popover */
 .klao-gs-color-picker-wrapper {
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative;
 }
 
-.klao-gs-color-picker {
-  -webkit-appearance: none;
-  border: 1px solid var(--klao-border-color, #e1e9ef);
-  border-radius: var(--klao-radius-md, 8px);
+.klao-gs-color-swatch-trigger {
   width: 42px;
   height: 38px;
+  border-radius: var(--klao-radius-md, 8px);
+  border: 1px solid var(--klao-border-color, #e1e9ef);
   cursor: pointer;
-  background: transparent;
-  padding: 2px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
 }
 
-.klao-gs-color-picker::-webkit-color-swatch-wrapper {
-  padding: 0;
+.klao-gs-color-swatch-trigger:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.3);
 }
 
-.klao-gs-color-picker::-webkit-color-swatch {
-  border: none;
-  border-radius: 6px;
+.klao-gs-color-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 100;
+  background: var(--klao-bg-card, #ffffff);
+  border: 1px solid var(--klao-border-color, #e1e9ef);
+  border-radius: var(--klao-radius-lg, 12px);
+  padding: 12px;
+  box-shadow: var(--klao-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.05));
+}
+
+.klao-gs-color-popover .react-colorful {
+  width: 220px;
+  height: 160px;
+}
+
+.klao-gs-color-popover .react-colorful__saturation {
+  border-radius: 6px 6px 0 0;
+}
+
+.klao-gs-color-popover .react-colorful__hue {
+  height: 14px;
+  border-radius: 0 0 6px 6px;
+  margin-top: 8px;
+}
+
+.klao-gs-color-popover .react-colorful__pointer {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Toggle Switch Row */

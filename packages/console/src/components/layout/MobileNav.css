@@ -81,7 +81,7 @@
 }
 
 .klao-mobile-nav__card:active {
-  background-color: rgba(157, 206, 224, 0.25);
+  background-color: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.25);
   transform: translateY(2px);
 }
 
@@ -182,8 +182,8 @@
 
 .klao-mobile-nav__sub-card:active {
   transform: scale(0.96) translateY(1px);
-  background: rgba(157, 206, 224, 0.25);
-  border-color: rgba(157, 206, 224, 0.4);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.25);
+  border-color: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.4);
 }
 
 

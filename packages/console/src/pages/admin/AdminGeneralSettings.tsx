@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { HexColorPicker } from 'react-colorful';
+import { hexToHSL, hslToHex, computeBackgroundTint } from '../../utils/colorUtils';
 import { 
   Settings, 
   Palette, 
@@ -16,6 +18,7 @@ import {
 } from 'lucide-react';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { ALL_TIMEZONE_OPTIONS } from '../../utils/timezoneHelper';
+import { useTheme } from '../../contexts/ThemeContext';
 import './AdminGeneralSettings.css';
 
 export interface GeneralSettingsData {
@@ -168,11 +171,116 @@ const ANNOUNCEMENT_TYPE_OPTIONS = [
   { value: 'critical', label: 'Critical Alert (Red)' }
 ];
 
+interface ColorAccentFieldProps {
+  label: string;
+  help: string;
+  value: string;
+  autoValue: string;
+  onChange: (color: string) => void;
+  onReset?: () => void;
+  showPicker?: boolean;
+}
+
+const ColorAccentField: React.FC<ColorAccentFieldProps> = ({
+  label,
+  help,
+  value,
+  autoValue,
+  onChange,
+  onReset,
+  showPicker = true
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const isAuto = !value || value === autoValue;
+  const displayValue = isAuto ? autoValue : value;
+  const showReset = onReset && !isAuto;
+
+  // Click outside closes popover
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [isOpen]);
+
+  return (
+    <div className="klao-gs-group">
+      <label className="klao-gs-label">{label}</label>
+      <div className="klao-gs-color-picker-wrapper" ref={wrapperRef}>
+        <button
+          type="button"
+          className="klao-gs-color-swatch-trigger"
+          style={{ backgroundColor: displayValue, cursor: showPicker ? 'pointer' : 'default' }}
+          onClick={() => showPicker && setIsOpen(prev => !prev)}
+          aria-label={`${label} color picker`}
+        />
+        {showPicker && isOpen && (
+          <div className="klao-gs-color-popover">
+            <HexColorPicker color={displayValue} onChange={onChange} />
+          </div>
+        )}
+        <input
+          type="text"
+          className="klao-input"
+          style={{ fontFamily: 'monospace', fontWeight: 600, width: '100%' }}
+          value={displayValue}
+          onChange={e => onChange(e.target.value)}
+          placeholder={autoValue}
+        />
+        {showReset && (
+          <button
+            type="button"
+            className="klao-btn klao-btn--ghost"
+            style={{ fontSize: '0.7rem', padding: '2px 8px', flexShrink: 0 }}
+            onClick={onReset}
+            title="Reset to auto-calculated"
+          >
+            Auto
+          </button>
+        )}
+      </div>
+      <span className="klao-gs-help">{help}</span>
+    </div>
+  );
+};
+
 const AdminGeneralSettings: React.FC = () => {
+  const { primaryAccentColor, setPrimaryAccentColor, secondaryAccentColor, setSecondaryAccentColor, backgroundAccentColor, setBackgroundAccentColor, fontAccentColor, setFontAccentColor, setLogoLightUrl, setLogoDarkUrl, saveBrandingToServer, commitTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<'branding' | 'localization' | 'security' | 'maintenance'>('branding');
-  const [formData, setFormData] = useState<GeneralSettingsData>(DEFAULT_SETTINGS_DATA);
+  const [formData, setFormData] = useState<GeneralSettingsData>({
+    ...DEFAULT_SETTINGS_DATA,
+    primaryAccentColor,
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccessMsg, setSavedSuccessMsg] = useState<string | null>(null);
+
+  const resetToAuto = (field: 'secondary' | 'background' | 'font') => {
+    if (field === 'secondary') setSecondaryAccentColor(null);
+    if (field === 'background') setBackgroundAccentColor(null);
+    if (field === 'font') setFontAccentColor(null);
+  };
+
+  const computedPalette = useMemo(() => {
+    const hex = formData.primaryAccentColor;
+    if (!hex || !hex.startsWith('#') || hex.length < 4) return { secondary: '', background: '', font: '' };
+    try {
+      const hsl = hexToHSL(hex);
+      const h = hsl.h;
+      const tint = computeBackgroundTint(h);
+      return {
+        secondary: hslToHex(h, 35, 55),
+        background: hslToHex(h + tint.hueShift, tint.sat, 97),
+        font: hslToHex(h, 8, 22),
+      };
+    } catch {
+      return { secondary: '', background: '', font: '' };
+    }
+  }, [formData.primaryAccentColor]);
 
   const handleInputChange = (field: keyof GeneralSettingsData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -207,7 +315,18 @@ const AdminGeneralSettings: React.FC = () => {
     setIsSaving(true);
     setSavedSuccessMsg(null);
 
-    // Simulate API call persistence
+    // Apply theme now — primary from form, secondary/bg/font already in context state
+    setPrimaryAccentColor(formData.primaryAccentColor);
+    setLogoLightUrl(formData.logoLightUrl);
+    setLogoDarkUrl(formData.logoDarkUrl);
+    commitTheme({
+      primaryAccentColor: formData.primaryAccentColor,
+      logoLightUrl: formData.logoLightUrl,
+      logoDarkUrl: formData.logoDarkUrl,
+    });
+    await saveBrandingToServer();
+
+    // Simulate API call persistence for non-branding fields
     await new Promise(resolve => setTimeout(resolve, 600));
     setIsSaving(false);
     setSavedSuccessMsg('General Settings saved successfully.');
@@ -370,40 +489,42 @@ const AdminGeneralSettings: React.FC = () => {
                   <span className="klao-gs-help">Recommended Dimensions: <strong>200 × 50 px</strong> (Max 2MB)</span>
                 </div>
 
-                {/* Primary Theme Accent Color with Hex Code Input & Picker */}
-                <div className="klao-gs-group" style={{ gridColumn: 'span 2' }}>
-                  <label className="klao-gs-label">Primary Theme Accent Color (Hex Code / Selector)</label>
-                  <div className="klao-gs-color-picker-wrapper">
-                    <input
-                      type="color"
-                      className="klao-gs-color-picker"
-                      value={formData.primaryAccentColor.startsWith('#') ? formData.primaryAccentColor : '#a855f7'}
-                      onChange={e => handleInputChange('primaryAccentColor', e.target.value)}
-                    />
-                    <input
-                      type="text"
-                      className="klao-input"
-                      style={{ maxWidth: '160px', fontFamily: 'monospace', fontWeight: 600 }}
-                      value={formData.primaryAccentColor}
-                      onChange={e => handleInputChange('primaryAccentColor', e.target.value)}
-                      placeholder="#A855F7"
-                      maxLength={7}
-                    />
-                    <div className="klao-gs-swatches" style={{ marginTop: 0 }}>
-                      {ACCENT_PRESETS.map(preset => (
-                        <button
-                          key={preset.color}
-                          type="button"
-                          className={`klao-gs-swatch ${formData.primaryAccentColor.toLowerCase() === preset.color.toLowerCase() ? 'klao-gs-swatch--active' : ''}`}
-                          onClick={() => handleInputChange('primaryAccentColor', preset.color)}
-                        >
-                          <span className="klao-gs-dot" style={{ backgroundColor: preset.color }} />
-                          <span>{preset.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <span className="klao-gs-help">Click the color box to pick a color, type a custom Hex Code (e.g. #3B82F6), or choose a preset swatch.</span>
+                {/* Primary — Secondary — Background — Font Accent Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '20px' }}>
+                  <ColorAccentField
+                    label="Primary Accent"
+                    help="Main brand color"
+                    value={formData.primaryAccentColor}
+                    autoValue={computedPalette.secondary}
+                    onChange={color => handleInputChange('primaryAccentColor', color)}
+                  />
+                  <ColorAccentField
+                    label="Secondary Accent"
+                    help="Monochromatic auto-derived"
+                    value={secondaryAccentColor || ''}
+                    autoValue={computedPalette.secondary}
+                    onChange={setSecondaryAccentColor}
+                    onReset={() => resetToAuto('secondary')}
+                    showPicker={false}
+                  />
+                  <ColorAccentField
+                    label="Background Accent"
+                    help="Page body & nav hover"
+                    value={backgroundAccentColor || ''}
+                    autoValue={computedPalette.background}
+                    onChange={setBackgroundAccentColor}
+                    onReset={() => resetToAuto('background')}
+                    showPicker={false}
+                  />
+                  <ColorAccentField
+                    label="Font Accent"
+                    help="Main text color"
+                    value={fontAccentColor || ''}
+                    autoValue={computedPalette.font}
+                    onChange={setFontAccentColor}
+                    onReset={() => resetToAuto('font')}
+                    showPicker={false}
+                  />
                 </div>
 
                 {/* Custom Login Tagline */}

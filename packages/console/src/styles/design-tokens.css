@@ -1,6 +1,10 @@
 :root {
   /* Brand Colors - Steel Blue */
   --klao-primary: #9DCEE0;
+  --klao-secondary: #e09dce;
+  --klao-primary-r: 157;
+  --klao-primary-g: 206;
+  --klao-primary-b: 224;
   --klao-primary-light: #e1e9ef;
   --klao-primary-dark: #6b8ba4;
 
@@ -44,6 +48,9 @@
 
   /* Transitions */
   --klao-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  /* Gradient */
+  --klao-bg-gradient: none;
 }
 
 [data-theme='dark'] {

@@ -68,7 +68,7 @@
 .klao-sso-tab-btn--active {
   color: var(--klao-primary-dark);
   border-bottom-color: var(--klao-primary-dark);
-  background: rgba(157, 206, 224, 0.08);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.08);
 }
 
 .klao-sso-dirty-dot {
@@ -183,7 +183,7 @@
 
 .klao-sso-setting-row:hover {
   background: rgba(0, 0, 0, 0.03);
-  border-color: rgba(157, 206, 224, 0.4);
+  border-color: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.4);
 }
 
 .klao-sso-setting-info {
@@ -273,12 +273,12 @@
 
 .klao-sso-radio-card:hover {
   border-color: var(--klao-primary);
-  background: rgba(157, 206, 224, 0.04);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.04);
 }
 
 .klao-sso-radio-card--selected {
   border-color: var(--klao-primary);
-  background: rgba(157, 206, 224, 0.08);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.08);
 }
 
 .klao-sso-radio-input {
@@ -313,7 +313,7 @@
 .klao-idp-card:hover {
   transform: translateY(-3px);
   box-shadow: var(--klao-shadow-md);
-  border-color: rgba(157, 206, 224, 0.6);
+  border-color: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.6);
 }
 
 .klao-idp-card__top {
@@ -548,7 +548,7 @@
 .klao-input-text:focus {
   outline: none;
   border-color: var(--klao-primary-dark);
-  box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.25);
+  box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.25);
 }
 
 .klao-input-password-wrapper {

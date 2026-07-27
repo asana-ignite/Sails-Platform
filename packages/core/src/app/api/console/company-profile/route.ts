@@ -52,7 +52,8 @@ export async function GET() {
           dpoName: '',
           dpoEmail: '',
           termsUrl: '',
-          privacyUrl: ''
+          privacyUrl: '',
+          branding: null
         }
       });
     }
@@ -90,13 +91,18 @@ export async function PUT(req: Request) {
       tenantId: _t,
       createdAt,
       updatedAt,
+      branding,
       ...profileData
     } = body;
 
-    const payload = {
+    const payload: Record<string, any> = {
       ...profileData,
       supportPhone: profileData.supportPhone || profileData.fax || null
     };
+
+    if (branding !== undefined) {
+      payload.branding = typeof branding === 'string' ? JSON.parse(branding) : branding;
+    }
 
     const upserted = await db.companyProfile.upsert({
       where: { tenantId },

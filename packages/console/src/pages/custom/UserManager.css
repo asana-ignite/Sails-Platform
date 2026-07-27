@@ -41,7 +41,7 @@
 
 .klao-user-manager__search-input:focus {
   border-color: var(--klao-primary);
-  box-shadow: 0 0 0 3px rgba(var(--klao-primary-rgb), 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
   outline: none;
 }
 
@@ -180,7 +180,7 @@
 }
 
 .klao-user-manager__tr--selected {
-  background: rgba(var(--klao-primary-rgb), 0.05);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.05);
 }
 
 .klao-user-manager__identity {
@@ -523,7 +523,7 @@
 
 .klao-input:focus {
   border-color: var(--klao-primary);
-  box-shadow: 0 0 0 3px rgba(var(--klao-primary-rgb), 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
   outline: none;
 }
 
@@ -554,7 +554,7 @@
 }
 
 .klao-role-option.active {
-  background: rgba(var(--klao-primary-rgb), 0.05);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.05);
   border-color: var(--klao-primary);
 }
 

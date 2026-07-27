@@ -44,8 +44,8 @@
 .klao-custom-select__trigger:hover:not(:disabled),
 .klao-custom-select.is-open .klao-custom-select__trigger {
   border-color: var(--klao-primary, #9DCEE0);
-  background: rgba(157, 206, 224, 0.08);
-  box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.2);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.08);
+  box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.2);
 }
 
 .klao-custom-select__trigger:disabled {
@@ -148,7 +148,7 @@
 }
 
 .klao-custom-select__option:hover {
-  background: rgba(157, 206, 224, 0.15);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.15);
   color: var(--klao-text-main, #344759);
 }
 

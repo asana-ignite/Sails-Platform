@@ -20,7 +20,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import logo from '../assets/logo.png';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Benefit {
   id: number;
@@ -56,6 +56,7 @@ const AdminLogin: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedBenefits, setSelectedBenefits] = useState<Benefit[]>([]);
+  const { logoLightUrl, logoDarkUrl, themeMode } = useTheme();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -123,7 +124,7 @@ const AdminLogin: React.FC = () => {
           </button>
 
           <div className="klao-auth-brand">
-            <img src={logo} alt="KLAO Logo" className="klao-auth-logo-img" />
+            <img src={themeMode === 'dark' ? logoDarkUrl : logoLightUrl} alt="KLAO Logo" className="klao-auth-logo-img" />
             <span className="klao-auth-logo-text">KLAO</span>
           </div>
 

@@ -5,6 +5,7 @@ import LoadingScreen from './components/common/LoadingScreen';
 import './styles/globals.css';
 import { ConsoleProvider, useConsole, ConsoleMenu } from './contexts/ConsoleContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // Lazy load pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -93,6 +94,7 @@ const SmartPageRouter: React.FC = () => {
 function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <AuthProvider>
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
@@ -121,6 +123,7 @@ function App() {
           </Routes>
         </Suspense>
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

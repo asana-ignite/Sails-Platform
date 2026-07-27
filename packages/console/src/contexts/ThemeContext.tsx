@@ -1,0 +1,315 @@
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { hexToRgbChannels, hexToHSL, hslToHex, computeBackgroundTint } from '../utils/colorUtils';
+
+interface ThemeState {
+  themeMode: 'light' | 'dark';
+  primaryAccentColor: string;
+  secondaryAccentColor: string | null;
+  backgroundAccentColor: string | null;
+  fontAccentColor: string | null;
+  logoLightUrl: string;
+  logoDarkUrl: string;
+}
+
+interface ThemeContextType {
+  themeMode: 'light' | 'dark';
+  primaryAccentColor: string;
+  secondaryAccentColor: string | null;
+  backgroundAccentColor: string | null;
+  fontAccentColor: string | null;
+  logoLightUrl: string;
+  logoDarkUrl: string;
+  setThemeMode: (mode: 'light' | 'dark') => void;
+  setPrimaryAccentColor: (color: string) => void;
+  setSecondaryAccentColor: (color: string | null) => void;
+  setBackgroundAccentColor: (color: string | null) => void;
+  setFontAccentColor: (color: string | null) => void;
+  setLogoLightUrl: (url: string) => void;
+  setLogoDarkUrl: (url: string) => void;
+  commitTheme: (overrides?: Partial<ThemeState>) => void;
+  saveBrandingToServer: () => Promise<void>;
+}
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+const STORAGE_KEY = 'klao-theme';
+
+function computeAutoSecondary(h: number): string {
+  return hslToHex(h, 35, 55);
+}
+
+function computeAutoBackground(h: number): string {
+  const tint = computeBackgroundTint(h);
+  return hslToHex(h + tint.hueShift, tint.sat, 97);
+}
+
+function computeAutoFont(h: number, isDark: boolean): string {
+  if (isDark) return hslToHex(h, 0, 95);
+  return hslToHex(h, 8, 22);
+}
+
+function generatePalette(state: ThemeState): Record<string, string> {
+  const hexAccent = state.primaryAccentColor;
+  const hsl = hexToHSL(hexAccent);
+  const h = hsl.h;
+  const isDark = state.themeMode === 'dark';
+  const { r, g, b } = hexToRgbChannels(hexAccent);
+
+  const secondary = state.secondaryAccentColor || computeAutoSecondary(h);
+  const backgroundBody = state.backgroundAccentColor || computeAutoBackground(h);
+  const textMain = state.fontAccentColor || computeAutoFont(h, isDark);
+
+  return {
+    '--klao-primary': hexAccent,
+    '--klao-primary-r': String(r),
+    '--klao-primary-g': String(g),
+    '--klao-primary-b': String(b),
+
+    '--klao-secondary': secondary,
+
+    '--klao-primary-light': isDark
+      ? hslToHex(h, 20, 18)
+      : hslToHex(h, 25, 93),
+
+    '--klao-primary-dark': isDark
+      ? hslToHex(h, 40, 68)
+      : hslToHex(h, 45, 38),
+
+    '--klao-bg-body': backgroundBody,
+
+    '--klao-bg-sidebar': isDark
+      ? hslToHex(h, 3, 14)
+      : '#ffffff',
+
+    '--klao-bg-topbar': isDark
+      ? hslToHex(h, 3, 16)
+      : '#ffffff',
+
+    '--klao-bg-card': isDark
+      ? hslToHex(h, 3, 16)
+      : '#ffffff',
+
+    '--klao-text-main': textMain,
+
+    '--klao-text-muted': isDark
+      ? hslToHex(h, 4, 65)
+      : hslToHex(h, 6, 50),
+
+    '--klao-text-light': '#ffffff',
+
+    '--klao-text-sidebar': isDark
+      ? hslToHex(h, 4, 65)
+      : hslToHex(h, 8, 42),
+
+    '--klao-text-sidebar-active': hexAccent,
+
+    '--klao-border-color': isDark
+      ? hslToHex(h, 4, 17)
+      : hslToHex(h, 5, 93),
+
+    '--klao-shadow-sm': isDark
+      ? '0 2px 4px rgba(0, 0, 0, 0.3)'
+      : '0 2px 4px rgba(0, 0, 0, 0.03)',
+
+    '--klao-shadow-md': isDark
+      ? '0 4px 12px rgba(0, 0, 0, 0.4)'
+      : '0 4px 12px rgba(0, 0, 0, 0.05)',
+  };
+}
+
+function applyPaletteToDOM(palette: Record<string, string>, mode: 'light' | 'dark') {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', mode);
+  Object.entries(palette).forEach(([key, value]) => {
+    root.style.setProperty(key, value);
+  });
+}
+
+const DEFAULT_THEME: ThemeState = {
+  themeMode: 'light',
+  primaryAccentColor: '#a855f7',
+  secondaryAccentColor: null,
+  backgroundAccentColor: null,
+  fontAccentColor: null,
+  logoLightUrl: '/assets/logo-standard.jpg',
+  logoDarkUrl: '/assets/logo-standard.jpg',
+};
+
+function loadFromStorage(): ThemeState {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        themeMode: parsed.themeMode === 'dark' ? 'dark' : 'light',
+        primaryAccentColor:
+          typeof parsed.primaryAccentColor === 'string' && parsed.primaryAccentColor.startsWith('#')
+            ? parsed.primaryAccentColor
+            : DEFAULT_THEME.primaryAccentColor,
+        secondaryAccentColor:
+          typeof parsed.secondaryAccentColor === 'string' && parsed.secondaryAccentColor.startsWith('#')
+            ? parsed.secondaryAccentColor
+            : null,
+        backgroundAccentColor:
+          typeof parsed.backgroundAccentColor === 'string' && parsed.backgroundAccentColor.startsWith('#')
+            ? parsed.backgroundAccentColor
+            : null,
+        fontAccentColor:
+          typeof parsed.fontAccentColor === 'string' && parsed.fontAccentColor.startsWith('#')
+            ? parsed.fontAccentColor
+            : null,
+        logoLightUrl:
+          typeof parsed.logoLightUrl === 'string' ? parsed.logoLightUrl : DEFAULT_THEME.logoLightUrl,
+        logoDarkUrl:
+          typeof parsed.logoDarkUrl === 'string' ? parsed.logoDarkUrl : DEFAULT_THEME.logoDarkUrl,
+      };
+    }
+  } catch {
+    // ignore
+  }
+  return { ...DEFAULT_THEME };
+}
+
+function saveToStorage(state: ThemeState) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore
+  }
+}
+
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [state, setState] = useState<ThemeState>(loadFromStorage);
+
+  const commitTheme = useCallback((overrides?: Partial<ThemeState>) => {
+    const merged = { ...state, ...overrides };
+    const palette = generatePalette(merged);
+    applyPaletteToDOM(palette, merged.themeMode);
+  }, [state]);
+
+  // Apply on initial mount only
+  useEffect(() => {
+    const palette = generatePalette(state);
+    applyPaletteToDOM(palette, state.themeMode);
+  }, []);
+
+  // Server fetch merges branding then re-applies
+  useEffect(() => {
+    let cancelled = false;
+    const fetchBranding = async () => {
+      try {
+        const res = await fetch('/api/console/company-profile');
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (!json.success || !json.data?.branding || cancelled) return;
+        const serverBranding = json.data.branding;
+        setState((prev) => {
+          const next: ThemeState = { ...prev };
+          if (serverBranding.primaryAccentColor?.startsWith('#'))
+            next.primaryAccentColor = serverBranding.primaryAccentColor;
+          if (typeof serverBranding.secondaryAccentColor === 'string')
+            next.secondaryAccentColor = serverBranding.secondaryAccentColor.startsWith('#') ? serverBranding.secondaryAccentColor : null;
+          if (typeof serverBranding.backgroundAccentColor === 'string')
+            next.backgroundAccentColor = serverBranding.backgroundAccentColor.startsWith('#') ? serverBranding.backgroundAccentColor : null;
+          if (typeof serverBranding.fontAccentColor === 'string')
+            next.fontAccentColor = serverBranding.fontAccentColor.startsWith('#') ? serverBranding.fontAccentColor : null;
+          if (serverBranding.logoLightUrl) next.logoLightUrl = serverBranding.logoLightUrl;
+          if (serverBranding.logoDarkUrl) next.logoDarkUrl = serverBranding.logoDarkUrl;
+          // Apply merged branding immediately
+          const palette = generatePalette(next);
+          // Defer DOM update out of render phase
+          setTimeout(() => applyPaletteToDOM(palette, next.themeMode), 0);
+          saveToStorage(next);
+          return next;
+        });
+      } catch {
+        // Server unavailable
+      }
+    };
+    fetchBranding();
+    return () => { cancelled = true; };
+  }, []);
+
+  const saveBrandingToServerFn = useCallback(async () => {
+    try {
+      await fetch('/api/console/company-profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          branding: {
+            primaryAccentColor: state.primaryAccentColor,
+            secondaryAccentColor: state.secondaryAccentColor,
+            backgroundAccentColor: state.backgroundAccentColor,
+            fontAccentColor: state.fontAccentColor,
+            logoLightUrl: state.logoLightUrl,
+            logoDarkUrl: state.logoDarkUrl,
+          },
+        }),
+      });
+    } catch {
+      // localStorage already saved
+    }
+  }, [state]);
+
+  const setThemeMode = useCallback((mode: 'light' | 'dark') => {
+    setState((prev) => { const next = { ...prev, themeMode: mode }; saveToStorage(next); return next; });
+  }, []);
+
+  const setPrimaryAccentColor = useCallback((color: string) => {
+    const normalized = color.startsWith('#') ? color : `#${color}`;
+    setState((prev) => { const next = { ...prev, primaryAccentColor: normalized }; saveToStorage(next); return next; });
+  }, []);
+
+  const setSecondaryAccentColor = useCallback((color: string | null) => {
+    setState((prev) => { const next = { ...prev, secondaryAccentColor: color }; saveToStorage(next); return next; });
+  }, []);
+
+  const setBackgroundAccentColor = useCallback((color: string | null) => {
+    setState((prev) => { const next = { ...prev, backgroundAccentColor: color }; saveToStorage(next); return next; });
+  }, []);
+
+  const setFontAccentColor = useCallback((color: string | null) => {
+    setState((prev) => { const next = { ...prev, fontAccentColor: color }; saveToStorage(next); return next; });
+  }, []);
+
+  const setLogoLightUrl = useCallback((url: string) => {
+    setState((prev) => { const next = { ...prev, logoLightUrl: url }; saveToStorage(next); return next; });
+  }, []);
+
+  const setLogoDarkUrl = useCallback((url: string) => {
+    setState((prev) => { const next = { ...prev, logoDarkUrl: url }; saveToStorage(next); return next; });
+  }, []);
+
+  return (
+    <ThemeContext.Provider
+      value={{
+        themeMode: state.themeMode,
+        primaryAccentColor: state.primaryAccentColor,
+        secondaryAccentColor: state.secondaryAccentColor,
+        backgroundAccentColor: state.backgroundAccentColor,
+        fontAccentColor: state.fontAccentColor,
+        logoLightUrl: state.logoLightUrl,
+        logoDarkUrl: state.logoDarkUrl,
+        setThemeMode,
+        setPrimaryAccentColor,
+        setSecondaryAccentColor,
+        setBackgroundAccentColor,
+        setFontAccentColor,
+        setLogoLightUrl,
+        setLogoDarkUrl,
+        commitTheme,
+        saveBrandingToServer: saveBrandingToServerFn,
+      }}
+    >
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};

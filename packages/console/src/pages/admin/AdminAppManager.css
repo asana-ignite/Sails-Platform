@@ -66,7 +66,7 @@
   gap: 4px;
   font-size: 0.75rem;
   color: var(--klao-primary);
-  background: rgba(157, 206, 224, 0.1);
+  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
   padding: 2px 8px;
   border-radius: 100px;
   width: fit-content;

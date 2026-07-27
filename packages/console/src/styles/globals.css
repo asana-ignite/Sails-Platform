@@ -19,6 +19,7 @@ body {
   font-family: var(--klao-font-family);
   font-size: var(--klao-font-size-base);
   background-color: var(--klao-bg-body);
+  background-image: var(--klao-bg-gradient);
   color: var(--klao-text-main);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -91,7 +92,7 @@ textarea {
   width: 36px;
   height: 36px;
   background-color: var(--klao-primary-light);
-  color: var(--klao-primary);
+  color: var(--klao-secondary);
   border-radius: var(--klao-radius-md);
   display: flex;
   align-items: center;
@@ -132,13 +133,13 @@ textarea {
 .klao-btn--primary {
   background-color: var(--klao-primary);
   color: white;
-  box-shadow: 0 4px 10px rgba(157, 206, 224, 0.3);
+  box-shadow: 0 4px 10px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.3);
 }
 
 .klao-btn--primary:hover {
   background-color: var(--klao-primary-dark);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(157, 206, 224, 0.5);
+  box-shadow: 0 6px 16px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.5);
 }
 
 .klao-btn--ghost,

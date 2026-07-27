@@ -93,7 +93,7 @@
 .klao-sidebar__link--active {
   background-color: var(--klao-primary);
   color: var(--klao-text-light);
-  box-shadow: 0 4px 12px rgba(157, 206, 224, 0.4);
+  box-shadow: 0 4px 12px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.4);
 }
 
 .klao-sidebar__link--active:hover {
@@ -188,14 +188,14 @@
 .klao-sidebar__submenu-link--active {
   background-color: var(--klao-primary);
   color: var(--klao-text-light) !important;
-  box-shadow: 0 4px 12px rgba(157, 206, 224, 0.4);
+  box-shadow: 0 4px 12px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.4);
   font-weight: 600;
 }
 
 .klao-sidebar__submenu-link--active:hover {
   background-color: var(--klao-primary);
   color: var(--klao-text-light) !important;
-  box-shadow: 0 4px 12px rgba(157, 206, 224, 0.4);
+  box-shadow: 0 4px 12px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.4);
 }
 
 /* Parent highlight when child is active */
