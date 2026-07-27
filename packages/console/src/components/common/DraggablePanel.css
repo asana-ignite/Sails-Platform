@@ -1,0 +1,106 @@
+.draggable-panel {
+  position: fixed;
+  z-index: 9990;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-lg);
+  background: var(--klao-bg-card);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  user-select: none;
+}
+
+.draggable-panel__handle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--klao-primary-light);
+  border-bottom: 1px solid var(--klao-border-color);
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.draggable-panel__handle:active {
+  cursor: grabbing;
+}
+
+.draggable-panel__title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--klao-text-main);
+}
+
+.draggable-panel__close {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 50%;
+  font-size: 1rem;
+  color: var(--klao-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.draggable-panel__close:hover {
+  background: var(--klao-danger);
+  color: white;
+}
+
+.draggable-panel__body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  user-select: text;
+}
+
+.draggable-panel__body .klao-audit {
+  gap: 14px;
+}
+
+.draggable-panel__body .klao-audit__header {
+  display: none;
+}
+
+.draggable-panel__body .klao-audit__tabs {
+  flex-wrap: wrap;
+}
+
+.draggable-panel__body .klao-audit__tab {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+}
+
+.draggable-panel__body .klao-audit__toolbar {
+  flex-wrap: wrap;
+}
+
+.draggable-panel__body .klao-audit__search {
+  max-width: 200px;
+}
+
+.draggable-panel__body .klao-audit__td {
+  padding: 6px 10px;
+  font-size: 0.78rem;
+}
+
+.draggable-panel__body .klao-audit__th {
+  padding: 6px 10px;
+  font-size: 0.7rem;
+}
+
+.draggable-panel__resize {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, var(--klao-border-color) 50%);
+  border-radius: 0 0 var(--klao-radius-lg) 0;
+}

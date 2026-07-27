@@ -336,4 +336,52 @@ export type KlaoFieldConfig =
   | AutoNumberFieldConfig
   | Record<string, any>;
 
+// ─── Page Layout Contracts ─────────────────────────────────────
+
+export type ViewType = 'LIST' | 'DETAIL' | 'FORM';
+
+export interface TableLayout {
+  id: string;
+  tableId: string;
+  viewType: ViewType;
+  name: string;
+  isDefault: boolean;
+  recordTitleField?: string | null;
+  config: LayoutConfig;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LayoutConfig {
+  sections: LayoutSection[];
+  fields: LayoutField[];
+  relatedRecords?: RelatedRecord[];    // only for DETAIL view
+}
+
+export interface LayoutSection {
+  id: string;
+  title: string;
+  position: number;
+  columns: number;                    // 1–4 columns in this section
+  collapsed?: boolean;
+}
+
+export interface LayoutField {
+  fieldId: string;                    // FK → FieldDefinition.id
+  sectionId: string;
+  position: number;
+  width: 'full' | 'half' | 'third' | 'quarter';
+  visible: boolean;
+  readOnly?: boolean;                 // only matters in FORM view
+  labelOverride?: string;
+}
+
+export interface RelatedRecord {
+  tableId: string;                    // FK → TableDefinition.id of child table
+  fieldId: string;                    // FK → FieldDefinition (the relation field)
+  displayFields: string[];            // which child fields to show in the inline list
+  maxRows?: number;                   // how many rows to preview
+  orderBy?: string;                   // child field to sort by
+}
+
 

@@ -1,0 +1,267 @@
+/**
+ * MOCK UP — Layout-Driven Page Styles
+ *
+ * Shows how the section grid system auto-adjusts from layout config.
+ * In production this would be in globals.css under --klao-* tokens.
+ */
+
+/* ─── Root ──────────────────────────────────────────────────── */
+.layout-sample {
+  --grid-gap: 16px;
+}
+
+/* ─── Section Card ──────────────────────────────────────────── */
+.layout-sample__section {
+  margin-bottom: 20px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.layout-sample__section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px 20px;
+  border: none;
+  background: var(--klao-bg-secondary, #f8fafc);
+  color: var(--klao-text-primary, #1e293b);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 1px solid var(--klao-border, #e2e8f0);
+}
+
+.layout-sample__section-header:hover {
+  background: var(--klao-bg-hover, #f1f5f9);
+}
+
+.layout-sample__section-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--klao-text-secondary, #64748b);
+}
+
+/* ─── Section Grid (1-4 columns from layout.config.columns) ─── */
+.layout-sample__section-grid {
+  display: grid;
+  gap: var(--grid-gap);
+  padding: 20px;
+}
+
+.layout-sample__section-grid--cols-1 { grid-template-columns: 1fr; }
+.layout-sample__section-grid--cols-2 { grid-template-columns: 1fr 1fr; }
+.layout-sample__section-grid--cols-3 { grid-template-columns: repeat(3, 1fr); }
+.layout-sample__section-grid--cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* ─── Individual Field ──────────────────────────────────────── */
+.layout-sample__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Width classes — field takes N columns in the section grid */
+.layout-sample__field--full    { grid-column: span 4; }
+.layout-sample__field--half    { grid-column: span 2; }
+.layout-sample__field--third   { grid-column: span 1; }
+.layout-sample__field--quarter { grid-column: span 1; }
+
+/* ─── Field Label ───────────────────────────────────────────── */
+.layout-sample__field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--klao-text-secondary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.layout-sample__required {
+  color: var(--klao-danger, #ef4444);
+  margin-left: 2px;
+}
+
+/* ─── Field Value (DETAIL view — read-only) ─────────────────── */
+.layout-sample__field-value {
+  font-size: 14px;
+  color: var(--klao-text-primary, #1e293b);
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.layout-sample__null {
+  color: var(--klao-text-muted, #94a3b8);
+  font-style: italic;
+}
+
+.layout-sample__link {
+  color: var(--klao-primary, #9dcee0);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.layout-sample__link:hover {
+  text-decoration: underline;
+}
+
+.layout-sample__with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ─── Form Inputs (FORM view) ───────────────────────────────── */
+.layout-sample__input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid var(--klao-border, #e2e8f0);
+  border-radius: var(--klao-radius-sm, 4px);
+  background: var(--klao-bg-primary, #fff);
+  color: var(--klao-text-primary, #1e293b);
+}
+
+.layout-sample__input:focus {
+  outline: none;
+  border-color: var(--klao-primary, #9dcee0);
+  box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.15);
+}
+
+.layout-sample__textarea {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid var(--klao-border, #e2e8f0);
+  border-radius: var(--klao-radius-sm, 4px);
+  background: var(--klao-bg-primary, #fff);
+  color: var(--klao-text-primary, #1e293b);
+  resize: vertical;
+}
+
+.layout-sample__textarea:focus {
+  outline: none;
+  border-color: var(--klao-primary, #9dcee0);
+  box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.15);
+}
+
+/* ─── Header overrides ──────────────────────────────────────── */
+.layout-sample__header {
+  margin-bottom: 24px;
+}
+
+.layout-sample__back {
+  margin-right: 4px;
+}
+
+.layout-sample__danger {
+  color: var(--klao-danger, #ef4444);
+}
+
+.layout-sample__danger:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* ─── LIST table ────────────────────────────────────────────── */
+.layout-sample__list-table-wrap {
+  padding: 0;
+  overflow: hidden;
+}
+
+.layout-sample__mock-row td {
+  padding: 12px 16px;
+  font-size: 13px;
+}
+
+.layout-sample__mock-msg {
+  color: var(--klao-text-muted, #94a3b8);
+  font-style: italic;
+  font-size: 13px;
+  padding: 16px !important;
+  text-align: center;
+}
+
+/* ─── Related records section ───────────────────────────────── */
+.layout-sample__related {
+  padding: 0;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.layout-sample__related-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: var(--klao-bg-secondary, #f8fafc);
+  border-bottom: 1px solid var(--klao-border, #e2e8f0);
+}
+
+.layout-sample__related-count {
+  font-size: 12px;
+  color: var(--klao-text-muted, #94a3b8);
+}
+
+/* ─── Debug panel ───────────────────────────────────────────── */
+.layout-sample__debug {
+  margin-top: 32px;
+  border: 1px dashed var(--klao-border, #e2e8f0);
+  border-radius: var(--klao-radius-md, 8px);
+  overflow: hidden;
+}
+
+.layout-sample__debug-toggle {
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--klao-text-muted, #94a3b8);
+  cursor: pointer;
+  background: var(--klao-bg-secondary, #f8fafc);
+  user-select: none;
+}
+
+.layout-sample__debug-json {
+  padding: 16px;
+  margin: 0;
+  font-size: 11px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  line-height: 1.5;
+  background: var(--klao-bg-primary, #fff);
+  color: var(--klao-text-primary, #1e293b);
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ─── Detail layout — stacks sections vertically ────────────── */
+.layout-sample__detail-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ─── Mock legend hint ──────────────────────────────────────── */
+.layout-sample__mock-legend {
+  padding: 10px 16px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--klao-text-muted, #94a3b8);
+  background: var(--klao-bg-secondary, #f8fafc);
+  border-top: 1px solid var(--klao-border, #e2e8f0);
+}
+
+.layout-sample__mock-legend code {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  background: rgba(157, 206, 224, 0.15);
+  padding: 1px 4px;
+  border-radius: 3px;
+}

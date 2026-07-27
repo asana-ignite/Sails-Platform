@@ -11,9 +11,12 @@ import { ThemeProvider } from './contexts/ThemeContext';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const DynamicTablePage = lazy(() => import('./pages/DynamicTablePage'));
 const AppPluginShell = lazy(() => import('./pages/admin/AppPluginShell'));
+const AdminAuditLog = lazy(() => import('./pages/admin/AdminAuditLog'));
 const Login = lazy(() => import('./pages/Login'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized'));
+const LayoutDemo = lazy(() => import('./pages/__mockups__/LayoutDemo'));
+const RouteBuilder = lazy(() => import('./pages/__mockups__/RouteBuilder'));
 
 /**
  * ProtectedRoute
@@ -101,6 +104,8 @@ function App() {
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/layout-demo" element={<LayoutDemo />} />
+            <Route path="/route-builder" element={<RouteBuilder />} />
 
             {/* Protected Application Routes */}
             <Route
@@ -108,14 +113,19 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ConsoleProvider>
-                    <AppLayout>
-                      <Routes>
-                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/:appSlug/*" element={<SmartPageRouter />} />
-                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                      </Routes>
-                    </AppLayout>
+                    <Routes>
+                      <Route path="/audit-live" element={<Suspense fallback={<LoadingScreen />}><AdminAuditLog /></Suspense>} />
+                      <Route path="*" element={
+                        <AppLayout>
+                          <Routes>
+                            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                            <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/:appSlug/*" element={<SmartPageRouter />} />
+                            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                          </Routes>
+                        </AppLayout>
+                      } />
+                    </Routes>
                   </ConsoleProvider>
                 </ProtectedRoute>
               }

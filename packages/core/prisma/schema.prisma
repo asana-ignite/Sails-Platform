@@ -41,10 +41,29 @@ model TableDefinition {
   fields      FieldDefinition[]
   tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rules       ValidationRule[]
+  layouts     TableLayout[]
 
   @@unique([tenantId, tableName])
   @@index([tenantId])
   @@map("tables")
+  @@schema("core")
+}
+
+model TableLayout {
+  id             String          @id @default(cuid())
+  tableId        String          @map("table_id")
+  viewType       String          @map("view_type")
+  name           String
+  isDefault      Boolean         @default(false) @map("is_default")
+  config         Json
+  recordTitleField String?       @map("record_title_field")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at")
+  table          TableDefinition @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@unique([tableId, viewType, name])
+  @@index([tableId])
+  @@map("table_layouts")
   @@schema("core")
 }
 

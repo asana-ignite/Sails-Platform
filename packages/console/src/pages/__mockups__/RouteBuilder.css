@@ -1,0 +1,700 @@
+/**
+ * Route Builder — Visual Routing Process Editor
+ */
+
+/* ─── Root ──────────────────────────────────────────────────── */
+
+.rb-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--klao-bg-tertiary, #f1f5f9);
+  overflow: hidden;
+}
+
+/* ─── Toolbar ───────────────────────────────────────────────── */
+
+.rb-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 44px;
+  background: var(--klao-bg-primary, #fff);
+  border-bottom: 1px solid var(--klao-border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.rb-toolbar__brand {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--klao-text-primary, #1e293b);
+}
+
+.rb-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ─── Body Layout ───────────────────────────────────────────── */
+
+.rb-body {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ─── Canvas ────────────────────────────────────────────────── */
+
+.rb-canvas {
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+.rb-canvas__scroll {
+  width: 100%;
+  max-width: 760px;
+  overflow-y: auto;
+  padding: 24px 24px 80px;
+}
+
+/* ─── Process Header ────────────────────────────────────────── */
+
+.rb-process-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  background: var(--klao-bg-primary, #fff);
+  border: 1px solid var(--klao-border, #e2e8f0);
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.rb-process-header__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(157, 206, 224, 0.12);
+  color: var(--klao-primary, #9dcee0);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.rb-process-header__info {
+  flex: 1;
+}
+
+.rb-process-name {
+  font-size: 16px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border-radius: 4px;
+  color: var(--klao-text-primary, #1e293b);
+  background: transparent;
+  width: 100%;
+}
+
+.rb-process-name:focus {
+  outline: none;
+  border-color: var(--klao-primary, #9dcee0);
+  background: var(--klao-bg-primary, #fff);
+}
+
+.rb-process-name:hover {
+  background: rgba(0,0,0,0.02);
+}
+
+.rb-process-desc {
+  width: 100%;
+}
+
+.rb-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(157, 206, 224, 0.12);
+  color: var(--klao-primary, #9dcee0);
+  white-space: nowrap;
+}
+
+/* ─── Chain ─────────────────────────────────────────────────── */
+
+.rb-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.rb-chain__empty {
+  padding: 40px;
+  text-align: center;
+  border: 2px dashed var(--klao-border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--klao-text-muted, #94a3b8);
+  background: var(--klao-bg-primary, #fff);
+}
+
+/* ─── Drop Zone ─────────────────────────────────────────────── */
+
+.rb-drop-zone {
+  height: 4px;
+  transition: height 0.15s, background 0.15s;
+  border-radius: 2px;
+  margin: 4px 0;
+}
+
+.rb-drop-zone--active {
+  height: 12px;
+  background: rgba(157, 206, 224, 0.2);
+}
+
+/* ─── Connector (arrow between stages) ──────────────────────── */
+
+.rb-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rb-connector__line {
+  width: 2px;
+  height: 16px;
+  background: var(--klao-border, #e2e8f0);
+}
+
+.rb-connector__arrow {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--klao-bg-primary, #fff);
+  border: 1px solid var(--klao-border, #e2e8f0);
+  color: var(--klao-text-muted, #94a3b8);
+}
+
+/* ─── Stage Card ────────────────────────────────────────────── */
+
+.rb-stage {
+  background: var(--klao-bg-primary, #fff);
+  border: 2px solid var(--klao-border, #e2e8f0);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.rb-stage:hover {
+  border-color: var(--klao-primary, #9dcee0);
+}
+
+.rb-stage--selected {
+  border-color: var(--klao-primary, #9dcee0) !important;
+  box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.12);
+}
+
+.rb-stage--expanded {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+
+/* ─── Stage Header ──────────────────────────────────────────── */
+
+.rb-stage__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.rb-stage__header:hover {
+  background: var(--klao-bg-secondary, #f8fafc);
+}
+
+.rb-stage__order {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rb-stage__number {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--klao-primary, #9dcee0);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.rb-stage__drag {
+  display: flex;
+  align-items: center;
+  border: none;
+  background: none;
+  color: var(--klao-text-muted, #94a3b8);
+  cursor: grab;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.rb-stage__drag:active {
+  cursor: grabbing;
+}
+
+.rb-stage__main-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rb-stage__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--klao-text-primary, #1e293b);
+  display: block;
+}
+
+.rb-stage__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.rb-stage__router {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--klao-text-secondary, #64748b);
+}
+
+.rb-stage__cond-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.rb-stage__action-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+}
+
+.rb-stage__timeout-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+}
+
+/* Stage header actions */
+.rb-stage__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.rb-stage__header:hover .rb-stage__header-actions {
+  opacity: 1;
+}
+
+.rb-stage__expand-icon {
+  transition: transform 0.2s;
+  color: var(--klao-text-muted, #94a3b8);
+}
+
+.rb-stage__expand-icon--open {
+  transform: rotate(180deg);
+}
+
+.rb-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--klao-text-muted, #94a3b8);
+  cursor: pointer;
+}
+
+.rb-icon-btn:hover {
+  background: rgba(0,0,0,0.05);
+  color: var(--klao-text-primary, #1e293b);
+}
+
+.rb-icon-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.rb-icon-btn--danger:hover {
+  color: var(--klao-danger, #ef4444);
+}
+
+/* ─── Stage Body (expandable) ───────────────────────────────── */
+
+.rb-stage__body {
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--klao-border, #e2e8f0);
+  animation: rbSlideDown 0.15s ease-out;
+}
+
+@keyframes rbSlideDown {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 2000px; }
+}
+
+.rb-stage__form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.rb-form-group--half { }
+.rb-form-group--full { grid-column: 1 / -1; }
+
+.rb-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rb-form-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--klao-text-secondary, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rb-form-hint {
+  font-size: 10px;
+  color: var(--klao-text-muted, #94a3b8);
+  font-style: italic;
+}
+
+.rb-code-input {
+  font-family: 'SF Mono', 'Fira Code', monospace !important;
+  font-size: 11px !important;
+}
+
+/* ─── Capabilities ──────────────────────────────────────────── */
+
+.rb-capabilities { }
+
+.rb-capabilities__grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rb-cap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid var(--klao-border, #e2e8f0);
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--klao-text-muted, #94a3b8);
+  transition: all 0.12s;
+  user-select: none;
+}
+
+.rb-cap:hover {
+  border-color: var(--klao-primary, #9dcee0);
+}
+
+.rb-cap--active {
+  background: rgba(157, 206, 224, 0.08);
+  border-color: var(--klao-primary, #9dcee0);
+  color: var(--klao-primary, #9dcee0);
+}
+
+.rb-cap input {
+  display: none;
+}
+
+/* ─── Actions Section ───────────────────────────────────────── */
+
+.rb-actions-section {
+  border-top: 1px solid var(--klao-border, #e2e8f0);
+  padding-top: 12px;
+}
+
+.rb-actions__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.rb-actions__grid:has(:nth-child(3)) {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* ─── Action Block ──────────────────────────────────────────── */
+
+.rb-action-block {
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rb-action-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.rb-action-block__add-menu {
+  display: flex;
+  gap: 2px;
+}
+
+.rb-action-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 7px;
+  border: 1px solid var(--klao-border, #e2e8f0);
+  border-radius: 4px;
+  background: var(--klao-bg-primary, #fff);
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--klao-text-secondary, #64748b);
+  white-space: nowrap;
+  transition: border-color 0.1s;
+}
+
+.rb-action-add-btn:hover {
+  border-color: var(--klao-primary, #9dcee0);
+}
+
+.rb-action-empty {
+  font-size: 10px;
+  color: var(--klao-text-muted, #94a3b8);
+  font-style: italic;
+  margin: 0;
+  text-align: center;
+  padding: 6px;
+}
+
+.rb-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rb-action-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: var(--klao-bg-primary, #fff);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.rb-action-item__type {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--klao-text-primary, #1e293b);
+}
+
+/* ─── Add Stage Button ──────────────────────────────────────── */
+
+.rb-add-stage-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  border: 2px dashed var(--klao-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--klao-bg-primary, #fff);
+  color: var(--klao-text-muted, #94a3b8);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.rb-add-stage-btn:hover {
+  border-color: var(--klao-primary, #9dcee0);
+  color: var(--klao-primary, #9dcee0);
+}
+
+/* ─── End Node ──────────────────────────────────────────────── */
+
+.rb-end-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.rb-end-node__icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 2px solid rgba(16, 185, 129, 0.3);
+}
+
+.rb-end-node__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #10b981;
+}
+
+/* ─── RIGHT: Context Panel ──────────────────────────────────── */
+
+.rb-context {
+  padding: 12px;
+  background: var(--klao-bg-secondary, #f8fafc);
+  border-left: 1px solid var(--klao-border, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.rb-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--klao-text-secondary, #64748b);
+}
+
+.rb-context__card {
+  background: var(--klao-bg-primary, #fff);
+  border: 1px solid var(--klao-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rb-context__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rb-context__key {
+  font-size: 11px;
+  color: var(--klao-text-muted, #94a3b8);
+}
+
+.rb-context__value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--klao-text-primary, #1e293b);
+}
+
+.rb-context__help {
+  font-size: 11px;
+  color: var(--klao-text-secondary, #64748b);
+  line-height: 1.5;
+}
+
+.rb-context__help p {
+  margin: 0 0 8px;
+}
+
+.rb-context__help-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--klao-text-primary, #1e293b);
+  margin: 0 0 6px;
+}
+
+.rb-context__help-list {
+  margin: 0;
+  padding-left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rb-context__preview {
+  margin-top: auto;
+}
+
+.rb-context__json {
+  font-size: 10px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  padding: 8px;
+  background: var(--klao-bg-primary, #fff);
+  border: 1px solid var(--klao-border, #e2e8f0);
+  border-radius: 6px;
+  max-height: 300px;
+  overflow: auto;
+  margin: 0;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--klao-text-primary, #1e293b);
+}
