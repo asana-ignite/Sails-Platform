@@ -669,7 +669,8 @@
 
 .om-tab-button--active {
     background: var(--klao-primary, #3b82f6) !important;
-    color: #ffffff !important;
+    background-image: var(--klao-primary-bg) !important;
+    color: var(--klao-text-light, #ffffff) !important;
     font-weight: 600;
     box-shadow: var(--klao-shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.2));
 }

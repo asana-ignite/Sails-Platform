@@ -621,6 +621,7 @@ const AdminGeneralSettings: React.FC = () => {
                     size="md"
                     value={formData.baseCurrency}
                     options={CURRENCY_OPTIONS}
+                    searchable={true}
                     onChange={val => handleInputChange('baseCurrency', val)}
                   />
                   <span className="klao-gs-help">Default currency used across financial calculations and reporting</span>
@@ -643,6 +644,7 @@ const AdminGeneralSettings: React.FC = () => {
                     size="md"
                     value={formData.timezone}
                     options={ALL_TIMEZONE_OPTIONS}
+                    searchable={true}
                     onChange={val => handleInputChange('timezone', val)}
                   />
                   <span className="klao-gs-help">Standard IANA timezone list covering all global regions (400+ world timezones)</span>

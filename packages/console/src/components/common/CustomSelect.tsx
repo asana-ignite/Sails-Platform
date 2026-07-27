@@ -36,7 +36,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedOption = options.find(opt => String(opt.value) === String(value));
+  const isValueMatch = (val1: string | number, val2: string | number) => {
+    if (val1 === undefined || val1 === null || val2 === undefined || val2 === null) return false;
+    return String(val1).trim().toLowerCase() === String(val2).trim().toLowerCase();
+  };
+
+  const selectedOption = options.find(opt => isValueMatch(opt.value, value));
 
   const filteredOptions = searchable && searchQuery
     ? options.filter(opt => opt.label.toLowerCase().includes(searchQuery.toLowerCase()) || String(opt.value).toLowerCase().includes(searchQuery.toLowerCase()))
@@ -108,7 +113,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
               <div className="klao-custom-select__no-results">No matches found</div>
             ) : (
               filteredOptions.map(option => {
-                const isSelected = String(option.value) === String(value);
+                const isSelected = isValueMatch(option.value, value);
                 return (
                   <div
                     key={String(option.value)}

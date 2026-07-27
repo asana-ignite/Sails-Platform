@@ -984,7 +984,7 @@ const ObjectManager: React.FC = () => {
                       </td>
                       <td>
                         {table.isSystem ? (
-                          <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                          <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.15)', color: 'var(--klao-primary)', border: '1px solid rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.3)' }}>
                             System Model
                           </span>
                         ) : (
@@ -1216,7 +1216,7 @@ const ObjectManager: React.FC = () => {
                           </td>
                           <td>
                             {field.isSystem ? (
-                              <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                              <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.15)', color: 'var(--klao-primary)', border: '1px solid rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.3)' }}>
                                 System Field
                               </span>
                             ) : (
@@ -1767,19 +1767,19 @@ const ObjectManager: React.FC = () => {
                             {newFieldLogicalType === 'auto_number' && (
                               <div style={{
                                 padding: '12px 16px',
-                                backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                                border: '1px solid rgba(59, 130, 246, 0.25)',
+                                backgroundColor: 'rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.08)',
+                                border: '1px solid rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.25)',
                                 borderRadius: '8px',
                                 marginBottom: '16px'
                               }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#60a5fa', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--klao-primary)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
                                   <Sparkles size={16} />
                                   <span>Format Pattern & Date Token Guidance</span>
                                 </div>
-                                <p style={{ margin: '0 0 8px 0', fontSize: '0.8125rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+                                <p style={{ margin: '0 0 8px 0', fontSize: '0.8125rem', color: 'var(--klao-text-main)', lineHeight: '1.4' }}>
                                   Enter zeros (e.g. <code>0000</code>) to auto-detect padding digits. Insert date tokens anywhere in pattern.
                                 </p>
-                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                                   <div><code>INV-0000</code> ➔ 4 digits (<code>INV-0001</code>)</div>
                                   <div><code>{`{yyyy}`}</code> / <code>{`{YYYY}`}</code> ➔ 4-digit Year</div>
                                   <div><code>INV-{`{yyyy}`}00000</code> ➔ Year + 5 digits</div>
@@ -2201,19 +2201,19 @@ const ObjectManager: React.FC = () => {
                             {editFieldLogicalType === 'auto_number' && (
                               <div style={{
                                 padding: '12px 16px',
-                                backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                                border: '1px solid rgba(59, 130, 246, 0.25)',
+                                backgroundColor: 'rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.08)',
+                                border: '1px solid rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.25)',
                                 borderRadius: '8px',
                                 marginBottom: '16px'
                               }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#60a5fa', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--klao-primary)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
                                   <Sparkles size={16} />
                                   <span>Format Pattern & Date Token Guidance</span>
                                 </div>
-                                <p style={{ margin: '0 0 8px 0', fontSize: '0.8125rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+                                <p style={{ margin: '0 0 8px 0', fontSize: '0.8125rem', color: 'var(--klao-text-main)', lineHeight: '1.4' }}>
                                   Enter zeros (e.g. <code>0000</code>) to auto-detect padding digits. Insert date tokens anywhere in pattern.
                                 </p>
-                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                                   <div><code>INV-0000</code> ➔ 4 digits (<code>INV-0001</code>)</div>
                                   <div><code>{`{yyyy}`}</code> / <code>{`{YYYY}`}</code> ➔ 4-digit Year</div>
                                   <div><code>INV-{`{yyyy}`}00000</code> ➔ Year + 5 digits</div>

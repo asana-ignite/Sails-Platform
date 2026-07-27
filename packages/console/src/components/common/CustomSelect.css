@@ -43,7 +43,7 @@
 
 .klao-custom-select__trigger:hover:not(:disabled),
 .klao-custom-select.is-open .klao-custom-select__trigger {
-  border-color: var(--klao-primary, #9DCEE0);
+  border-color: var(--klao-primary);
   background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.08);
   box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.2);
 }
@@ -68,18 +68,18 @@
 }
 
 .klao-custom-select__placeholder {
-  color: var(--klao-text-muted, #6b8ba4);
+  color: var(--klao-text-muted);
 }
 
 .klao-custom-select__chevron {
-  color: var(--klao-text-muted, #6b8ba4);
+  color: var(--klao-text-muted);
   transition: transform 0.2s ease;
   flex-shrink: 0;
 }
 
 .klao-custom-select.is-open .klao-custom-select__chevron {
   transform: rotate(180deg);
-  color: var(--klao-primary, #9DCEE0);
+  color: var(--klao-primary);
 }
 
 /* Dropdown Menu */
@@ -119,8 +119,9 @@
 }
 
 .klao-custom-select__search-input:focus {
-  border-color: var(--klao-primary, #9DCEE0);
-  background: #ffffff;
+  border-color: var(--klao-primary);
+  box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.2);
+  background: var(--klao-bg-card);
 }
 
 .klao-custom-select__options-list {
@@ -147,15 +148,23 @@
   transition: all 0.15s ease;
 }
 
-.klao-custom-select__option:hover {
+.klao-custom-select__option:hover:not(.is-selected) {
   background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.15);
-  color: var(--klao-text-main, #344759);
+  color: var(--klao-text-main);
 }
 
 .klao-custom-select__option.is-selected {
-  background: var(--klao-primary, #9DCEE0);
-  color: #ffffff;
+  background-color: var(--klao-primary) !important;
+  background-image: var(--klao-primary-bg) !important;
+  color: var(--klao-text-light, #ffffff) !important;
   font-weight: 600;
+}
+
+.klao-custom-select__option.is-selected:hover {
+  background-color: var(--klao-primary) !important;
+  background-image: var(--klao-primary-bg) !important;
+  color: var(--klao-text-light, #ffffff) !important;
+  filter: brightness(1.08);
 }
 
 .klao-custom-select__option-content {

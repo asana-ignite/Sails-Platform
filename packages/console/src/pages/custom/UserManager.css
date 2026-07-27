@@ -247,9 +247,9 @@
   font-weight: 600;
 }
 
-.klao-status-badge--active { color: #10b981; background: rgba(16, 185, 129, 0.1); }
-.klao-status-badge--inactive { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
-.klao-status-badge--pending { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+.klao-status-badge--active { color: var(--klao-success, #10b981); background: var(--klao-success-light, rgba(16, 185, 129, 0.1)); }
+.klao-status-badge--inactive { color: var(--klao-danger, #ef4444); background: var(--klao-danger-light, rgba(239, 68, 68, 0.1)); }
+.klao-status-badge--pending { color: var(--klao-warning, #f59e0b); background: var(--klao-warning-light, rgba(245, 158, 11, 0.1)); }
 
 .klao-user-manager__last-login {
   font-size: 0.85rem;
