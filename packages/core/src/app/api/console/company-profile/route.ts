@@ -3,36 +3,45 @@ import { db } from '@/lib/db';
 import { getAppSession } from '@/lib/auth/session';
 
 /**
+ * Helper to resolve active tenant context
+ */
+async function resolveTenantId() {
+  const session = await getAppSession();
+  return (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
+}
+
+/**
  * GET /api/console/company-profile
  * Fetches company profile details for the active tenant.
  */
 export async function GET() {
   try {
-    const session = await getAppSession();
-    const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
-
+    const tenantId = await resolveTenantId();
     if (!tenantId) {
       return NextResponse.json({ success: false, error: 'Tenant context required' }, { status: 400 });
     }
 
-    let profile = await db.companyProfile.findUnique({
+    const profile = await db.companyProfile.findUnique({
       where: { tenantId }
     });
 
     if (!profile) {
-      // Fallback: fetch tenant name as legal name default
       const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
       return NextResponse.json({
         success: true,
         data: {
-          legalName: tenant?.name || 'Klao Enterprise',
-          tradingName: tenant?.name || 'Klao Platform',
+          legalName: tenant?.name || '',
+          tradingName: tenant?.name || '',
           taxId: '',
           industry: 'Software & Technology',
           companySize: '51-200',
           websiteUrl: '',
+          businessContactName: '',
           corporateEmail: '',
+          businessContactPhone: '',
+          supportContactName: '',
           supportEmail: '',
+          supportPhone: '',
           phone: '',
           fax: '',
           streetAddress: '',
@@ -48,7 +57,14 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ success: true, data: profile });
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...profile,
+        businessContactPhone: profile.businessContactPhone || profile.phone || '',
+        supportPhone: profile.supportPhone || profile.fax || ''
+      }
+    });
   } catch (error: any) {
     console.error('[API COMPANY PROFILE GET]:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -61,60 +77,34 @@ export async function GET() {
  */
 export async function PUT(req: Request) {
   try {
-    const session = await getAppSession();
-    const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
-
+    const tenantId = await resolveTenantId();
     if (!tenantId) {
       return NextResponse.json({ success: false, error: 'Tenant context required' }, { status: 400 });
     }
 
     const body = await req.json();
 
+    // Whitelist payload fields to avoid manual duplication between create/update
+    const {
+      id,
+      tenantId: _t,
+      createdAt,
+      updatedAt,
+      ...profileData
+    } = body;
+
+    const payload = {
+      ...profileData,
+      supportPhone: profileData.supportPhone || profileData.fax || null
+    };
+
     const upserted = await db.companyProfile.upsert({
       where: { tenantId },
       create: {
         tenantId,
-        legalName: body.legalName,
-        tradingName: body.tradingName,
-        taxId: body.taxId,
-        industry: body.industry,
-        companySize: body.companySize,
-        websiteUrl: body.websiteUrl,
-        corporateEmail: body.corporateEmail,
-        supportEmail: body.supportEmail,
-        phone: body.phone,
-        fax: body.fax,
-        streetAddress: body.streetAddress,
-        subDistrict: body.subDistrict,
-        city: body.city,
-        postalCode: body.postalCode,
-        country: body.country,
-        dpoName: body.dpoName,
-        dpoEmail: body.dpoEmail,
-        termsUrl: body.termsUrl,
-        privacyUrl: body.privacyUrl
+        ...payload
       },
-      update: {
-        legalName: body.legalName,
-        tradingName: body.tradingName,
-        taxId: body.taxId,
-        industry: body.industry,
-        companySize: body.companySize,
-        websiteUrl: body.websiteUrl,
-        corporateEmail: body.corporateEmail,
-        supportEmail: body.supportEmail,
-        phone: body.phone,
-        fax: body.fax,
-        streetAddress: body.streetAddress,
-        subDistrict: body.subDistrict,
-        city: body.city,
-        postalCode: body.postalCode,
-        country: body.country,
-        dpoName: body.dpoName,
-        dpoEmail: body.dpoEmail,
-        termsUrl: body.termsUrl,
-        privacyUrl: body.privacyUrl
-      }
+      update: payload
     });
 
     return NextResponse.json({ success: true, data: upserted });

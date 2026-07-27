@@ -136,11 +136,22 @@
   gap: 8px;
   padding: 8px 14px;
   border-radius: var(--klao-radius-md, 6px);
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: var(--klao-shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.03));
+  animation: klao-fade-in 0.25s ease-out;
+}
+
+.klao-cp-toast--success {
   background: var(--klao-success-light, #eaf9f6);
   border: 1px solid var(--klao-success, #4ec5ad);
   color: var(--klao-success, #2e7d6e);
-  font-size: 0.85rem;
-  font-weight: 600;
+}
+
+.klao-cp-toast--danger {
+  background: var(--klao-danger-light, #ffefef);
+  border: 1px solid var(--klao-danger, #fd6161);
+  color: var(--klao-danger, #fd6161);
 }
 
 @media (max-width: 768px) {

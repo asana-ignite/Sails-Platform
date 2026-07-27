@@ -419,15 +419,21 @@ model CompanyProfile {
   websiteUrl      String?  @map("website_url")
 
   // Contact & Headquarters
-  corporateEmail  String?  @map("corporate_email")
-  supportEmail    String?  @map("support_email")
-  phone           String?
-  fax             String?
-  streetAddress   String?  @map("street_address")
-  subDistrict     String?  @map("sub_district")
-  city            String?
-  postalCode      String?  @map("postal_code")
-  country         String?
+  businessContactName  String?  @map("business_contact_name")
+  corporateEmail       String?  @map("corporate_email")
+  businessContactPhone String?  @map("business_contact_phone")
+
+  supportContactName   String?  @map("support_contact_name")
+  supportEmail         String?  @map("support_email")
+  supportPhone         String?  @map("support_phone")
+  phone                String?  // Legacy primary phone
+  fax                  String?  // Legacy fax
+
+  streetAddress        String?  @map("street_address")
+  subDistrict          String?  @map("sub_district")
+  city                 String?
+  postalCode           String?  @map("postal_code")
+  country              String?
 
   // Legal & Compliance
   dpoName         String?  @map("dpo_name")

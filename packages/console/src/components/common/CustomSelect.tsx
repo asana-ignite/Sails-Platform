@@ -16,6 +16,7 @@ interface CustomSelectProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
+  searchable?: boolean;
   style?: React.CSSProperties;
 }
 
@@ -27,22 +28,36 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   className = '',
   size = 'md',
   disabled = false,
+  searchable = false,
   style
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const selectedOption = options.find(opt => String(opt.value) === String(value));
+
+  const filteredOptions = searchable && searchQuery
+    ? options.filter(opt => opt.label.toLowerCase().includes(searchQuery.toLowerCase()) || String(opt.value).toLowerCase().includes(searchQuery.toLowerCase()))
+    : options;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setSearchQuery('');
       }
     };
     window.addEventListener('mousedown', handleClickOutside);
     return () => window.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (isOpen && searchable && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isOpen, searchable]);
 
   return (
     <div 
@@ -53,7 +68,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       <button
         type="button"
         className="klao-custom-select__trigger"
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={() => {
+          if (!disabled) {
+            setIsOpen(!isOpen);
+            if (isOpen) setSearchQuery('');
+          }
+        }}
         disabled={disabled}
       >
         <span className="klao-custom-select__value">
@@ -71,25 +91,44 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
       {isOpen && (
         <div className="klao-custom-select__dropdown animate-fade-in">
-          {options.map(option => {
-            const isSelected = String(option.value) === String(value);
-            return (
-              <div
-                key={String(option.value)}
-                className={`klao-custom-select__option ${isSelected ? 'is-selected' : ''}`}
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-              >
-                <div className="klao-custom-select__option-content">
-                  {option.icon && <span className="klao-custom-select__option-icon">{option.icon}</span>}
-                  <span>{option.label}</span>
-                </div>
-                {isSelected && <Check size={14} className="klao-custom-select__check" />}
-              </div>
-            );
-          })}
+          {searchable && (
+            <div className="klao-custom-select__search-wrapper" onClick={e => e.stopPropagation()}>
+              <input
+                ref={searchInputRef}
+                type="text"
+                className="klao-custom-select__search-input"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </div>
+          )}
+          <div className="klao-custom-select__options-list">
+            {filteredOptions.length === 0 ? (
+              <div className="klao-custom-select__no-results">No matches found</div>
+            ) : (
+              filteredOptions.map(option => {
+                const isSelected = String(option.value) === String(value);
+                return (
+                  <div
+                    key={String(option.value)}
+                    className={`klao-custom-select__option ${isSelected ? 'is-selected' : ''}`}
+                    onClick={() => {
+                      onChange(option.value);
+                      setIsOpen(false);
+                      setSearchQuery('');
+                    }}
+                  >
+                    <div className="klao-custom-select__option-content">
+                      {option.icon && <span className="klao-custom-select__option-icon">{option.icon}</span>}
+                      <span>{option.label}</span>
+                    </div>
+                    {isSelected && <Check size={14} className="klao-custom-select__check" />}
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
     </div>

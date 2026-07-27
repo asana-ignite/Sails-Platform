@@ -95,9 +95,44 @@
   box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
   padding: 4px;
   z-index: 9999 !important;
-  max-height: 240px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
+}
+
+.klao-custom-select__search-wrapper {
+  padding: 4px 4px 6px 4px;
+  border-bottom: 1px solid var(--klao-border-color, #f1f2f6);
+  margin-bottom: 4px;
+}
+
+.klao-custom-select__search-input {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--klao-radius-sm, 4px);
+  border: 1px solid var(--klao-border-color, #e1e9ef);
+  background: var(--klao-bg-body, #f4f7f9);
+  color: var(--klao-text-main, #344759);
+  font-size: 0.8rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.klao-custom-select__search-input:focus {
+  border-color: var(--klao-primary, #9DCEE0);
+  background: #ffffff;
+}
+
+.klao-custom-select__options-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.klao-custom-select__no-results {
+  padding: 12px 10px;
+  font-size: 0.8rem;
+  color: var(--klao-text-muted, #6b8ba4);
+  text-align: center;
 }
 
 .klao-custom-select__option {
