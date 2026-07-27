@@ -91,6 +91,7 @@ export async function PUT(req: Request) {
       tenantId: _t,
       createdAt,
       updatedAt,
+      themeConfig,
       branding,
       ...profileData
     } = body;
@@ -100,8 +101,11 @@ export async function PUT(req: Request) {
       supportPhone: profileData.supportPhone || profileData.fax || null
     };
 
-    if (branding !== undefined) {
-      payload.branding = typeof branding === 'string' ? JSON.parse(branding) : branding;
+    const targetThemeConfig = themeConfig || branding;
+    if (targetThemeConfig !== undefined) {
+      const parsedConfig = typeof targetThemeConfig === 'string' ? JSON.parse(targetThemeConfig) : targetThemeConfig;
+      payload.themeConfig = parsedConfig;
+      payload.branding = parsedConfig; // Backward compatibility
     }
 
     const upserted = await db.companyProfile.upsert({

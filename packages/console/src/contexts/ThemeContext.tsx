@@ -31,7 +31,7 @@ interface ThemeContextType {
   setLogoLightUrl: (url: string) => void;
   setLogoDarkUrl: (url: string) => void;
   commitTheme: (overrides?: Partial<ThemeState>) => void;
-  saveBrandingToServer: (overrides?: Partial<ThemeState>) => Promise<void>;
+  saveBrandingToServer: (overrides?: Record<string, any>) => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -212,7 +212,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     applyPaletteToDOM(palette, state.themeMode);
   }, []);
 
-  // Server fetch merges branding then re-applies
+  // Server fetch merges branding/themeConfig then re-applies
   useEffect(() => {
     let cancelled = false;
     const fetchBranding = async () => {
@@ -220,8 +220,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const res = await fetch('/api/console/company-profile');
         if (!res.ok || cancelled) return;
         const json = await res.json();
-        if (!json.success || !json.data?.branding || cancelled) return;
-        const serverBranding = json.data.branding;
+        const serverConfig = json.data?.themeConfig || json.data?.branding;
+        if (!json.success || !serverConfig || cancelled) return;
+        const serverBranding = typeof serverConfig === 'string' ? JSON.parse(serverConfig) : serverConfig;
         setState((prev) => {
           const next: ThemeState = { ...prev };
           if (serverBranding.primaryAccentColor?.startsWith('#'))
@@ -253,25 +254,29 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => { cancelled = true; };
   }, []);
 
-  const saveBrandingToServerFn = useCallback(async (overrides?: Partial<ThemeState>) => {
+  const saveBrandingToServerFn = useCallback(async (overrides?: Record<string, any>) => {
     setState((prev) => {
       const merged = { ...prev, ...overrides };
+      const themePayload = {
+        primaryAccentColor: merged.primaryAccentColor,
+        secondaryAccentColor: merged.secondaryAccentColor,
+        backgroundAccentColor: merged.backgroundAccentColor,
+        fontAccentColor: merged.fontAccentColor,
+        paletteTechnique: merged.paletteTechnique,
+        enableGradient: merged.enableGradient,
+        logoLightUrl: merged.logoLightUrl,
+        logoDarkUrl: merged.logoDarkUrl,
+      };
+
       fetch('/api/console/company-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          branding: {
-            primaryAccentColor: merged.primaryAccentColor,
-            secondaryAccentColor: merged.secondaryAccentColor,
-            backgroundAccentColor: merged.backgroundAccentColor,
-            fontAccentColor: merged.fontAccentColor,
-            paletteTechnique: merged.paletteTechnique,
-            enableGradient: merged.enableGradient,
-            logoLightUrl: merged.logoLightUrl,
-            logoDarkUrl: merged.logoDarkUrl,
-          },
+          themeConfig: themePayload,
+          branding: themePayload,
         }),
       }).catch(() => {});
+
       return merged;
     });
   }, []);

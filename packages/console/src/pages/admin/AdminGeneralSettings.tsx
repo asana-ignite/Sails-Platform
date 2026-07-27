@@ -320,6 +320,54 @@ const AdminGeneralSettings: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  // Initial fetch for all General Settings fields from server (with localStorage fallback)
+  useEffect(() => {
+    let cancelled = false;
+    const fetchGeneralSettings = async () => {
+      try {
+        const res = await fetch('/api/console/company-profile');
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (json.success && json.data && !cancelled) {
+          const profile = json.data;
+          const rawConfig = profile.themeConfig || profile.branding;
+          const themeConf = typeof rawConfig === 'string' ? JSON.parse(rawConfig) : (rawConfig || {});
+
+          setFormData(prev => ({
+            ...prev,
+            baseCurrency: profile.baseCurrency || themeConf.baseCurrency || prev.baseCurrency,
+            fiscalYearStartMonth: profile.fiscalYearStartMonth || themeConf.fiscalYearStartMonth || prev.fiscalYearStartMonth,
+            timezone: profile.timezone || themeConf.timezone || prev.timezone,
+            dateFormat: profile.dateFormat || themeConf.dateFormat || prev.dateFormat,
+            timeFormat: profile.timeFormat || themeConf.timeFormat || prev.timeFormat,
+            loginTagline: profile.loginTagline || themeConf.loginTagline || prev.loginTagline,
+            allowSelfRegistration: typeof profile.allowSelfRegistration === 'boolean' ? profile.allowSelfRegistration : (typeof themeConf.allowSelfRegistration === 'boolean' ? themeConf.allowSelfRegistration : prev.allowSelfRegistration),
+            allowedEmailDomains: profile.allowedEmailDomains || themeConf.allowedEmailDomains || prev.allowedEmailDomains,
+            defaultUserRole: profile.defaultUserRole || themeConf.defaultUserRole || prev.defaultUserRole,
+            defaultLandingPage: profile.defaultLandingPage || themeConf.defaultLandingPage || prev.defaultLandingPage,
+            inactivityTimeoutMinutes: profile.inactivityTimeoutMinutes !== undefined && profile.inactivityTimeoutMinutes !== null ? String(profile.inactivityTimeoutMinutes) : (themeConf.inactivityTimeoutMinutes || prev.inactivityTimeoutMinutes),
+            maxFileUploadMb: profile.maxFileUploadMb !== undefined && profile.maxFileUploadMb !== null ? String(profile.maxFileUploadMb) : (themeConf.maxFileUploadMb || prev.maxFileUploadMb),
+            maintenanceMode: typeof profile.maintenanceMode === 'boolean' ? profile.maintenanceMode : (typeof themeConf.maintenanceMode === 'boolean' ? themeConf.maintenanceMode : prev.maintenanceMode),
+            announcementBannerText: profile.announcementBannerText || themeConf.announcementBannerText || prev.announcementBannerText,
+            announcementType: profile.announcementType || themeConf.announcementType || prev.announcementType,
+            primaryAccentColor: themeConf.primaryAccentColor || prev.primaryAccentColor,
+            logoLightUrl: themeConf.logoLightUrl || prev.logoLightUrl,
+            logoDarkUrl: themeConf.logoDarkUrl || prev.logoDarkUrl,
+          }));
+        }
+      } catch {
+        const cached = localStorage.getItem('klao-general-settings');
+        if (cached && !cancelled) {
+          try {
+            setFormData(prev => ({ ...prev, ...JSON.parse(cached) }));
+          } catch {}
+        }
+      }
+    };
+    fetchGeneralSettings();
+    return () => { cancelled = true; };
+  }, []);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -340,16 +388,42 @@ const AdminGeneralSettings: React.FC = () => {
     setLogoLightUrl(formData.logoLightUrl);
     setLogoDarkUrl(formData.logoDarkUrl);
     commitTheme(themeOverrides);
-    await saveBrandingToServer(themeOverrides);
 
-    // Simulate API call persistence for non-branding fields
-    await new Promise(resolve => setTimeout(resolve, 600));
-    setIsSaving(false);
-    setSavedSuccessMsg('General Settings saved successfully.');
-
-    setTimeout(() => {
-      setSavedSuccessMsg(null);
-    }, 4000);
+    try {
+      localStorage.setItem('klao-general-settings', JSON.stringify(formData));
+      await fetch('/api/console/company-profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          baseCurrency: formData.baseCurrency,
+          fiscalYearStartMonth: formData.fiscalYearStartMonth,
+          timezone: formData.timezone,
+          dateFormat: formData.dateFormat,
+          timeFormat: formData.timeFormat,
+          loginTagline: formData.loginTagline,
+          allowSelfRegistration: formData.allowSelfRegistration,
+          allowedEmailDomains: formData.allowedEmailDomains,
+          defaultUserRole: formData.defaultUserRole,
+          defaultLandingPage: formData.defaultLandingPage,
+          inactivityTimeoutMinutes: parseInt(String(formData.inactivityTimeoutMinutes), 10) || 30,
+          maxFileUploadMb: parseInt(String(formData.maxFileUploadMb), 10) || 25,
+          maintenanceMode: formData.maintenanceMode,
+          announcementBannerText: formData.announcementBannerText,
+          announcementType: formData.announcementType,
+          themeConfig: themeOverrides,
+          branding: themeOverrides,
+        }),
+      });
+      setSavedSuccessMsg('General Settings saved successfully.');
+    } catch (err: any) {
+      console.error('Error saving General Settings:', err);
+      setSavedSuccessMsg('General Settings saved locally.');
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => {
+        setSavedSuccessMsg(null);
+      }, 4000);
+    }
   };
 
   return (
@@ -614,7 +688,7 @@ const AdminGeneralSettings: React.FC = () => {
                 </div>
               </div>
 
-              <div className="klao-cp-grid-2">
+              <div className="klao-gs-grid-2">
                 <div className="klao-gs-group">
                   <label className="klao-gs-label">Primary Base Currency *</label>
                   <CustomSelect
@@ -638,7 +712,7 @@ const AdminGeneralSettings: React.FC = () => {
                   <span className="klao-gs-help">Beginning month of fiscal annual reporting</span>
                 </div>
 
-                <div className="klao-gs-group">
+                <div className="klao-gs-group" style={{ gridColumn: 'span 2' }}>
                   <label className="klao-gs-label">System Timezone (All Standard World Timezones)</label>
                   <CustomSelect
                     size="md"

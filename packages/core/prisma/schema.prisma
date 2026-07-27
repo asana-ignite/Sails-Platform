@@ -441,8 +441,30 @@ model CompanyProfile {
   termsUrl        String?  @map("terms_url")
   privacyUrl      String?  @map("privacy_url")
 
-  // Branding & Theme
-  branding        Json?    @map("branding")
+  // Localization & Financial Settings
+  baseCurrency             String?  @default("THB") @map("base_currency")
+  fiscalYearStartMonth     String?  @default("January") @map("fiscal_year_start_month")
+  timezone                 String?  @default("Asia/Bangkok") @map("timezone")
+  dateFormat               String?  @default("YYYY-MM-DD") @map("date_format")
+  timeFormat               String?  @default("24h") @map("time_format")
+
+  // System Security & Governance Settings
+  loginTagline             String?  @map("login_tagline")
+  allowSelfRegistration    Boolean  @default(false) @map("allow_self_registration")
+  allowedEmailDomains      String?  @map("allowed_email_domains")
+  defaultUserRole          String?  @default("MEMBER") @map("default_user_role")
+  defaultLandingPage       String?  @default("/console/dashboard") @map("default_landing_page")
+  inactivityTimeoutMinutes Int?     @default(30) @map("inactivity_timeout_minutes")
+  maxFileUploadMb          Int?     @default(25) @map("max_file_upload_mb")
+
+  // Maintenance & Announcement Settings
+  maintenanceMode          Boolean  @default(false) @map("maintenance_mode")
+  announcementBannerText   String?  @map("announcement_banner_text")
+  announcementType         String?  @default("info") @map("announcement_type")
+
+  // Theme & Visual Styling Configuration
+  themeConfig              Json?    @map("theme_config")
+  branding                 Json?    @map("branding")
 
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
