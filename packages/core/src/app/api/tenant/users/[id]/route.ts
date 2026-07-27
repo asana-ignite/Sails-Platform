@@ -4,6 +4,155 @@ import { getAppSession } from '@/lib/auth/session';
 import { SchemaLogger } from '@/core/engine/SchemaLogger';
 
 /**
+ * GET /api/tenant/users/[id]
+ * Fetches detailed profile, positions, teams, and data table access for a single user.
+ */
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getAppSession();
+    const caller = session?.user as any;
+    const { id } = params;
+
+    if (!caller) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN' && caller.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
+    }
+
+    const user = await db.user.findUnique({
+      where: { id },
+      include: {
+        positionSlots: {
+          include: {
+            position: {
+              include: {
+                teamLinks: {
+                  include: {
+                    team: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        teams: {
+          include: {
+            team: true
+          }
+        },
+        objectPermissions: true
+      }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (caller.role !== 'SUPER_ADMIN' && user.tenantId !== caller.tenantId) {
+      return NextResponse.json({ error: 'Forbidden: User outside tenant scope.' }, { status: 403 });
+    }
+
+    // Fetch tenant table definitions
+    const tables = await db.tableDefinition.findMany({
+      where: { tenantId: user.tenantId || caller.tenantId },
+      include: {
+        fields: true
+      }
+    });
+
+    const isSystemAdmin = user.role === 'SUPER_ADMIN' || user.role === 'TENANT_ADMIN' || user.role === 'ADMIN';
+
+    let tableAccessList = [];
+
+    if (isSystemAdmin) {
+      tableAccessList = tables.map(table => ({
+        id: table.id,
+        name: table.name,
+        tableName: table.tableName,
+        description: table.description,
+        isSystem: table.isSystem,
+        fieldCount: table.fields.length,
+        isAccessible: true,
+        canCreate: true,
+        canDelete: true,
+        readScope: 'ALL',
+        modifyScope: 'ALL',
+        source: 'ADMIN_ROLE'
+      }));
+    } else {
+      // Resolve team IDs and position IDs for permissions calculation
+      const explicitTeamIds = user.teams.map(t => t.teamId);
+      const positionIds = user.positionSlots.map(ps => ps.position.id);
+      const positionTeamIds = user.positionSlots.flatMap(ps => ps.position.teamLinks.map(tl => tl.teamId));
+      const allTeamIds = Array.from(new Set([...explicitTeamIds, ...positionTeamIds]));
+
+      // Fetch all object permissions linked to this user, their teams, or their positions
+      const permissions = await db.objectPermission.findMany({
+        where: {
+          tenantId: user.tenantId || caller.tenantId,
+          OR: [
+            { userId: user.id },
+            { teamId: { in: allTeamIds } },
+            { positionId: { in: positionIds } }
+          ]
+        }
+      });
+
+      const scopeRank: Record<string, number> = { 'NONE': 0, 'OWNER': 1, 'TEAM': 2, 'HIERARCHY': 3, 'ALL': 4 };
+      const rankToScope = ['NONE', 'OWNER', 'TEAM', 'HIERARCHY', 'ALL'];
+
+      tableAccessList = tables.map(table => {
+        const tablePerms = permissions.filter(p => p.objectName === table.tableName || p.objectName === table.name);
+        
+        let maxReadRank = 0;
+        let maxModifyRank = 0;
+        let canCreate = false;
+        let canDelete = false;
+
+        tablePerms.forEach(p => {
+          if ((scopeRank[p.readScope] || 0) > maxReadRank) maxReadRank = scopeRank[p.readScope] || 0;
+          if ((scopeRank[p.modifyScope] || 0) > maxModifyRank) maxModifyRank = scopeRank[p.modifyScope] || 0;
+          if (p.canCreate) canCreate = true;
+          if (p.canDelete) canDelete = true;
+        });
+
+        const isAccessible = maxReadRank > 0 || maxModifyRank > 0 || canCreate || canDelete;
+
+        return {
+          id: table.id,
+          name: table.name,
+          tableName: table.tableName,
+          description: table.description,
+          isSystem: table.isSystem,
+          fieldCount: table.fields.length,
+          isAccessible,
+          canCreate,
+          canDelete,
+          readScope: rankToScope[maxReadRank],
+          modifyScope: rankToScope[maxModifyRank],
+          source: tablePerms.length > 0 ? 'ASSIGNED_PERMISSIONS' : 'NONE'
+        };
+      });
+    }
+
+    const accessibleTablesCount = tableAccessList.filter(t => t.isAccessible).length;
+
+    return NextResponse.json({
+      ...user,
+      accessibleTables: tableAccessList,
+      accessibleTablesCount
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+/**
  * PATCH /api/tenant/users/[id]
  * Allows Admins to update user details within their tenant scope.
  */

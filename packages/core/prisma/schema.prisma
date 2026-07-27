@@ -37,6 +37,7 @@ model TableDefinition {
   description String?
   isSystem    Boolean           @default(false) @map("is_system")
   createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @default(now()) @updatedAt @map("updated_at")
   fields      FieldDefinition[]
   tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rules       ValidationRule[]

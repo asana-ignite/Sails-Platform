@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Search, MoreHorizontal, Shield, Circle, UserPlus, Filter, ChevronUp, ChevronDown, ArrowUpDown, ChevronLeft, ChevronRight, Edit2, UserX, UserCheck, Key, Trash2, Copy, X } from 'lucide-react';
 import { useConsole } from '../../contexts/ConsoleContext';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { UserDetailsModal } from './UserDetailsModal';
 import './UserManager.css';
 
 interface User {
@@ -30,6 +31,7 @@ const UserManager: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilters, setActiveFilters] = useState<{ role?: string; status?: string }>({});
   const [selectedRole, setSelectedRole] = useState('Member');
+  const [selectedUserIdForDetails, setSelectedUserIdForDetails] = useState<string | null>(null);
   
   // Form & Modal State
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', title: '', positionText: '', role: 'MEMBER' });
@@ -405,7 +407,7 @@ const UserManager: React.FC = () => {
               <tr
                 key={user.id}
                 className={`klao-user-manager__tr ${selectedUserIds.has(user.id) ? 'klao-user-manager__tr--selected' : ''}`}
-                onClick={() => handleAction('edit', user)}
+                onClick={() => setSelectedUserIdForDetails(user.id)}
                 style={{ cursor: 'pointer' }}
               >
                 <td className="klao-user-manager__td klao-user-manager__td--checkbox" onClick={(e) => e.stopPropagation()}>
@@ -554,7 +556,7 @@ const UserManager: React.FC = () => {
       {/* 4. Add/Edit User Ghost Glass Modal */}
       {showAddUserDrawer && createPortal(
         <div className="klao-modal-overlay">
-          <div className="klao-card" style={{ width: '460px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="klao-card" style={{ width: '940px', maxWidth: '95vw', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <UserPlus size={20} color="var(--klao-primary)" />
@@ -573,32 +575,34 @@ const UserManager: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: '24px' }}>
-              <div className="klao-form-group" style={{ marginBottom: '16px' }}>
-                <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Full Name</label>
-                <input 
-                  type="text" 
-                  className="klao-input" 
-                  placeholder="e.g. John Doe" 
-                  autoFocus 
-                  style={{ width: '100%' }}
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div className="klao-form-group">
+                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Full Name</label>
+                  <input 
+                    type="text" 
+                    className="klao-input" 
+                    placeholder="e.g. John Doe" 
+                    autoFocus 
+                    style={{ width: '100%' }}
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+
+                <div className="klao-form-group">
+                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Email Address</label>
+                  <input 
+                    type="email" 
+                    className="klao-input" 
+                    placeholder="john@example.com" 
+                    style={{ width: '100%' }}
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  />
+                </div>
               </div>
 
-              <div className="klao-form-group" style={{ marginBottom: '16px' }}>
-                <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Email Address</label>
-                <input 
-                  type="email" 
-                  className="klao-input" 
-                  placeholder="john@example.com" 
-                  style={{ width: '100%' }}
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div className="klao-form-group">
                   <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Phone Number</label>
                   <input 
@@ -612,20 +616,32 @@ const UserManager: React.FC = () => {
                 </div>
 
                 <div className="klao-form-group">
-                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Mapped Position (Slot)</label>
-                  <div 
+                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Job Title</label>
+                  <input 
+                    type="text" 
                     className="klao-input" 
-                    style={{ 
-                      width: '100%',
-                      background: 'var(--klao-bg-body)',
-                      color: 'var(--klao-primary, #3b82f6)',
-                      fontWeight: 600,
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                  >
-                    {(formData as any).positionText || 'Unassigned Position'}
-                  </div>
+                    placeholder="e.g. Senior Software Engineer" 
+                    style={{ width: '100%' }}
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="klao-form-group" style={{ marginBottom: '16px' }}>
+                <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Mapped Position (Slot)</label>
+                <div 
+                  className="klao-input" 
+                  style={{ 
+                    width: '100%',
+                    background: 'var(--klao-bg-body)',
+                    color: 'var(--klao-primary, #3b82f6)',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  {(formData as any).positionText || 'Unassigned Position'}
                 </div>
               </div>
 
@@ -766,6 +782,19 @@ const UserManager: React.FC = () => {
         </div>,
         document.body
       )}
+
+      {/* USER DETAILS GHOST GLASS MODAL */}
+      <UserDetailsModal
+        userId={selectedUserIdForDetails}
+        onClose={() => setSelectedUserIdForDetails(null)}
+        onEdit={(id) => {
+          setSelectedUserIdForDetails(null);
+          const targetUser = users.find(u => u.id === id);
+          if (targetUser) {
+            handleAction('edit', targetUser);
+          }
+        }}
+      />
     </div>
   );
 };

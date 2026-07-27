@@ -675,3 +675,30 @@
     box-shadow: var(--klao-shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
+/* Sortable Table Headers */
+.om-th-sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s ease;
+}
+
+.om-th-sortable:hover {
+    color: var(--klao-primary, #3b82f6);
+}
+
+.om-th-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.om-sort-icon--idle {
+    opacity: 0.35;
+    transition: opacity 0.15s ease;
+}
+
+.om-th-sortable:hover .om-sort-icon--idle {
+    opacity: 0.8;
+}
+
+

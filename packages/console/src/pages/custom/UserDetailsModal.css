@@ -1,0 +1,412 @@
+/* KLAO User Details Modal - Ghost Glass DNA */
+
+.klao-user-details-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: klaoFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.klao-user-details-modal {
+  width: 940px;
+  max-width: 95vw;
+  max-height: 88vh;
+  background: var(--klao-bg-card, rgba(255, 255, 255, 0.95));
+  border: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+  border-radius: var(--klao-radius-lg, 20px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  animation: klaoPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--klao-text-main, #0f172a);
+  overflow: hidden;
+}
+
+@keyframes klaoFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes klaoPopIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Header */
+.klao-user-details-modal__header {
+  padding: 24px 28px 18px 28px;
+  border-bottom: 1px solid var(--klao-border, rgba(226, 232, 240, 0.6));
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: var(--klao-bg-surface, rgba(248, 250, 252, 0.5));
+}
+
+.klao-user-details-modal__user-summary {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.klao-user-details-modal__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--klao-primary, #3b82f6), #1d4ed8);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.klao-user-details-modal__user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.klao-user-details-modal__name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.klao-user-details-modal__name {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--klao-text-main, #0f172a);
+}
+
+.klao-user-details-modal__email {
+  font-size: 0.88rem;
+  color: var(--klao-text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.klao-user-details-modal__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.klao-user-details-modal__close-btn {
+  background: transparent;
+  border: none;
+  color: var(--klao-text-muted, #64748b);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.klao-user-details-modal__close-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--klao-text-main, #0f172a);
+}
+
+/* Stat Cards Banner */
+.klao-user-details-modal__stats-banner {
+  padding: 16px 28px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  background: var(--klao-bg-body, rgba(241, 245, 249, 0.4));
+  border-bottom: 1px solid var(--klao-border, rgba(226, 232, 240, 0.6));
+}
+
+.klao-stat-card {
+  background: var(--klao-bg-card, rgba(255, 255, 255, 0.9));
+  border: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.klao-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.klao-stat-card__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.klao-stat-card__icon--position {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.klao-stat-card__icon--team {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.klao-stat-card__icon--tables {
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+}
+
+.klao-stat-card__content {
+  display: flex;
+  flex-direction: column;
+}
+
+.klao-stat-card__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--klao-text-main, #0f172a);
+}
+
+.klao-stat-card__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--klao-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+/* Tabs Bar */
+.klao-user-details-modal__tabs {
+  padding: 0 28px;
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--klao-border, rgba(226, 232, 240, 0.6));
+  background: var(--klao-bg-card, #ffffff);
+}
+
+.klao-tab-btn {
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--klao-text-muted, #64748b);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.klao-tab-btn:hover {
+  color: var(--klao-primary, #3b82f6);
+}
+
+.klao-tab-btn--active {
+  color: var(--klao-primary, #3b82f6);
+  border-bottom-color: var(--klao-primary, #3b82f6);
+}
+
+.klao-tab-btn__badge {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--klao-primary, #3b82f6);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Content Area */
+.klao-user-details-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  background: var(--klao-bg-card, #ffffff);
+}
+
+/* Section Cards & Panels */
+.klao-details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.klao-details-group {
+  background: var(--klao-bg-surface, rgba(248, 250, 252, 0.6));
+  border: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.klao-details-group__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: var(--klao-text-main, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.klao-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.klao-field-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.klao-field-item__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--klao-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.klao-field-item__value {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--klao-text-main, #0f172a);
+}
+
+/* Position Cards */
+.klao-position-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.klao-position-card:last-child {
+  margin-bottom: 0;
+}
+
+.klao-position-card__slot {
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: monospace;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+/* Team List Cards */
+.klao-team-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.klao-team-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Data Table Access Table */
+.klao-data-access-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.klao-data-access-table th {
+  background: var(--klao-bg-surface, #f8fafc);
+  padding: 12px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--klao-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: left;
+  border-bottom: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+}
+
+.klao-data-access-table td {
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  border-bottom: 1px solid var(--klao-border, rgba(241, 245, 249, 0.8));
+  color: var(--klao-text-main, #0f172a);
+}
+
+.klao-data-access-table tr:last-child td {
+  border-bottom: none;
+}
+
+.klao-scope-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.klao-scope-badge--all { background: rgba(16, 185, 129, 0.12); color: #059669; }
+.klao-scope-badge--hierarchy { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+.klao-scope-badge--team { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+.klao-scope-badge--owner { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+.klao-scope-badge--none { background: rgba(100, 116, 139, 0.12); color: #64748b; }
+
+.klao-th-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.klao-th-sortable:hover {
+  color: var(--klao-primary, #3b82f6);
+}
+
+.klao-th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.klao-sort-icon--idle {
+  opacity: 0.35;
+  transition: opacity 0.15s ease;
+}
+
+.klao-th-sortable:hover .klao-sort-icon--idle {
+  opacity: 0.8;
+}

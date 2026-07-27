@@ -28,6 +28,7 @@ export interface KlaoTableDefinition {
   description?: string | null;
   isSystem?: boolean;  // Platform system table indicator
   createdAt: string;
+  updatedAt?: string;
   fields?: KlaoFieldDefinition[];
   rules?: ValidationRule[];
   _count?: { fields: number };

@@ -103,7 +103,13 @@ export async function GET(req: NextRequest) {
           include: {
             position: true
           }
-        }
+        },
+        teams: {
+          include: {
+            team: true
+          }
+        },
+        objectPermissions: true
       },
       orderBy: { createdAt: 'desc' }
     });

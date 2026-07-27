@@ -15,6 +15,9 @@ import {
   Info,
   ChevronRight,
   ChevronLeft,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
   Eye,
   MoreHorizontal,
   Edit2,
@@ -328,12 +331,40 @@ const ObjectManager: React.FC = () => {
   // Pagination state for tables
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [tableSortConfig, setTableSortConfig] = useState<{ key: 'name' | 'description' | 'isSystem' | 'fields' | 'createdAt' | 'updatedAt'; direction: 'asc' | 'desc' } | null>(null);
 
   // Field Manager state
   const [fieldSearchTerm, setFieldSearchTerm] = useState('');
   const [fieldCurrentPage, setFieldCurrentPage] = useState(1);
   const [fieldPageSize, setFieldPageSize] = useState(10);
+  const [fieldSortConfig, setFieldSortConfig] = useState<{ key: 'name' | 'description' | 'logicalType' | 'isSystem' | 'isRequired'; direction: 'asc' | 'desc' } | null>(null);
   const [activeMenuFieldId, setActiveMenuFieldId] = useState<string | null>(null);
+
+  const handleTableSort = (key: 'name' | 'description' | 'isSystem' | 'fields' | 'createdAt' | 'updatedAt') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (tableSortConfig && tableSortConfig.key === key && tableSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setTableSortConfig({ key, direction });
+  };
+
+  const getTableSortIcon = (key: 'name' | 'description' | 'isSystem' | 'fields' | 'createdAt' | 'updatedAt') => {
+    if (!tableSortConfig || tableSortConfig.key !== key) return <ArrowUpDown size={14} className="om-sort-icon--idle" />;
+    return tableSortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
+  };
+
+  const handleFieldSort = (key: 'name' | 'description' | 'logicalType' | 'isSystem' | 'isRequired') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (fieldSortConfig && fieldSortConfig.key === key && fieldSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setFieldSortConfig({ key, direction });
+  };
+
+  const getFieldSortIcon = (key: 'name' | 'description' | 'logicalType' | 'isSystem' | 'isRequired') => {
+    if (!fieldSortConfig || fieldSortConfig.key !== key) return <ArrowUpDown size={14} className="om-sort-icon--idle" />;
+    return fieldSortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
+  };
 
   const [isCreatingTable, setIsCreatingTable] = useState(false);
   const [isCreatingField, setIsCreatingField] = useState(false);
@@ -809,26 +840,63 @@ const ObjectManager: React.FC = () => {
     );
   };
 
-  // Filtered tables based on search term (searches across all displayed columns)
+  // Filtered tables based on search term and sorting
   const filteredTables = useMemo(() => {
-    if (!searchTerm.trim()) return tables;
-    const q = searchTerm.trim().toLowerCase();
+    let list = [...tables];
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toLowerCase();
+      list = list.filter(t => {
+        const nameMatch = t.name?.toLowerCase().includes(q);
+        const dbNameMatch = t.tableName?.toLowerCase().includes(q);
+        const descMatch = t.description?.toLowerCase().includes(q);
+        
+        const fieldsCount = t._count?.fields ?? t.fields?.length ?? 0;
+        const fieldsStr = `${fieldsCount} fields`;
+        const fieldsMatch = fieldsStr.toLowerCase().includes(q);
 
-    return tables.filter(t => {
-      const nameMatch = t.name?.toLowerCase().includes(q);
-      const dbNameMatch = t.tableName?.toLowerCase().includes(q);
-      const descMatch = t.description?.toLowerCase().includes(q);
-      
-      const fieldsCount = t._count?.fields ?? t.fields?.length ?? 0;
-      const fieldsStr = `${fieldsCount} fields`;
-      const fieldsMatch = fieldsStr.toLowerCase().includes(q);
+        const dateStr = t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '';
+        const dateMatch = dateStr.toLowerCase().includes(q);
 
-      const dateStr = t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '';
-      const dateMatch = dateStr.toLowerCase().includes(q);
+        const updatedDateStr = t.updatedAt ? new Date(t.updatedAt).toLocaleString() : (t.createdAt ? new Date(t.createdAt).toLocaleString() : '');
+        const updatedDateMatch = updatedDateStr.toLowerCase().includes(q);
 
-      return nameMatch || dbNameMatch || descMatch || fieldsMatch || dateMatch;
-    });
-  }, [tables, searchTerm]);
+        return nameMatch || dbNameMatch || descMatch || fieldsMatch || dateMatch || updatedDateMatch;
+      });
+    }
+
+    if (tableSortConfig !== null) {
+      list.sort((a, b) => {
+        let valA: any = '';
+        let valB: any = '';
+
+        if (tableSortConfig.key === 'name') {
+          valA = a.name || '';
+          valB = b.name || '';
+        } else if (tableSortConfig.key === 'description') {
+          valA = a.description || '';
+          valB = b.description || '';
+        } else if (tableSortConfig.key === 'isSystem') {
+          valA = a.isSystem ? 1 : 0;
+          valB = b.isSystem ? 1 : 0;
+        } else if (tableSortConfig.key === 'fields') {
+          valA = a._count?.fields ?? a.fields?.length ?? 0;
+          valB = b._count?.fields ?? b.fields?.length ?? 0;
+        } else if (tableSortConfig.key === 'createdAt') {
+          valA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          valB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        } else if (tableSortConfig.key === 'updatedAt') {
+          valA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+          valB = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+        }
+
+        if (valA < valB) return tableSortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return tableSortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return list;
+  }, [tables, searchTerm, tableSortConfig]);
 
   // Reset to page 1 when search term or page size changes
   useEffect(() => {
@@ -846,24 +914,54 @@ const ObjectManager: React.FC = () => {
     return filteredTables.slice(start, start + pageSize);
   }, [filteredTables, currentPage, pageSize]);
 
-  // Filtered fields based on fieldSearchTerm
+  // Filtered fields based on fieldSearchTerm and sorting
   const filteredFields = useMemo(() => {
-    const fields = selectedTable?.fields || [];
-    if (!fieldSearchTerm.trim()) return fields;
-    const q = fieldSearchTerm.trim().toLowerCase();
+    let fields = [...(selectedTable?.fields || [])];
+    if (fieldSearchTerm.trim()) {
+      const q = fieldSearchTerm.trim().toLowerCase();
+      fields = fields.filter(f => {
+        const nameMatch = f.name?.toLowerCase().includes(q);
+        const descMatch = f.description?.toLowerCase().includes(q);
+        const dbNameMatch = f.fieldName?.toLowerCase().includes(q);
+        const logicalTypeMatch = f.logicalType?.toLowerCase().includes(q);
+        const physicalTypeMatch = f.physicalType?.toLowerCase().includes(q);
+        const reqStr = f.isRequired ? 'required' : 'optional';
+        const reqMatch = reqStr.includes(q);
 
-    return fields.filter(f => {
-      const nameMatch = f.name?.toLowerCase().includes(q);
-      const descMatch = f.description?.toLowerCase().includes(q);
-      const dbNameMatch = f.fieldName?.toLowerCase().includes(q);
-      const logicalTypeMatch = f.logicalType?.toLowerCase().includes(q);
-      const physicalTypeMatch = f.physicalType?.toLowerCase().includes(q);
-      const reqStr = f.isRequired ? 'required' : 'optional';
-      const reqMatch = reqStr.includes(q);
+        return nameMatch || descMatch || dbNameMatch || logicalTypeMatch || physicalTypeMatch || reqMatch;
+      });
+    }
 
-      return nameMatch || descMatch || dbNameMatch || logicalTypeMatch || physicalTypeMatch || reqMatch;
-    });
-  }, [selectedTable?.fields, fieldSearchTerm]);
+    if (fieldSortConfig !== null) {
+      fields.sort((a, b) => {
+        let valA: any = '';
+        let valB: any = '';
+
+        if (fieldSortConfig.key === 'name') {
+          valA = a.name || '';
+          valB = b.name || '';
+        } else if (fieldSortConfig.key === 'description') {
+          valA = a.description || '';
+          valB = b.description || '';
+        } else if (fieldSortConfig.key === 'logicalType') {
+          valA = a.logicalType || '';
+          valB = b.logicalType || '';
+        } else if (fieldSortConfig.key === 'isSystem') {
+          valA = a.isSystem ? 1 : 0;
+          valB = b.isSystem ? 1 : 0;
+        } else if (fieldSortConfig.key === 'isRequired') {
+          valA = a.isRequired ? 1 : 0;
+          valB = b.isRequired ? 1 : 0;
+        }
+
+        if (valA < valB) return fieldSortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return fieldSortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return fields;
+  }, [selectedTable?.fields, fieldSearchTerm, fieldSortConfig]);
 
   // Reset field page to 1 when search or page size changes
   useEffect(() => {
@@ -948,11 +1046,42 @@ const ObjectManager: React.FC = () => {
             <table className="om-list-table">
               <thead>
                 <tr>
-                  <th>Model</th>
-                  <th>Description</th>
-                  <th>Model Type</th>
-                  <th>Fields</th>
-                  <th>Created At</th>
+                  <th className="om-th-sortable" onClick={() => handleTableSort('name')}>
+                    <div className="om-th-content">
+                      <span>Model</span>
+                      {getTableSortIcon('name')}
+                    </div>
+                  </th>
+                  <th className="om-th-sortable" onClick={() => handleTableSort('description')}>
+                    <div className="om-th-content">
+                      <span>Description</span>
+                      {getTableSortIcon('description')}
+                    </div>
+                  </th>
+                  <th className="om-th-sortable" onClick={() => handleTableSort('isSystem')}>
+                    <div className="om-th-content">
+                      <span>Model Type</span>
+                      {getTableSortIcon('isSystem')}
+                    </div>
+                  </th>
+                  <th className="om-th-sortable" onClick={() => handleTableSort('fields')}>
+                    <div className="om-th-content">
+                      <span>Fields</span>
+                      {getTableSortIcon('fields')}
+                    </div>
+                  </th>
+                  <th className="om-th-sortable" onClick={() => handleTableSort('createdAt')}>
+                    <div className="om-th-content">
+                      <span>Created At</span>
+                      {getTableSortIcon('createdAt')}
+                    </div>
+                  </th>
+                  <th className="om-th-sortable" onClick={() => handleTableSort('updatedAt')}>
+                    <div className="om-th-content">
+                      <span>Last Modified</span>
+                      {getTableSortIcon('updatedAt')}
+                    </div>
+                  </th>
                   <th style={{ textAlign: 'right' }}></th>
                 </tr>
               </thead>
@@ -961,6 +1090,7 @@ const ObjectManager: React.FC = () => {
                   const fieldsCount = table._count?.fields ?? table.fields?.length ?? 0;
                   const fieldsText = `${fieldsCount} Fields`;
                   const dateText = table.createdAt ? new Date(table.createdAt).toLocaleDateString() : 'N/A';
+                  const updatedDateText = table.updatedAt ? new Date(table.updatedAt).toLocaleString() : (table.createdAt ? new Date(table.createdAt).toLocaleString() : 'N/A');
 
                   return (
                     <tr key={table.id} className="om-clickable-row" onClick={() => selectRow(table)}>
@@ -1000,6 +1130,12 @@ const ObjectManager: React.FC = () => {
                         <span className="om-date-cell">
                           <Calendar size={14} style={{ marginRight: '4px' }} />
                           {renderHighlightedText(dateText, searchTerm)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="om-date-cell">
+                          <Calendar size={14} style={{ marginRight: '4px' }} />
+                          {renderHighlightedText(updatedDateText, searchTerm)}
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>
@@ -1174,11 +1310,36 @@ const ObjectManager: React.FC = () => {
                 <table className="om-list-table">
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Description</th>
-                      <th>Type</th>
-                      <th>Category</th>
-                      <th>Required</th>
+                      <th className="om-th-sortable" onClick={() => handleFieldSort('name')}>
+                        <div className="om-th-content">
+                          <span>Name</span>
+                          {getFieldSortIcon('name')}
+                        </div>
+                      </th>
+                      <th className="om-th-sortable" onClick={() => handleFieldSort('description')}>
+                        <div className="om-th-content">
+                          <span>Description</span>
+                          {getFieldSortIcon('description')}
+                        </div>
+                      </th>
+                      <th className="om-th-sortable" onClick={() => handleFieldSort('logicalType')}>
+                        <div className="om-th-content">
+                          <span>Type</span>
+                          {getFieldSortIcon('logicalType')}
+                        </div>
+                      </th>
+                      <th className="om-th-sortable" onClick={() => handleFieldSort('isSystem')}>
+                        <div className="om-th-content">
+                          <span>Category</span>
+                          {getFieldSortIcon('isSystem')}
+                        </div>
+                      </th>
+                      <th className="om-th-sortable" onClick={() => handleFieldSort('isRequired')}>
+                        <div className="om-th-content">
+                          <span>Required</span>
+                          {getFieldSortIcon('isRequired')}
+                        </div>
+                      </th>
                       <th style={{ textAlign: 'right' }}></th>
                     </tr>
                   </thead>
