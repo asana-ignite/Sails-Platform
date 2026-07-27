@@ -6,7 +6,7 @@ export const AddressType: FieldTypePlugin = {
   type: 'address',
   label: 'Address',
   description: 'Physical location and postal address',
-  iconName: 'AlignLeft',
+  iconName: 'MapPin',
   physicalType: 'text',
   parametersSchema: [
     { name: 'includeCountry', label: 'Include Country Field', type: 'boolean', defaultValue: true },

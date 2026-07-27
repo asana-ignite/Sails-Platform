@@ -22,6 +22,7 @@ model Tenant {
   teams           Team[]
   users           User[]
   positions       Position[]
+  companyProfile  CompanyProfile?
 
   @@index([createdAt])
   @@map("tenants")
@@ -402,5 +403,44 @@ model TeamPosition {
   @@id([teamId, positionId])
   @@index([positionId])
   @@map("team_positions")
+  @@schema("core")
+}
+
+model CompanyProfile {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique @map("tenant_id")
+  
+  // Organization Details
+  legalName       String?  @map("legal_name")
+  tradingName     String?  @map("trading_name")
+  taxId           String?  @map("tax_id")
+  industry        String?
+  companySize     String?  @map("company_size")
+  websiteUrl      String?  @map("website_url")
+
+  // Contact & Headquarters
+  corporateEmail  String?  @map("corporate_email")
+  supportEmail    String?  @map("support_email")
+  phone           String?
+  fax             String?
+  streetAddress   String?  @map("street_address")
+  subDistrict     String?  @map("sub_district")
+  city            String?
+  postalCode      String?  @map("postal_code")
+  country         String?
+
+  // Legal & Compliance
+  dpoName         String?  @map("dpo_name")
+  dpoEmail        String?  @map("dpo_email")
+  termsUrl        String?  @map("terms_url")
+  privacyUrl      String?  @map("privacy_url")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("company_profiles")
   @@schema("core")
 }

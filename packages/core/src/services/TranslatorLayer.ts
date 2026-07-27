@@ -89,6 +89,11 @@ export class TranslatorLayer {
       relationTarget: relationTarget
     });
 
+    // 1b. If logicalType is auto_number, setup PostgreSQL sequence and dynamic DEFAULT expression
+    if (logicalType === 'auto_number') {
+      await this.alchemaCore.setupAutoNumberColumn(tableDef.tenant.schemaName, tableDef.tableName, fieldName, config);
+    }
+
     // 2. Save metadata
     const fieldDef = await db.fieldDefinition.create({
       data: {
@@ -363,5 +368,35 @@ export class TranslatorLayer {
     );
 
     return rule;
+  }
+
+  /**
+   * Resets sequence counter for an Auto Number field.
+   */
+  async resetFieldSequence(fieldId: string, nextValue: number = 1) {
+    const fieldDef = await db.fieldDefinition.findUniqueOrThrow({
+      where: { id: fieldId },
+      include: { table: { include: { tenant: true } } }
+    });
+
+    if (fieldDef.logicalType !== 'auto_number') {
+      throw new Error(`Field '${fieldDef.name}' is not an Auto Number field.`);
+    }
+
+    const tenantSchema = fieldDef.table.tenant.schemaName;
+    const tableName = fieldDef.table.tableName;
+    const fieldName = fieldDef.fieldName;
+
+    await this.alchemaCore.resetSequence(tenantSchema, tableName, fieldName, nextValue);
+
+    const updatedConfig = {
+      ...(fieldDef.config as any || {}),
+      startingNumber: nextValue
+    };
+
+    return await db.fieldDefinition.update({
+      where: { id: fieldId },
+      data: { config: updatedConfig }
+    });
   }
 }

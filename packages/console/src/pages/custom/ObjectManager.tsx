@@ -31,12 +31,62 @@ import {
   Mail,
   Phone,
   Sliders,
-  Table
+  Table,
+  Sparkles,
+  RefreshCw,
+  MapPin
 } from 'lucide-react';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import './ObjectManager.css';
 
 const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
+  {
+    type: 'auto_number',
+    label: 'Auto Number',
+    description: 'Auto-incrementing formatted identifier (supports date tokens: {YYYY}, {YY}, {MM}, {DD})',
+    iconName: 'Hash',
+    physicalType: 'text',
+    parametersSchema: [
+      {
+        name: 'prefix',
+        label: 'Format Pattern',
+        type: 'text',
+        placeholder: 'e.g. INV-0000 or INV-{yyyy}0000',
+        description: 'Format pattern using zeroes (e.g. 0000 = 4 digits padding) and date tokens ({yyyy}, {mm}, {dd})'
+      },
+      {
+        name: 'startingNumber',
+        label: 'Starting Number',
+        type: 'number',
+        defaultValue: 1,
+        min: 1,
+        description: 'First sequence number for new records'
+      }
+    ]
+  },
+  {
+    type: 'number',
+    label: 'Number / Decimal',
+    description: 'Numeric value supporting integer or floating point decimal precision',
+    iconName: 'Hash',
+    physicalType: 'number',
+    parametersSchema: [
+      {
+        name: 'numberType',
+        label: 'Number Subtype',
+        type: 'select',
+        defaultValue: 'decimal',
+        options: [
+          { label: 'Decimal / Floating Point', value: 'decimal' },
+          { label: 'Integer (Whole Numbers)', value: 'integer' }
+        ]
+      },
+      { name: 'decimalPlaces', label: 'No. Decimal Places', type: 'number', defaultValue: 2, min: 0, max: 10 },
+      { name: 'min', label: 'Minimum Value', type: 'number', placeholder: 'e.g. 0' },
+      { name: 'max', label: 'Maximum Value', type: 'number', placeholder: 'e.g. 1000000' },
+      { name: 'defaultValue', label: 'Default Value', type: 'number', placeholder: 'e.g. 0' }
+    ]
+  },
   {
     type: 'short_text',
     label: 'Short Text',
@@ -69,116 +119,6 @@ const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
     parametersSchema: [
       { name: 'maxLength', label: 'Max Character Length', type: 'number', defaultValue: 2000, min: 1 },
       { name: 'placeholder', label: 'Placeholder Text', type: 'text', placeholder: 'e.g. Provide details...' }
-    ]
-  },
-  {
-    type: 'number',
-    label: 'Number / Decimal',
-    description: 'Numeric value supporting integer or floating point decimal precision',
-    iconName: 'Hash',
-    physicalType: 'number',
-    parametersSchema: [
-      {
-        name: 'numberType',
-        label: 'Number Subtype',
-        type: 'select',
-        defaultValue: 'decimal',
-        options: [
-          { label: 'Decimal / Floating Point', value: 'decimal' },
-          { label: 'Integer (Whole Numbers)', value: 'integer' }
-        ]
-      },
-      { name: 'decimalPlaces', label: 'No. Decimal Places', type: 'number', defaultValue: 2, min: 0, max: 10 },
-      { name: 'min', label: 'Minimum Value', type: 'number', placeholder: 'e.g. 0' },
-      { name: 'max', label: 'Maximum Value', type: 'number', placeholder: 'e.g. 1000000' },
-      { name: 'defaultValue', label: 'Default Value', type: 'number', placeholder: 'e.g. 0' }
-    ]
-  },
-  {
-    type: 'currency',
-    label: 'Currency',
-    description: 'Financial monetary value with currency symbol',
-    iconName: 'DollarSign',
-    physicalType: 'number',
-    parametersSchema: [
-      {
-        name: 'currencySymbol',
-        label: 'Currency Symbol',
-        type: 'select',
-        defaultValue: '$',
-        options: [
-          { label: '$ (USD / Dollar)', value: '$' },
-          { label: '฿ (THB / Baht)', value: '฿' },
-          { label: '€ (EUR / Euro)', value: '€' },
-          { label: '£ (GBP / Pound)', value: '£' },
-          { label: '¥ (JPY / Yen)', value: '¥' }
-        ]
-      },
-      { name: 'decimalPlaces', label: 'No. Decimal Places', type: 'number', defaultValue: 2, min: 0, max: 6 },
-      { name: 'min', label: 'Minimum Amount', type: 'number', placeholder: '0' },
-      { name: 'max', label: 'Maximum Amount', type: 'number', placeholder: '100000000' }
-    ]
-  },
-  {
-    type: 'boolean',
-    label: 'Boolean',
-    description: 'True or False toggle state',
-    iconName: 'ToggleLeft',
-    physicalType: 'boolean',
-    parametersSchema: [
-      {
-        name: 'defaultValue',
-        label: 'Default State',
-        type: 'select',
-        defaultValue: 'false',
-        options: [
-          { label: 'False (Unchecked)', value: 'false' },
-          { label: 'True (Checked)', value: 'true' }
-        ]
-      },
-      { name: 'trueLabel', label: 'True Display Label', type: 'text', placeholder: 'Yes / Active', defaultValue: 'True' },
-      { name: 'falseLabel', label: 'False Display Label', type: 'text', placeholder: 'No / Inactive', defaultValue: 'False' }
-    ]
-  },
-  {
-    type: 'date',
-    label: 'Date / Time',
-    description: 'Calendar date and timestamp precision',
-    iconName: 'Calendar',
-    physicalType: 'date',
-    parametersSchema: [
-      {
-        name: 'dateFormat',
-        label: 'Display Date Format',
-        type: 'select',
-        defaultValue: 'YYYY-MM-DD',
-        options: [
-          { label: 'YYYY-MM-DD (ISO)', value: 'YYYY-MM-DD' },
-          { label: 'DD/MM/YYYY', value: 'DD/MM/YYYY' },
-          { label: 'MM/DD/YYYY', value: 'MM/DD/YYYY' }
-        ]
-      },
-      { name: 'defaultCurrent', label: 'Default to Current Date/Time', type: 'boolean', defaultValue: false }
-    ]
-  },
-  {
-    type: 'email',
-    label: 'Email',
-    description: 'Email address with pattern validation',
-    iconName: 'Mail',
-    physicalType: 'text',
-    parametersSchema: [
-      { name: 'placeholder', label: 'Input Placeholder', type: 'text', placeholder: 'e.g. user@example.com' }
-    ]
-  },
-  {
-    type: 'phone',
-    label: 'Phone',
-    description: 'Telephone or mobile phone number',
-    iconName: 'Phone',
-    physicalType: 'text',
-    parametersSchema: [
-      { name: 'placeholder', label: 'Input Placeholder', type: 'text', placeholder: 'e.g. +1 555-0199' }
     ]
   },
   {
@@ -224,6 +164,94 @@ const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
     ]
   },
   {
+    type: 'relation',
+    label: 'Relation',
+    description: 'Foreign key link to records in another data model',
+    iconName: 'Link',
+    physicalType: 'relation',
+    parametersSchema: [
+      { name: 'targetTable', label: 'Target Data Model', type: 'model_select', required: true },
+      {
+        name: 'relationType',
+        label: 'Relation Type',
+        type: 'select',
+        defaultValue: 'many_to_one',
+        options: [
+          { label: 'Many-to-One (Lookup Foreign Key)', value: 'many_to_one' },
+          { label: 'One-to-Many', value: 'one_to_many' },
+          { label: 'One-to-One', value: 'one_to_one' }
+        ]
+      }
+    ]
+  },
+  {
+    type: 'boolean',
+    label: 'Boolean',
+    description: 'True or False toggle state',
+    iconName: 'ToggleLeft',
+    physicalType: 'boolean',
+    parametersSchema: [
+      {
+        name: 'defaultValue',
+        label: 'Default State',
+        type: 'select',
+        defaultValue: 'false',
+        options: [
+          { label: 'False (Unchecked)', value: 'false' },
+          { label: 'True (Checked)', value: 'true' }
+        ]
+      },
+      { name: 'trueLabel', label: 'True Display Label', type: 'text', placeholder: 'Yes / Active', defaultValue: 'True' },
+      { name: 'falseLabel', label: 'False Display Label', type: 'text', placeholder: 'No / Inactive', defaultValue: 'False' }
+    ]
+  },
+  {
+    type: 'date',
+    label: 'Date / Time',
+    description: 'Calendar date and timestamp precision',
+    iconName: 'Calendar',
+    physicalType: 'date',
+    parametersSchema: [
+      {
+        name: 'dateFormat',
+        label: 'Display Date Format',
+        type: 'select',
+        defaultValue: 'YYYY-MM-DD',
+        options: [
+          { label: 'YYYY-MM-DD (ISO)', value: 'YYYY-MM-DD' },
+          { label: 'DD/MM/YYYY', value: 'DD/MM/YYYY' },
+          { label: 'MM/DD/YYYY', value: 'MM/DD/YYYY' }
+        ]
+      },
+      { name: 'defaultCurrent', label: 'Default to Current Date/Time', type: 'boolean', defaultValue: false }
+    ]
+  },
+  {
+    type: 'currency',
+    label: 'Currency',
+    description: 'Financial monetary value with currency symbol',
+    iconName: 'DollarSign',
+    physicalType: 'number',
+    parametersSchema: [
+      {
+        name: 'currencySymbol',
+        label: 'Currency Symbol',
+        type: 'select',
+        defaultValue: '$',
+        options: [
+          { label: '$ (USD / Dollar)', value: '$' },
+          { label: '฿ (THB / Baht)', value: '฿' },
+          { label: '€ (EUR / Euro)', value: '€' },
+          { label: '£ (GBP / Pound)', value: '£' },
+          { label: '¥ (JPY / Yen)', value: '¥' }
+        ]
+      },
+      { name: 'decimalPlaces', label: 'No. Decimal Places', type: 'number', defaultValue: 2, min: 0, max: 6 },
+      { name: 'min', label: 'Minimum Amount', type: 'number', placeholder: '0' },
+      { name: 'max', label: 'Maximum Amount', type: 'number', placeholder: '100000000' }
+    ]
+  },
+  {
     type: 'percentage',
     label: 'Percentage',
     description: 'Numeric percentage value (e.g. 15.5%)',
@@ -237,10 +265,20 @@ const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
     ]
   },
   {
+    type: 'phone',
+    label: 'Phone Number',
+    description: 'Telephone or mobile phone number',
+    iconName: 'Phone',
+    physicalType: 'text',
+    parametersSchema: [
+      { name: 'placeholder', label: 'Input Placeholder', type: 'text', placeholder: 'e.g. +1 555-0199' }
+    ]
+  },
+  {
     type: 'address',
     label: 'Address',
     description: 'Physical location and postal address',
-    iconName: 'AlignLeft',
+    iconName: 'MapPin',
     physicalType: 'text',
     parametersSchema: [
       { name: 'includeCountry', label: 'Include Country Field', type: 'boolean', defaultValue: true },
@@ -276,27 +314,6 @@ const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
         label: 'Allow Multiple File Uploads',
         type: 'boolean',
         defaultValue: false
-      }
-    ]
-  },
-  {
-    type: 'relation',
-    label: 'Relation',
-    description: 'Foreign key link to records in another data model',
-    iconName: 'Link',
-    physicalType: 'relation',
-    parametersSchema: [
-      { name: 'targetTable', label: 'Target Data Model', type: 'model_select', required: true },
-      {
-        name: 'relationType',
-        label: 'Relation Type',
-        type: 'select',
-        defaultValue: 'many_to_one',
-        options: [
-          { label: 'Many-to-One (Lookup Foreign Key)', value: 'many_to_one' },
-          { label: 'One-to-Many', value: 'one_to_many' },
-          { label: 'One-to-One', value: 'one_to_one' }
-        ]
       }
     ]
   }
@@ -353,6 +370,34 @@ const ObjectManager: React.FC = () => {
   const [editFieldLogicalType, setEditFieldLogicalType] = useState('short_text');
   const [editFieldRequired, setEditFieldRequired] = useState(false);
   const [editDynamicConfigValues, setEditDynamicConfigValues] = useState<Record<string, any>>({});
+
+  // Sequence reset state
+  const [resetSeqValue, setResetSeqValue] = useState<number>(1);
+  const [isResettingSeq, setIsResettingSeq] = useState(false);
+  const [resetSeqSuccessMsg, setResetSeqSuccessMsg] = useState<string | null>(null);
+
+  const handleResetSequence = async (fieldId: string) => {
+    setIsResettingSeq(true);
+    setResetSeqSuccessMsg(null);
+    try {
+      const res = await fetch(`/api/metadata/fields/${fieldId}/reset-sequence`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nextValue: resetSeqValue })
+      });
+      if (res.ok) {
+        setResetSeqSuccessMsg(`Sequence counter successfully reset to ${resetSeqValue}.`);
+        fetchTables();
+      } else {
+        const data = await res.json();
+        setErrorMsg(data.error || 'Failed to reset sequence counter');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error resetting sequence counter');
+    } finally {
+      setIsResettingSeq(false);
+    }
+  };
 
   // Fetch registered field types from Core API Registry
   const fetchFieldTypes = useCallback(async () => {
@@ -1572,6 +1617,7 @@ const ObjectManager: React.FC = () => {
                         if (t.iconName === 'Phone') IconComp = Phone;
                         if (t.iconName === 'List') IconComp = List;
                         if (t.iconName === 'Link') IconComp = Link;
+                        if (t.iconName === 'MapPin') IconComp = MapPin;
 
                         const isActive = newFieldLogicalType === t.type;
                         return (
@@ -1717,87 +1763,140 @@ const ObjectManager: React.FC = () => {
                             This field type does not require additional parameters.
                           </p>
                         ) : (
-                          <div className="om-form-grid-2">
-                            {activeFieldTypeMeta.parametersSchema.map((param: FieldParameterDefinition) => {
-                              if (param.type === 'select') {
-                                return (
-                                  <div key={param.name} className="om-field-group">
-                                    <label className="om-field-label">{param.label}</label>
-                                    <CustomSelect
-                                      size="md"
-                                      value={dynamicConfigValues[param.name] ?? param.defaultValue ?? ''}
-                                      options={param.options || []}
-                                      onChange={val => setDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
-                                    />
-                                  </div>
-                                );
-                              }
+                          <div>
+                            {newFieldLogicalType === 'auto_number' && (
+                              <div style={{
+                                padding: '12px 16px',
+                                backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                                border: '1px solid rgba(59, 130, 246, 0.25)',
+                                borderRadius: '8px',
+                                marginBottom: '16px'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#60a5fa', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
+                                  <Sparkles size={16} />
+                                  <span>Format Pattern & Date Token Guidance</span>
+                                </div>
+                                <p style={{ margin: '0 0 8px 0', fontSize: '0.8125rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+                                  Enter zeros (e.g. <code>0000</code>) to auto-detect padding digits. Insert date tokens anywhere in pattern.
+                                </p>
+                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
+                                  <div><code>INV-0000</code> ➔ 4 digits (<code>INV-0001</code>)</div>
+                                  <div><code>{`{yyyy}`}</code> / <code>{`{YYYY}`}</code> ➔ 4-digit Year</div>
+                                  <div><code>INV-{`{yyyy}`}00000</code> ➔ Year + 5 digits</div>
+                                  <div><code>{`{mm}`}</code> / <code>{`{MM}`}</code> ➔ 2-digit Month</div>
+                                  <div><code>REQ-{`{yyyy}`}-{`{mm}`}-000-US</code></div>
+                                  <div><code>{`{dd}`}</code> / <code>{`{DD}`}</code> ➔ 2-digit Day</div>
+                                </div>
+                              </div>
+                            )}
 
-                              if (param.type === 'boolean') {
-                                return (
-                                  <div key={param.name} className="om-field-group" style={{ justifyContent: 'center' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
-                                      <input
-                                        type="checkbox"
-                                        checked={!!dynamicConfigValues[param.name]}
-                                        onChange={e => setDynamicConfigValues(prev => ({ ...prev, [param.name]: e.target.checked }))}
-                                        style={{ width: 'auto' }}
+                            <div className="om-form-grid-2">
+                              {activeFieldTypeMeta.parametersSchema.map((param: FieldParameterDefinition) => {
+                                if (param.type === 'select') {
+                                  return (
+                                    <div key={param.name} className="om-field-group">
+                                      <label className="om-field-label">{param.label}</label>
+                                      <CustomSelect
+                                        size="md"
+                                        value={dynamicConfigValues[param.name] ?? param.defaultValue ?? ''}
+                                        options={param.options || []}
+                                        onChange={val => setDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
                                       />
-                                      <label className="om-field-label" style={{ margin: 0 }}>{param.label}</label>
+                                      {param.description && (
+                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                          {param.description}
+                                        </small>
+                                      )}
                                     </div>
-                                  </div>
-                                );
-                              }
+                                  );
+                                }
 
-                              if (param.type === 'model_select') {
+                                if (param.type === 'boolean') {
+                                  return (
+                                    <div key={param.name} className="om-field-group" style={{ justifyContent: 'center' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={!!dynamicConfigValues[param.name]}
+                                          onChange={e => setDynamicConfigValues(prev => ({ ...prev, [param.name]: e.target.checked }))}
+                                          style={{ width: 'auto' }}
+                                        />
+                                        <label className="om-field-label" style={{ margin: 0 }}>{param.label}</label>
+                                      </div>
+                                      {param.description && (
+                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                          {param.description}
+                                        </small>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
+                                if (param.type === 'model_select') {
+                                  return (
+                                    <div key={param.name} className="om-field-group">
+                                      <label className="om-field-label">{param.label} *</label>
+                                      <CustomSelect
+                                        size="md"
+                                        value={dynamicConfigValues[param.name] || ''}
+                                        options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
+                                        onChange={val => setDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
+                                        placeholder="Select Target Model"
+                                      />
+                                      {param.description && (
+                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                          {param.description}
+                                        </small>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
+                                if (param.type === 'textarea') {
+                                  return (
+                                    <div key={param.name} className="om-field-group om-field-group--full">
+                                      <label className="om-field-label">{param.label}</label>
+                                      <textarea
+                                        className="klao-input"
+                                        placeholder={param.placeholder}
+                                        rows={4}
+                                        value={dynamicConfigValues[param.name] || ''}
+                                        onChange={e => setDynamicConfigValues(prev => ({ ...prev, [param.name]: e.target.value }))}
+                                        style={{ resize: 'vertical' }}
+                                      />
+                                      {param.description && (
+                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                          {param.description}
+                                        </small>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
                                 return (
                                   <div key={param.name} className="om-field-group">
-                                    <label className="om-field-label">{param.label} *</label>
-                                    <CustomSelect
-                                      size="md"
-                                      value={dynamicConfigValues[param.name] || ''}
-                                      options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
-                                      onChange={val => setDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
-                                      placeholder="Select Target Model"
-                                    />
-                                  </div>
-                                );
-                              }
-
-                              if (param.type === 'textarea') {
-                                return (
-                                  <div key={param.name} className="om-field-group om-field-group--full">
                                     <label className="om-field-label">{param.label}</label>
-                                    <textarea
+                                    <input
+                                      type={param.type === 'number' ? 'number' : 'text'}
                                       className="klao-input"
                                       placeholder={param.placeholder}
-                                      rows={4}
-                                      value={dynamicConfigValues[param.name] || ''}
-                                      onChange={e => setDynamicConfigValues(prev => ({ ...prev, [param.name]: e.target.value }))}
-                                      style={{ resize: 'vertical' }}
+                                      min={param.min}
+                                      max={param.max}
+                                      value={dynamicConfigValues[param.name] ?? ''}
+                                      onChange={e => setDynamicConfigValues(prev => ({ 
+                                        ...prev, 
+                                        [param.name]: param.type === 'number' && e.target.value !== '' ? Number(e.target.value) : e.target.value 
+                                      }))}
                                     />
+                                    {param.description && (
+                                      <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                        {param.description}
+                                      </small>
+                                    )}
                                   </div>
                                 );
-                              }
-
-                              return (
-                                <div key={param.name} className="om-field-group">
-                                  <label className="om-field-label">{param.label}</label>
-                                  <input
-                                    type={param.type === 'number' ? 'number' : 'text'}
-                                    className="klao-input"
-                                    placeholder={param.placeholder}
-                                    min={param.min}
-                                    max={param.max}
-                                    value={dynamicConfigValues[param.name] ?? ''}
-                                    onChange={e => setDynamicConfigValues(prev => ({ 
-                                      ...prev, 
-                                      [param.name]: param.type === 'number' && e.target.value !== '' ? Number(e.target.value) : e.target.value 
-                                    }))}
-                                  />
-                                </div>
-                              );
-                            })}
+                              })}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1953,6 +2052,7 @@ const ObjectManager: React.FC = () => {
                         if (t.iconName === 'Phone') IconComp = Phone;
                         if (t.iconName === 'List') IconComp = List;
                         if (t.iconName === 'Link') IconComp = Link;
+                        if (t.iconName === 'MapPin') IconComp = MapPin;
 
                         const isActive = editFieldLogicalType === t.type;
                         return (
@@ -2097,87 +2197,184 @@ const ObjectManager: React.FC = () => {
                             This field type does not require additional parameters.
                           </p>
                         ) : (
-                          <div className="om-form-grid-2">
-                            {activeFieldTypeMeta.parametersSchema.map((param: FieldParameterDefinition) => {
-                              if (param.type === 'select') {
-                                return (
-                                  <div key={param.name} className="om-field-group">
-                                    <label className="om-field-label">{param.label}</label>
-                                    <CustomSelect
-                                      size="md"
-                                      value={editDynamicConfigValues[param.name] ?? param.defaultValue ?? ''}
-                                      options={param.options || []}
-                                      onChange={val => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
-                                    />
-                                  </div>
-                                );
-                              }
+                          <div>
+                            {editFieldLogicalType === 'auto_number' && (
+                              <div style={{
+                                padding: '12px 16px',
+                                backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                                border: '1px solid rgba(59, 130, 246, 0.25)',
+                                borderRadius: '8px',
+                                marginBottom: '16px'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#60a5fa', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
+                                  <Sparkles size={16} />
+                                  <span>Format Pattern & Date Token Guidance</span>
+                                </div>
+                                <p style={{ margin: '0 0 8px 0', fontSize: '0.8125rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+                                  Enter zeros (e.g. <code>0000</code>) to auto-detect padding digits. Insert date tokens anywhere in pattern.
+                                </p>
+                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
+                                  <div><code>INV-0000</code> ➔ 4 digits (<code>INV-0001</code>)</div>
+                                  <div><code>{`{yyyy}`}</code> / <code>{`{YYYY}`}</code> ➔ 4-digit Year</div>
+                                  <div><code>INV-{`{yyyy}`}00000</code> ➔ Year + 5 digits</div>
+                                  <div><code>{`{mm}`}</code> / <code>{`{MM}`}</code> ➔ 2-digit Month</div>
+                                  <div><code>REQ-{`{yyyy}`}-{`{mm}`}-000-US</code></div>
+                                  <div><code>{`{dd}`}</code> / <code>{`{DD}`}</code> ➔ 2-digit Day</div>
+                                </div>
+                              </div>
+                            )}
 
-                              if (param.type === 'boolean') {
-                                return (
-                                  <div key={param.name} className="om-field-group" style={{ justifyContent: 'center' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
-                                      <input
-                                        type="checkbox"
-                                        checked={!!editDynamicConfigValues[param.name]}
-                                        onChange={e => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: e.target.checked }))}
-                                        style={{ width: 'auto' }}
+                            <div className="om-form-grid-2">
+                              {activeFieldTypeMeta.parametersSchema.map((param: FieldParameterDefinition) => {
+                                if (param.type === 'select') {
+                                  return (
+                                    <div key={param.name} className="om-field-group">
+                                      <label className="om-field-label">{param.label}</label>
+                                      <CustomSelect
+                                        size="md"
+                                        value={editDynamicConfigValues[param.name] ?? param.defaultValue ?? ''}
+                                        options={param.options || []}
+                                        onChange={val => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
                                       />
-                                      <label className="om-field-label" style={{ margin: 0 }}>{param.label}</label>
+                                      {param.description && (
+                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                          {param.description}
+                                        </small>
+                                      )}
                                     </div>
-                                  </div>
-                                );
-                              }
+                                  );
+                                }
 
-                              if (param.type === 'model_select') {
+                                if (param.type === 'boolean') {
+                                  return (
+                                    <div key={param.name} className="om-field-group" style={{ justifyContent: 'center' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={!!editDynamicConfigValues[param.name]}
+                                          onChange={e => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: e.target.checked }))}
+                                          style={{ width: 'auto' }}
+                                        />
+                                        <label className="om-field-label" style={{ margin: 0 }}>{param.label}</label>
+                                      </div>
+                                      {param.description && (
+                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                          {param.description}
+                                        </small>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
+                                if (param.type === 'model_select') {
+                                  return (
+                                    <div key={param.name} className="om-field-group">
+                                      <label className="om-field-label">{param.label} *</label>
+                                      <CustomSelect
+                                        size="md"
+                                        value={editDynamicConfigValues[param.name] || ''}
+                                        options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
+                                        onChange={val => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
+                                        placeholder="Select Target Model"
+                                      />
+                                      {param.description && (
+                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                          {param.description}
+                                        </small>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
+                                if (param.type === 'textarea') {
+                                  return (
+                                    <div key={param.name} className="om-field-group om-field-group--full">
+                                      <label className="om-field-label">{param.label}</label>
+                                      <textarea
+                                        className="klao-input"
+                                        placeholder={param.placeholder}
+                                        rows={4}
+                                        value={editDynamicConfigValues[param.name] || ''}
+                                        onChange={e => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: e.target.value }))}
+                                        style={{ resize: 'vertical' }}
+                                      />
+                                      {param.description && (
+                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                          {param.description}
+                                        </small>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
                                 return (
                                   <div key={param.name} className="om-field-group">
-                                    <label className="om-field-label">{param.label} *</label>
-                                    <CustomSelect
-                                      size="md"
-                                      value={editDynamicConfigValues[param.name] || ''}
-                                      options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
-                                      onChange={val => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
-                                      placeholder="Select Target Model"
-                                    />
-                                  </div>
-                                );
-                              }
-
-                              if (param.type === 'textarea') {
-                                return (
-                                  <div key={param.name} className="om-field-group om-field-group--full">
                                     <label className="om-field-label">{param.label}</label>
-                                    <textarea
+                                    <input
+                                      type={param.type === 'number' ? 'number' : 'text'}
                                       className="klao-input"
                                       placeholder={param.placeholder}
-                                      rows={4}
-                                      value={editDynamicConfigValues[param.name] || ''}
-                                      onChange={e => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: e.target.value }))}
-                                      style={{ resize: 'vertical' }}
+                                      min={param.min}
+                                      max={param.max}
+                                      value={editDynamicConfigValues[param.name] ?? ''}
+                                      onChange={e => setEditDynamicConfigValues(prev => ({ 
+                                        ...prev, 
+                                        [param.name]: param.type === 'number' && e.target.value !== '' ? Number(e.target.value) : e.target.value 
+                                      }))}
                                     />
+                                    {param.description && (
+                                      <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                        {param.description}
+                                      </small>
+                                    )}
                                   </div>
                                 );
-                              }
+                              })}
+                            </div>
 
-                              return (
-                                <div key={param.name} className="om-field-group">
-                                  <label className="om-field-label">{param.label}</label>
-                                  <input
-                                    type={param.type === 'number' ? 'number' : 'text'}
-                                    className="klao-input"
-                                    placeholder={param.placeholder}
-                                    min={param.min}
-                                    max={param.max}
-                                    value={editDynamicConfigValues[param.name] ?? ''}
-                                    onChange={e => setEditDynamicConfigValues(prev => ({ 
-                                      ...prev, 
-                                      [param.name]: param.type === 'number' && e.target.value !== '' ? Number(e.target.value) : e.target.value 
-                                    }))}
-                                  />
+                            {editFieldLogicalType === 'auto_number' && editingField && (
+                              <div style={{
+                                marginTop: '20px',
+                                padding: '14px 16px',
+                                backgroundColor: 'rgba(234, 179, 8, 0.06)',
+                                border: '1px solid rgba(234, 179, 8, 0.25)',
+                                borderRadius: '8px'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#eab308', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
+                                  <RefreshCw size={16} />
+                                  <span>Admin Action: Reset Sequence Counter</span>
                                 </div>
-                              );
-                            })}
+                                <p style={{ margin: '0 0 10px 0', fontSize: '0.8125rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+                                  Restart the sequence number counter for new records. The next created record will start at this value.
+                                </p>
+                                {resetSeqSuccessMsg && (
+                                  <div style={{ margin: '0 0 10px 0', padding: '8px 12px', backgroundColor: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', borderRadius: '4px', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <CheckCircle2 size={16} />
+                                    <span>{resetSeqSuccessMsg}</span>
+                                  </div>
+                                )}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <input
+                                    type="number"
+                                    className="klao-input"
+                                    min={1}
+                                    value={resetSeqValue}
+                                    onChange={e => setResetSeqValue(Math.max(Number(e.target.value) || 1, 1))}
+                                    style={{ width: '130px' }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="klao-btn klao-btn--secondary"
+                                    onClick={() => handleResetSequence(editingField.id)}
+                                    disabled={isResettingSeq}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                  >
+                                    <RefreshCw size={14} className={isResettingSeq ? 'spin' : ''} />
+                                    <span>{isResettingSeq ? 'Resetting...' : 'Reset Sequence'}</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

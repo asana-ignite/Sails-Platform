@@ -251,4 +251,155 @@ export class AlchemaCore {
     await this.logDdlAction(schemaName, tableName, 'ALTER_COLUMN_TYPE', sql);
     return result;
   }
+
+  /**
+   * Helper to create a sequence and set dynamic DEFAULT expression on an auto_number column.
+   */
+  async setupAutoNumberColumn(schemaName: string, tableName: string, fieldName: string, config?: any) {
+    const seqName = `${tableName}_${fieldName}_seq`;
+    const startingNumber = Math.max(Number(config?.startingNumber) || 1, 1);
+
+    // 1. Create sequence
+    const createSeqSql = format(
+      'CREATE SEQUENCE IF NOT EXISTS %I.%I START WITH %s',
+      schemaName,
+      seqName,
+      startingNumber
+    );
+    await this.pool.query(createSeqSql);
+    await this.logDdlAction(schemaName, tableName, 'CREATE_SEQUENCE', createSeqSql);
+
+    // 2. Build DEFAULT expression with date tokens support
+    const defaultExpr = buildAutoNumberSqlExpression(schemaName, seqName, config);
+
+    // 3. Apply DEFAULT expression to column
+    const setDefaultSql = format(
+      'ALTER TABLE %I.%I ALTER COLUMN %I SET DEFAULT %s',
+      schemaName,
+      tableName,
+      fieldName,
+      defaultExpr
+    );
+    await this.pool.query(setDefaultSql);
+    await this.logDdlAction(schemaName, tableName, 'SET_COLUMN_DEFAULT', setDefaultSql);
+  }
+
+  /**
+   * Resets an auto_number sequence counter to a specified value.
+   */
+  async resetSequence(schemaName: string, tableName: string, fieldName: string, nextValue: number = 1) {
+    const seqName = `${tableName}_${fieldName}_seq`;
+    const targetValue = Math.max(Number(nextValue) || 1, 1);
+
+    const resetSql = format(
+      'ALTER SEQUENCE %I.%I RESTART WITH %s',
+      schemaName,
+      seqName,
+      targetValue
+    );
+    await this.pool.query(resetSql);
+    await this.logDdlAction(schemaName, tableName, 'RESET_SEQUENCE', resetSql);
+  }
+}
+
+/**
+ * Parses pattern string like "INV-0000" or "INV-{yyyy}{mm}00000" or "REQ-{YYYY}-000-US"
+ * into prefix, zero-padding digits, and suffix.
+ */
+export function parseAutoNumberPattern(patternStr: string, fallbackDigits: number = 5): { prefix: string; digits: number; suffix: string } {
+  if (!patternStr) {
+    return { prefix: '', digits: fallbackDigits, suffix: '' };
+  }
+
+  // Normalize casing for date tokens
+  let normalized = patternStr
+    .replace(/\{yyyy\}/gi, '{YYYY}')
+    .replace(/\{yy\}/gi, '{YY}')
+    .replace(/\{mm\}/gi, '{MM}')
+    .replace(/\{dd\}/gi, '{DD}');
+
+  // Find zero placeholder sequence (0+)
+  const zeroMatch = normalized.match(/(0+)/);
+
+  if (zeroMatch && zeroMatch.index !== undefined) {
+    const zeroIndex = zeroMatch.index;
+    const zeroLen = zeroMatch[0].length;
+    const prefix = normalized.substring(0, zeroIndex);
+    const suffix = normalized.substring(zeroIndex + zeroLen);
+    return {
+      prefix,
+      digits: Math.min(Math.max(zeroLen, 1), 10),
+      suffix
+    };
+  }
+
+  return {
+    prefix: normalized,
+    digits: Math.min(Math.max(fallbackDigits, 1), 10),
+    suffix: ''
+  };
+}
+
+/**
+ * Builds PostgreSQL DEFAULT SQL string expression for auto_number columns.
+ * Supports date tokens: {YYYY}, {YY}, {MM}, {DD} and auto-detects zero padding from pattern.
+ */
+export function buildAutoNumberSqlExpression(schemaName: string, seqName: string, config?: any): string {
+  const patternInput = config?.pattern || config?.format || config?.prefix || '';
+  const explicitDigits = config?.digits ? Number(config.digits) : undefined;
+
+  let prefix = config?.prefix || '';
+  let suffix = config?.suffix || '';
+  let digits = explicitDigits || 5;
+
+  if (patternInput && (patternInput.includes('0') || patternInput.includes('{'))) {
+    const parsed = parseAutoNumberPattern(patternInput, digits);
+    prefix = parsed.prefix;
+    digits = explicitDigits || parsed.digits;
+    suffix = parsed.suffix || (config?.suffix || '');
+  }
+
+  function parsePatternToSql(pattern: string): string[] {
+    if (!pattern) return [];
+    
+    const normalized = pattern
+      .replace(/\{yyyy\}/gi, '{YYYY}')
+      .replace(/\{yy\}/gi, '{YY}')
+      .replace(/\{mm\}/gi, '{MM}')
+      .replace(/\{dd\}/gi, '{DD}');
+
+    const regex = /(\{YYYY\}|\{YY\}|\{MM\}|\{DD\})/g;
+    const parts: string[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(normalized)) !== null) {
+      if (match.index > lastIndex) {
+        const literal = normalized.substring(lastIndex, match.index);
+        parts.push(format('%L', literal));
+      }
+      const token = match[0];
+      if (token === '{YYYY}') parts.push("TO_CHAR(CURRENT_DATE, 'YYYY')");
+      else if (token === '{YY}') parts.push("TO_CHAR(CURRENT_DATE, 'YY')");
+      else if (token === '{MM}') parts.push("TO_CHAR(CURRENT_DATE, 'MM')");
+      else if (token === '{DD}') parts.push("TO_CHAR(CURRENT_DATE, 'DD')");
+      
+      lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < normalized.length) {
+      const literal = normalized.substring(lastIndex);
+      parts.push(format('%L', literal));
+    }
+
+    return parts;
+  }
+
+  const prefixSqlParts = parsePatternToSql(prefix);
+  const suffixSqlParts = parsePatternToSql(suffix);
+
+  const seqSqlPart = format("LPAD(nextval(%L)::text, %s, '0')", `${schemaName}.${seqName}`, digits);
+
+  const allParts = [...prefixSqlParts, seqSqlPart, ...suffixSqlParts];
+  return `(${allParts.join(' || ')})`;
 }

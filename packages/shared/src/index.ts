@@ -198,6 +198,7 @@ export const LOGICAL_TYPES = [
   'attachment',
   'citizen_id',
   'lat_lng',
+  'auto_number',
 ] as const;
 
 export type LogicalType = typeof LOGICAL_TYPES[number];
@@ -311,6 +312,13 @@ export interface RelationFieldConfig {
   relationType?: 'one_to_many' | 'many_to_one' | 'one_to_one';
 }
 
+export interface AutoNumberFieldConfig {
+  prefix?: string;
+  suffix?: string;
+  startingNumber?: number;
+  digits?: number;
+}
+
 export type KlaoFieldConfig =
   | ShortTextFieldConfig
   | LongTextFieldConfig
@@ -324,6 +332,7 @@ export type KlaoFieldConfig =
   | DateFieldConfig
   | SelectFieldConfig
   | RelationFieldConfig
+  | AutoNumberFieldConfig
   | Record<string, any>;
 
 

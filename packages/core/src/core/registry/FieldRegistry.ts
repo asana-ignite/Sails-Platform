@@ -11,6 +11,7 @@ import { PercentageType } from './types/PercentageType';
 import { PhoneType } from './types/PhoneType';
 import { AddressType } from './types/AddressType';
 import { AttachmentType } from './types/AttachmentType';
+import { AutoNumberType } from './types/AutoNumberType';
 
 export class FieldRegistry {
   private static instance: FieldRegistry;
@@ -18,14 +19,15 @@ export class FieldRegistry {
 
   private constructor() {
     this.plugins = new Map();
-    // Register default plugins
+    // Register default plugins in specified display sequence
+    this.register(AutoNumberType);
+    this.register(NumberType);
     this.register(ShortTextType);
     this.register(TextType);
-    this.register(NumberType);
+    this.register(SelectType);
+    this.register(RelationType);
     this.register(BooleanType);
     this.register(DateType);
-    this.register(RelationType);
-    this.register(SelectType);
     this.register(CurrencyType);
     this.register(PercentageType);
     this.register(PhoneType);
