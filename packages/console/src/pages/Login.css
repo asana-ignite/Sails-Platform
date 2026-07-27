@@ -140,7 +140,7 @@
 .google-login-button:hover,
 .microsoft-login-button:hover,
 .saml-login-button:hover {
-  background: #ffffff;
+  background: var(--klao-bg-card);
   border-color: var(--klao-primary);
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(0,0,0,0.05);
@@ -161,7 +161,7 @@
 
 .input-group:focus-within {
   border-color: var(--klao-primary-dark);
-  background: #ffffff;
+  background: var(--klao-bg-card);
   box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.25);
 }
 

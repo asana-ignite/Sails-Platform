@@ -2,12 +2,6 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAppSession } from '@/lib/auth/session';
 
-/**
- * Helper to resolve active tenant context
- */
-/**
- * Helper to resolve active tenant context
- */
 async function resolveTenantId() {
   const session = await getAppSession();
   const caller = session?.user as any;
@@ -24,10 +18,26 @@ async function resolveTenantId() {
   return process.env.DEFAULT_TENANT_ID || null;
 }
 
-/**
- * GET /api/console/company-profile
- * Fetches company profile details for the active tenant.
- */
+const PROFILE_FIELDS = [
+  'legalName', 'tradingName', 'taxId', 'industry', 'companySize', 'websiteUrl',
+  'businessContactName', 'corporateEmail', 'businessContactPhone',
+  'supportContactName', 'supportEmail', 'supportPhone', 'phone', 'fax',
+  'streetAddress', 'subDistrict', 'city', 'postalCode', 'country',
+  'dpoName', 'dpoEmail', 'termsUrl', 'privacyUrl',
+  'baseCurrency', 'fiscalYearStartMonth', 'timezone', 'dateFormat', 'timeFormat',
+  'loginTagline', 'allowSelfRegistration', 'allowedEmailDomains', 'defaultUserRole',
+  'defaultLandingPage', 'inactivityTimeoutMinutes', 'maxFileUploadMb',
+  'maintenanceMode', 'announcementBannerText', 'announcementType',
+] as const;
+
+function pickProfileFields(body: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const key of PROFILE_FIELDS) {
+    if (key in body) result[key] = body[key];
+  }
+  return result;
+}
+
 export async function GET() {
   try {
     const tenantId = await resolveTenantId();
@@ -67,22 +77,7 @@ export async function GET() {
           dpoEmail: '',
           termsUrl: '',
           privacyUrl: '',
-          baseCurrency: 'THB',
-          fiscalYearStartMonth: 'January',
-          timezone: 'Asia/Bangkok',
-          dateFormat: 'YYYY-MM-DD',
-          timeFormat: '24h',
-          loginTagline: '',
-          allowSelfRegistration: false,
-          allowedEmailDomains: '',
-          defaultUserRole: 'MEMBER',
-          defaultLandingPage: '/console/dashboard',
-          inactivityTimeoutMinutes: 30,
-          maxFileUploadMb: 25,
-          maintenanceMode: false,
-          announcementBannerText: '',
-          announcementType: 'info',
-          branding: null
+          themeConfig: null
         }
       });
     }
@@ -90,18 +85,6 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: {
-        baseCurrency: 'THB',
-        fiscalYearStartMonth: 'January',
-        timezone: 'Asia/Bangkok',
-        dateFormat: 'YYYY-MM-DD',
-        timeFormat: '24h',
-        allowSelfRegistration: false,
-        defaultUserRole: 'MEMBER',
-        defaultLandingPage: '/console/dashboard',
-        inactivityTimeoutMinutes: 30,
-        maxFileUploadMb: 25,
-        maintenanceMode: false,
-        announcementType: 'info',
         ...profile,
         businessContactPhone: profile.businessContactPhone || profile.phone || '',
         supportPhone: profile.supportPhone || profile.fax || ''
@@ -113,10 +96,6 @@ export async function GET() {
   }
 }
 
-/**
- * PUT /api/console/company-profile
- * Upserts (creates or updates) company profile details for the active tenant.
- */
 export async function PUT(req: Request) {
   try {
     const tenantId = await resolveTenantId();
@@ -126,38 +105,29 @@ export async function PUT(req: Request) {
 
     const body = await req.json();
 
-    // Whitelist payload fields to avoid manual duplication between create/update
     const {
       id,
       tenantId: _t,
       createdAt,
       updatedAt,
       themeConfig,
-      branding,
-      ...profileData
+      ...rest
     } = body;
 
+    const profileData = pickProfileFields(rest);
     const payload: Record<string, any> = {
       ...profileData,
-      supportPhone: profileData.supportPhone || profileData.fax || null
+      supportPhone: profileData.supportPhone || rest.fax || null,
     };
 
-    const targetThemeConfig = themeConfig || branding;
-    if (targetThemeConfig !== undefined) {
-      const parsedConfig = typeof targetThemeConfig === 'string' ? JSON.parse(targetThemeConfig) : targetThemeConfig;
-      payload.themeConfig = parsedConfig;
-      payload.branding = parsedConfig; // Backward compatibility
+    if (themeConfig !== undefined) {
+      payload.themeConfig = typeof themeConfig === 'string' ? JSON.parse(themeConfig) : themeConfig;
     }
 
     const upserted = await db.companyProfile.upsert({
       where: { tenantId },
       create: {
         tenantId,
-        baseCurrency: 'THB',
-        fiscalYearStartMonth: 'January',
-        timezone: 'Asia/Bangkok',
-        dateFormat: 'YYYY-MM-DD',
-        timeFormat: '24h',
         ...payload
       },
       update: payload

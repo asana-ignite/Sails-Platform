@@ -226,7 +226,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #cbd5e1;
+  background-color: var(--klao-border-color);
   transition: .3s;
   border-radius: 26px;
 }
@@ -245,7 +245,7 @@
 }
 
 .klao-sso-toggle input:checked + .klao-sso-slider {
-  background-color: #4ec5ad;
+  background-color: var(--klao-success);
 }
 
 .klao-sso-toggle input:checked + .klao-sso-slider:before {
@@ -385,7 +385,7 @@
 
 .klao-idp-card__badge--enabled {
   background: var(--klao-success-light);
-  color: #2b957e;
+  color: var(--klao-success);
   border: 1px solid rgba(78, 197, 173, 0.3);
 }
 
@@ -603,8 +603,8 @@
   bottom: 24px;
   right: 24px;
   z-index: 10000 !important;
-  background: #344759;
-  color: #ffffff;
+  background: var(--klao-text-main);
+  color: var(--klao-text-light);
   padding: 12px 20px;
   border-radius: var(--klao-radius-md);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);

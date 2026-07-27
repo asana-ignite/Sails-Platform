@@ -458,14 +458,13 @@ model CompanyProfile {
   inactivityTimeoutMinutes Int?     @default(30) @map("inactivity_timeout_minutes")
   maxFileUploadMb          Int?     @default(25) @map("max_file_upload_mb")
 
-  // Maintenance & Announcement Settings
-  maintenanceMode          Boolean  @default(false) @map("maintenance_mode")
-  announcementBannerText   String?  @map("announcement_banner_text")
-  announcementType         String?  @default("info") @map("announcement_type")
+  // Maintenance & Alerts Settings
+  maintenanceMode       Boolean  @default(false) @map("maintenance_mode")
+  announcementBannerText String? @map("announcement_banner_text")
+  announcementType      String?  @default("info") @map("announcement_type")
 
-  // Theme & Visual Styling Configuration
-  themeConfig              Json?    @map("theme_config")
-  branding                 Json?    @map("branding")
+  // Branding & Theme
+  themeConfig     Json?    @map("theme_config")
 
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")

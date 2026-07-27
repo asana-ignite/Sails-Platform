@@ -825,21 +825,6 @@
   filter: brightness(0.9) !important;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
-
-.klao-btn--primary {
-  background-color: var(--klao-primary);
-  background-image: var(--klao-primary-bg);
-  color: var(--klao-text-light, #ffffff);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.klao-btn--primary:hover {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-}
-
-.klao-btn--primary:active {
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
-}
 /* ------------------------------------- */
 
 .klao-add-drawer__footer {

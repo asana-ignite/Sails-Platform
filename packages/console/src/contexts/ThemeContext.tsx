@@ -28,6 +28,7 @@ interface ThemeContextType {
   setSecondaryAccentColor: (color: string | null) => void;
   setBackgroundAccentColor: (color: string | null) => void;
   setFontAccentColor: (color: string | null) => void;
+  setEnableGradient: (enabled: boolean) => void;
   setLogoLightUrl: (url: string) => void;
   setLogoDarkUrl: (url: string) => void;
   commitTheme: (overrides?: Partial<ThemeState>) => void;
@@ -53,11 +54,11 @@ function generatePalette(state: ThemeState): Record<string, string> {
 
   const enableGrad = state.enableGradient !== false; // default true
 
-  // Subtle 15-degree hue & slight lightness shift for ultra-sleek micro-gradient
+  // Shift hue 30°, bump saturation +12%, lighten/darken ±15% for visible gradient
   const subtleShiftHex = hslToHex(
-    (h + 15) % 360,
-    Math.min(100, hsl.s + 4),
-    Math.max(15, hsl.l > 50 ? hsl.l - 8 : hsl.l + 8)
+    (h + 30) % 360,
+    Math.min(100, hsl.s + 12),
+    Math.max(10, hsl.l > 50 ? hsl.l - 15 : hsl.l + 15)
   );
 
   const primaryBg = enableGrad
@@ -220,7 +221,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const res = await fetch('/api/console/company-profile');
         if (!res.ok || cancelled) return;
         const json = await res.json();
-        const serverConfig = json.data?.themeConfig || json.data?.branding;
+        const serverConfig = json.data?.themeConfig;
         if (!json.success || !serverConfig || cancelled) return;
         const serverBranding = typeof serverConfig === 'string' ? JSON.parse(serverConfig) : serverConfig;
         setState((prev) => {
@@ -255,31 +256,22 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const saveBrandingToServerFn = useCallback(async (overrides?: Record<string, any>) => {
-    setState((prev) => {
-      const merged = { ...prev, ...overrides };
-      const themePayload = {
-        primaryAccentColor: merged.primaryAccentColor,
-        secondaryAccentColor: merged.secondaryAccentColor,
-        backgroundAccentColor: merged.backgroundAccentColor,
-        fontAccentColor: merged.fontAccentColor,
-        paletteTechnique: merged.paletteTechnique,
-        enableGradient: merged.enableGradient,
-        logoLightUrl: merged.logoLightUrl,
-        logoDarkUrl: merged.logoDarkUrl,
-      };
-
-      fetch('/api/console/company-profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          themeConfig: themePayload,
-          branding: themePayload,
-        }),
-      }).catch(() => {});
-
-      return merged;
+    const merged = { ...state, ...overrides };
+    await fetch('/api/console/company-profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        branding: {
+          primaryAccentColor: merged.primaryAccentColor,
+          secondaryAccentColor: merged.secondaryAccentColor,
+          backgroundAccentColor: merged.backgroundAccentColor,
+          fontAccentColor: merged.fontAccentColor,
+          logoLightUrl: merged.logoLightUrl,
+          logoDarkUrl: merged.logoDarkUrl,
+        },
+      }),
     });
-  }, []);
+  }, [state]);
 
   const setThemeMode = useCallback((mode: 'light' | 'dark') => {
     setState((prev) => { const next = { ...prev, themeMode: mode }; saveToStorage(next); return next; });
@@ -302,6 +294,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setState((prev) => { const next = { ...prev, fontAccentColor: color }; saveToStorage(next); return next; });
   }, []);
 
+  const setEnableGradient = useCallback((enabled: boolean) => {
+    setState((prev) => { const next = { ...prev, enableGradient: enabled }; saveToStorage(next); return next; });
+  }, []);
+
   const setLogoLightUrl = useCallback((url: string) => {
     setState((prev) => { const next = { ...prev, logoLightUrl: url }; saveToStorage(next); return next; });
   }, []);
@@ -318,6 +314,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         secondaryAccentColor: state.secondaryAccentColor,
         backgroundAccentColor: state.backgroundAccentColor,
         fontAccentColor: state.fontAccentColor,
+        enableGradient: state.enableGradient,
+        paletteTechnique: state.paletteTechnique,
         logoLightUrl: state.logoLightUrl,
         logoDarkUrl: state.logoDarkUrl,
         setThemeMode,
@@ -325,6 +323,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setSecondaryAccentColor,
         setBackgroundAccentColor,
         setFontAccentColor,
+        setEnableGradient,
         setLogoLightUrl,
         setLogoDarkUrl,
         commitTheme,

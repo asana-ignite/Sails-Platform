@@ -256,15 +256,20 @@ const PALETTE_TECHNIQUE_OPTIONS = [
 ];
 
 const AdminGeneralSettings: React.FC = () => {
-  const { primaryAccentColor, setPrimaryAccentColor, secondaryAccentColor, setSecondaryAccentColor, backgroundAccentColor, setBackgroundAccentColor, fontAccentColor, setFontAccentColor, enableGradient, setLogoLightUrl, setLogoDarkUrl, saveBrandingToServer, commitTheme } = useTheme();
+  const { primaryAccentColor, setPrimaryAccentColor, secondaryAccentColor, setSecondaryAccentColor, backgroundAccentColor, setBackgroundAccentColor, fontAccentColor, setFontAccentColor, enableGradient, setEnableGradient, setLogoLightUrl, setLogoDarkUrl, saveBrandingToServer, commitTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<'branding' | 'localization' | 'security' | 'maintenance'>('branding');
   const [paletteTechnique, setPaletteTechnique] = useState<ColorMatchingTechnique>('monochromatic');
-  const [enableGradientAccent, setEnableGradientAccent] = useState<boolean>(enableGradient !== false);
+  const [customSecondary, setCustomSecondary] = useState<string | null>(null);
+  const [customBackground, setCustomBackground] = useState<string | null>(null);
+  const [customFont, setCustomFont] = useState<string | null>(null);
 
-  // Local state for custom color overrides (null means Auto mode)
-  const [customSecondary, setCustomSecondary] = useState<string | null>(secondaryAccentColor || null);
-  const [customBackground, setCustomBackground] = useState<string | null>(backgroundAccentColor || null);
-  const [customFont, setCustomFont] = useState<string | null>(fontAccentColor || null);
+  const gradientOn = enableGradient !== false;
+
+  useEffect(() => {
+    setCustomSecondary(secondaryAccentColor);
+    setCustomBackground(backgroundAccentColor);
+    setCustomFont(fontAccentColor);
+  }, [secondaryAccentColor, backgroundAccentColor, fontAccentColor]);
 
   const [formData, setFormData] = useState<GeneralSettingsData>({
     ...DEFAULT_SETTINGS_DATA,
@@ -375,11 +380,11 @@ const AdminGeneralSettings: React.FC = () => {
 
     const themeOverrides = {
       primaryAccentColor: formData.primaryAccentColor,
-      secondaryAccentColor: customSecondary,
-      backgroundAccentColor: customBackground,
-      fontAccentColor: customFont,
+      secondaryAccentColor: customSecondary || computedPalette.secondary,
+      backgroundAccentColor: customBackground || computedPalette.background,
+      fontAccentColor: customFont || computedPalette.font,
       paletteTechnique,
-      enableGradient: enableGradientAccent,
+      enableGradient: gradientOn,
       logoLightUrl: formData.logoLightUrl,
       logoDarkUrl: formData.logoDarkUrl,
     };
@@ -410,14 +415,7 @@ const AdminGeneralSettings: React.FC = () => {
           maintenanceMode: formData.maintenanceMode,
           announcementBannerText: formData.announcementBannerText,
           announcementType: formData.announcementType,
-          themeConfig: {
-            ...themeOverrides,
-            baseCurrency: formData.baseCurrency,
-          },
-          branding: {
-            ...themeOverrides,
-            baseCurrency: formData.baseCurrency,
-          },
+          themeConfig: themeOverrides,
         }),
       });
 
@@ -432,9 +430,7 @@ const AdminGeneralSettings: React.FC = () => {
       setSavedSuccessMsg(err.message || 'Error saving General Settings.');
     } finally {
       setIsSaving(false);
-      setTimeout(() => {
-        setSavedSuccessMsg(null);
-      }, 4000);
+      setTimeout(() => setSavedSuccessMsg(null), 4000);
     }
   };
 
@@ -602,8 +598,8 @@ const AdminGeneralSettings: React.FC = () => {
                   <label className="klao-gs-switch">
                     <input
                       type="checkbox"
-                      checked={enableGradientAccent}
-                      onChange={e => setEnableGradientAccent(e.target.checked)}
+                      checked={gradientOn}
+                      onChange={e => setEnableGradient(e.target.checked)}
                     />
                     <span className="klao-gs-slider" />
                   </label>

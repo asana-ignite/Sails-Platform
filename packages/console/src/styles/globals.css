@@ -136,7 +136,14 @@ textarea {
   box-shadow: 0 4px 10px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.3);
 }
 
-.klao-btn--primary:hover {
+.klao-btn--primary:disabled {
+  background-color: var(--klao-primary);
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.klao-btn--primary:hover:not(:disabled) {
   background-color: var(--klao-primary-dark);
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.5);
