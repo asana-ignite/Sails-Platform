@@ -48,21 +48,21 @@ export const SYSTEM_PERMISSION_REGISTRY: Record<string, PermissionDefinition> = 
     category: 'Platform'
   },
 
-  // --- Identity & Security ---
+  // --- Login & Security ---
   'system.security.sso': {
-    label: 'Configure SSO',
-    description: 'Manage SAML, OIDC, and Enterprise Identity Providers.',
+    label: 'Login & Single Sign-On',
+    description: 'Manage internal login policies, Google, Entra, and Enterprise Identity Providers.',
     category: 'Security'
   },
   'system.security.tokens': {
-    label: 'Personal Access Tokens',
-    description: 'Issue and revoke long-lived API tokens and keys.',
+    label: 'API & Service Tokens',
+    description: 'Issue and revoke long-lived API tokens and service keys.',
     category: 'Security'
   },
   'system.security.apps': {
     label: 'Connected Apps',
     description: 'Authorize and manage third-party application access.',
-    category: 'Security'
+    category: 'Integrations'
   },
 
   // --- Extensions & Integrations ---

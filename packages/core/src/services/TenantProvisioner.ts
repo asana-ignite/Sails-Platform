@@ -135,29 +135,22 @@ export class TenantProvisioner {
               }
             },
             {
-              label: 'Identity & Security', icon: 'Lock', order: 3, actionType: 'plugin',
+              label: 'Login & Security', icon: 'ShieldCheck', order: 3, actionType: 'plugin',
               children: {
                 create: [
-                  { label: 'SSO Configuration', icon: 'Key', path: '/admin/sso', order: 0, requiredCapability: 'system.security.sso', componentKey: 'AdminSSOConfig', actionType: 'plugin' },
-                  { label: 'API Tokens', icon: 'FileDigit', path: '/admin/tokens', order: 1, requiredCapability: 'system.security.tokens', componentKey: 'AdminApiTokens', actionType: 'plugin' },
-                  { label: 'Connected Apps', icon: 'Link', path: '/admin/connected-apps', order: 2, requiredCapability: 'system.security.apps', componentKey: 'AdminConnectedApps', actionType: 'plugin' }
+                  { label: 'Login & Single Sign-On', icon: 'Key', path: '/admin/sso', order: 0, requiredCapability: 'system.security.sso', componentKey: 'AdminSSOConfig', actionType: 'plugin' },
+                  { label: 'API & Service Tokens', icon: 'FileDigit', path: '/admin/tokens', order: 1, requiredCapability: 'system.security.tokens', componentKey: 'AdminApiTokens', actionType: 'plugin' },
+                  { label: 'Audit History', icon: 'FileClock', path: '/admin/audit', order: 2, requiredCapability: 'system.audit.view', componentKey: 'AdminAuditLog', actionType: 'plugin' }
                 ]
               }
             },
             {
-              label: 'Extensions', icon: 'Blocks', order: 4, actionType: 'plugin',
+              label: 'Integrations & Apps', icon: 'Blocks', order: 4, actionType: 'plugin',
               children: {
                 create: [
-                  { label: 'Custom Modules (BYOC)', icon: 'Code2', path: '/admin/byoc', order: 0, requiredCapability: 'system.extensions.byoc', componentKey: 'AdminByocModules', actionType: 'plugin' },
-                  { label: 'API & Webhooks', icon: 'Webhook', path: '/admin/integrations', order: 1, requiredCapability: 'system.integrations.api', componentKey: 'AdminIntegrations', actionType: 'plugin' }
-                ]
-              }
-            },
-            {
-              label: 'Governance', icon: 'Building2', order: 5, actionType: 'plugin',
-              children: {
-                create: [
-                  { label: 'Audit History', icon: 'FileClock', path: '/admin/audit', order: 0, requiredCapability: 'system.audit.view', componentKey: 'AdminAuditLog', actionType: 'plugin' }
+                  { label: 'Connected Apps', icon: 'Link', path: '/admin/connected-apps', order: 0, requiredCapability: 'system.security.apps', componentKey: 'AdminConnectedApps', actionType: 'plugin' },
+                  { label: 'API & Webhooks', icon: 'Webhook', path: '/admin/integrations', order: 1, requiredCapability: 'system.integrations.api', componentKey: 'AdminIntegrations', actionType: 'plugin' },
+                  { label: 'Custom Modules (BYOC)', icon: 'Code2', path: '/admin/byoc', order: 2, requiredCapability: 'system.extensions.byoc', componentKey: 'AdminByocModules', actionType: 'plugin' }
                 ]
               }
             }

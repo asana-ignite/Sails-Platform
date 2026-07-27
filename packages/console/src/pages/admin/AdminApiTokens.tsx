@@ -4,7 +4,7 @@ const AdminApiTokens: React.FC = () => {
   return (
     <div className="klao-card" style={{ textAlign: 'center', borderStyle: 'dashed', background: 'rgba(255,255,255,0.4)' }}>
       <p style={{ color: 'var(--klao-text-muted)' }}>
-        This is the <strong>API Tokens</strong> management module. 
+        This is the <strong>API & Service Tokens</strong> management module. 
       </p>
       <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
         {[1, 2, 3].map(i => (

@@ -1,0 +1,626 @@
+/* Login & Single Sign-On (SSO) Module Styling */
+
+.klao-sso-config {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  animation: klao-fade-in 0.4s ease-out;
+  padding-bottom: 60px;
+}
+
+/* Page Header & Actions */
+.klao-sso-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.klao-sso-header__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--klao-text-main);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.klao-sso-header__subtitle {
+  font-size: 0.9rem;
+  color: var(--klao-text-muted);
+  max-width: 680px;
+  line-height: 1.5;
+}
+
+/* Tab Navigation Bar */
+.klao-sso-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--klao-border-color);
+  padding-bottom: 0;
+  margin-top: 4px;
+}
+
+.klao-sso-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border: none;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--klao-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: var(--klao-transition);
+  border-radius: var(--klao-radius-md) var(--klao-radius-md) 0 0;
+}
+
+.klao-sso-tab-btn:hover {
+  color: var(--klao-text-main);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.klao-sso-tab-btn--active {
+  color: var(--klao-primary-dark);
+  border-bottom-color: var(--klao-primary-dark);
+  background: rgba(157, 206, 224, 0.08);
+}
+
+.klao-sso-dirty-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--klao-warning);
+  display: inline-block;
+}
+
+/* Confirmation Modal Overlay */
+.klao-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 9999 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: klao-fade-in 0.2s ease-out;
+}
+
+.klao-confirm-modal {
+  background: var(--klao-bg-card);
+  border-radius: var(--klao-radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 460px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border: 1px solid var(--klao-border-color);
+  animation: klao-fade-in 0.2s ease-out;
+}
+
+.klao-confirm-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--klao-text-main);
+}
+
+.klao-confirm-modal__body {
+  font-size: 0.9rem;
+  color: var(--klao-text-muted);
+  line-height: 1.5;
+}
+
+.klao-confirm-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* Section Containers */
+.klao-sso-section {
+  background: var(--klao-bg-card);
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-lg);
+  padding: 24px 28px;
+  box-shadow: var(--klao-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.klao-sso-section__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--klao-text-main);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--klao-border-color);
+}
+
+.klao-sso-section__subtitle {
+  font-size: 0.85rem;
+  color: var(--klao-text-muted);
+  margin-top: -12px;
+  margin-bottom: 8px;
+}
+
+/* Policy Grid & Form Rows */
+.klao-sso-policy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.klao-sso-setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-md);
+  transition: var(--klao-transition);
+}
+
+.klao-sso-setting-row:hover {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(157, 206, 224, 0.4);
+}
+
+.klao-sso-setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.klao-sso-setting-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--klao-text-main);
+}
+
+.klao-sso-setting-desc {
+  font-size: 0.82rem;
+  color: var(--klao-text-muted);
+  line-height: 1.4;
+}
+
+/* Toggle Switches */
+.klao-sso-toggle {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.klao-sso-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.klao-sso-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: .3s;
+  border-radius: 26px;
+}
+
+.klao-sso-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+.klao-sso-toggle input:checked + .klao-sso-slider {
+  background-color: #4ec5ad;
+}
+
+.klao-sso-toggle input:checked + .klao-sso-slider:before {
+  transform: translateX(22px);
+}
+
+/* Radio Group Enforcement Selection */
+.klao-sso-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.klao-sso-radio-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 1.5px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-md);
+  cursor: pointer;
+  transition: var(--klao-transition);
+  background: var(--klao-bg-card);
+}
+
+.klao-sso-radio-card:hover {
+  border-color: var(--klao-primary);
+  background: rgba(157, 206, 224, 0.04);
+}
+
+.klao-sso-radio-card--selected {
+  border-color: var(--klao-primary);
+  background: rgba(157, 206, 224, 0.08);
+}
+
+.klao-sso-radio-input {
+  margin-top: 3px;
+  accent-color: var(--klao-primary-dark);
+  width: 16px;
+  height: 16px;
+}
+
+/* Identity Provider Cards Grid */
+.klao-idp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.klao-idp-card {
+  background: var(--klao-bg-card);
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-lg);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  transition: var(--klao-transition);
+  box-shadow: var(--klao-shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.klao-idp-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--klao-shadow-md);
+  border-color: rgba(157, 206, 224, 0.6);
+}
+
+.klao-idp-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.klao-idp-card__identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.klao-idp-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--klao-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  background: rgba(0,0,0,0.04);
+  color: var(--klao-text-main);
+  border: 1px solid var(--klao-border-color);
+  flex-shrink: 0;
+}
+
+.klao-idp-card__icon--google {
+  background: rgba(234, 67, 53, 0.08);
+  color: #ea4335;
+  border-color: rgba(234, 67, 53, 0.2);
+}
+
+.klao-idp-card__icon--entra {
+  background: rgba(0, 120, 212, 0.08);
+  color: #0078d4;
+  border-color: rgba(0, 120, 212, 0.2);
+}
+
+.klao-idp-card__icon--saml {
+  background: rgba(117, 136, 222, 0.08);
+  color: #7588de;
+  border-color: rgba(117, 136, 222, 0.2);
+}
+
+.klao-idp-card__name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--klao-text-main);
+}
+
+.klao-idp-card__type {
+  font-size: 0.78rem;
+  color: var(--klao-text-muted);
+}
+
+.klao-idp-card__badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.klao-idp-card__badge--enabled {
+  background: var(--klao-success-light);
+  color: #2b957e;
+  border: 1px solid rgba(78, 197, 173, 0.3);
+}
+
+.klao-idp-card__badge--disabled {
+  background: rgba(0,0,0,0.05);
+  color: var(--klao-text-muted);
+  border: 1px solid var(--klao-border-color);
+}
+
+.klao-idp-card__desc {
+  font-size: 0.85rem;
+  color: var(--klao-text-muted);
+  line-height: 1.45;
+}
+
+.klao-idp-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  background: rgba(0,0,0,0.02);
+  padding: 10px 12px;
+  border-radius: var(--klao-radius-md);
+  border: 1px dashed var(--klao-border-color);
+}
+
+.klao-idp-card__detail-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--klao-text-muted);
+}
+
+.klao-idp-card__detail-value {
+  font-family: monospace;
+  color: var(--klao-text-main);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+/* Portaled Slide-Over Drawer Styling */
+.klao-sso-drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 9999 !important;
+  display: flex;
+  justify-content: flex-end;
+  animation: klao-fade-in 0.25s ease-out;
+}
+
+.klao-sso-drawer {
+  width: 100%;
+  max-width: 520px;
+  height: 100%;
+  background: var(--klao-bg-card);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  animation: klao-slide-left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.klao-sso-drawer__header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--klao-border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.klao-sso-drawer__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--klao-text-main);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.klao-sso-drawer__close {
+  background: transparent;
+  border: none;
+  color: var(--klao-text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--klao-transition);
+}
+
+.klao-sso-drawer__close:hover {
+  background: rgba(0,0,0,0.06);
+  color: var(--klao-text-main);
+}
+
+.klao-sso-drawer__body {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.klao-sso-drawer__footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--klao-border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+/* Form Input Groups inside Drawer */
+.klao-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.klao-form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--klao-text-main);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.klao-form-help {
+  font-size: 0.78rem;
+  color: var(--klao-text-muted);
+}
+
+.klao-input-text {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-md);
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--klao-text-main);
+  transition: var(--klao-transition);
+}
+
+.klao-input-text:focus {
+  outline: none;
+  border-color: var(--klao-primary-dark);
+  box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.25);
+}
+
+.klao-input-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.klao-input-password-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--klao-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.klao-input-copy-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.klao-input-copy-btn {
+  position: absolute;
+  right: 8px;
+  background: var(--klao-bg-body);
+  border: 1px solid var(--klao-border-color);
+  border-radius: var(--klao-radius-sm);
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--klao-text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--klao-transition);
+}
+
+.klao-input-copy-btn:hover {
+  background: var(--klao-primary-light);
+  border-color: var(--klao-primary);
+}
+
+/* Toast Banners */
+.klao-sso-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 10000 !important;
+  background: #344759;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: var(--klao-radius-md);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  animation: klao-fade-in 0.3s ease-out;
+}
+
+@keyframes klao-slide-left {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
