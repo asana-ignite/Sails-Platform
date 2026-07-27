@@ -5,9 +5,23 @@ import { getAppSession } from '@/lib/auth/session';
 /**
  * Helper to resolve active tenant context
  */
+/**
+ * Helper to resolve active tenant context
+ */
 async function resolveTenantId() {
   const session = await getAppSession();
-  return (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
+  const caller = session?.user as any;
+  if (caller?.tenantId) return caller.tenantId;
+
+  if (caller?.id) {
+    const dbUser = await db.user.findUnique({ where: { id: caller.id }, select: { tenantId: true } });
+    if (dbUser?.tenantId) return dbUser.tenantId;
+  }
+
+  const firstTenant = await db.tenant.findFirst({ select: { id: true } });
+  if (firstTenant?.id) return firstTenant.id;
+
+  return process.env.DEFAULT_TENANT_ID || null;
 }
 
 /**
@@ -53,6 +67,21 @@ export async function GET() {
           dpoEmail: '',
           termsUrl: '',
           privacyUrl: '',
+          baseCurrency: 'THB',
+          fiscalYearStartMonth: 'January',
+          timezone: 'Asia/Bangkok',
+          dateFormat: 'YYYY-MM-DD',
+          timeFormat: '24h',
+          loginTagline: '',
+          allowSelfRegistration: false,
+          allowedEmailDomains: '',
+          defaultUserRole: 'MEMBER',
+          defaultLandingPage: '/console/dashboard',
+          inactivityTimeoutMinutes: 30,
+          maxFileUploadMb: 25,
+          maintenanceMode: false,
+          announcementBannerText: '',
+          announcementType: 'info',
           branding: null
         }
       });
@@ -61,6 +90,18 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: {
+        baseCurrency: 'THB',
+        fiscalYearStartMonth: 'January',
+        timezone: 'Asia/Bangkok',
+        dateFormat: 'YYYY-MM-DD',
+        timeFormat: '24h',
+        allowSelfRegistration: false,
+        defaultUserRole: 'MEMBER',
+        defaultLandingPage: '/console/dashboard',
+        inactivityTimeoutMinutes: 30,
+        maxFileUploadMb: 25,
+        maintenanceMode: false,
+        announcementType: 'info',
         ...profile,
         businessContactPhone: profile.businessContactPhone || profile.phone || '',
         supportPhone: profile.supportPhone || profile.fax || ''
@@ -112,6 +153,11 @@ export async function PUT(req: Request) {
       where: { tenantId },
       create: {
         tenantId,
+        baseCurrency: 'THB',
+        fiscalYearStartMonth: 'January',
+        timezone: 'Asia/Bangkok',
+        dateFormat: 'YYYY-MM-DD',
+        timeFormat: '24h',
         ...payload
       },
       update: payload

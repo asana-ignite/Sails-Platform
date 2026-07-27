@@ -326,7 +326,7 @@ const AdminGeneralSettings: React.FC = () => {
     const fetchGeneralSettings = async () => {
       try {
         const res = await fetch('/api/console/company-profile');
-        if (!res.ok || cancelled) return;
+        if (!res.ok) throw new Error('Server returned error status');
         const json = await res.json();
         if (json.success && json.data && !cancelled) {
           const profile = json.data;
@@ -335,11 +335,11 @@ const AdminGeneralSettings: React.FC = () => {
 
           setFormData(prev => ({
             ...prev,
-            baseCurrency: profile.baseCurrency || themeConf.baseCurrency || prev.baseCurrency,
-            fiscalYearStartMonth: profile.fiscalYearStartMonth || themeConf.fiscalYearStartMonth || prev.fiscalYearStartMonth,
-            timezone: profile.timezone || themeConf.timezone || prev.timezone,
-            dateFormat: profile.dateFormat || themeConf.dateFormat || prev.dateFormat,
-            timeFormat: profile.timeFormat || themeConf.timeFormat || prev.timeFormat,
+            baseCurrency: profile.baseCurrency || themeConf.baseCurrency || prev.baseCurrency || 'THB',
+            fiscalYearStartMonth: profile.fiscalYearStartMonth || themeConf.fiscalYearStartMonth || prev.fiscalYearStartMonth || 'January',
+            timezone: profile.timezone || themeConf.timezone || prev.timezone || 'Asia/Bangkok',
+            dateFormat: profile.dateFormat || themeConf.dateFormat || prev.dateFormat || 'YYYY-MM-DD',
+            timeFormat: profile.timeFormat || themeConf.timeFormat || prev.timeFormat || '24h',
             loginTagline: profile.loginTagline || themeConf.loginTagline || prev.loginTagline,
             allowSelfRegistration: typeof profile.allowSelfRegistration === 'boolean' ? profile.allowSelfRegistration : (typeof themeConf.allowSelfRegistration === 'boolean' ? themeConf.allowSelfRegistration : prev.allowSelfRegistration),
             allowedEmailDomains: profile.allowedEmailDomains || themeConf.allowedEmailDomains || prev.allowedEmailDomains,
@@ -391,7 +391,7 @@ const AdminGeneralSettings: React.FC = () => {
 
     try {
       localStorage.setItem('klao-general-settings', JSON.stringify(formData));
-      await fetch('/api/console/company-profile', {
+      const res = await fetch('/api/console/company-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -410,14 +410,26 @@ const AdminGeneralSettings: React.FC = () => {
           maintenanceMode: formData.maintenanceMode,
           announcementBannerText: formData.announcementBannerText,
           announcementType: formData.announcementType,
-          themeConfig: themeOverrides,
-          branding: themeOverrides,
+          themeConfig: {
+            ...themeOverrides,
+            baseCurrency: formData.baseCurrency,
+          },
+          branding: {
+            ...themeOverrides,
+            baseCurrency: formData.baseCurrency,
+          },
         }),
       });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to save settings to server.');
+      }
+
       setSavedSuccessMsg('General Settings saved successfully.');
     } catch (err: any) {
       console.error('Error saving General Settings:', err);
-      setSavedSuccessMsg('General Settings saved locally.');
+      setSavedSuccessMsg(err.message || 'Error saving General Settings.');
     } finally {
       setIsSaving(false);
       setTimeout(() => {
