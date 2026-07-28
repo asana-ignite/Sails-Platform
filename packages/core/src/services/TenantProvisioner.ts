@@ -129,8 +129,9 @@ export class TenantProvisioner {
               children: {
                 create: [
                   { label: 'Data Model', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', componentKey: 'AdminEntityManager', actionType: 'plugin' },
-                  { label: 'Console Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 1, requiredCapability: 'system.apps.manage', componentKey: 'AdminAppManager', actionType: 'plugin' },
-                  { label: 'Navigation Menus', icon: 'Menu', path: '/admin/menus', order: 2, requiredCapability: 'system.menus.manage', componentKey: 'AdminMenuManager', actionType: 'plugin' }
+                  { label: 'Views', icon: 'LayoutTemplate', path: '/admin/views', order: 1, requiredCapability: 'system.schema.manage', componentKey: 'AdminViewManager', actionType: 'plugin' },
+                  { label: 'Console Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 2, requiredCapability: 'system.apps.manage', componentKey: 'AdminAppManager', actionType: 'plugin' },
+                  { label: 'Navigation Menus', icon: 'Menu', path: '/admin/menus', order: 3, requiredCapability: 'system.menus.manage', componentKey: 'AdminMenuManager', actionType: 'plugin' }
                 ]
               }
             },

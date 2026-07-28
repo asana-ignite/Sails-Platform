@@ -48,10 +48,10 @@
 }
 
 .sails-topbar__logo-text {
-  font-weight: 800;
+  font-weight: 400;
   font-size: 1.25rem;
   letter-spacing: -0.5px;
-  color: var(--sails-primary);
+  color: #000000;
 }
 
 .sails-topbar__center {

@@ -486,8 +486,9 @@ cmrren4zy000bky2ddoe9254s	cmrren4zy0005ky2drpf29ccy	Users	UserPlus	/admin/users	
 cmrren4zy000cky2di741v67l	cmrren4zy0005ky2drpf29ccy	Teams	GitBranch	/admin/teams	plugin	cmrren4zy000aky2djxij4dnp	1	system.teams.manage	AdminTeamManager
 cmrren4zy000dky2d44ntpye6	cmrren4zy0005ky2drpf29ccy	Access Roles	ShieldCheck	/admin/roles	plugin	cmrren4zy000aky2djxij4dnp	2	system.roles.assign	AdminPermissions
 cmrren4zy000fky2dz2ubyib1	cmrren4zy0005ky2drpf29ccy	Data Model	Database	/admin/schema	plugin	cmrren4zy000eky2d5eyztko0	0	system.schema.manage	AdminEntityManager
-cmrren4zy000gky2db6xp98ek	cmrren4zy0005ky2drpf29ccy	Console Apps	LayoutGrid	/admin/apps	plugin	cmrren4zy000eky2d5eyztko0	1	system.apps.manage	AdminAppManager
-cmrren4zy000hky2dovgh6gur	cmrren4zy0005ky2drpf29ccy	Navigation Menus	Menu	/admin/menus	plugin	cmrren4zy000eky2d5eyztko0	2	system.menus.manage	AdminMenuManager
+cmrren4zy000views000000001	cmrren4zy0005ky2drpf29ccy	Views	LayoutTemplate	/admin/views	plugin	cmrren4zy000eky2d5eyztko0	1	system.schema.manage	AdminViewManager
+cmrren4zy000gky2db6xp98ek	cmrren4zy0005ky2drpf29ccy	Console Apps	LayoutGrid	/admin/apps	plugin	cmrren4zy000eky2d5eyztko0	2	system.apps.manage	AdminAppManager
+cmrren4zy000hky2dovgh6gur	cmrren4zy0005ky2drpf29ccy	Navigation Menus	Menu	/admin/menus	plugin	cmrren4zy000eky2d5eyztko0	3	system.menus.manage	AdminMenuManager
 cmrren4zy000jky2dpyji1i2a	cmrren4zy0005ky2drpf29ccy	SSO Configuration	Key	/admin/sso	plugin	cmrren4zy000iky2dzgvllyyf	0	system.security.sso	AdminSSOConfig
 cmrren4zy000kky2diyy3a63e	cmrren4zy0005ky2drpf29ccy	API Tokens	FileDigit	/admin/tokens	plugin	cmrren4zy000iky2dzgvllyyf	1	system.security.tokens	AdminApiTokens
 cmrren4zy000lky2dwj0ox01h	cmrren4zy0005ky2drpf29ccy	Connected Apps	Link	/admin/apps	plugin	cmrren4zy000iky2dzgvllyyf	2	system.security.apps	AdminConnectedApps

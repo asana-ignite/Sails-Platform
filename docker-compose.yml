@@ -32,8 +32,8 @@ services:
       - DATABASE_URL=postgresql://postgres:mysecretpassword@db:5432/postgres?schema=core
       - NEXTAUTH_SECRET=development-secret-only
       - NEXTAUTH_URL=http://localhost:5173
-      - GOOGLE_CLIENT_ID=your-google-client-id
-      - GOOGLE_CLIENT_SECRET=your-google-client-secret
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-your-google-client-id}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-your-google-client-secret}
     volumes:
       - .:/app
       - /app/node_modules

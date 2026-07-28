@@ -67,9 +67,9 @@
 
 .sails-auth-logo-text {
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 400;
   letter-spacing: -1px;
-  color: var(--sails-text-main);
+  color: #000000;
   background: none !important;
   -webkit-text-fill-color: initial !important;
 }

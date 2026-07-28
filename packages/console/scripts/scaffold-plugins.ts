@@ -8,6 +8,7 @@ const components = [
   { name: 'AdminUserManager', label: 'Users' },
   { name: 'AdminTeamManager', label: 'Teams' },
   { name: 'AdminEntityManager', label: 'Data Model' },
+  { name: 'AdminViewManager', label: 'Views' },
   { name: 'AdminAppManager', label: 'Console Apps' },
   { name: 'AdminMenuManager', label: 'Navigation Menus' },
   { name: 'AdminSSOConfig', label: 'Login & Single Sign-On' },

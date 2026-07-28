@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAppSession } from '@/lib/auth/session';
+import { ensurePlatformStudioMenus } from '@/lib/menu-repair';
 
 /**
  * GET /api/console/menus
@@ -16,6 +17,8 @@ export async function GET(req: Request) {
     if (!tenantId) {
       return NextResponse.json({ success: false, error: 'Tenant context required' }, { status: 400 });
     }
+
+    await ensurePlatformStudioMenus(tenantId);
 
     const where: any = {
       app: { tenantId }

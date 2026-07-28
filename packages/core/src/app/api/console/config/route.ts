@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAppSession } from '@/lib/auth/session';
 import { SYSTEM_PERMISSION_REGISTRY } from '@/lib/security/registry';
+import { ensurePlatformStudioMenus } from '@/lib/menu-repair';
 
 /**
  * GET /api/console/config
@@ -38,6 +39,27 @@ export async function GET() {
     // 2. Fallback Mock Data if DB is empty or no tenantId (e.g., local development without seeded data)
     if (apps.length === 0) {
       apps = getMockData();
+    }
+
+    // 2.5 Auto-repair: ensure expected Platform Studio menus exist for existing tenants
+    if (apps.length > 0 && tenantId) {
+      await ensurePlatformStudioMenus(tenantId);
+      // Re-fetch to get the updated menus
+      apps = await db.consoleApp.findMany({
+        where: { tenantId },
+        orderBy: { order: 'asc' },
+        include: {
+          menus: {
+            where: { parentId: null },
+            orderBy: { order: 'asc' },
+            include: {
+              children: {
+                orderBy: { order: 'asc' }
+              }
+            }
+          }
+        }
+      });
     }
 
     // 3. Filter Apps and Menus by Role & System Capability
@@ -200,8 +222,9 @@ function getMockData() {
           order: 2,
           children: [
             { id: 'm-schema', label: 'Data Model', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminEntityManager' },
-            { id: 'm-apps', label: 'Console Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 1, requiredCapability: 'system.apps.manage', actionType: 'plugin', componentKey: 'AdminAppManager' },
-            { id: 'm-menus', label: 'Navigation Menus', icon: 'Menu', path: '/admin/menus', order: 2, requiredCapability: 'system.menus.manage', actionType: 'plugin', componentKey: 'AdminMenuManager' }
+            { id: 'm-views', label: 'Views', icon: 'LayoutTemplate', path: '/admin/views', order: 1, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminViewManager' },
+            { id: 'm-apps', label: 'Console Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 2, requiredCapability: 'system.apps.manage', actionType: 'plugin', componentKey: 'AdminAppManager' },
+            { id: 'm-menus', label: 'Navigation Menus', icon: 'Menu', path: '/admin/menus', order: 3, requiredCapability: 'system.menus.manage', actionType: 'plugin', componentKey: 'AdminMenuManager' }
           ]
         }
       ]
