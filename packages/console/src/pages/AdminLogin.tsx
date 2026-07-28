@@ -65,19 +65,19 @@ const AdminLogin: React.FC = () => {
 
   const renderBenefitIcon = (iconName: string) => {
     switch (iconName) {
-      case 'shield': return <ShieldCheck size={20} style={{ color: 'var(--klao-primary)' }} />;
+      case 'shield': return <ShieldCheck size={20} style={{ color: 'var(--sails-primary)' }} />;
       case 'zap': return <Zap size={20} style={{ color: '#4ec5ad' }} />;
-      case 'database': return <Database size={20} style={{ color: 'var(--klao-info)' }} />;
-      case 'code': return <Code size={20} style={{ color: 'var(--klao-warning)' }} />;
+      case 'database': return <Database size={20} style={{ color: 'var(--sails-info)' }} />;
+      case 'code': return <Code size={20} style={{ color: 'var(--sails-warning)' }} />;
       case 'user': return <UserCheck size={20} style={{ color: '#4ec5ad' }} />;
-      case 'activity': return <Activity size={20} style={{ color: 'var(--klao-danger)' }} />;
-      case 'layers': return <Layers size={20} style={{ color: 'var(--klao-primary)' }} />;
-      case 'settings': return <Settings size={20} style={{ color: 'var(--klao-primary-dark)' }} />;
-      case 'lock': return <Lock size={20} style={{ color: 'var(--klao-primary)' }} />;
-      case 'shield-alert': return <ShieldAlert size={20} style={{ color: 'var(--klao-danger)' }} />;
-      case 'cpu': return <Cpu size={20} style={{ color: 'var(--klao-primary-dark)' }} />;
-      case 'key': return <Key size={20} style={{ color: 'var(--klao-warning)' }} />;
-      case 'building': return <Building size={20} style={{ color: 'var(--klao-primary)' }} />;
+      case 'activity': return <Activity size={20} style={{ color: 'var(--sails-danger)' }} />;
+      case 'layers': return <Layers size={20} style={{ color: 'var(--sails-primary)' }} />;
+      case 'settings': return <Settings size={20} style={{ color: 'var(--sails-primary-dark)' }} />;
+      case 'lock': return <Lock size={20} style={{ color: 'var(--sails-primary)' }} />;
+      case 'shield-alert': return <ShieldAlert size={20} style={{ color: 'var(--sails-danger)' }} />;
+      case 'cpu': return <Cpu size={20} style={{ color: 'var(--sails-primary-dark)' }} />;
+      case 'key': return <Key size={20} style={{ color: 'var(--sails-warning)' }} />;
+      case 'building': return <Building size={20} style={{ color: 'var(--sails-primary)' }} />;
       default: return <ShieldCheck size={20} />;
     }
   };
@@ -114,23 +114,23 @@ const AdminLogin: React.FC = () => {
   };
 
   return (
-    <div className="klao-auth-layout">
+    <div className="sails-auth-layout">
       {/* Left Column: Admin Sign-In Form (38% width on desktop) */}
-      <div className="klao-auth-form-side">
-        <div className="klao-auth-form-wrapper">
-          <button className="klao-auth-back-btn" onClick={() => navigate('/login')}>
+      <div className="sails-auth-form-side">
+        <div className="sails-auth-form-wrapper">
+          <button className="sails-auth-back-btn" onClick={() => navigate('/login')}>
             <ArrowLeft size={16} />
             <span>Back to User Login</span>
           </button>
 
-          <div className="klao-auth-brand">
-            <img src={themeMode === 'dark' ? logoDarkUrl : logoLightUrl} alt="KLAO Logo" className="klao-auth-logo-img" />
-            <span className="klao-auth-logo-text">KLAO</span>
+          <div className="sails-auth-brand">
+            <img src={themeMode === 'dark' ? logoDarkUrl : logoLightUrl} alt="SAILS Logo" className="sails-auth-logo-img" />
+            <span className="sails-auth-logo-text">SAILS</span>
           </div>
 
           <div>
-            <h2 className="klao-auth-title">Admin Portal</h2>
-            <p className="klao-auth-subtitle">System Administrator authentication for Klao Core.</p>
+            <h2 className="sails-auth-title">Admin Portal</h2>
+            <p className="sails-auth-subtitle">System Administrator authentication for Sails Core.</p>
           </div>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -162,27 +162,27 @@ const AdminLogin: React.FC = () => {
               className="google-login-button" 
               type="submit" 
               disabled={isLoading} 
-              style={{ backgroundColor: 'var(--klao-primary-dark)', color: 'white', border: 'none', padding: '12px', marginTop: '4px' }}
+              style={{ backgroundColor: 'var(--sails-primary-dark)', color: 'white', border: 'none', padding: '12px', marginTop: '4px' }}
             >
               <span>{isLoading ? 'Verifying Credentials...' : 'Sign In to Admin Portal'}</span>
             </button>
           </form>
 
-          <div className="klao-login-footer" style={{ marginTop: '20px' }}>
+          <div className="sails-login-footer" style={{ marginTop: '20px' }}>
             <p>© 2026 Ignite Idea. System Administration.</p>
           </div>
         </div>
       </div>
 
       {/* Right Column: Admin Hero Side (62% width on desktop) */}
-      <div className="klao-auth-hero-side klao-auth-hero-side--admin">
-        <div className="klao-hero-gradient-overlay" />
+      <div className="sails-auth-hero-side sails-auth-hero-side--admin">
+        <div className="sails-hero-gradient-overlay" />
 
         {/* 3 Random Floating Benefit Cards with Independent Animations */}
         {selectedBenefits.map((benefit, index) => (
           <div 
             key={benefit.id} 
-            className={`klao-hero-floating-card klao-hero-floating-card--${index + 1}`}
+            className={`sails-hero-floating-card sails-hero-floating-card--${index + 1}`}
           >
             {renderBenefitIcon(benefit.icon)}
             <div>
@@ -192,11 +192,11 @@ const AdminLogin: React.FC = () => {
           </div>
         ))}
 
-        <div className="klao-auth-hero-content">
-          <h1 className="klao-hero-greeting" style={{ fontSize: '2.5rem' }}>
+        <div className="sails-auth-hero-content">
+          <h1 className="sails-hero-greeting" style={{ fontSize: '2.5rem' }}>
             System Administrator Access
           </h1>
-          <p className="klao-hero-subtext">
+          <p className="sails-hero-subtext">
             Elevated administrative portal for managing tenants, data schemas, security policies, and platform services.
           </p>
         </div>

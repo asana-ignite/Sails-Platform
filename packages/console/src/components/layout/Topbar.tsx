@@ -92,60 +92,60 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
   };
 
   return (
-    <header className={`klao-topbar ${isMobileSearchVisible ? 'klao-topbar--mobile-visible' : ''}`}>
-      <div className="klao-topbar__left">
-        <button className="klao-topbar__menu-trigger" onClick={onMenuToggle}>
+    <header className={`sails-topbar ${isMobileSearchVisible ? 'sails-topbar--mobile-visible' : ''}`}>
+      <div className="sails-topbar__left">
+        <button className="sails-topbar__menu-trigger" onClick={onMenuToggle}>
           <Menu size={20} />
         </button>
-        <div className="klao-topbar__logo">
-          <img src={themeMode === 'dark' ? logoDarkUrl : logoLightUrl} alt="KLAO Logo" className="klao-topbar__logo-icon" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-          <span className="klao-topbar__logo-text">KLAO</span>
+        <div className="sails-topbar__logo">
+          <img src={themeMode === 'dark' ? logoDarkUrl : logoLightUrl} alt="SAILS Logo" className="sails-topbar__logo-icon" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+          <span className="sails-topbar__logo-text">SAILS</span>
         </div>
       </div>
 
-      <div className="klao-topbar__center">
-        <div className="klao-topbar__search">
-          <Search className="klao-topbar__search-icon" size={18} />
+      <div className="sails-topbar__center">
+        <div className="sails-topbar__search">
+          <Search className="sails-topbar__search-icon" size={18} />
           <input
             type="text"
-            className="klao-topbar__search-input"
+            className="sails-topbar__search-input"
             placeholder="Search leads, contacts, orders..."
           />
         </div>
       </div>
 
-      <div className="klao-topbar__right">
+      <div className="sails-topbar__right">
         <div
-          className="klao-topbar__action-wrapper"
+          className="sails-topbar__action-wrapper"
           ref={switcherRef}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
           <button
-            className={`klao-topbar__action ${isSwitcherOpen ? 'klao-topbar__action--active' : ''}`}
+            className={`sails-topbar__action ${isSwitcherOpen ? 'sails-topbar__action--active' : ''}`}
             title="App Switcher"
           >
             <LayoutGrid size={20} />
           </button>
 
           {isSwitcherOpen && (
-            <div className={`klao-app-switcher ${isClosing ? 'klao-app-switcher--closing' : ''}`}>
+            <div className={`sails-app-switcher ${isClosing ? 'sails-app-switcher--closing' : ''}`}>
               {isLoading ? (
-                <div className="klao-app-switcher__loading">
+                <div className="sails-app-switcher__loading">
                   <Spinner size={32} label="Loading Apps..." />
                 </div>
               ) : (
-                <div className="klao-app-switcher__grid">
+                <div className="sails-app-switcher__grid">
                   {apps.map((app) => (
                     <div
                       key={app.id}
-                      className={`klao-app-switcher__item ${activeApp?.id === app.id ? 'klao-app-switcher__item--active' : ''}`}
+                      className={`sails-app-switcher__item ${activeApp?.id === app.id ? 'sails-app-switcher__item--active' : ''}`}
                       onClick={() => handleAppClick(app.id)}
                     >
-                      <div className="klao-app-switcher__icon">
+                      <div className="sails-app-switcher__icon">
                         <DynamicIcon name={app.icon || 'Box'} size={20} />
                       </div>
-                      <span className="klao-app-switcher__name">{app.name}</span>
+                      <span className="sails-app-switcher__name">{app.name}</span>
                     </div>
                   ))}
                 </div>
@@ -154,37 +154,37 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
           )}
         </div>
 
-        <button className="klao-topbar__action">
+        <button className="sails-topbar__action">
           <Bell size={20} />
-          <span className="klao-topbar__badge"></span>
+          <span className="sails-topbar__badge"></span>
         </button>
 
-        <div className="klao-topbar__profile-container" ref={profileRef}>
+        <div className="sails-topbar__profile-container" ref={profileRef}>
           <div 
-            className={`klao-topbar__profile ${isProfileOpen ? 'klao-topbar__profile--active' : ''}`} 
+            className={`sails-topbar__profile ${isProfileOpen ? 'sails-topbar__profile--active' : ''}`} 
             onClick={() => setIsProfileOpen(!isProfileOpen)}
           >
-            <div className="klao-topbar__avatar">
+            <div className="sails-topbar__avatar">
               {user?.image ? (
                 <img src={user.image} alt={user.name} style={{ borderRadius: '50%', width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <User size={20} />
               )}
             </div>
-            <div className="klao-topbar__user-info">
-              <span className="klao-topbar__user-name">{user?.name || 'Guest'}</span>
-              <span className="klao-topbar__user-role">{formatRole(user?.role)}</span>
+            <div className="sails-topbar__user-info">
+              <span className="sails-topbar__user-name">{user?.name || 'Guest'}</span>
+              <span className="sails-topbar__user-role">{formatRole(user?.role)}</span>
             </div>
-            <ChevronDown size={14} className={`klao-topbar__profile-chevron ${isProfileOpen ? 'klao-topbar__profile-chevron--active' : ''}`} />
+            <ChevronDown size={14} className={`sails-topbar__profile-chevron ${isProfileOpen ? 'sails-topbar__profile-chevron--active' : ''}`} />
           </div>
 
           {isProfileOpen && (
-            <div className="klao-profile-dropdown">
-              <div className="klao-profile-dropdown__item" onClick={() => { navigate('/settings/profile'); setIsProfileOpen(false); }}>
+            <div className="sails-profile-dropdown">
+              <div className="sails-profile-dropdown__item" onClick={() => { navigate('/settings/profile'); setIsProfileOpen(false); }}>
                 <Settings size={16} />
                 <span>Setting</span>
               </div>
-              <div className="klao-profile-dropdown__item klao-profile-dropdown__item--danger" onClick={logout}>
+              <div className="sails-profile-dropdown__item sails-profile-dropdown__item--danger" onClick={logout}>
                 <LogOut size={16} />
                 <span>Logout</span>
               </div>

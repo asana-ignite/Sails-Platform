@@ -62,7 +62,7 @@ const DEFAULT_SETTINGS_DATA: GeneralSettingsData = {
   timeFormat: '24h',
 
   allowSelfRegistration: false,
-  allowedEmailDomains: 'klao.io, partner.com',
+  allowedEmailDomains: 'sails.io, partner.com',
   defaultUserRole: 'MEMBER',
   defaultLandingPage: '/console/dashboard',
   inactivityTimeoutMinutes: '30',
@@ -209,24 +209,24 @@ const ColorAccentField: React.FC<ColorAccentFieldProps> = ({
   }, [isOpen]);
 
   return (
-    <div className="klao-gs-group">
-      <label className="klao-gs-label">{label}</label>
-      <div className="klao-gs-color-picker-wrapper" ref={wrapperRef}>
+    <div className="sails-gs-group">
+      <label className="sails-gs-label">{label}</label>
+      <div className="sails-gs-color-picker-wrapper" ref={wrapperRef}>
         <button
           type="button"
-          className="klao-gs-color-swatch-trigger"
+          className="sails-gs-color-swatch-trigger"
           style={{ backgroundColor: displayValue, cursor: showPicker ? 'pointer' : 'default' }}
           onClick={() => showPicker && setIsOpen(prev => !prev)}
           aria-label={`${label} color picker`}
         />
         {showPicker && isOpen && (
-          <div className="klao-gs-color-popover">
+          <div className="sails-gs-color-popover">
             <HexColorPicker color={displayValue} onChange={onChange} />
           </div>
         )}
         <input
           type="text"
-          className="klao-input"
+          className="sails-input"
           style={{ fontFamily: 'monospace', fontWeight: 600, width: '100%' }}
           value={displayValue}
           onChange={e => onChange(e.target.value)}
@@ -235,7 +235,7 @@ const ColorAccentField: React.FC<ColorAccentFieldProps> = ({
         {showReset && (
           <button
             type="button"
-            className="klao-btn klao-btn--ghost"
+            className="sails-btn sails-btn--ghost"
             style={{ fontSize: '0.7rem', padding: '2px 8px', flexShrink: 0 }}
             onClick={onReset}
             title="Reset to auto-calculated"
@@ -244,7 +244,7 @@ const ColorAccentField: React.FC<ColorAccentFieldProps> = ({
           </button>
         )}
       </div>
-      <span className="klao-gs-help">{help}</span>
+      <span className="sails-gs-help">{help}</span>
     </div>
   );
 };
@@ -361,7 +361,7 @@ const AdminGeneralSettings: React.FC = () => {
           }));
         }
       } catch {
-        const cached = localStorage.getItem('klao-general-settings');
+        const cached = localStorage.getItem('sails-general-settings');
         if (cached && !cancelled) {
           try {
             setFormData(prev => ({ ...prev, ...JSON.parse(cached) }));
@@ -395,7 +395,7 @@ const AdminGeneralSettings: React.FC = () => {
     commitTheme(themeOverrides);
 
     try {
-      localStorage.setItem('klao-general-settings', JSON.stringify(formData));
+      localStorage.setItem('sails-general-settings', JSON.stringify(formData));
       const res = await fetch('/api/console/company-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -435,12 +435,12 @@ const AdminGeneralSettings: React.FC = () => {
   };
 
   return (
-    <div className="klao-general-settings klao-page-container">
+    <div className="sails-general-settings sails-page-container">
       {/* Tab Navigation */}
-      <nav className="klao-general-settings__nav">
+      <nav className="sails-general-settings__nav">
         <button
           type="button"
-          className={`klao-general-settings__tab ${activeTab === 'branding' ? 'klao-general-settings__tab--active' : ''}`}
+          className={`sails-general-settings__tab ${activeTab === 'branding' ? 'sails-general-settings__tab--active' : ''}`}
           onClick={() => setActiveTab('branding')}
         >
           <Palette size={16} />
@@ -448,7 +448,7 @@ const AdminGeneralSettings: React.FC = () => {
         </button>
         <button
           type="button"
-          className={`klao-general-settings__tab ${activeTab === 'localization' ? 'klao-general-settings__tab--active' : ''}`}
+          className={`sails-general-settings__tab ${activeTab === 'localization' ? 'sails-general-settings__tab--active' : ''}`}
           onClick={() => setActiveTab('localization')}
         >
           <Globe2 size={16} />
@@ -456,7 +456,7 @@ const AdminGeneralSettings: React.FC = () => {
         </button>
         <button
           type="button"
-          className={`klao-general-settings__tab ${activeTab === 'security' ? 'klao-general-settings__tab--active' : ''}`}
+          className={`sails-general-settings__tab ${activeTab === 'security' ? 'sails-general-settings__tab--active' : ''}`}
           onClick={() => setActiveTab('security')}
         >
           <Lock size={16} />
@@ -464,7 +464,7 @@ const AdminGeneralSettings: React.FC = () => {
         </button>
         <button
           type="button"
-          className={`klao-general-settings__tab ${activeTab === 'maintenance' ? 'klao-general-settings__tab--active' : ''}`}
+          className={`sails-general-settings__tab ${activeTab === 'maintenance' ? 'sails-general-settings__tab--active' : ''}`}
           onClick={() => setActiveTab('maintenance')}
         >
           <AlertTriangle size={16} />
@@ -474,46 +474,46 @@ const AdminGeneralSettings: React.FC = () => {
 
       {/* Form Container */}
       <form onSubmit={handleSave}>
-        <div className="klao-card klao-general-settings__card">
+        <div className="sails-card sails-general-settings__card">
           {/* TAB 1: Branding & Theme */}
           {activeTab === 'branding' && (
             <div>
-              <div className="klao-gs-section-header">
-                <div className="klao-gs-section-icon">
+              <div className="sails-gs-section-header">
+                <div className="sails-gs-section-icon">
                   <Palette size={20} />
                 </div>
                 <div>
-                  <h3 className="klao-gs-section-title">Branding & Theme Customization</h3>
-                  <p className="klao-gs-section-subtitle">
+                  <h3 className="sails-gs-section-title">Branding & Theme Customization</h3>
+                  <p className="sails-gs-section-subtitle">
                     Upload organization logos and configure primary theme accent colors.
                   </p>
                 </div>
               </div>
 
-              <div className="klao-gs-grid-2">
+              <div className="sails-gs-grid-2">
                 {/* Light Mode Logo Attachment */}
-                <div className="klao-gs-group">
-                  <label className="klao-gs-label">Main Logo Attachment (Light Mode)</label>
+                <div className="sails-gs-group">
+                  <label className="sails-gs-label">Main Logo Attachment (Light Mode)</label>
                   
-                  <div className="klao-gs-logo-preview-box">
+                  <div className="sails-gs-logo-preview-box">
                     <img 
                       src={formData.logoLightUrl || '/assets/logo-standard.jpg'} 
                       alt="Light Mode Logo Preview" 
-                      className="klao-gs-logo-img"
+                      className="sails-gs-logo-img"
                     />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
                         {formData.logoLightUrl && !formData.logoLightUrl.startsWith('/assets/') ? 'Custom Uploaded Logo' : 'Standard Platform Sailboat Logo (Default)'}
                       </span>
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <span className="klao-gs-format-badge">JPG</span>
-                        <span className="klao-gs-format-badge">PNG</span>
-                        <span className="klao-gs-format-badge">SVG</span>
-                        <span className="klao-gs-format-badge">GIF</span>
+                        <span className="sails-gs-format-badge">JPG</span>
+                        <span className="sails-gs-format-badge">PNG</span>
+                        <span className="sails-gs-format-badge">SVG</span>
+                        <span className="sails-gs-format-badge">GIF</span>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
-                      <label className="klao-btn klao-btn--secondary" style={{ cursor: 'pointer', fontSize: '0.8rem', padding: '6px 12px' }}>
+                      <label className="sails-btn sails-btn--secondary" style={{ cursor: 'pointer', fontSize: '0.8rem', padding: '6px 12px' }}>
                         <Upload size={14} style={{ marginRight: '4px' }} />
                         <span>{formData.logoLightUrl && !formData.logoLightUrl.startsWith('/assets/') ? 'Change' : 'Upload Custom'}</span>
                         <input
@@ -526,8 +526,8 @@ const AdminGeneralSettings: React.FC = () => {
                       {formData.logoLightUrl && !formData.logoLightUrl.startsWith('/assets/') && (
                         <button
                           type="button"
-                          className="klao-btn klao-btn--ghost"
-                          style={{ fontSize: '0.8rem', padding: '6px 10px', color: 'var(--klao-text-muted)' }}
+                          className="sails-btn sails-btn--ghost"
+                          style={{ fontSize: '0.8rem', padding: '6px 10px', color: 'var(--sails-text-muted)' }}
                           onClick={() => handleInputChange('logoLightUrl', '/assets/logo-standard.jpg')}
                           title="Reset to standard default platform logo"
                         >
@@ -536,32 +536,32 @@ const AdminGeneralSettings: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  <span className="klao-gs-help">Recommended Dimensions: <strong>200 × 50 px</strong> (Max 2MB)</span>
+                  <span className="sails-gs-help">Recommended Dimensions: <strong>200 × 50 px</strong> (Max 2MB)</span>
                 </div>
 
                 {/* Dark Mode Logo Attachment */}
-                <div className="klao-gs-group">
-                  <label className="klao-gs-label">Dark Mode Logo Attachment</label>
+                <div className="sails-gs-group">
+                  <label className="sails-gs-label">Dark Mode Logo Attachment</label>
                   
-                  <div className="klao-gs-logo-preview-box" style={{ background: '#1e293b' }}>
+                  <div className="sails-gs-logo-preview-box" style={{ background: '#1e293b' }}>
                     <img 
                       src={formData.logoDarkUrl || '/assets/logo-standard.jpg'} 
                       alt="Dark Mode Logo Preview" 
-                      className="klao-gs-logo-img"
+                      className="sails-gs-logo-img"
                     />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#f8fafc' }}>
                         {formData.logoDarkUrl && !formData.logoDarkUrl.startsWith('/assets/') ? 'Custom Uploaded Logo' : 'Standard Platform Sailboat Logo (Default)'}
                       </span>
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <span className="klao-gs-format-badge">JPG</span>
-                        <span className="klao-gs-format-badge">PNG</span>
-                        <span className="klao-gs-format-badge">SVG</span>
-                        <span className="klao-gs-format-badge">GIF</span>
+                        <span className="sails-gs-format-badge">JPG</span>
+                        <span className="sails-gs-format-badge">PNG</span>
+                        <span className="sails-gs-format-badge">SVG</span>
+                        <span className="sails-gs-format-badge">GIF</span>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
-                      <label className="klao-btn klao-btn--secondary" style={{ cursor: 'pointer', fontSize: '0.8rem', padding: '6px 12px' }}>
+                      <label className="sails-btn sails-btn--secondary" style={{ cursor: 'pointer', fontSize: '0.8rem', padding: '6px 12px' }}>
                         <Upload size={14} style={{ marginRight: '4px' }} />
                         <span>{formData.logoDarkUrl && !formData.logoDarkUrl.startsWith('/assets/') ? 'Change' : 'Upload Custom'}</span>
                         <input
@@ -574,7 +574,7 @@ const AdminGeneralSettings: React.FC = () => {
                       {formData.logoDarkUrl && !formData.logoDarkUrl.startsWith('/assets/') && (
                         <button
                           type="button"
-                          className="klao-btn klao-btn--ghost"
+                          className="sails-btn sails-btn--ghost"
                           style={{ fontSize: '0.8rem', padding: '6px 10px', color: '#94a3b8' }}
                           onClick={() => handleInputChange('logoDarkUrl', '/assets/logo-standard.jpg')}
                           title="Reset to standard default platform logo"
@@ -584,37 +584,37 @@ const AdminGeneralSettings: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  <span className="klao-gs-help">Recommended Dimensions: <strong>200 × 50 px</strong> (Max 2MB)</span>
+                  <span className="sails-gs-help">Recommended Dimensions: <strong>200 × 50 px</strong> (Max 2MB)</span>
                 </div>
 
                 {/* Gradient Theme Toggle Row */}
-                <div className="klao-gs-toggle-row" style={{ gridColumn: '1 / -1', marginBottom: '8px' }}>
+                <div className="sails-gs-toggle-row" style={{ gridColumn: '1 / -1', marginBottom: '8px' }}>
                   <div>
-                    <div className="klao-gs-toggle-title">Enable Gradient Theme Accents</div>
-                    <div className="klao-gs-toggle-desc">
+                    <div className="sails-gs-toggle-title">Enable Gradient Theme Accents</div>
+                    <div className="sails-gs-toggle-desc">
                       Apply smooth dual-tone gradients across primary action buttons, page header accents, and site backgrounds.
                     </div>
                   </div>
-                  <label className="klao-gs-switch">
+                  <label className="sails-gs-switch">
                     <input
                       type="checkbox"
                       checked={gradientOn}
                       onChange={e => setEnableGradient(e.target.checked)}
                     />
-                    <span className="klao-gs-slider" />
+                    <span className="sails-gs-slider" />
                   </label>
                 </div>
 
                 {/* Color Palette Matching Technique Dropdown */}
-                <div className="klao-gs-group" style={{ gridColumn: '1 / -1', marginBottom: '4px' }}>
-                  <label className="klao-gs-label">Color Palette Matching Technique</label>
+                <div className="sails-gs-group" style={{ gridColumn: '1 / -1', marginBottom: '4px' }}>
+                  <label className="sails-gs-label">Color Palette Matching Technique</label>
                   <CustomSelect
                     size="md"
                     value={paletteTechnique}
                     options={PALETTE_TECHNIQUE_OPTIONS}
                     onChange={val => setPaletteTechnique(val as ColorMatchingTechnique)}
                   />
-                  <span className="klao-gs-help">
+                  <span className="sails-gs-help">
                     Color theory algorithm used to calculate auto-suggested secondary, background, and font contrast.
                   </span>
                 </div>
@@ -667,11 +667,11 @@ const AdminGeneralSettings: React.FC = () => {
                 </div>
 
                 {/* Custom Login Tagline */}
-                <div className="klao-gs-group" style={{ gridColumn: 'span 2' }}>
-                  <label className="klao-gs-label">Custom Login Tagline</label>
+                <div className="sails-gs-group" style={{ gridColumn: 'span 2' }}>
+                  <label className="sails-gs-label">Custom Login Tagline</label>
                   <input
                     type="text"
-                    className="klao-input"
+                    className="sails-input"
                     value={formData.loginTagline}
                     onChange={e => handleInputChange('loginTagline', e.target.value)}
                     placeholder="Enter custom slogan displayed on user sign-in page"
@@ -684,21 +684,21 @@ const AdminGeneralSettings: React.FC = () => {
           {/* TAB 2: Localization & Financials */}
           {activeTab === 'localization' && (
             <div>
-              <div className="klao-gs-section-header">
-                <div className="klao-gs-section-icon">
+              <div className="sails-gs-section-header">
+                <div className="sails-gs-section-icon">
                   <Globe2 size={20} />
                 </div>
                 <div>
-                  <h3 className="klao-gs-section-title">Localization & Financial Preferences</h3>
-                  <p className="klao-gs-section-subtitle">
+                  <h3 className="sails-gs-section-title">Localization & Financial Preferences</h3>
+                  <p className="sails-gs-section-subtitle">
                     Set base operational currency, fiscal calendar starting month, timezone, and date formats.
                   </p>
                 </div>
               </div>
 
-              <div className="klao-gs-grid-2">
-                <div className="klao-gs-group">
-                  <label className="klao-gs-label">Primary Base Currency *</label>
+              <div className="sails-gs-grid-2">
+                <div className="sails-gs-group">
+                  <label className="sails-gs-label">Primary Base Currency *</label>
                   <CustomSelect
                     size="md"
                     value={formData.baseCurrency}
@@ -706,22 +706,22 @@ const AdminGeneralSettings: React.FC = () => {
                     searchable={true}
                     onChange={val => handleInputChange('baseCurrency', val)}
                   />
-                  <span className="klao-gs-help">Default currency used across financial calculations and reporting</span>
+                  <span className="sails-gs-help">Default currency used across financial calculations and reporting</span>
                 </div>
 
-                <div className="klao-gs-group">
-                  <label className="klao-gs-label">Fiscal Year Start Month</label>
+                <div className="sails-gs-group">
+                  <label className="sails-gs-label">Fiscal Year Start Month</label>
                   <CustomSelect
                     size="md"
                     value={formData.fiscalYearStartMonth}
                     options={MONTH_OPTIONS}
                     onChange={val => handleInputChange('fiscalYearStartMonth', val)}
                   />
-                  <span className="klao-gs-help">Beginning month of fiscal annual reporting</span>
+                  <span className="sails-gs-help">Beginning month of fiscal annual reporting</span>
                 </div>
 
-                <div className="klao-gs-group" style={{ gridColumn: 'span 2' }}>
-                  <label className="klao-gs-label">System Timezone (All Standard World Timezones)</label>
+                <div className="sails-gs-group" style={{ gridColumn: 'span 2' }}>
+                  <label className="sails-gs-label">System Timezone (All Standard World Timezones)</label>
                   <CustomSelect
                     size="md"
                     value={formData.timezone}
@@ -729,11 +729,11 @@ const AdminGeneralSettings: React.FC = () => {
                     searchable={true}
                     onChange={val => handleInputChange('timezone', val)}
                   />
-                  <span className="klao-gs-help">Standard IANA timezone list covering all global regions (400+ world timezones)</span>
+                  <span className="sails-gs-help">Standard IANA timezone list covering all global regions (400+ world timezones)</span>
                 </div>
 
-                <div className="klao-gs-group">
-                  <label className="klao-gs-label">Date Display Format</label>
+                <div className="sails-gs-group">
+                  <label className="sails-gs-label">Date Display Format</label>
                   <CustomSelect
                     size="md"
                     value={formData.dateFormat}
@@ -742,8 +742,8 @@ const AdminGeneralSettings: React.FC = () => {
                   />
                 </div>
 
-                <div className="klao-gs-group">
-                  <label className="klao-gs-label">Time Display Format</label>
+                <div className="sails-gs-group">
+                  <label className="sails-gs-label">Time Display Format</label>
                   <CustomSelect
                     size="md"
                     value={formData.timeFormat}
@@ -758,49 +758,49 @@ const AdminGeneralSettings: React.FC = () => {
           {/* TAB 3: System Security & Governance */}
           {activeTab === 'security' && (
             <div>
-              <div className="klao-gs-section-header">
-                <div className="klao-gs-section-icon">
+              <div className="sails-gs-section-header">
+                <div className="sails-gs-section-icon">
                   <Lock size={20} />
                 </div>
                 <div>
-                  <h3 className="klao-gs-section-title">Security & User Access Governance</h3>
-                  <p className="klao-gs-section-subtitle">
+                  <h3 className="sails-gs-section-title">Security & User Access Governance</h3>
+                  <p className="sails-gs-section-subtitle">
                     Self-registration rules, allowed domain whitelists, default roles, and timeout limits.
                   </p>
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div className="klao-gs-toggle-row">
+                <div className="sails-gs-toggle-row">
                   <div>
-                    <div className="klao-gs-toggle-title">Allow User Self-Registration</div>
-                    <div className="klao-gs-toggle-desc">Allow users to sign up without an explicit admin invitation</div>
+                    <div className="sails-gs-toggle-title">Allow User Self-Registration</div>
+                    <div className="sails-gs-toggle-desc">Allow users to sign up without an explicit admin invitation</div>
                   </div>
-                  <label className="klao-gs-switch">
+                  <label className="sails-gs-switch">
                     <input
                       type="checkbox"
                       checked={formData.allowSelfRegistration}
                       onChange={e => handleInputChange('allowSelfRegistration', e.target.checked)}
                     />
-                    <span className="klao-gs-slider" />
+                    <span className="sails-gs-slider" />
                   </label>
                 </div>
 
-                <div className="klao-gs-grid-2">
-                  <div className="klao-gs-group">
-                    <label className="klao-gs-label">Allowed Self-Signup Email Domains</label>
+                <div className="sails-gs-grid-2">
+                  <div className="sails-gs-group">
+                    <label className="sails-gs-label">Allowed Self-Signup Email Domains</label>
                     <input
                       type="text"
-                      className="klao-input"
+                      className="sails-input"
                       value={formData.allowedEmailDomains}
                       onChange={e => handleInputChange('allowedEmailDomains', e.target.value)}
                       placeholder="e.g. company.com, partner.org"
                     />
-                    <span className="klao-gs-help">Comma-separated list of allowed email domains</span>
+                    <span className="sails-gs-help">Comma-separated list of allowed email domains</span>
                   </div>
 
-                  <div className="klao-gs-group">
-                    <label className="klao-gs-label">Default Role for New Users</label>
+                  <div className="sails-gs-group">
+                    <label className="sails-gs-label">Default Role for New Users</label>
                     <CustomSelect
                       size="md"
                       value={formData.defaultUserRole}
@@ -809,8 +809,8 @@ const AdminGeneralSettings: React.FC = () => {
                     />
                   </div>
 
-                  <div className="klao-gs-group">
-                    <label className="klao-gs-label">Default Post-Login Landing Page</label>
+                  <div className="sails-gs-group">
+                    <label className="sails-gs-label">Default Post-Login Landing Page</label>
                     <CustomSelect
                       size="md"
                       value={formData.defaultLandingPage}
@@ -819,8 +819,8 @@ const AdminGeneralSettings: React.FC = () => {
                     />
                   </div>
 
-                  <div className="klao-gs-group">
-                    <label className="klao-gs-label">Inactivity Session Timeout</label>
+                  <div className="sails-gs-group">
+                    <label className="sails-gs-label">Inactivity Session Timeout</label>
                     <CustomSelect
                       size="md"
                       value={formData.inactivityTimeoutMinutes}
@@ -829,8 +829,8 @@ const AdminGeneralSettings: React.FC = () => {
                     />
                   </div>
 
-                  <div className="klao-gs-group">
-                    <label className="klao-gs-label">Max Attachment File Upload Limit</label>
+                  <div className="sails-gs-group">
+                    <label className="sails-gs-label">Max Attachment File Upload Limit</label>
                     <CustomSelect
                       size="md"
                       value={formData.maxFileUploadMb}
@@ -846,53 +846,53 @@ const AdminGeneralSettings: React.FC = () => {
           {/* TAB 4: Maintenance & Alerts */}
           {activeTab === 'maintenance' && (
             <div>
-              <div className="klao-gs-section-header">
-                <div className="klao-gs-section-icon">
+              <div className="sails-gs-section-header">
+                <div className="sails-gs-section-icon">
                   <AlertTriangle size={20} />
                 </div>
                 <div>
-                  <h3 className="klao-gs-section-title">System Maintenance & Announcement Banners</h3>
-                  <p className="klao-gs-section-subtitle">
+                  <h3 className="sails-gs-section-title">System Maintenance & Announcement Banners</h3>
+                  <p className="sails-gs-section-subtitle">
                     Emergency system lockouts and global announcement banner broadcasts.
                   </p>
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <div className="klao-gs-toggle-row" style={{ borderColor: formData.maintenanceMode ? 'rgba(239, 68, 68, 0.4)' : undefined, background: formData.maintenanceMode ? 'rgba(239, 68, 68, 0.08)' : undefined }}>
+                <div className="sails-gs-toggle-row" style={{ borderColor: formData.maintenanceMode ? 'rgba(239, 68, 68, 0.4)' : undefined, background: formData.maintenanceMode ? 'rgba(239, 68, 68, 0.08)' : undefined }}>
                   <div>
-                    <div className="klao-gs-toggle-title" style={{ color: formData.maintenanceMode ? '#fca5a5' : undefined }}>
+                    <div className="sails-gs-toggle-title" style={{ color: formData.maintenanceMode ? '#fca5a5' : undefined }}>
                       {formData.maintenanceMode ? '🔴 System Maintenance Mode Active' : 'System Maintenance Mode'}
                     </div>
-                    <div className="klao-gs-toggle-desc">
+                    <div className="sails-gs-toggle-desc">
                       When enabled, non-admin users will be blocked from accessing the console and shown a maintenance page.
                     </div>
                   </div>
-                  <label className="klao-gs-switch">
+                  <label className="sails-gs-switch">
                     <input
                       type="checkbox"
                       checked={formData.maintenanceMode}
                       onChange={e => handleInputChange('maintenanceMode', e.target.checked)}
                     />
-                    <span className="klao-gs-slider" style={{ backgroundColor: formData.maintenanceMode ? '#ef4444' : undefined }} />
+                    <span className="sails-gs-slider" style={{ backgroundColor: formData.maintenanceMode ? '#ef4444' : undefined }} />
                   </label>
                 </div>
 
-                <div className="klao-gs-grid-2">
-                  <div className="klao-gs-group" style={{ gridColumn: 'span 2' }}>
-                    <label className="klao-gs-label">Broadcast Announcement Banner Text</label>
+                <div className="sails-gs-grid-2">
+                  <div className="sails-gs-group" style={{ gridColumn: 'span 2' }}>
+                    <label className="sails-gs-label">Broadcast Announcement Banner Text</label>
                     <input
                       type="text"
-                      className="klao-input"
+                      className="sails-input"
                       value={formData.announcementBannerText}
                       onChange={e => handleInputChange('announcementBannerText', e.target.value)}
                       placeholder="e.g. System upgrade scheduled tonight..."
                     />
-                    <span className="klao-gs-help">Displayed at top of all user screens when text is non-empty</span>
+                    <span className="sails-gs-help">Displayed at top of all user screens when text is non-empty</span>
                   </div>
 
-                  <div className="klao-gs-group">
-                    <label className="klao-gs-label">Announcement Banner Type</label>
+                  <div className="sails-gs-group">
+                    <label className="sails-gs-label">Announcement Banner Type</label>
                     <CustomSelect
                       size="md"
                       value={formData.announcementType}
@@ -902,9 +902,9 @@ const AdminGeneralSettings: React.FC = () => {
                   </div>
 
                   {formData.announcementBannerText && (
-                    <div className="klao-gs-group" style={{ gridColumn: 'span 2' }}>
-                      <label className="klao-gs-label">Announcement Banner Live Preview</label>
-                      <div className={`klao-gs-banner-preview klao-gs-banner-preview--${formData.announcementType}`}>
+                    <div className="sails-gs-group" style={{ gridColumn: 'span 2' }}>
+                      <label className="sails-gs-label">Announcement Banner Live Preview</label>
+                      <div className={`sails-gs-banner-preview sails-gs-banner-preview--${formData.announcementType}`}>
                         <Megaphone size={18} />
                         <span>{formData.announcementBannerText}</span>
                       </div>
@@ -916,10 +916,10 @@ const AdminGeneralSettings: React.FC = () => {
           )}
 
           {/* Footer Save Actions */}
-          <div className="klao-gs-footer">
+          <div className="sails-gs-footer">
             <div>
               {savedSuccessMsg && (
-                <div className="klao-gs-toast">
+                <div className="sails-gs-toast">
                   <CheckCircle2 size={16} />
                   <span>{savedSuccessMsg}</span>
                 </div>
@@ -927,7 +927,7 @@ const AdminGeneralSettings: React.FC = () => {
             </div>
             <button
               type="submit"
-              className="klao-btn klao-btn--primary"
+              className="sails-btn sails-btn--primary"
               disabled={isSaving}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             >

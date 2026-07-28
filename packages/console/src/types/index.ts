@@ -1,6 +1,6 @@
 /**
- * KLAO Global Types
+ * SAILS Global Types
  */
 
-export * from '@klao/shared';
+export * from '@sails/shared';
 

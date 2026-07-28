@@ -1,5 +1,5 @@
 {
-  "name": "klao-platform",
+  "name": "sails-platform",
   "private": true,
   "workspaces": [
     "packages/*"

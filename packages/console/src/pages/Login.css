@@ -1,16 +1,16 @@
 /* Split-Screen Auth Layout matching auth-signin.html reference */
 
-.klao-auth-layout {
+.sails-auth-layout {
   min-height: 100vh;
   width: 100vw;
   display: flex;
-  background-color: var(--klao-bg-body);
-  font-family: var(--klao-font-family);
+  background-color: var(--sails-bg-body);
+  font-family: var(--sails-font-family);
   overflow-x: hidden;
 }
 
 /* Left Column - Form Side (Compact 38% width on desktop matching reference layout) */
-.klao-auth-form-side {
+.sails-auth-form-side {
   flex: 0 0 38%;
   max-width: 38%;
   min-height: 100vh;
@@ -18,13 +18,13 @@
   align-items: center;
   justify-content: center;
   padding: 40px 32px;
-  background: var(--klao-bg-card);
-  border-right: 1px solid var(--klao-border-color);
+  background: var(--sails-bg-card);
+  border-right: 1px solid var(--sails-border-color);
   z-index: 2;
   position: relative;
 }
 
-.klao-auth-form-wrapper {
+.sails-auth-form-wrapper {
   width: 100%;
   max-width: 360px;
   display: flex;
@@ -33,67 +33,67 @@
 }
 
 /* Back Button for Admin Login */
-.klao-auth-back-btn {
+.sails-auth-back-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   background: transparent;
   border: none;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   padding: 0;
   margin-bottom: -6px;
-  transition: var(--klao-transition);
+  transition: var(--sails-transition);
 }
 
-.klao-auth-back-btn:hover {
-  color: var(--klao-primary-dark);
+.sails-auth-back-btn:hover {
+  color: var(--sails-primary-dark);
 }
 
 /* Brand Logo */
-.klao-auth-brand {
+.sails-auth-brand {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.klao-auth-logo-img {
+.sails-auth-logo-img {
   width: 32px;
   height: 32px;
   object-fit: contain;
 }
 
-.klao-auth-logo-text {
+.sails-auth-logo-text {
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -1px;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   background: none !important;
   -webkit-text-fill-color: initial !important;
 }
 
 /* Form Titles */
-.klao-auth-title {
+.sails-auth-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   margin-bottom: 4px;
   background: none !important;
   -webkit-text-fill-color: initial !important;
 }
 
-.klao-auth-subtitle {
+.sails-auth-subtitle {
   font-size: 0.85rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   line-height: 1.4;
   background: none !important;
   -webkit-text-fill-color: initial !important;
 }
 
 /* SSO Buttons & Icons Sizing Fix */
-.klao-auth-sso-grid {
+.sails-auth-sso-grid {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -108,13 +108,13 @@
   gap: 10px;
   padding: 10px 14px;
   background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-md);
-  color: var(--klao-text-main);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
+  color: var(--sails-text-main);
   font-weight: 600;
   font-size: 0.88rem;
   cursor: pointer;
-  transition: var(--klao-transition);
+  transition: var(--sails-transition);
   height: 42px;
 }
 
@@ -140,8 +140,8 @@
 .google-login-button:hover,
 .microsoft-login-button:hover,
 .saml-login-button:hover {
-  background: var(--klao-bg-card);
-  border-color: var(--klao-primary);
+  background: var(--sails-bg-card);
+  border-color: var(--sails-primary);
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
@@ -153,16 +153,16 @@
   gap: 10px;
   padding: 10px 14px;
   background: rgba(0, 0, 0, 0.02);
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-md);
-  color: var(--klao-text-muted);
-  transition: var(--klao-transition);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
+  color: var(--sails-text-muted);
+  transition: var(--sails-transition);
 }
 
 .input-group:focus-within {
-  border-color: var(--klao-primary-dark);
-  background: var(--klao-bg-card);
-  box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.25);
+  border-color: var(--sails-primary-dark);
+  background: var(--sails-bg-card);
+  box-shadow: 0 0 0 3px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.25);
 }
 
 .input-group input {
@@ -171,32 +171,32 @@
   outline: none;
   flex: 1;
   font-size: 0.88rem;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
 }
 
 /* Options Bar (Remember Me & Forgot Pwd) */
-.klao-auth-options {
+.sails-auth-options {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 0.82rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
-.klao-auth-remember {
+.sails-auth-remember {
   display: flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
 }
 
-.klao-auth-forgot {
-  color: var(--klao-primary-dark);
+.sails-auth-forgot {
+  color: var(--sails-primary-dark);
   text-decoration: none;
   font-weight: 500;
 }
 
-.klao-auth-forgot:hover {
+.sails-auth-forgot:hover {
   text-decoration: underline;
 }
 
@@ -207,18 +207,18 @@
   gap: 10px;
   padding: 10px 14px;
   background: transparent;
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-md);
-  color: var(--klao-text-muted);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
+  color: var(--sails-text-muted);
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: var(--klao-transition);
+  transition: var(--sails-transition);
 }
 
 .admin-login-button:hover {
-  border-color: var(--klao-primary);
-  color: var(--klao-text-main);
+  border-color: var(--sails-primary);
+  color: var(--sails-text-main);
   background: rgba(0, 0, 0, 0.02);
 }
 
@@ -226,7 +226,7 @@
   display: flex;
   align-items: center;
   text-align: center;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   font-size: 0.78rem;
   margin: 2px 0;
 }
@@ -235,7 +235,7 @@
 .login-divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid var(--klao-border-color);
+  border-bottom: 1px solid var(--sails-border-color);
 }
 
 .login-divider span {
@@ -244,15 +244,15 @@
 
 .login-error {
   padding: 10px 14px;
-  background: var(--klao-danger-light);
-  color: var(--klao-danger);
+  background: var(--sails-danger-light);
+  color: var(--sails-danger);
   border: 1px solid rgba(253, 97, 97, 0.3);
-  border-radius: var(--klao-radius-md);
+  border-radius: var(--sails-radius-md);
   font-size: 0.82rem;
 }
 
 /* Right Column - Hero Side (Approx 62% width on desktop matching reference layout) */
-.klao-auth-hero-side {
+.sails-auth-hero-side {
   flex: 1;
   min-height: 100vh;
   position: relative;
@@ -266,14 +266,14 @@
   padding: 60px;
 }
 
-.klao-auth-hero-side--admin {
+.sails-auth-hero-side--admin {
   background-image: url('/auth-bg.jpg');
   background-size: cover;
   background-position: center;
 }
 
 /* Decorative Hero Background Elements */
-.klao-hero-gradient-overlay {
+.sails-hero-gradient-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -283,7 +283,7 @@
   pointer-events: none;
 }
 
-.klao-auth-hero-content {
+.sails-auth-hero-content {
   position: absolute;
   top: 60px;
   right: 60px;
@@ -297,29 +297,29 @@
   z-index: 5;
 }
 
-.klao-hero-greeting {
+.sails-hero-greeting {
   font-size: 2.2rem;
   font-weight: 800;
   line-height: 1.25;
-  background: linear-gradient(135deg, #ffffff 0%, var(--klao-primary) 100%);
+  background: linear-gradient(135deg, #ffffff 0%, var(--sails-primary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-.klao-hero-subtext {
+.sails-hero-subtext {
   font-size: 0.98rem;
   color: rgba(255, 255, 255, 0.75);
   line-height: 1.55;
 }
 
 /* Floating Glassmorphism Hero Cards */
-.klao-hero-floating-card {
+.sails-hero-floating-card {
   position: absolute;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: var(--klao-radius-lg);
+  border-radius: var(--sails-radius-lg);
   padding: 12px 18px;
   display: flex;
   align-items: center;
@@ -329,33 +329,33 @@
   z-index: 4;
 }
 
-.klao-hero-floating-card--1 {
+.sails-hero-floating-card--1 {
   top: 18%;
   left: 8%;
   animation: float-diagonal 7s ease-in-out infinite;
 }
 
-.klao-hero-floating-card--2 {
+.sails-hero-floating-card--2 {
   top: 46%;
   right: 12%;
   animation: float-horizontal 9s ease-in-out infinite 0.5s;
 }
 
-.klao-hero-floating-card--3 {
+.sails-hero-floating-card--3 {
   bottom: 22%;
   left: 12%;
   animation: float-vertical 8s ease-in-out infinite 1.5s;
 }
 
 
-.klao-hero-badge-group {
+.sails-hero-badge-group {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
 }
 
-.klao-hero-badge {
+.sails-hero-badge {
   padding: 6px 14px;
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(10px);
@@ -366,9 +366,9 @@
   color: #ffffff;
 }
 
-.klao-login-footer p {
+.sails-login-footer p {
   font-size: 0.78rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
 @keyframes float-slow {
@@ -408,38 +408,38 @@
 }
 
 /* Dark Theme Adjustments */
-[data-theme='dark'] .klao-auth-form-side {
-  background: var(--klao-bg-card);
+[data-theme='dark'] .sails-auth-form-side {
+  background: var(--sails-bg-card);
 }
 
 [data-theme='dark'] .google-login-button,
 [data-theme='dark'] .microsoft-login-button,
 [data-theme='dark'] .saml-login-button {
-  background: var(--klao-bg-card);
-  border-color: var(--klao-border-color);
-  color: var(--klao-text-main);
+  background: var(--sails-bg-card);
+  border-color: var(--sails-border-color);
+  color: var(--sails-text-main);
 }
 
 [data-theme='dark'] .google-login-button:hover,
 [data-theme='dark'] .microsoft-login-button:hover,
 [data-theme='dark'] .saml-login-button:hover {
-  background: var(--klao-bg-body);
+  background: var(--sails-bg-body);
 }
 
 /* Responsive Layout */
 @media (max-width: 992px) {
-  .klao-auth-layout {
+  .sails-auth-layout {
     flex-direction: column;
   }
 
-  .klao-auth-form-side {
+  .sails-auth-form-side {
     flex: 1;
     max-width: 100%;
     border-right: none;
     padding: 30px 20px;
   }
 
-  .klao-auth-hero-side {
+  .sails-auth-hero-side {
     display: none;
   }
 }

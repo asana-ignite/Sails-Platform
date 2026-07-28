@@ -1,10 +1,10 @@
-# Project Backlog: KLAO (Ignite Idea Operating System)
+# Project Backlog: SAILS (Ignite Idea Operating System)
 
 ## Active & Pending Phases
 
 ### Phase 8: Internal Modules (User & Project Management) (In Progress)
 - [ ] **[PM]** Design JSON payloads for `ConsoleMenu` injection for Sales and Projects.
-- [ ] **[Architect]** Define shared interfaces (`KlaoUser`, `KlaoTableDefinition`) in `packages/shared/src/index.ts`.
+- [ ] **[Architect]** Define shared interfaces (`SailsUser`, `SailsTableDefinition`) in `packages/shared/src/index.ts`.
 - [ ] **[Database]** Verify `prisma/schema.prisma` for `users`, `tables`, and `fields`.
 - [ ] **[BackEnd]** Implement/Verify API endpoints ensuring the strict Security Pipeline is enforced.
 - [ ] **[FrontEnd]** Build `UserManager.tsx` and `ObjectManager.tsx` in `packages/console/src/pages/custom/`. Register in `src/features/admin/registry.tsx`.
@@ -53,12 +53,12 @@
 - [ ] Logic for complex validation rules (Regex, Range, Enum plugins).
 - [x] Interceptor-based Audit Trails within Database Transactions (`QueryLayer.ts`).
 
-### Phase 3: Dynamic UI Layer → KLAO Console (100% Complete)
+### Phase 3: Dynamic UI Layer → SAILS Console (100% Complete)
 - [x] **Schema Provider**: Integrated into Admin UI components.
 - [x] **Dynamic Form Engine**: Component that generates forms from Zod schemas.
 - [x] **Dynamic Data Table**: Component that displays table data with server-side filtering/sorting.
 - [x] **Field Components**: Specialized inputs (Select, Date, etc.) implemented in Admin UI.
-- [x] **Migration**: Decoupled UI into `klao-console/` project.
+- [x] **Migration**: Decoupled UI into `sails-console/` project.
 - [x] **Dynamic Metadata Integration**:
     - [x] Implemented hierarchical `ConsoleApp` and `ConsoleMenu` database models.
     - [x] Created `ConsoleProvider` context for global navigation state.
@@ -96,7 +96,7 @@
 - [x] Transition Runtime Environment to **Bun**.
 - [x] **Docker-based Dev Environment**: Implemented `Dockerfile` and `docker compose` for unified development.
 - [ ] Performance benchmarking (DDL speed vs Metadata size).
-- [x] Decouple UI into **KLAO Console** (`/packages/console`) project.
+- [x] Decouple UI into **SAILS Console** (`/packages/console`) project.
 - [x] Generate `shared/types.ts` API contract for Console.
 - [x] Documentation and Deployment.
 - [x] **Refactoring (Profile → Team)**: Successfully renamed all references to Team for better organizational alignment.
@@ -116,7 +116,7 @@
     - [x] Update `TenantProvisioner` for automated system app injection.
     - [x] Provision "Settings & Admin" for Ignite Idea.
 - [x] **Step 5: Frontend Integration (Experience)**
-    - [x] Create Admin UI route stubs in `klao-console`.
+    - [x] Create Admin UI route stubs in `sails-console`.
     - [x] Implement Permission Toggle component in Admin settings.
 
 ### Phase 7: Internal Ops & Team Security (100% Complete)

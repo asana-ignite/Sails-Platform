@@ -1,4 +1,4 @@
-.klao-mobile-search-bar {
+.sails-mobile-search-bar {
   display: none;
   position: fixed;
   bottom: 60px; /* Stacked above Global Bar */
@@ -20,14 +20,14 @@
 }
 
 @media (max-width: 768px) {
-  .klao-mobile-search-bar {
+  .sails-mobile-search-bar {
     display: flex !important;
     bottom: calc(60px + env(safe-area-inset-bottom));
     align-items: center;
   }
 }
 
-.klao-mobile-search-bar--visible {
+.sails-mobile-search-bar--visible {
   transform: translateY(0);
   opacity: 1;
   visibility: visible;
@@ -36,35 +36,35 @@
 
 
 
-.klao-mobile-search-bar__inner {
+.sails-mobile-search-bar__inner {
   display: flex;
   align-items: center;
   width: 100%;
-  background-color: var(--klao-bg-body);
-  border-radius: var(--klao-radius-md);
+  background-color: var(--sails-bg-body);
+  border-radius: var(--sails-radius-md);
   padding: 0 12px;
   height: 44px;
 }
 
-.klao-mobile-search-bar__icon {
-  color: var(--klao-text-muted);
+.sails-mobile-search-bar__icon {
+  color: var(--sails-text-muted);
   margin-right: 10px;
 }
 
-.klao-mobile-search-bar__input {
+.sails-mobile-search-bar__input {
   flex: 1;
   background: none;
   border: none;
   height: 100%;
   font-size: 1rem;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   outline: none;
 }
 
-.klao-mobile-search-bar__close {
+.sails-mobile-search-bar__close {
   background: none;
   border: none;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   padding: 4px;
   display: flex;
   align-items: center;
@@ -73,6 +73,6 @@
   margin-left: 8px;
 }
 
-.klao-mobile-search-bar__close:active {
-  color: var(--klao-primary);
+.sails-mobile-search-bar__close:active {
+  color: var(--sails-primary);
 }

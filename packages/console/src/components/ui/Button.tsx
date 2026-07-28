@@ -7,7 +7,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /**
- * KLAO UI: Standard Button
+ * SAILS UI: Standard Button
  * Follows BEM naming convention.
  */
 export const Button: React.FC<ButtonProps> = ({ 
@@ -17,7 +17,7 @@ export const Button: React.FC<ButtonProps> = ({
   className = '', 
   ...props 
 }) => {
-  const classes = `klao-btn klao-btn--${variant} klao-btn--${size} ${className}`;
+  const classes = `sails-btn sails-btn--${variant} sails-btn--${size} ${className}`;
   
   return (
     <button className={classes} {...props}>

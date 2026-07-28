@@ -13,7 +13,7 @@ import {
   ArrowLeft, Edit3, Trash2, ChevronDown, ChevronRight,
   Mail, Phone, MapPin, Calendar, Hash, User, DollarSign,
 } from 'lucide-react';
-import type { TableLayout, LayoutSection, LayoutField, KlaoFieldDefinition } from '@klao/shared';
+import type { TableLayout, LayoutSection, LayoutField, SailsFieldDefinition } from '@sails/shared';
 import './LayoutSample.css';
 import {
   MOCK_LEADS_FIELDS,
@@ -30,7 +30,7 @@ interface LayoutSampleProps {
 
 // ─── Helpers ───────────────────────────────────────────────────
 
-function fieldById(id: string): KlaoFieldDefinition | undefined {
+function fieldById(id: string): SailsFieldDefinition | undefined {
   return MOCK_LEADS_FIELDS.find((f) => f.id === id);
 }
 
@@ -63,7 +63,7 @@ const MOCK_RECORD: Record<string, any> = {
   assigned_to:  'Somsak Chaiyaporn',
 };
 
-function renderFieldValue(field: KlaoFieldDefinition, value: any): React.ReactNode {
+function renderFieldValue(field: SailsFieldDefinition, value: any): React.ReactNode {
   if (value === undefined || value === null) return <span className="layout-sample__null">—</span>;
 
   switch (field.logicalType) {
@@ -109,7 +109,7 @@ function renderFieldValue(field: KlaoFieldDefinition, value: any): React.ReactNo
 
 // ─── Sub-components ────────────────────────────────────────────
 
-function FieldLabel({ field, layoutField }: { field: KlaoFieldDefinition; layoutField: LayoutField }) {
+function FieldLabel({ field, layoutField }: { field: SailsFieldDefinition; layoutField: LayoutField }) {
   return (
     <label className="layout-sample__field-label">
       {layoutField.labelOverride || field.name}
@@ -146,7 +146,7 @@ function FormField({ layoutField }: { layoutField: LayoutField }) {
       <FieldLabel field={field} layoutField={layoutField} />
       {isTextarea ? (
         <textarea
-          className="klao-input layout-sample__textarea"
+          className="sails-input layout-sample__textarea"
           defaultValue={value}
           readOnly={isReadOnly}
           rows={4}
@@ -154,7 +154,7 @@ function FormField({ layoutField }: { layoutField: LayoutField }) {
       ) : (
         <input
           type="text"
-          className="klao-input layout-sample__input"
+          className="sails-input layout-sample__input"
           defaultValue={value}
           readOnly={isReadOnly}
         />
@@ -176,7 +176,7 @@ function Section({
   const [collapsed, setCollapsed] = useState(section.collapsed || false);
 
   return (
-    <div className="klao-card layout-sample__section">
+    <div className="sails-card layout-sample__section">
       <button
         className="layout-sample__section-header"
         onClick={() => setCollapsed(!collapsed)}
@@ -207,14 +207,14 @@ function RelatedRecords({ layout }: { layout: TableLayout }) {
   return (
     <>
       {related.map((rel) => (
-        <div key={rel.tableId} className="klao-card layout-sample__related">
+        <div key={rel.tableId} className="sails-card layout-sample__related">
           <div className="layout-sample__related-header">
             <h3 className="layout-sample__section-title">
               Related {rel.tableId.replace('t_', '')}
             </h3>
             <span className="layout-sample__related-count">{rel.maxRows} shown</span>
           </div>
-          <table className="klao-table">
+          <table className="sails-table">
             <thead>
               <tr>
                 {rel.displayFields.map((df) => (
@@ -257,37 +257,37 @@ export const LayoutSample: React.FC<LayoutSampleProps> = ({ demoView }) => {
   const isList = demoView === 'LIST';
 
   return (
-    <div className="klao-page-container layout-sample">
+    <div className="sails-page-container layout-sample">
       {/* ── Page Header (dynamically titled from layout) ── */}
-      <header className="klao-page-header layout-sample__header">
-        <div className="klao-page-header__left">
+      <header className="sails-page-header layout-sample__header">
+        <div className="sails-page-header__left">
           {isDetail && (
-            <button className="klao-btn klao-btn--ghost layout-sample__back">
+            <button className="sails-btn sails-btn--ghost layout-sample__back">
               <ArrowLeft size={18} />
             </button>
           )}
           <div>
-            <h1 className="klao-page-header__title">
+            <h1 className="sails-page-header__title">
               {isDetail || isForm ? titleValue : 'Leads'}
             </h1>
-            <p className="klao-page-header__subtitle">
+            <p className="sails-page-header__subtitle">
               {isList   && 'Layout-driven table view — columns from layout config'}
               {isDetail && 'Layout-driven detail view — sections from layout config'}
               {isForm   && `Editing: ${titleValue}`}
             </p>
           </div>
         </div>
-        <div className="klao-page-header__right">
+        <div className="sails-page-header__right">
           {isDetail && (
             <>
-              <button className="klao-btn klao-btn--ghost"><Edit3 size={16} /> Edit</button>
-              <button className="klao-btn klao-btn--ghost layout-sample__danger"><Trash2 size={16} /> Delete</button>
+              <button className="sails-btn sails-btn--ghost"><Edit3 size={16} /> Edit</button>
+              <button className="sails-btn sails-btn--ghost layout-sample__danger"><Trash2 size={16} /> Delete</button>
             </>
           )}
           {isForm && (
             <>
-              <button className="klao-btn klao-btn--ghost">Cancel</button>
-              <button className="klao-btn klao-btn--primary">Save Lead</button>
+              <button className="sails-btn sails-btn--ghost">Cancel</button>
+              <button className="sails-btn sails-btn--primary">Save Lead</button>
             </>
           )}
         </div>
@@ -295,8 +295,8 @@ export const LayoutSample: React.FC<LayoutSampleProps> = ({ demoView }) => {
 
       {/* ── LIST View: table columns from layout config ── */}
       {isList && (
-        <div className="klao-card layout-sample__list-table-wrap">
-          <table className="klao-table">
+        <div className="sails-card layout-sample__list-table-wrap">
+          <table className="sails-table">
             <thead>
               <tr>
                 {layout.config.fields

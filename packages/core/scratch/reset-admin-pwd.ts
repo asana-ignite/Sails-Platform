@@ -6,7 +6,7 @@ const db = new PrismaClient();
 async function resetPwd() {
   const hash = await bcrypt.hash('Welcome2Ignite', 10);
   await db.user.update({
-    where: { email: 'admin@klao.app' },
+    where: { email: 'admin@sails.app' },
     data: { password: hash }
   });
   console.log("Password reset successfully.");

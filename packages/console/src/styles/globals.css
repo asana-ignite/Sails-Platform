@@ -16,11 +16,11 @@ body {
 }
 
 body {
-  font-family: var(--klao-font-family);
-  font-size: var(--klao-font-size-base);
-  background-color: var(--klao-bg-body);
-  background-image: var(--klao-bg-gradient);
-  color: var(--klao-text-main);
+  font-family: var(--sails-font-family);
+  font-size: var(--sails-font-size-base);
+  background-color: var(--sails-bg-body);
+  background-image: var(--sails-bg-gradient);
+  color: var(--sails-text-main);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -34,147 +34,147 @@ ol {
 a {
   text-decoration: none;
   color: inherit;
-  transition: var(--klao-transition);
+  transition: var(--sails-transition);
 }
 
 button {
   font: inherit;
-  font-family: var(--klao-font-family);
+  font-family: var(--sails-font-family);
   cursor: pointer;
   border: none;
   background: none;
-  transition: var(--klao-transition);
+  transition: var(--sails-transition);
 }
 
 input,
 select,
 textarea {
   font: inherit;
-  font-family: var(--klao-font-family);
+  font-family: var(--sails-font-family);
   outline: none;
 }
 
 /* Base Utility for BEM Cards */
-.klao-card {
-  background-color: var(--klao-bg-card);
-  border-radius: var(--klao-radius-md);
-  box-shadow: var(--klao-shadow-sm);
-  padding: calc(var(--klao-spacing-unit) * 3);
-  transition: var(--klao-transition);
+.sails-card {
+  background-color: var(--sails-bg-card);
+  border-radius: var(--sails-radius-md);
+  box-shadow: var(--sails-shadow-sm);
+  padding: calc(var(--sails-spacing-unit) * 3);
+  transition: var(--sails-transition);
 }
 
-.klao-card:hover {
-  box-shadow: var(--klao-shadow-md);
+.sails-card:hover {
+  box-shadow: var(--sails-shadow-md);
 }
 
 /* Global Page Container */
-.klao-page-container {
+.sails-page-container {
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
 }
 
 /* Global Page Header Styles */
-.klao-page-header {
+.sails-page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: calc(var(--klao-spacing-unit) * 4);
+  margin-bottom: calc(var(--sails-spacing-unit) * 4);
 }
 
-.klao-page-header__left {
+.sails-page-header__left {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.klao-page-header__icon-wrapper {
+.sails-page-header__icon-wrapper {
   width: 36px;
   height: 36px;
-  background-color: var(--klao-primary-light);
-  color: var(--klao-secondary);
-  border-radius: var(--klao-radius-md);
+  background-color: var(--sails-primary-light);
+  color: var(--sails-secondary);
+  border-radius: var(--sails-radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--klao-shadow-sm);
+  box-shadow: var(--sails-shadow-sm);
 }
 
-.klao-page-header__title {
+.sails-page-header__title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   margin-bottom: 1px;
   letter-spacing: -0.2px;
 }
 
-.klao-page-header__subtitle {
+.sails-page-header__subtitle {
   font-size: 0.8rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
 /* Global Button System */
-.klao-btn {
+.sails-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   padding: 6px 12px;
-  border-radius: var(--klao-radius-sm);
+  border-radius: var(--sails-radius-sm);
   font-weight: 600;
   font-size: 0.8rem;
   cursor: pointer;
-  transition: var(--klao-transition);
+  transition: var(--sails-transition);
   border: 1px solid transparent;
   outline: none;
   white-space: nowrap;
 }
 
-.klao-btn--primary {
-  background-color: var(--klao-primary);
+.sails-btn--primary {
+  background-color: var(--sails-primary);
   color: white;
-  box-shadow: 0 4px 10px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.3);
+  box-shadow: 0 4px 10px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.3);
 }
 
-.klao-btn--primary:disabled {
-  background-color: var(--klao-primary);
+.sails-btn--primary:disabled {
+  background-color: var(--sails-primary);
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
 }
 
-.klao-btn--primary:hover:not(:disabled) {
-  background-color: var(--klao-primary-dark);
+.sails-btn--primary:hover:not(:disabled) {
+  background-color: var(--sails-primary-dark);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.5);
+  box-shadow: 0 6px 16px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.5);
 }
 
-.klao-btn--ghost,
-.klao-btn--secondary {
+.sails-btn--ghost,
+.sails-btn--secondary {
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--klao-border-color);
-  color: var(--klao-text-main);
+  border: 1px solid var(--sails-border-color);
+  color: var(--sails-text-main);
 }
 
-.klao-btn--ghost:hover,
-.klao-btn--secondary:hover {
+.sails-btn--ghost:hover,
+.sails-btn--secondary:hover {
   background-color: rgba(255, 255, 255, 0.1);
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-.klao-btn--danger {
-  color: var(--klao-danger);
-  background-color: var(--klao-danger-light);
+.sails-btn--danger {
+  color: var(--sails-danger);
+  background-color: var(--sails-danger-light);
 }
 
-.klao-btn--danger:hover {
-  background-color: var(--klao-danger);
+.sails-btn--danger:hover {
+  background-color: var(--sails-danger);
   color: white;
 }
 
 /* Global Modal System */
-.klao-modal-overlay {
+.sails-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -186,16 +186,16 @@ textarea {
   align-items: center;
   justify-content: center;
   z-index: 9999 !important;
-  animation: klao-fade-in 0.2s ease-out;
+  animation: sails-fade-in 0.2s ease-out;
 }
 
 /* Premium Custom Checkbox */
-.klao-checkbox {
+.sails-checkbox {
   appearance: none;
   -webkit-appearance: none;
   width: 18px;
   height: 18px;
-  border: 1px solid var(--klao-border-color);
+  border: 1px solid var(--sails-border-color);
   border-radius: 4px;
   background: white;
   cursor: pointer;
@@ -207,17 +207,17 @@ textarea {
   vertical-align: middle;
 }
 
-.klao-checkbox:hover {
-  border-color: var(--klao-primary);
-  background: var(--klao-primary-light);
+.sails-checkbox:hover {
+  border-color: var(--sails-primary);
+  background: var(--sails-primary-light);
 }
 
-.klao-checkbox:checked {
-  background: var(--klao-primary);
-  border-color: var(--klao-primary);
+.sails-checkbox:checked {
+  background: var(--sails-primary);
+  border-color: var(--sails-primary);
 }
 
-.klao-checkbox:checked::after {
+.sails-checkbox:checked::after {
   content: "";
   width: 5px;
   height: 10px;
@@ -227,12 +227,12 @@ textarea {
   margin-bottom: 2px;
 }
 
-.klao-checkbox:indeterminate {
-  background: var(--klao-primary);
-  border-color: var(--klao-primary);
+.sails-checkbox:indeterminate {
+  background: var(--sails-primary);
+  border-color: var(--sails-primary);
 }
 
-.klao-checkbox:indeterminate::after {
+.sails-checkbox:indeterminate::after {
   content: "";
   width: 10px;
   height: 2px;
@@ -240,26 +240,26 @@ textarea {
   border-radius: 1px;
 }
 
-.klao-modal {
-  background: var(--klao-bg-card);
+.sails-modal {
+  background: var(--sails-bg-card);
   width: 100%;
   max-width: 550px;
-  border-radius: var(--klao-radius-lg);
+  border-radius: var(--sails-radius-lg);
   padding: 32px;
-  box-shadow: var(--klao-shadow-lg);
-  border: 1px solid var(--klao-border-color);
-  animation: klao-modal-slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: var(--sails-shadow-lg);
+  border: 1px solid var(--sails-border-color);
+  animation: sails-modal-slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.klao-modal h2 {
+.sails-modal h2 {
   font-size: 1.5rem;
   font-weight: 800;
   margin-bottom: 24px;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   letter-spacing: -0.5px;
 }
 
-.klao-modal__footer {
+.sails-modal__footer {
   margin-top: 32px;
   display: flex;
   justify-content: flex-end;
@@ -267,80 +267,80 @@ textarea {
 }
 
 /* Global Form System */
-.klao-form-group {
+.sails-form-group {
   margin-bottom: 20px;
 }
 
-.klao-form-row {
+.sails-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.klao-form-group label {
+.sails-form-group label {
   display: block;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   margin-bottom: 8px;
 }
 
-.klao-form-group input,
-.klao-form-group select,
-.klao-form-group textarea,
+.sails-form-group input,
+.sails-form-group select,
+.sails-form-group textarea,
 textarea {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-md);
-  font-family: var(--klao-font-family);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
+  font-family: var(--sails-font-family);
   font-size: 0.95rem;
   line-height: 1.5;
-  background: var(--klao-bg-body);
-  color: var(--klao-text-main);
-  transition: var(--klao-transition);
+  background: var(--sails-bg-body);
+  color: var(--sails-text-main);
+  transition: var(--sails-transition);
 }
 
 select {
   appearance: none;
   -webkit-appearance: none;
-  background-color: var(--klao-bg-card);
-  color: var(--klao-text-main);
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-md);
+  background-color: var(--sails-bg-card);
+  color: var(--sails-text-main);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
   padding: 10px 36px 10px 14px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   background-size: 16px;
-  font-family: var(--klao-font-family);
+  font-family: var(--sails-font-family);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: var(--klao-transition);
+  transition: var(--sails-transition);
 }
 
 select:focus {
-  border-color: var(--klao-primary);
-  box-shadow: 0 0 0 3px var(--klao-primary-light);
+  border-color: var(--sails-primary);
+  box-shadow: 0 0 0 3px var(--sails-primary-light);
 }
 
 select option {
-  background-color: var(--klao-bg-card, #1e293b);
-  color: var(--klao-text-main, #f8fafc);
+  background-color: var(--sails-bg-card, #1e293b);
+  color: var(--sails-text-main, #f8fafc);
   padding: 10px;
 }
 
-.klao-form-group input:focus,
-.klao-form-group select:focus,
-.klao-form-group textarea:focus,
+.sails-form-group input:focus,
+.sails-form-group select:focus,
+.sails-form-group textarea:focus,
 textarea:focus {
-  border-color: var(--klao-primary);
-  background: var(--klao-bg-card);
-  box-shadow: 0 0 0 3px var(--klao-primary-light);
+  border-color: var(--sails-primary);
+  background: var(--sails-bg-card);
+  box-shadow: 0 0 0 3px var(--sails-primary-light);
 }
 
-@keyframes klao-fade-in {
+@keyframes sails-fade-in {
   from {
     opacity: 0;
   }
@@ -350,7 +350,7 @@ textarea:focus {
   }
 }
 
-@keyframes klao-modal-slide-up {
+@keyframes sails-modal-slide-up {
   from {
     opacity: 0;
     transform: translateY(20px) scale(0.95);

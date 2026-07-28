@@ -17,21 +17,21 @@ const MobileAppSwitcher: React.FC<MobileAppSwitcherProps> = ({ isVisible, onClos
   };
 
   return (
-    <div className={`klao-mobile-app-switcher ${isVisible ? 'klao-mobile-app-switcher--visible' : ''}`}>
+    <div className={`sails-mobile-app-switcher ${isVisible ? 'sails-mobile-app-switcher--visible' : ''}`}>
       {isLoading ? (
-        <div className="klao-mobile-app-switcher__loading">Loading...</div>
+        <div className="sails-mobile-app-switcher__loading">Loading...</div>
       ) : (
-        <div className="klao-mobile-app-switcher__grid">
+        <div className="sails-mobile-app-switcher__grid">
           {apps.map((app) => (
             <div 
               key={app.id} 
-              className={`klao-mobile-app-switcher__item ${activeApp?.id === app.id ? 'klao-mobile-app-switcher__item--active' : ''}`}
+              className={`sails-mobile-app-switcher__item ${activeApp?.id === app.id ? 'sails-mobile-app-switcher__item--active' : ''}`}
               onClick={() => handleAppClick(app.id)}
             >
-              <div className="klao-mobile-app-switcher__icon-wrapper">
+              <div className="sails-mobile-app-switcher__icon-wrapper">
                 <DynamicIcon name={app.icon || 'Box'} size={24} />
               </div>
-              <span className="klao-mobile-app-switcher__name">{app.name}</span>
+              <span className="sails-mobile-app-switcher__name">{app.name}</span>
             </div>
           ))}
         </div>

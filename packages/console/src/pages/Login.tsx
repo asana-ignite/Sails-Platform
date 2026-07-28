@@ -63,9 +63,9 @@ const getRandomBenefits = (): Benefit[] => {
 
 const getRememberedName = (): string | null => {
   if (typeof window === 'undefined') return null;
-  const localName = localStorage.getItem('klao_user_name') || localStorage.getItem('remembered_user_name');
+  const localName = localStorage.getItem('sails_user_name') || localStorage.getItem('remembered_user_name');
   if (localName) return localName;
-  const match = document.cookie.match(/(?:^|; )klao_user_name=([^;]*)/);
+  const match = document.cookie.match(/(?:^|; )sails_user_name=([^;]*)/);
   return match ? decodeURIComponent(match[1]) : null;
 };
 
@@ -90,19 +90,19 @@ const Login: React.FC = () => {
 
   const renderBenefitIcon = (iconName: string) => {
     switch (iconName) {
-      case 'shield': return <ShieldCheck size={20} style={{ color: 'var(--klao-primary)' }} />;
+      case 'shield': return <ShieldCheck size={20} style={{ color: 'var(--sails-primary)' }} />;
       case 'zap': return <Zap size={20} style={{ color: '#4ec5ad' }} />;
-      case 'database': return <Database size={20} style={{ color: 'var(--klao-info)' }} />;
-      case 'code': return <Code size={20} style={{ color: 'var(--klao-warning)' }} />;
+      case 'database': return <Database size={20} style={{ color: 'var(--sails-info)' }} />;
+      case 'code': return <Code size={20} style={{ color: 'var(--sails-warning)' }} />;
       case 'user': return <UserCheck size={20} style={{ color: '#4ec5ad' }} />;
-      case 'activity': return <Activity size={20} style={{ color: 'var(--klao-danger)' }} />;
-      case 'layers': return <Layers size={20} style={{ color: 'var(--klao-primary)' }} />;
-      case 'settings': return <Settings size={20} style={{ color: 'var(--klao-primary-dark)' }} />;
-      case 'lock': return <Lock size={20} style={{ color: 'var(--klao-primary)' }} />;
-      case 'shield-alert': return <ShieldAlert size={20} style={{ color: 'var(--klao-danger)' }} />;
-      case 'cpu': return <Cpu size={20} style={{ color: 'var(--klao-primary-dark)' }} />;
-      case 'key': return <Key size={20} style={{ color: 'var(--klao-warning)' }} />;
-      case 'building': return <Building size={20} style={{ color: 'var(--klao-primary)' }} />;
+      case 'activity': return <Activity size={20} style={{ color: 'var(--sails-danger)' }} />;
+      case 'layers': return <Layers size={20} style={{ color: 'var(--sails-primary)' }} />;
+      case 'settings': return <Settings size={20} style={{ color: 'var(--sails-primary-dark)' }} />;
+      case 'lock': return <Lock size={20} style={{ color: 'var(--sails-primary)' }} />;
+      case 'shield-alert': return <ShieldAlert size={20} style={{ color: 'var(--sails-danger)' }} />;
+      case 'cpu': return <Cpu size={20} style={{ color: 'var(--sails-primary-dark)' }} />;
+      case 'key': return <Key size={20} style={{ color: 'var(--sails-warning)' }} />;
+      case 'building': return <Building size={20} style={{ color: 'var(--sails-primary)' }} />;
       default: return <ShieldCheck size={20} />;
     }
   };
@@ -158,8 +158,8 @@ const Login: React.FC = () => {
         if (rememberMe && email) {
           const userName = email.split('@')[0];
           const formattedName = userName.charAt(0).toUpperCase() + userName.slice(1);
-          localStorage.setItem('klao_user_name', formattedName);
-          document.cookie = `klao_user_name=${encodeURIComponent(formattedName)}; path=/; max-age=2592000;`;
+          localStorage.setItem('sails_user_name', formattedName);
+          document.cookie = `sails_user_name=${encodeURIComponent(formattedName)}; path=/; max-age=2592000;`;
         }
         window.location.href = '/dashboard';
       } else {
@@ -174,23 +174,23 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="klao-auth-layout">
+    <div className="sails-auth-layout">
       {/* Left Column: Sign In Form (38% width on desktop) */}
-      <div className="klao-auth-form-side">
-        <div className="klao-auth-form-wrapper">
-          <div className="klao-auth-brand">
-            <img src={themeMode === 'dark' ? logoDarkUrl : logoLightUrl} alt="KLAO Logo" className="klao-auth-logo-img" />
-            <span className="klao-auth-logo-text">KLAO</span>
+      <div className="sails-auth-form-side">
+        <div className="sails-auth-form-wrapper">
+          <div className="sails-auth-brand">
+            <img src={themeMode === 'dark' ? logoDarkUrl : logoLightUrl} alt="SAILS Logo" className="sails-auth-logo-img" />
+            <span className="sails-auth-logo-text">SAILS</span>
           </div>
 
           <div>
-            <h2 className="klao-auth-title">Sign In</h2>
-            <p className="klao-auth-subtitle">Access your admin dashboard & operating system.</p>
+            <h2 className="sails-auth-title">Sign In</h2>
+            <p className="sails-auth-subtitle">Access your admin dashboard & operating system.</p>
           </div>
 
           {error && <div className="login-error">{error}</div>}
 
-          <div className="klao-auth-sso-grid">
+          <div className="sails-auth-sso-grid">
             {ssoConfig.googleEnabled && (
               <button className="google-login-button" onClick={() => handleSSOLogin('google')}>
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
@@ -212,7 +212,7 @@ const Login: React.FC = () => {
 
             {ssoConfig.samlEnabled && (
               <button className="saml-login-button" onClick={() => handleSSOLogin('saml')}>
-                <Key size={18} style={{ color: 'var(--klao-info)' }} />
+                <Key size={18} style={{ color: 'var(--sails-info)' }} />
                 <span>Sign in with Enterprise SAML</span>
               </button>
             )}
@@ -249,8 +249,8 @@ const Login: React.FC = () => {
                   />
                 </div>
 
-                <div className="klao-auth-options">
-                  <label className="klao-auth-remember">
+                <div className="sails-auth-options">
+                  <label className="sails-auth-remember">
                     <input 
                       type="checkbox" 
                       checked={rememberMe} 
@@ -258,7 +258,7 @@ const Login: React.FC = () => {
                     />
                     <span>Remember me</span>
                   </label>
-                  <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Please contact your administrator to reset your password.'); }} className="klao-auth-forgot">
+                  <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Please contact your administrator to reset your password.'); }} className="sails-auth-forgot">
                     Forgot password?
                   </a>
                 </div>
@@ -267,7 +267,7 @@ const Login: React.FC = () => {
                   className="google-login-button" 
                   type="submit" 
                   disabled={isLoading} 
-                  style={{ backgroundColor: 'var(--klao-primary-dark)', color: 'white', border: 'none', padding: '13px' }}
+                  style={{ backgroundColor: 'var(--sails-primary-dark)', color: 'white', border: 'none', padding: '13px' }}
                 >
                   <span>{isLoading ? 'Verifying...' : 'Sign In'}</span>
                 </button>
@@ -276,21 +276,21 @@ const Login: React.FC = () => {
           )}
 
 
-          <div className="klao-login-footer" style={{ marginTop: '10px' }}>
-            <p>© 2026 Ignite Idea. KLAO Internal Platform.</p>
+          <div className="sails-login-footer" style={{ marginTop: '10px' }}>
+            <p>© 2026 Ignite Idea. SAILS Internal Platform.</p>
           </div>
         </div>
       </div>
 
       {/* Right Column: Hero Graphic Side (62% width on desktop) */}
-      <div className="klao-auth-hero-side">
-        <div className="klao-hero-gradient-overlay" />
+      <div className="sails-auth-hero-side">
+        <div className="sails-hero-gradient-overlay" />
 
         {/* 3 Random Floating Benefit Cards with Independent Animations */}
         {selectedBenefits.map((benefit, index) => (
           <div 
             key={benefit.id} 
-            className={`klao-hero-floating-card klao-hero-floating-card--${index + 1}`}
+            className={`sails-hero-floating-card sails-hero-floating-card--${index + 1}`}
           >
             {renderBenefitIcon(benefit.icon)}
             <div>
@@ -300,11 +300,11 @@ const Login: React.FC = () => {
           </div>
         ))}
 
-        <div className="klao-auth-hero-content">
-          <h1 className="klao-hero-greeting" style={{ fontSize: '2.5rem' }}>
-            {rememberedName ? `Welcome back, ${rememberedName}!` : 'Welcome to KLAO Platform'}
+        <div className="sails-auth-hero-content">
+          <h1 className="sails-hero-greeting" style={{ fontSize: '2.5rem' }}>
+            {rememberedName ? `Welcome back, ${rememberedName}!` : 'Welcome to SAILS Platform'}
           </h1>
-          <p className="klao-hero-subtext">
+          <p className="sails-hero-subtext">
             Manage operations, monitor platform security, and automate business workflows with the intelligent internal operating system.
           </p>
         </div>

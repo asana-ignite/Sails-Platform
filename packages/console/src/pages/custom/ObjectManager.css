@@ -4,7 +4,7 @@
     flex-direction: column;
     width: 100%;
     padding: 0;
-    color: var(--klao-text-main);
+    color: var(--sails-text-main);
     box-sizing: border-box;
 }
 
@@ -27,34 +27,34 @@
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--klao-text-muted);
+    color: var(--sails-text-muted);
     pointer-events: none;
 }
 
 .om-search-input {
     width: 100%;
     padding: 10px 12px 10px 40px;
-    background: var(--klao-bg-card);
-    border: 1px solid var(--klao-border-color);
-    border-radius: var(--klao-radius-md);
+    background: var(--sails-bg-card);
+    border: 1px solid var(--sails-border-color);
+    border-radius: var(--sails-radius-md);
     font-size: 0.9rem;
-    color: var(--klao-text-main);
+    color: var(--sails-text-main);
     transition: all 0.2s;
 }
 
 .om-search-input:focus {
-    border-color: var(--klao-primary);
-    box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
+    border-color: var(--sails-primary);
+    box-shadow: 0 0 0 3px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
     outline: none;
 }
 
 /* Master Table Layout */
 .om-table-card {
-    border-radius: var(--klao-radius-lg);
-    background: var(--klao-bg-card);
-    border: 1px solid var(--klao-border-color);
+    border-radius: var(--sails-radius-lg);
+    background: var(--sails-bg-card);
+    border: 1px solid var(--sails-border-color);
     overflow: visible;
-    box-shadow: var(--klao-shadow-sm);
+    box-shadow: var(--sails-shadow-sm);
 }
 
 .om-list-table {
@@ -68,15 +68,15 @@
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--klao-text-muted);
-    border-bottom: 1px solid var(--klao-border-color);
+    color: var(--sails-text-muted);
+    border-bottom: 1px solid var(--sails-border-color);
     background: rgba(255, 255, 255, 0.01);
     font-weight: 600;
 }
 
 .om-list-table td {
     padding: 16px 20px;
-    border-bottom: 1px solid var(--klao-border-color);
+    border-bottom: 1px solid var(--sails-border-color);
     font-size: 0.9rem;
     vertical-align: middle;
 }
@@ -103,24 +103,24 @@
     justify-content: center;
     width: 36px;
     height: 36px;
-    background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
-    color: var(--klao-primary);
-    border-radius: var(--klao-radius-md);
+    background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
+    color: var(--sails-primary);
+    border-radius: var(--sails-radius-md);
 }
 
 .om-name-primary {
     font-weight: 600;
-    color: var(--klao-text-main);
+    color: var(--sails-text-main);
 }
 
 .om-name-secondary {
     font-size: 0.75rem;
-    color: var(--klao-text-muted);
+    color: var(--sails-text-muted);
     margin-top: 2px;
 }
 
 .om-desc-text {
-    color: var(--klao-text-muted);
+    color: var(--sails-text-muted);
     font-size: 0.85rem;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -135,15 +135,15 @@
     border-radius: 100px;
     font-size: 0.75rem;
     font-weight: 500;
-    background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
-    color: var(--klao-primary);
-    border: 1px solid rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.2);
+    background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
+    color: var(--sails-primary);
+    border: 1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.2);
 }
 
 .om-date-cell {
     display: inline-flex;
     align-items: center;
-    color: var(--klao-text-muted);
+    color: var(--sails-text-muted);
     font-size: 0.85rem;
 }
 
@@ -159,20 +159,20 @@
 .om-empty-state-row {
     text-align: center;
     padding: 64px 32px !important;
-    color: var(--klao-text-muted);
+    color: var(--sails-text-muted);
 }
 
 .om-empty-icon {
     margin-bottom: 16px;
     opacity: 0.5;
-    color: var(--klao-text-muted);
+    color: var(--sails-text-muted);
 }
 
 .om-empty-state-row h3 {
     margin: 0 0 8px 0;
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--klao-text-main);
+    color: var(--sails-text-main);
 }
 
 .om-empty-state-row p {
@@ -191,14 +191,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--klao-border-color);
+    border-bottom: 1px solid var(--sails-border-color);
     padding-bottom: 20px;
 }
 
 .om-back-btn {
     background: transparent;
     border: none;
-    color: var(--klao-text-muted);
+    color: var(--sails-text-muted);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -210,7 +210,7 @@
 
 .om-back-btn:hover {
     background: rgba(255, 255, 255, 0.05);
-    color: var(--klao-text-main);
+    color: var(--sails-text-main);
 }
 
 .om-detail-title-text {
@@ -221,7 +221,7 @@
 
 .om-detail-meta-text {
     font-size: 0.85rem;
-    color: var(--klao-text-muted);
+    color: var(--sails-text-muted);
     margin-top: 4px;
     padding-left: 36px;
 }
@@ -235,17 +235,17 @@
 
 .om-stat-card-full {
     padding: 20px;
-    border-radius: var(--klao-radius-lg);
-    background: var(--klao-bg-card);
-    border: 1px solid var(--klao-border-color);
-    box-shadow: var(--klao-shadow-sm);
+    border-radius: var(--sails-radius-lg);
+    background: var(--sails-bg-card);
+    border: 1px solid var(--sails-border-color);
+    box-shadow: var(--sails-shadow-sm);
 }
 
 .om-stat-card-full label {
     display: block;
     font-size: 0.7rem;
     text-transform: uppercase;
-    color: var(--klao-text-muted);
+    color: var(--sails-text-muted);
     letter-spacing: 0.08em;
     font-weight: 600;
     margin-bottom: 8px;
@@ -283,8 +283,8 @@
 
 .om-status-tag--optional {
     background: rgba(255, 255, 255, 0.05);
-    color: var(--klao-text-muted);
-    border: 1px solid var(--klao-border-color);
+    color: var(--sails-text-muted);
+    border: 1px solid var(--sails-border-color);
 }
 
 /* Modals & Overlays */
@@ -305,11 +305,11 @@
 .om-modal {
     width: 480px;
     padding: 32px;
-    border-radius: var(--klao-radius-xl);
-    background: var(--klao-bg-card);
-    border: 1px solid var(--klao-border-color);
-    box-shadow: var(--klao-shadow-lg);
-    animation: klao-fade-in 0.2s ease-out;
+    border-radius: var(--sails-radius-xl);
+    background: var(--sails-bg-card);
+    border: 1px solid var(--sails-border-color);
+    box-shadow: var(--sails-shadow-lg);
+    animation: sails-fade-in 0.2s ease-out;
 }
 
 /* Big Modal Screen (Replaces Slide-over Sidebars) */
@@ -321,12 +321,12 @@
     display: flex;
     flex-direction: column;
     padding: 0;
-    border-radius: var(--klao-radius-lg, 16px);
-    background: var(--klao-bg-card, #ffffff);
-    border: 1px solid var(--klao-border-color, #e2e8f0);
-    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--klao-border-color);
+    border-radius: var(--sails-radius-lg, 16px);
+    background: var(--sails-bg-card, #ffffff);
+    border: 1px solid var(--sails-border-color, #e2e8f0);
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--sails-border-color);
     overflow: hidden;
-    animation: klao-modal-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: sails-modal-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .om-big-modal--md {
@@ -336,7 +336,7 @@
 }
 
 
-@keyframes klao-modal-pop {
+@keyframes sails-modal-pop {
     from { opacity: 0; transform: scale(0.96) translateY(12px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
 }
@@ -346,8 +346,8 @@
     justify-content: space-between;
     align-items: flex-start;
     padding: 28px 36px;
-    border-bottom: 1px solid var(--klao-border-color);
-    background: var(--klao-bg-card);
+    border-bottom: 1px solid var(--sails-border-color);
+    background: var(--sails-bg-card);
 }
 
 .om-modal-header-info {
@@ -363,9 +363,9 @@
     width: 48px;
     height: 48px;
     border-radius: 14px;
-    background: var(--klao-primary-light);
-    color: var(--klao-primary-dark);
-    border: 1px solid var(--klao-border-color);
+    background: var(--sails-primary-light);
+    color: var(--sails-primary-dark);
+    border: 1px solid var(--sails-border-color);
     flex-shrink: 0;
 }
 
@@ -373,34 +373,34 @@
     font-size: 1.45rem;
     font-weight: 700;
     margin: 0 0 4px 0;
-    color: var(--klao-text-main);
+    color: var(--sails-text-main);
     letter-spacing: -0.02em;
 }
 
 .om-modal-subtitle {
     font-size: 0.9rem;
-    color: var(--klao-text-muted);
+    color: var(--sails-text-muted);
     margin: 0;
     line-height: 1.4;
 }
 
 .om-modal-close {
     background: transparent;
-    border: 1px solid var(--klao-border-color);
-    color: var(--klao-text-muted);
+    border: 1px solid var(--sails-border-color);
+    color: var(--sails-text-muted);
     padding: 8px;
-    border-radius: var(--klao-radius-md);
+    border-radius: var(--sails-radius-md);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: var(--klao-transition);
+    transition: var(--sails-transition);
 }
 
 .om-modal-close:hover {
-    background: var(--klao-bg-body);
-    color: var(--klao-text-main);
-    border-color: var(--klao-primary);
+    background: var(--sails-bg-body);
+    color: var(--sails-text-main);
+    border-color: var(--sails-primary);
 }
 
 .om-modal-body {
@@ -410,7 +410,7 @@
     display: flex;
     flex-direction: column;
     gap: 28px;
-    background: var(--klao-bg-card);
+    background: var(--sails-bg-card);
 }
 
 .om-modal-footer {
@@ -419,8 +419,8 @@
     align-items: center;
     gap: 14px;
     padding: 20px 36px;
-    border-top: 1px solid var(--klao-border-color);
-    background: var(--klao-bg-card);
+    border-top: 1px solid var(--sails-border-color);
+    background: var(--sails-bg-card);
 }
 
 /* Form Controls & Layout Grid inside Big Modal */
@@ -443,7 +443,7 @@
 .om-field-label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--klao-text-main);
+    color: var(--sails-text-main);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -451,7 +451,7 @@
 
 .om-field-hint {
     font-size: 0.775rem;
-    color: var(--klao-text-muted);
+    color: var(--sails-text-muted);
     font-weight: normal;
 }
 
@@ -477,25 +477,25 @@
     gap: 10px;
     height: 94px;
     padding: 14px 12px;
-    background: var(--klao-bg-body);
-    border: 1px solid var(--klao-border-color);
-    border-radius: var(--klao-radius-lg);
+    background: var(--sails-bg-body);
+    border: 1px solid var(--sails-border-color);
+    border-radius: var(--sails-radius-lg);
     cursor: pointer;
-    transition: var(--klao-transition);
+    transition: var(--sails-transition);
     text-align: center;
 }
 
 .om-type-card:hover {
-    background: var(--klao-primary-light);
-    border-color: var(--klao-primary);
+    background: var(--sails-primary-light);
+    border-color: var(--sails-primary);
     transform: translateY(-2px);
-    box-shadow: var(--klao-shadow-sm);
+    box-shadow: var(--sails-shadow-sm);
 }
 
 .om-type-card--active {
-    background: var(--klao-primary-light) !important;
-    border-color: var(--klao-primary) !important;
-    box-shadow: 0 0 0 2px var(--klao-primary);
+    background: var(--sails-primary-light) !important;
+    border-color: var(--sails-primary) !important;
+    box-shadow: 0 0 0 2px var(--sails-primary);
 }
 
 .om-type-card-icon {
@@ -507,7 +507,7 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    color: var(--klao-text-muted);
+    color: var(--sails-text-muted);
     transition: color 0.2s ease;
 }
 
@@ -518,26 +518,26 @@
 }
 
 .om-type-card--active .om-type-card-icon {
-    color: var(--klao-primary-dark);
+    color: var(--sails-primary-dark);
 }
 
 
 .om-type-card-label {
     font-size: 0.825rem;
     font-weight: 600;
-    color: var(--klao-text-main);
+    color: var(--sails-text-main);
 }
 
 .om-type-card--active .om-type-card-label {
-    color: var(--klao-primary-dark);
+    color: var(--sails-primary-dark);
     font-weight: 700;
 }
 
 /* Modular Configuration Section (Type-Specific Parameters) */
 .om-config-section {
-    background: var(--klao-bg-body);
-    border: 1px solid var(--klao-border-color);
-    border-radius: var(--klao-radius-lg);
+    background: var(--sails-bg-body);
+    border: 1px solid var(--sails-border-color);
+    border-radius: var(--sails-radius-lg);
     padding: 24px 28px;
     display: flex;
     flex-direction: column;
@@ -548,14 +548,14 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid var(--klao-border-color);
+    border-bottom: 1px solid var(--sails-border-color);
     padding-bottom: 14px;
 }
 
 .om-config-title {
     font-size: 1rem;
     font-weight: 700;
-    color: var(--klao-text-main);
+    color: var(--sails-text-main);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -568,19 +568,19 @@
     letter-spacing: 0.06em;
     padding: 4px 10px;
     border-radius: 100px;
-    background: var(--klao-primary-light);
-    color: var(--klao-primary-dark);
-    border: 1px solid var(--klao-border-color);
+    background: var(--sails-primary-light);
+    color: var(--sails-primary-dark);
+    border: 1px solid var(--sails-border-color);
 }
 
 /* Animation utilities */
-@keyframes klao-fade-in {
+@keyframes sails-fade-in {
     from { opacity: 0; transform: scale(0.98); }
     to { opacity: 1; transform: scale(1); }
 }
 
 .animate-fade-in {
-    animation: klao-fade-in 0.2s ease-out;
+    animation: sails-fade-in 0.2s ease-out;
 }
 
 /* Context Menu */
@@ -595,13 +595,13 @@
     right: 0;
     margin-top: 4px;
     width: 170px;
-    background: var(--klao-bg-card, #1e1e2d);
-    border: 1px solid var(--klao-border-color, rgba(255, 255, 255, 0.1));
-    border-radius: var(--klao-radius-md, 8px);
+    background: var(--sails-bg-card, #1e1e2d);
+    border: 1px solid var(--sails-border-color, rgba(255, 255, 255, 0.1));
+    border-radius: var(--sails-radius-md, 8px);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
     padding: 6px;
     z-index: 9999 !important;
-    animation: klao-fade-in 0.15s ease-out;
+    animation: sails-fade-in 0.15s ease-out;
 }
 
 .om-context-item {
@@ -614,7 +614,7 @@
     background: transparent;
     border-radius: 4px;
     font-size: 0.85rem;
-    color: var(--klao-text-main, #f3f4f6);
+    color: var(--sails-text-main, #f3f4f6);
     cursor: pointer;
     transition: all 0.15s ease;
     text-align: left;
@@ -625,7 +625,7 @@
 }
 
 .om-context-item--danger {
-    color: var(--klao-danger, #ef4444);
+    color: var(--sails-danger, #ef4444);
 }
 
 .om-context-item--danger:hover {
@@ -634,16 +634,16 @@
 
 .om-context-divider {
     height: 1px;
-    background: var(--klao-border-color, rgba(255, 255, 255, 0.1));
+    background: var(--sails-border-color, rgba(255, 255, 255, 0.1));
     margin: 4px 0;
 }
 
 /* Segmented Tab Switcher */
 .om-tab-group {
     display: flex;
-    background: var(--klao-bg-body, rgba(15, 23, 42, 0.6));
-    border: 1px solid var(--klao-border-color, rgba(255, 255, 255, 0.1));
-    border-radius: var(--klao-radius-md, 8px);
+    background: var(--sails-bg-body, rgba(15, 23, 42, 0.6));
+    border: 1px solid var(--sails-border-color, rgba(255, 255, 255, 0.1));
+    border-radius: var(--sails-radius-md, 8px);
     padding: 4px;
     gap: 4px;
 }
@@ -653,7 +653,7 @@
     padding: 8px 16px;
     border: none;
     background: transparent;
-    color: var(--klao-text-muted, #94a3b8);
+    color: var(--sails-text-muted, #94a3b8);
     font-size: 0.85rem;
     font-weight: 500;
     border-radius: 6px;
@@ -663,16 +663,16 @@
 }
 
 .om-tab-button:hover {
-    color: var(--klao-text-main, #f3f4f6);
+    color: var(--sails-text-main, #f3f4f6);
     background: rgba(255, 255, 255, 0.05);
 }
 
 .om-tab-button--active {
-    background: var(--klao-primary, #3b82f6) !important;
-    background-image: var(--klao-primary-bg) !important;
-    color: var(--klao-text-light, #ffffff) !important;
+    background: var(--sails-primary, #3b82f6) !important;
+    background-image: var(--sails-primary-bg) !important;
+    color: var(--sails-text-light, #ffffff) !important;
     font-weight: 600;
-    box-shadow: var(--klao-shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.2));
+    box-shadow: var(--sails-shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 /* Sortable Table Headers */
@@ -683,7 +683,7 @@
 }
 
 .om-th-sortable:hover {
-    color: var(--klao-primary, #3b82f6);
+    color: var(--sails-primary, #3b82f6);
 }
 
 .om-th-content {

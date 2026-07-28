@@ -387,12 +387,12 @@ const AdminCompanyProfile: React.FC = () => {
   };
 
   return (
-    <div className="klao-company-profile klao-page-container">
+    <div className="sails-company-profile sails-page-container">
       {/* Tab Navigation */}
-      <nav className="klao-company-profile__nav">
+      <nav className="sails-company-profile__nav">
         <button
           type="button"
-          className={`klao-company-profile__tab ${activeTab === 'organization' ? 'klao-company-profile__tab--active' : ''}`}
+          className={`sails-company-profile__tab ${activeTab === 'organization' ? 'sails-company-profile__tab--active' : ''}`}
           onClick={() => setActiveTab('organization')}
         >
           <Briefcase size={16} />
@@ -400,7 +400,7 @@ const AdminCompanyProfile: React.FC = () => {
         </button>
         <button
           type="button"
-          className={`klao-company-profile__tab ${activeTab === 'address' ? 'klao-company-profile__tab--active' : ''}`}
+          className={`sails-company-profile__tab ${activeTab === 'address' ? 'sails-company-profile__tab--active' : ''}`}
           onClick={() => setActiveTab('address')}
         >
           <MapPin size={16} />
@@ -410,67 +410,67 @@ const AdminCompanyProfile: React.FC = () => {
 
       {/* Form Container */}
       <form onSubmit={handleSave}>
-        <div className="klao-card klao-company-profile__card">
+        <div className="sails-card sails-company-profile__card">
           {/* TAB 1: Organization Details */}
           {activeTab === 'organization' && (
             <div>
-              <div className="klao-company-profile__section-header">
-                <div className="klao-company-profile__section-icon">
+              <div className="sails-company-profile__section-header">
+                <div className="sails-company-profile__section-icon">
                   <Briefcase size={20} />
                 </div>
                 <div>
-                  <h3 className="klao-company-profile__section-title">Organization Details</h3>
-                  <p className="klao-company-profile__section-subtitle">
+                  <h3 className="sails-company-profile__section-title">Organization Details</h3>
+                  <p className="sails-company-profile__section-subtitle">
                     Legal registration, trading names, tax identifiers, and public business profile.
                   </p>
                 </div>
               </div>
 
-              <div className="klao-cp-grid-2">
-                <div className="klao-cp-group">
-                  <label className="klao-cp-label">Official Legal Name *</label>
+              <div className="sails-cp-grid-2">
+                <div className="sails-cp-group">
+                  <label className="sails-cp-label">Official Legal Name *</label>
                   <input
                     type="text"
-                    className="klao-input"
+                    className="sails-input"
                     value={formData.legalName}
                     onChange={e => handleInputChange('legalName', e.target.value)}
                     placeholder="e.g. Acme Corporation Co., Ltd."
                     required
                   />
-                  <span className="klao-cp-help">Registered legal entity name as shown on tax certificates</span>
+                  <span className="sails-cp-help">Registered legal entity name as shown on tax certificates</span>
                 </div>
 
-                <div className="klao-cp-group">
-                  <label className="klao-cp-label">Trading / Display Name *</label>
+                <div className="sails-cp-group">
+                  <label className="sails-cp-label">Trading / Display Name *</label>
                   <input
                     type="text"
-                    className="klao-input"
+                    className="sails-input"
                     value={formData.tradingName}
                     onChange={e => handleInputChange('tradingName', e.target.value)}
                     placeholder="e.g. Acme Software"
                     required
                   />
-                  <span className="klao-cp-help">Display name used in platform menus and invoices</span>
+                  <span className="sails-cp-help">Display name used in platform menus and invoices</span>
                 </div>
 
-                <div className="klao-cp-group">
-                  <label className="klao-cp-label">Tax ID / Business Registration Number</label>
+                <div className="sails-cp-group">
+                  <label className="sails-cp-label">Tax ID / Business Registration Number</label>
                   <input
                     type="text"
-                    className="klao-input"
+                    className="sails-input"
                     value={formData.taxId}
                     onChange={e => handleInputChange('taxId', e.target.value)}
                     placeholder="e.g. 0105566012345"
                   />
-                  <span className="klao-cp-help">Official government tax identification number</span>
+                  <span className="sails-cp-help">Official government tax identification number</span>
                 </div>
 
-                <div className="klao-cp-group">
-                  <label className="klao-cp-label">Corporate Website URL</label>
+                <div className="sails-cp-group">
+                  <label className="sails-cp-label">Corporate Website URL</label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type="url"
-                      className="klao-input"
+                      className="sails-input"
                       value={formData.websiteUrl}
                       onChange={e => handleInputChange('websiteUrl', e.target.value)}
                       placeholder="https://example.com"
@@ -478,8 +478,8 @@ const AdminCompanyProfile: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="klao-cp-group">
-                  <label className="klao-cp-label">Industry Sector</label>
+                <div className="sails-cp-group">
+                  <label className="sails-cp-label">Industry Sector</label>
                   <CustomSelect
                     size="md"
                     value={formData.industry}
@@ -488,8 +488,8 @@ const AdminCompanyProfile: React.FC = () => {
                   />
                 </div>
 
-                <div className="klao-cp-group">
-                  <label className="klao-cp-label">Company Size</label>
+                <div className="sails-cp-group">
+                  <label className="sails-cp-label">Company Size</label>
                   <CustomSelect
                     size="md"
                     value={formData.companySize}
@@ -504,61 +504,61 @@ const AdminCompanyProfile: React.FC = () => {
           {/* TAB 2: Contact & Address */}
           {activeTab === 'address' && (
             <div>
-              <div className="klao-company-profile__section-header">
-                <div className="klao-company-profile__section-icon">
+              <div className="sails-company-profile__section-header">
+                <div className="sails-company-profile__section-icon">
                   <MapPin size={20} />
                 </div>
                 <div>
-                  <h3 className="klao-company-profile__section-title">Corporate Contact & Location</h3>
-                  <p className="klao-company-profile__section-subtitle">
+                  <h3 className="sails-company-profile__section-title">Corporate Contact & Location</h3>
+                  <p className="sails-company-profile__section-subtitle">
                     Corporate contact details and registered physical business location.
                   </p>
                 </div>
               </div>
 
-              <div className="klao-cp-grid-2">
-              <div className="klao-cp-grid-2 klao-cp-full" style={{ marginBottom: '24px' }}>
+              <div className="sails-cp-grid-2">
+              <div className="sails-cp-grid-2 sails-cp-full" style={{ marginBottom: '24px' }}>
                 {/* Column 1: Business Contact Person */}
-                <div style={{ background: 'var(--klao-bg-body, #f4f7f9)', padding: '16px', borderRadius: 'var(--klao-radius-md, 8px)', border: '1px solid var(--klao-border-color, #e1e9ef)' }}>
-                  <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--klao-text-main, #344759)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ background: 'var(--sails-bg-body, #f4f7f9)', padding: '16px', borderRadius: 'var(--sails-radius-md, 8px)', border: '1px solid var(--sails-border-color, #e1e9ef)' }}>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--sails-text-main, #344759)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     Business Contact Person
                   </h4>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div className="klao-cp-group">
-                      <label className="klao-cp-label">Business Contact Name</label>
+                    <div className="sails-cp-group">
+                      <label className="sails-cp-label">Business Contact Name</label>
                       <input
                         type="text"
-                        className="klao-input"
+                        className="sails-input"
                         value={formData.businessContactName}
                         onChange={e => handleInputChange('businessContactName', e.target.value)}
                         placeholder="e.g. John Doe"
                       />
                     </div>
 
-                    <div className="klao-cp-group">
-                      <label className="klao-cp-label">Email</label>
+                    <div className="sails-cp-group">
+                      <label className="sails-cp-label">Email</label>
                       <input
                         type="email"
-                        className={`klao-input ${emailErrors.corporateEmail ? 'is-invalid' : ''}`}
+                        className={`sails-input ${emailErrors.corporateEmail ? 'is-invalid' : ''}`}
                         value={formData.corporateEmail}
                         onChange={e => handleInputChange('corporateEmail', e.target.value)}
                         onBlur={() => handleEmailBlur('corporateEmail')}
                         placeholder="john@company.com"
-                        style={emailErrors.corporateEmail ? { borderColor: 'var(--klao-danger, #fd6161)' } : undefined}
+                        style={emailErrors.corporateEmail ? { borderColor: 'var(--sails-danger, #fd6161)' } : undefined}
                       />
                       {emailErrors.corporateEmail && (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--klao-danger, #fd6161)', marginTop: '2px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--sails-danger, #fd6161)', marginTop: '2px' }}>
                           {emailErrors.corporateEmail}
                         </span>
                       )}
                     </div>
 
-                    <div className="klao-cp-group">
-                      <label className="klao-cp-label">Phone Number</label>
+                    <div className="sails-cp-group">
+                      <label className="sails-cp-label">Phone Number</label>
                       <input
                         type="text"
-                        className="klao-input"
+                        className="sails-input"
                         value={formData.businessContactPhone || formData.phone}
                         onChange={e => {
                           handleInputChange('businessContactPhone', e.target.value);
@@ -571,46 +571,46 @@ const AdminCompanyProfile: React.FC = () => {
                 </div>
 
                 {/* Column 2: Support Contact Person */}
-                <div style={{ background: 'var(--klao-bg-body, #f4f7f9)', padding: '16px', borderRadius: 'var(--klao-radius-md, 8px)', border: '1px solid var(--klao-border-color, #e1e9ef)' }}>
-                  <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--klao-text-main, #344759)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ background: 'var(--sails-bg-body, #f4f7f9)', padding: '16px', borderRadius: 'var(--sails-radius-md, 8px)', border: '1px solid var(--sails-border-color, #e1e9ef)' }}>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--sails-text-main, #344759)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     Support Contact Person
                   </h4>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div className="klao-cp-group">
-                      <label className="klao-cp-label">Support Contact Name</label>
+                    <div className="sails-cp-group">
+                      <label className="sails-cp-label">Support Contact Name</label>
                       <input
                         type="text"
-                        className="klao-input"
+                        className="sails-input"
                         value={formData.supportContactName}
                         onChange={e => handleInputChange('supportContactName', e.target.value)}
                         placeholder="e.g. Jane Smith / Support Lead"
                       />
                     </div>
 
-                    <div className="klao-cp-group">
-                      <label className="klao-cp-label">Email</label>
+                    <div className="sails-cp-group">
+                      <label className="sails-cp-label">Email</label>
                       <input
                         type="email"
-                        className={`klao-input ${emailErrors.supportEmail ? 'is-invalid' : ''}`}
+                        className={`sails-input ${emailErrors.supportEmail ? 'is-invalid' : ''}`}
                         value={formData.supportEmail}
                         onChange={e => handleInputChange('supportEmail', e.target.value)}
                         onBlur={() => handleEmailBlur('supportEmail')}
                         placeholder="support@company.com"
-                        style={emailErrors.supportEmail ? { borderColor: 'var(--klao-danger, #fd6161)' } : undefined}
+                        style={emailErrors.supportEmail ? { borderColor: 'var(--sails-danger, #fd6161)' } : undefined}
                       />
                       {emailErrors.supportEmail && (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--klao-danger, #fd6161)', marginTop: '2px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--sails-danger, #fd6161)', marginTop: '2px' }}>
                           {emailErrors.supportEmail}
                         </span>
                       )}
                     </div>
 
-                    <div className="klao-cp-group">
-                      <label className="klao-cp-label">Support Phone Number</label>
+                    <div className="sails-cp-group">
+                      <label className="sails-cp-label">Support Phone Number</label>
                       <input
                         type="text"
-                        className="klao-input"
+                        className="sails-input"
                         value={formData.supportPhone || formData.fax}
                         onChange={e => {
                           handleInputChange('supportPhone', e.target.value);
@@ -623,42 +623,42 @@ const AdminCompanyProfile: React.FC = () => {
                 </div>
               </div>
 
-                <div className="klao-cp-group klao-cp-full">
-                  <label className="klao-cp-label">Address Line 1 <span style={{ color: 'var(--klao-danger, #fd6161)' }}>*</span></label>
+                <div className="sails-cp-group sails-cp-full">
+                  <label className="sails-cp-label">Address Line 1 <span style={{ color: 'var(--sails-danger, #fd6161)' }}>*</span></label>
                   <input
                     type="text"
                     required
-                    className="klao-input"
+                    className="sails-input"
                     value={formData.streetAddress}
                     onChange={e => handleInputChange('streetAddress', e.target.value)}
                     placeholder="Street address, P.O. box, building, suite, unit, etc."
                   />
                 </div>
 
-                <div className="klao-cp-group klao-cp-full">
-                  <label className="klao-cp-label">Address Line 2 <span style={{ color: 'var(--klao-text-muted, #6b8ba4)', fontWeight: 400 }}>(Optional)</span></label>
+                <div className="sails-cp-group sails-cp-full">
+                  <label className="sails-cp-label">Address Line 2 <span style={{ color: 'var(--sails-text-muted, #6b8ba4)', fontWeight: 400 }}>(Optional)</span></label>
                   <input
                     type="text"
-                    className="klao-input"
+                    className="sails-input"
                     value={formData.subDistrict}
                     onChange={e => handleInputChange('subDistrict', e.target.value)}
                     placeholder="Apartment, suite, unit, building, floor, etc."
                   />
                 </div>
 
-                <div className="klao-cp-group">
-                  <label className="klao-cp-label">City / Province / State</label>
+                <div className="sails-cp-group">
+                  <label className="sails-cp-label">City / Province / State</label>
                   <input
                     type="text"
-                    className="klao-input"
+                    className="sails-input"
                     value={formData.city}
                     onChange={e => handleInputChange('city', e.target.value)}
                     placeholder="e.g. San Francisco / Bangkok / Bavaria"
                   />
                 </div>
 
-                <div className="klao-cp-group">
-                  <label className="klao-cp-label">Country</label>
+                <div className="sails-cp-group">
+                  <label className="sails-cp-label">Country</label>
                   <CustomSelect
                     value={formData.country}
                     options={COUNTRY_OPTIONS}
@@ -668,11 +668,11 @@ const AdminCompanyProfile: React.FC = () => {
                   />
                 </div>
 
-                <div className="klao-cp-group">
-                  <label className="klao-cp-label">Zip / Postal Code</label>
+                <div className="sails-cp-group">
+                  <label className="sails-cp-label">Zip / Postal Code</label>
                   <input
                     type="text"
-                    className="klao-input"
+                    className="sails-input"
                     value={formData.postalCode}
                     onChange={e => handleInputChange('postalCode', e.target.value)}
                     placeholder="e.g. 94105 / 10110"
@@ -683,16 +683,16 @@ const AdminCompanyProfile: React.FC = () => {
           )}
 
           {/* Footer Save Actions */}
-          <div className="klao-cp-footer">
+          <div className="sails-cp-footer">
             <div>
               {savedSuccessMsg && (
-                <div className="klao-cp-toast klao-cp-toast--success">
+                <div className="sails-cp-toast sails-cp-toast--success">
                   <CheckCircle2 size={16} />
                   <span>{savedSuccessMsg}</span>
                 </div>
               )}
               {errorMsg && (
-                <div className="klao-cp-toast klao-cp-toast--danger">
+                <div className="sails-cp-toast sails-cp-toast--danger">
                   <AlertCircle size={16} />
                   <span>{errorMsg}</span>
                 </div>
@@ -700,7 +700,7 @@ const AdminCompanyProfile: React.FC = () => {
             </div>
             <button
               type="submit"
-              className="klao-btn klao-btn--primary"
+              className="sails-btn sails-btn--primary"
               disabled={isSaving}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             >

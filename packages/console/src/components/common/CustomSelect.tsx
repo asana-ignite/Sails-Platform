@@ -66,13 +66,13 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
   return (
     <div 
-      className={`klao-custom-select klao-custom-select--${size} ${isOpen ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''} ${className}`} 
+      className={`sails-custom-select sails-custom-select--${size} ${isOpen ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''} ${className}`} 
       ref={containerRef}
       style={style}
     >
       <button
         type="button"
-        className="klao-custom-select__trigger"
+        className="sails-custom-select__trigger"
         onClick={() => {
           if (!disabled) {
             setIsOpen(!isOpen);
@@ -81,54 +81,54 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         }}
         disabled={disabled}
       >
-        <span className="klao-custom-select__value">
+        <span className="sails-custom-select__value">
           {selectedOption ? (
-            <span className="klao-custom-select__value-content">
-              {selectedOption.icon && <span className="klao-custom-select__option-icon">{selectedOption.icon}</span>}
+            <span className="sails-custom-select__value-content">
+              {selectedOption.icon && <span className="sails-custom-select__option-icon">{selectedOption.icon}</span>}
               {selectedOption.label}
             </span>
           ) : (
-            <span className="klao-custom-select__placeholder">{placeholder}</span>
+            <span className="sails-custom-select__placeholder">{placeholder}</span>
           )}
         </span>
-        <ChevronDown size={size === 'sm' ? 14 : 16} className="klao-custom-select__chevron" />
+        <ChevronDown size={size === 'sm' ? 14 : 16} className="sails-custom-select__chevron" />
       </button>
 
       {isOpen && (
-        <div className="klao-custom-select__dropdown animate-fade-in">
+        <div className="sails-custom-select__dropdown animate-fade-in">
           {searchable && (
-            <div className="klao-custom-select__search-wrapper" onClick={e => e.stopPropagation()}>
+            <div className="sails-custom-select__search-wrapper" onClick={e => e.stopPropagation()}>
               <input
                 ref={searchInputRef}
                 type="text"
-                className="klao-custom-select__search-input"
+                className="sails-custom-select__search-input"
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
           )}
-          <div className="klao-custom-select__options-list">
+          <div className="sails-custom-select__options-list">
             {filteredOptions.length === 0 ? (
-              <div className="klao-custom-select__no-results">No matches found</div>
+              <div className="sails-custom-select__no-results">No matches found</div>
             ) : (
               filteredOptions.map(option => {
                 const isSelected = isValueMatch(option.value, value);
                 return (
                   <div
                     key={String(option.value)}
-                    className={`klao-custom-select__option ${isSelected ? 'is-selected' : ''}`}
+                    className={`sails-custom-select__option ${isSelected ? 'is-selected' : ''}`}
                     onClick={() => {
                       onChange(option.value);
                       setIsOpen(false);
                       setSearchQuery('');
                     }}
                   >
-                    <div className="klao-custom-select__option-content">
-                      {option.icon && <span className="klao-custom-select__option-icon">{option.icon}</span>}
+                    <div className="sails-custom-select__option-content">
+                      {option.icon && <span className="sails-custom-select__option-icon">{option.icon}</span>}
                       <span>{option.label}</span>
                     </div>
-                    {isSelected && <Check size={14} className="klao-custom-select__check" />}
+                    {isSelected && <Check size={14} className="sails-custom-select__check" />}
                   </div>
                 );
               })

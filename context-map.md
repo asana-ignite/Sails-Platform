@@ -1,12 +1,12 @@
-# KLAO Context Map
+# SAILS Context Map
 
 > **Core Architectural Principle:** 
-> - **Shared Kernel:** All shared logic/types belong in `@klao/shared` (`packages/shared`).
+> - **Shared Kernel:** All shared logic/types belong in `@sails/shared` (`packages/shared`).
 > - **Feature-Based UI:** UI/Frontend logic is organized by feature in `packages/console/src/features/[feature]`.
 
 ## Navigation & Index
 
-- **Project Rules & Stack:** `.agents/rules/klao-platform-rules.md`
+- **Project Rules & Stack:** `.agents/rules/sails-platform-rules.md`
 - **Frontend / UI System:** `docs/UI_SYSTEM.md`
 - **Database / Isolation:** `docs/DATABASE.md`
 - **API & Security Pipeline:** `docs/API_DOCUMENTATION.md`

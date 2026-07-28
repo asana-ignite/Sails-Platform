@@ -1,6 +1,6 @@
-# KLAO (Ignite Idea Operating System)
+# SAILS (Ignite Idea Operating System)
 
-Welcome to **KLAO**, a specialized fork of the Klao Platform tailored for internal operations at **Ignite Idea**. KLAO serves as the central engine for managing Sales, Projects, Cases, and Timesheets.
+Welcome to **SAILS**, a specialized fork of the Sails Platform tailored for internal operations at **Ignite Idea**. SAILS serves as the central engine for managing Sales, Projects, Cases, and Timesheets.
 
 This project is structured as a Bun Workspace to centralize backend, frontend, and shared logic.
 
@@ -21,5 +21,5 @@ For deep dives into the platform's design, please refer to the files in the [doc
 - [ROADMAP.md](./docs/ROADMAP.md) - Strategic Roadmap
 
 ---
-*KLAO: Built for Ignite Idea Operations*
+*SAILS: Built for Ignite Idea Operations*
 

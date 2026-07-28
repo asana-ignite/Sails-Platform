@@ -9,16 +9,16 @@ interface MobileSearchBarProps {
 
 const MobileSearchBar: React.FC<MobileSearchBarProps> = ({ isVisible, onClose }) => {
   return (
-    <div className={`klao-mobile-search-bar ${isVisible ? 'klao-mobile-search-bar--visible' : ''}`}>
-      <div className="klao-mobile-search-bar__inner">
-        <Search className="klao-mobile-search-bar__icon" size={20} />
+    <div className={`sails-mobile-search-bar ${isVisible ? 'sails-mobile-search-bar--visible' : ''}`}>
+      <div className="sails-mobile-search-bar__inner">
+        <Search className="sails-mobile-search-bar__icon" size={20} />
         <input 
           type="text" 
-          className="klao-mobile-search-bar__input" 
+          className="sails-mobile-search-bar__input" 
           placeholder="Search leads, contacts..."
           autoFocus={isVisible}
         />
-        <button className="klao-mobile-search-bar__close" onClick={onClose}>
+        <button className="sails-mobile-search-bar__close" onClick={onClose}>
           <X size={20} />
         </button>
       </div>

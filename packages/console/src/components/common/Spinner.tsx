@@ -9,20 +9,20 @@ interface SpinnerProps {
 
 const Spinner: React.FC<SpinnerProps> = ({ 
   size = 24, 
-  color = 'var(--klao-primary)', 
+  color = 'var(--sails-primary)', 
   label 
 }) => {
   return (
-    <div className="klao-spinner-container">
+    <div className="sails-spinner-container">
       <div 
-        className="klao-spinner" 
+        className="sails-spinner" 
         style={{ 
           width: size, 
           height: size, 
           borderColor: `${color} transparent transparent transparent` 
         }}
       ></div>
-      {label && <span className="klao-spinner-label">{label}</span>}
+      {label && <span className="sails-spinner-label">{label}</span>}
     </div>
   );
 };

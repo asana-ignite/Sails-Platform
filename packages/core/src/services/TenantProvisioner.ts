@@ -2,7 +2,7 @@ import { db } from '../lib/db';
 import { AlchemaCore } from '../core/engine/AlchemaCore';
 import { Pool } from 'pg';
 import { ConnectionManager } from '../core/engine/ConnectionManager';
-import { ProvisionTenantResponse } from '@klao/shared';
+import { ProvisionTenantResponse } from '@sails/shared';
 import { TranslatorLayer } from './TranslatorLayer';
 
 export class TenantProvisioner {

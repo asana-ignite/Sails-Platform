@@ -12,7 +12,7 @@ export const authOptions: NextAuthOptions = {
   },
   providers: [
     CredentialsProvider({
-      name: "KLAO Identity",
+      name: "SAILS Identity",
       credentials: {
         email: { label: "Email", type: "email", placeholder: "jsmith@example.com" },
         password: { label: "Password", type: "password" }

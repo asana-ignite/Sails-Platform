@@ -18,8 +18,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
     }
 
-    const isDeveloperBypass = req.headers.get('x-klao-system-bypass') === 'true'
-      || (process.env.NODE_ENV === 'development' && process.env.KLAO_DEVELOPER_MODE === 'true');
+    const isDeveloperBypass = req.headers.get('x-sails-system-bypass') === 'true'
+      || (process.env.NODE_ENV === 'development' && process.env.SAILS_DEVELOPER_MODE === 'true');
 
     await getTranslator().removeFieldDef(params.id, isDeveloperBypass);
     return NextResponse.json({ success: true });
@@ -48,8 +48,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
     }
 
-    const isDeveloperBypass = req.headers.get('x-klao-system-bypass') === 'true'
-      || (process.env.NODE_ENV === 'development' && process.env.KLAO_DEVELOPER_MODE === 'true');
+    const isDeveloperBypass = req.headers.get('x-sails-system-bypass') === 'true'
+      || (process.env.NODE_ENV === 'development' && process.env.SAILS_DEVELOPER_MODE === 'true');
 
     const body = await req.json();
     const updatedField = await getTranslator().updateFieldDef(params.id, body, isDeveloperBypass);

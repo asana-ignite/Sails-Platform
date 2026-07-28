@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { KlaoTableDefinition, FieldTypeMetadata, FieldParameterDefinition } from '@klao/shared';
+import { SailsTableDefinition, FieldTypeMetadata, FieldParameterDefinition } from '@sails/shared';
 import { useConsole } from '../../contexts/ConsoleContext';
 import { 
   Database, 
@@ -323,8 +323,8 @@ const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
 ];
 
 const ObjectManager: React.FC = () => {
-  const [tables, setTables] = useState<KlaoTableDefinition[]>([]);
-  const [selectedTable, setSelectedTable] = useState<KlaoTableDefinition | null>(null);
+  const [tables, setTables] = useState<SailsTableDefinition[]>([]);
+  const [selectedTable, setSelectedTable] = useState<SailsTableDefinition | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -371,7 +371,7 @@ const ObjectManager: React.FC = () => {
 
   // Context menu & Edit Table state
   const [activeMenuTableId, setActiveMenuTableId] = useState<string | null>(null);
-  const [editingTable, setEditingTable] = useState<KlaoTableDefinition | null>(null);
+  const [editingTable, setEditingTable] = useState<SailsTableDefinition | null>(null);
   const [editTableName, setEditTableName] = useState('');
   const [editTableDesc, setEditTableDesc] = useState('');
   
@@ -561,7 +561,7 @@ const ObjectManager: React.FC = () => {
     }
   };
 
-  const triggerDeleteTable = (table: KlaoTableDefinition) => {
+  const triggerDeleteTable = (table: SailsTableDefinition) => {
     setDeleteConfirmTarget({
       type: 'table',
       id: table.id,
@@ -984,7 +984,7 @@ const ObjectManager: React.FC = () => {
     if (viewMode === 'list') {
       return (
         <button 
-          className="klao-btn klao-btn--primary" 
+          className="sails-btn sails-btn--primary" 
           onClick={() => setIsCreatingTable(true)}
         >
           <Plus size={18} />
@@ -995,14 +995,14 @@ const ObjectManager: React.FC = () => {
       return (
         <div style={{ display: 'flex', gap: '12px' }}>
           <button 
-            className="klao-btn klao-btn--secondary" 
+            className="sails-btn sails-btn--secondary" 
             onClick={() => { setViewMode('list'); setSelectedTable(null); }}
           >
             <ArrowLeft size={18} />
             <span>Back to Data Models</span>
           </button>
           <button 
-            className="klao-btn klao-btn--primary" 
+            className="sails-btn sails-btn--primary" 
             onClick={() => setIsCreatingField(true)}
           >
             <Plus size={18} />
@@ -1018,7 +1018,7 @@ const ObjectManager: React.FC = () => {
     return () => setHeaderActions(null);
   }, [setHeaderActions, memoizedHeaderActions]);
 
-  const selectRow = (table: KlaoTableDefinition) => {
+  const selectRow = (table: SailsTableDefinition) => {
     setSelectedTable(table);
     setViewMode('detail');
   };
@@ -1042,7 +1042,7 @@ const ObjectManager: React.FC = () => {
           </div>
 
           {/* Master Table Grid */}
-          <div className="klao-card om-table-card">
+          <div className="sails-card om-table-card">
             <table className="om-list-table">
               <thead>
                 <tr>
@@ -1114,11 +1114,11 @@ const ObjectManager: React.FC = () => {
                       </td>
                       <td>
                         {table.isSystem ? (
-                          <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.15)', color: 'var(--klao-primary)', border: '1px solid rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.3)' }}>
+                          <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.15)', color: 'var(--sails-primary)', border: '1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.3)' }}>
                             System Model
                           </span>
                         ) : (
-                          <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--klao-text-main)', border: '1px solid var(--klao-border-color)' }}>
+                          <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--sails-text-main)', border: '1px solid var(--sails-border-color)' }}>
                             Custom Model
                           </span>
                         )}
@@ -1141,7 +1141,7 @@ const ObjectManager: React.FC = () => {
                       <td style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                         <div className="om-action-wrapper">
                           <button 
-                            className={`klao-btn klao-btn--ghost ${activeMenuTableId === table.id ? 'active' : ''}`}
+                            className={`sails-btn sails-btn--ghost ${activeMenuTableId === table.id ? 'active' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setActiveMenuTableId(activeMenuTableId === table.id ? null : table.id);
@@ -1213,13 +1213,13 @@ const ObjectManager: React.FC = () => {
             </table>
 
             {/* Pagination Footer */}
-            <div className="klao-user-manager__pagination" style={{ borderTop: '1px solid var(--klao-border-color)' }}>
-              <div className="klao-user-manager__pagination-info">
-                <span className="klao-user-manager__pagination-range">
+            <div className="sails-user-manager__pagination" style={{ borderTop: '1px solid var(--sails-border-color)' }}>
+              <div className="sails-user-manager__pagination-info">
+                <span className="sails-user-manager__pagination-range">
                   Showing <strong>{startRange}</strong> to <strong>{endRange}</strong> of <strong>{totalCount}</strong> data models
                 </span>
-                <div className="klao-user-manager__page-size">
-                  <span className="klao-user-manager__page-size-label">Records per page:</span>
+                <div className="sails-user-manager__page-size">
+                  <span className="sails-user-manager__page-size-label">Records per page:</span>
                   <CustomSelect
                     size="sm"
                     value={pageSize === totalCount ? 'all' : pageSize}
@@ -1236,19 +1236,19 @@ const ObjectManager: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="klao-user-manager__pagination-controls">
+              <div className="sails-user-manager__pagination-controls">
                 <button
-                  className="klao-pagination-btn"
+                  className="sails-pagination-btn"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
                 >
                   <ChevronLeft size={16} />
                 </button>
-                <div className="klao-pagination-pages">
+                <div className="sails-pagination-pages">
                   {[...Array(totalPages)].map((_, i) => (
                     <button
                       key={i + 1}
-                      className={`klao-pagination-page ${currentPage === i + 1 ? 'klao-pagination-page--active' : ''}`}
+                      className={`sails-pagination-page ${currentPage === i + 1 ? 'sails-pagination-page--active' : ''}`}
                       onClick={() => setCurrentPage(i + 1)}
                     >
                       {i + 1}
@@ -1256,7 +1256,7 @@ const ObjectManager: React.FC = () => {
                   ))}
                 </div>
                 <button
-                  className="klao-pagination-btn"
+                  className="sails-pagination-btn"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages || totalPages === 0}
                 >
@@ -1271,15 +1271,15 @@ const ObjectManager: React.FC = () => {
           <div className="om-detail-view-full animate-fade-in">
             {/* Stats grid */}
             <div className="om-stats-grid-full">
-              <div className="klao-card om-stat-card-full">
+              <div className="sails-card om-stat-card-full">
                 <label>Storage Type</label>
                 <div className="stat-value">Relational (PostgreSQL)</div>
               </div>
-              <div className="klao-card om-stat-card-full">
+              <div className="sails-card om-stat-card-full">
                 <label>Total Fields</label>
                 <div className="stat-value">{selectedTable.fields?.length || 0} Columns</div>
               </div>
-              <div className="klao-card om-stat-card-full">
+              <div className="sails-card om-stat-card-full">
                 <label>Security Mode</label>
                 <div className="stat-value">Row-Level (RLS)</div>
               </div>
@@ -1288,7 +1288,7 @@ const ObjectManager: React.FC = () => {
             {/* Field list section */}
             <div className="om-section-full">
               <div className="om-section-header-full" style={{ marginBottom: '16px' }}>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--klao-text-main)', margin: 0 }}>
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--sails-text-main)', margin: 0 }}>
                   Field Definitions
                 </h2>
               </div>
@@ -1306,7 +1306,7 @@ const ObjectManager: React.FC = () => {
                 </div>
               </div>
 
-              <div className="klao-card om-table-card">
+              <div className="sails-card om-table-card">
                 <table className="om-list-table">
                   <thead>
                     <tr>
@@ -1359,15 +1359,15 @@ const ObjectManager: React.FC = () => {
                                 <div className="om-name-primary">
                                   {renderHighlightedText(field.name, fieldSearchTerm)}
                                 </div>
-                                <div className="om-name-secondary" style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)', marginTop: '2px' }}>
+                                <div className="om-name-secondary" style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)', marginTop: '2px' }}>
                                   <code>{renderHighlightedText(field.fieldName, fieldSearchTerm)}</code>
                                 </div>
                               </div>
                             </div>
                           </td>
                           <td>
-                            <div style={{ color: 'var(--klao-text-main)', fontSize: '0.85rem', maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={field.description || ''}>
-                              {field.description ? renderHighlightedText(field.description, fieldSearchTerm) : <span style={{ color: 'var(--klao-text-muted)', fontStyle: 'italic' }}>No description</span>}
+                            <div style={{ color: 'var(--sails-text-main)', fontSize: '0.85rem', maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={field.description || ''}>
+                              {field.description ? renderHighlightedText(field.description, fieldSearchTerm) : <span style={{ color: 'var(--sails-text-muted)', fontStyle: 'italic' }}>No description</span>}
                             </div>
                           </td>
                           <td>
@@ -1377,11 +1377,11 @@ const ObjectManager: React.FC = () => {
                           </td>
                           <td>
                             {field.isSystem ? (
-                              <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.15)', color: 'var(--klao-primary)', border: '1px solid rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.3)' }}>
+                              <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.15)', color: 'var(--sails-primary)', border: '1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.3)' }}>
                                 System Field
                               </span>
                             ) : (
-                              <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--klao-text-main)', border: '1px solid var(--klao-border-color)' }}>
+                              <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--sails-text-main)', border: '1px solid var(--sails-border-color)' }}>
                                 Custom Field
                               </span>
                             )}
@@ -1401,7 +1401,7 @@ const ObjectManager: React.FC = () => {
                         <td style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                           <div className="om-action-wrapper">
                             <button 
-                              className={`klao-btn klao-btn--ghost ${activeMenuFieldId === field.id ? 'active' : ''}`}
+                              className={`sails-btn sails-btn--ghost ${activeMenuFieldId === field.id ? 'active' : ''}`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setActiveMenuFieldId(activeMenuFieldId === field.id ? null : field.id);
@@ -1466,13 +1466,13 @@ const ObjectManager: React.FC = () => {
                 </table>
 
                 {/* Field Pagination Footer */}
-                <div className="klao-user-manager__pagination" style={{ borderTop: '1px solid var(--klao-border-color)' }}>
-                  <div className="klao-user-manager__pagination-info">
-                    <span className="klao-user-manager__pagination-range">
+                <div className="sails-user-manager__pagination" style={{ borderTop: '1px solid var(--sails-border-color)' }}>
+                  <div className="sails-user-manager__pagination-info">
+                    <span className="sails-user-manager__pagination-range">
                       Showing <strong>{fieldStartRange}</strong> to <strong>{fieldEndRange}</strong> of <strong>{totalFieldCount}</strong> fields
                     </span>
-                    <div className="klao-user-manager__page-size">
-                      <span className="klao-user-manager__page-size-label">Records per page:</span>
+                    <div className="sails-user-manager__page-size">
+                      <span className="sails-user-manager__page-size-label">Records per page:</span>
                       <CustomSelect
                         size="sm"
                         value={fieldPageSize === totalFieldCount ? 'all' : fieldPageSize}
@@ -1489,19 +1489,19 @@ const ObjectManager: React.FC = () => {
                       />
                     </div>
                   </div>
-                  <div className="klao-user-manager__pagination-controls">
+                  <div className="sails-user-manager__pagination-controls">
                     <button
-                      className="klao-pagination-btn"
+                      className="sails-pagination-btn"
                       onClick={() => setFieldCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={fieldCurrentPage === 1}
                     >
                       <ChevronLeft size={16} />
                     </button>
-                    <div className="klao-pagination-pages">
+                    <div className="sails-pagination-pages">
                       {[...Array(totalFieldPages)].map((_, i) => (
                         <button
                           key={i + 1}
-                          className={`klao-pagination-page ${fieldCurrentPage === i + 1 ? 'klao-pagination-page--active' : ''}`}
+                          className={`sails-pagination-page ${fieldCurrentPage === i + 1 ? 'sails-pagination-page--active' : ''}`}
                           onClick={() => setFieldCurrentPage(i + 1)}
                         >
                           {i + 1}
@@ -1509,7 +1509,7 @@ const ObjectManager: React.FC = () => {
                       ))}
                     </div>
                     <button
-                      className="klao-pagination-btn"
+                      className="sails-pagination-btn"
                       onClick={() => setFieldCurrentPage(prev => Math.min(totalFieldPages, prev + 1))}
                       disabled={fieldCurrentPage === totalFieldPages || totalFieldPages === 0}
                     >
@@ -1558,7 +1558,7 @@ const ObjectManager: React.FC = () => {
                   <label className="om-field-label">Data Model Name *</label>
                   <input 
                     type="text" 
-                    className="klao-input" 
+                    className="sails-input" 
                     placeholder="e.g. Sales Opportunities" 
                     autoFocus 
                     value={newTableName}
@@ -1574,7 +1574,7 @@ const ObjectManager: React.FC = () => {
                   <label className="om-field-label">System Name (DB Table) *</label>
                   <input 
                     type="text" 
-                    className="klao-input" 
+                    className="sails-input" 
                     placeholder="e.g. opportunities" 
                     value={newTableDbName}
                     onChange={e => setNewTableDbName(e.target.value)}
@@ -1586,7 +1586,7 @@ const ObjectManager: React.FC = () => {
               <div className="om-field-group">
                 <label className="om-field-label">Description</label>
                 <textarea 
-                  className="klao-input" 
+                  className="sails-input" 
                   placeholder="Describe the data model's purpose..." 
                   rows={3}
                   value={newTableDesc}
@@ -1597,8 +1597,8 @@ const ObjectManager: React.FC = () => {
             </div>
 
             <div className="om-modal-footer">
-              <button className="klao-btn klao-btn--ghost" onClick={() => setIsCreatingTable(false)}>Cancel</button>
-              <button className="klao-btn klao-btn--primary" onClick={handleCreateTable}>Create Model</button>
+              <button className="sails-btn sails-btn--ghost" onClick={() => setIsCreatingTable(false)}>Cancel</button>
+              <button className="sails-btn sails-btn--primary" onClick={handleCreateTable}>Create Model</button>
             </div>
           </div>
         </div>,
@@ -1635,7 +1635,7 @@ const ObjectManager: React.FC = () => {
                   <label className="om-field-label">Data Model Name *</label>
                   <input 
                     type="text" 
-                    className="klao-input" 
+                    className="sails-input" 
                     autoFocus 
                     value={editTableName}
                     onChange={e => setEditTableName(e.target.value)}
@@ -1646,7 +1646,7 @@ const ObjectManager: React.FC = () => {
                   <label className="om-field-label">System Name</label>
                   <input 
                     type="text" 
-                    className="klao-input" 
+                    className="sails-input" 
                     value={editingTable.tableName}
                     disabled
                     style={{ opacity: 0.6, cursor: 'not-allowed' }}
@@ -1658,7 +1658,7 @@ const ObjectManager: React.FC = () => {
               <div className="om-field-group">
                 <label className="om-field-label">Description</label>
                 <textarea 
-                  className="klao-input" 
+                  className="sails-input" 
                   rows={3}
                   value={editTableDesc}
                   onChange={e => setEditTableDesc(e.target.value)}
@@ -1668,8 +1668,8 @@ const ObjectManager: React.FC = () => {
             </div>
 
             <div className="om-modal-footer">
-              <button className="klao-btn klao-btn--ghost" onClick={() => setEditingTable(null)}>Cancel</button>
-              <button className="klao-btn klao-btn--primary" onClick={handleSaveEditTable}>Save Changes</button>
+              <button className="sails-btn sails-btn--ghost" onClick={() => setEditingTable(null)}>Cancel</button>
+              <button className="sails-btn sails-btn--primary" onClick={handleSaveEditTable}>Save Changes</button>
             </div>
           </div>
         </div>,
@@ -1716,7 +1716,7 @@ const ObjectManager: React.FC = () => {
                       <label className="om-field-label">Display Name *</label>
                       <input 
                         type="text" 
-                        className="klao-input" 
+                        className="sails-input" 
                         placeholder="e.g. Total Amount" 
                         autoFocus 
                         value={newFieldName}
@@ -1732,7 +1732,7 @@ const ObjectManager: React.FC = () => {
                       <label className="om-field-label">System Name (Column Name) *</label>
                       <input 
                         type="text" 
-                        className="klao-input" 
+                        className="sails-input" 
                         placeholder="e.g. totalamount" 
                         value={newFieldDbName}
                         onChange={e => setNewFieldDbName(e.target.value)}
@@ -1756,7 +1756,7 @@ const ObjectManager: React.FC = () => {
                     <label className="om-field-label">Description (Optional)</label>
                     <input 
                       type="text"
-                      className="klao-input" 
+                      className="sails-input" 
                       placeholder="Describe the purpose of this field..." 
                       value={newFieldDesc}
                       onChange={e => setNewFieldDesc(e.target.value)}
@@ -1856,7 +1856,7 @@ const ObjectManager: React.FC = () => {
                               <div className="om-field-group om-field-group--full">
                                 <label className="om-field-label">Custom Options (One Per Line) *</label>
                                 <textarea
-                                  className="klao-input"
+                                  className="sails-input"
                                   placeholder={'Draft\nIn Review\nApproved\nClosed'}
                                   rows={10}
                                   value={dynamicConfigValues.optionsText || ''}
@@ -1920,7 +1920,7 @@ const ObjectManager: React.FC = () => {
                             </div>
                           </div>
                         ) : (!activeFieldTypeMeta?.parametersSchema || activeFieldTypeMeta.parametersSchema.length === 0) ? (
-                          <p style={{ color: 'var(--klao-text-muted)', fontSize: '0.875rem', margin: 0 }}>
+                          <p style={{ color: 'var(--sails-text-muted)', fontSize: '0.875rem', margin: 0 }}>
                             This field type does not require additional parameters.
                           </p>
                         ) : (
@@ -1928,19 +1928,19 @@ const ObjectManager: React.FC = () => {
                             {newFieldLogicalType === 'auto_number' && (
                               <div style={{
                                 padding: '12px 16px',
-                                backgroundColor: 'rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.08)',
-                                border: '1px solid rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.25)',
+                                backgroundColor: 'rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.08)',
+                                border: '1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.25)',
                                 borderRadius: '8px',
                                 marginBottom: '16px'
                               }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--klao-primary)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sails-primary)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
                                   <Sparkles size={16} />
                                   <span>Format Pattern & Date Token Guidance</span>
                                 </div>
-                                <p style={{ margin: '0 0 8px 0', fontSize: '0.8125rem', color: 'var(--klao-text-main)', lineHeight: '1.4' }}>
+                                <p style={{ margin: '0 0 8px 0', fontSize: '0.8125rem', color: 'var(--sails-text-main)', lineHeight: '1.4' }}>
                                   Enter zeros (e.g. <code>0000</code>) to auto-detect padding digits. Insert date tokens anywhere in pattern.
                                 </p>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                                   <div><code>INV-0000</code> ➔ 4 digits (<code>INV-0001</code>)</div>
                                   <div><code>{`{yyyy}`}</code> / <code>{`{YYYY}`}</code> ➔ 4-digit Year</div>
                                   <div><code>INV-{`{yyyy}`}00000</code> ➔ Year + 5 digits</div>
@@ -1964,7 +1964,7 @@ const ObjectManager: React.FC = () => {
                                         onChange={val => setDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
                                       />
                                       {param.description && (
-                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                        <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
                                           {param.description}
                                         </small>
                                       )}
@@ -1985,7 +1985,7 @@ const ObjectManager: React.FC = () => {
                                         <label className="om-field-label" style={{ margin: 0 }}>{param.label}</label>
                                       </div>
                                       {param.description && (
-                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                        <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
                                           {param.description}
                                         </small>
                                       )}
@@ -2005,7 +2005,7 @@ const ObjectManager: React.FC = () => {
                                         placeholder="Select Target Model"
                                       />
                                       {param.description && (
-                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                        <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
                                           {param.description}
                                         </small>
                                       )}
@@ -2018,7 +2018,7 @@ const ObjectManager: React.FC = () => {
                                     <div key={param.name} className="om-field-group om-field-group--full">
                                       <label className="om-field-label">{param.label}</label>
                                       <textarea
-                                        className="klao-input"
+                                        className="sails-input"
                                         placeholder={param.placeholder}
                                         rows={4}
                                         value={dynamicConfigValues[param.name] || ''}
@@ -2026,7 +2026,7 @@ const ObjectManager: React.FC = () => {
                                         style={{ resize: 'vertical' }}
                                       />
                                       {param.description && (
-                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                        <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
                                           {param.description}
                                         </small>
                                       )}
@@ -2039,7 +2039,7 @@ const ObjectManager: React.FC = () => {
                                     <label className="om-field-label">{param.label}</label>
                                     <input
                                       type={param.type === 'number' ? 'number' : 'text'}
-                                      className="klao-input"
+                                      className="sails-input"
                                       placeholder={param.placeholder}
                                       min={param.min}
                                       max={param.max}
@@ -2050,7 +2050,7 @@ const ObjectManager: React.FC = () => {
                                       }))}
                                     />
                                     {param.description && (
-                                      <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                      <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
                                         {param.description}
                                       </small>
                                     )}
@@ -2071,7 +2071,7 @@ const ObjectManager: React.FC = () => {
               {fieldWizardStep === 1 ? (
                 <>
                   <button 
-                    className="klao-btn klao-btn--ghost" 
+                    className="sails-btn sails-btn--ghost" 
                     onClick={() => {
                       setIsCreatingField(false);
                       resetFieldParams();
@@ -2080,7 +2080,7 @@ const ObjectManager: React.FC = () => {
                     Cancel
                   </button>
                   <button 
-                    className="klao-btn klao-btn--primary" 
+                    className="sails-btn sails-btn--primary" 
                     disabled={!newFieldName || !newFieldDbName}
                     onClick={() => setFieldWizardStep(2)}
                   >
@@ -2090,13 +2090,13 @@ const ObjectManager: React.FC = () => {
               ) : (
                 <>
                   <button 
-                    className="klao-btn klao-btn--ghost" 
+                    className="sails-btn sails-btn--ghost" 
                     onClick={() => setFieldWizardStep(1)}
                   >
                     Back
                   </button>
                   <button 
-                    className="klao-btn klao-btn--primary" 
+                    className="sails-btn sails-btn--primary" 
                     onClick={handleCreateField}
                   >
                     Create Field
@@ -2146,7 +2146,7 @@ const ObjectManager: React.FC = () => {
                       <label className="om-field-label">Display Name *</label>
                       <input 
                         type="text" 
-                        className="klao-input" 
+                        className="sails-input" 
                         placeholder="e.g. Total Amount" 
                         autoFocus 
                         value={editFieldName}
@@ -2162,7 +2162,7 @@ const ObjectManager: React.FC = () => {
                       <label className="om-field-label">System Name (Column Name) *</label>
                       <input 
                         type="text" 
-                        className="klao-input" 
+                        className="sails-input" 
                         placeholder="e.g. totalamount" 
                         value={editFieldDbName}
                         onChange={e => setEditFieldDbName(e.target.value)}
@@ -2186,7 +2186,7 @@ const ObjectManager: React.FC = () => {
                     <label className="om-field-label">Description (Optional)</label>
                     <input 
                       type="text"
-                      className="klao-input" 
+                      className="sails-input" 
                       placeholder="Describe the purpose of this field..." 
                       value={editFieldDesc}
                       onChange={e => setEditFieldDesc(e.target.value)}
@@ -2197,7 +2197,7 @@ const ObjectManager: React.FC = () => {
                   <div className="om-field-group">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <label className="om-field-label">Field Data Type *</label>
-                      <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--klao-text-muted)' }}>
+                      <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--sails-text-muted)' }}>
                         Pre-save audits validate row data before applying DDL
                       </span>
                     </div>
@@ -2290,7 +2290,7 @@ const ObjectManager: React.FC = () => {
                               <div className="om-field-group om-field-group--full">
                                 <label className="om-field-label">Custom Options (One Per Line) *</label>
                                 <textarea
-                                  className="klao-input"
+                                  className="sails-input"
                                   placeholder={'Draft\nIn Review\nApproved\nClosed'}
                                   rows={10}
                                   value={editDynamicConfigValues.optionsText || ''}
@@ -2354,7 +2354,7 @@ const ObjectManager: React.FC = () => {
                             </div>
                           </div>
                         ) : (!activeFieldTypeMeta?.parametersSchema || activeFieldTypeMeta.parametersSchema.length === 0) ? (
-                          <p style={{ color: 'var(--klao-text-muted)', fontSize: '0.875rem', margin: 0 }}>
+                          <p style={{ color: 'var(--sails-text-muted)', fontSize: '0.875rem', margin: 0 }}>
                             This field type does not require additional parameters.
                           </p>
                         ) : (
@@ -2362,19 +2362,19 @@ const ObjectManager: React.FC = () => {
                             {editFieldLogicalType === 'auto_number' && (
                               <div style={{
                                 padding: '12px 16px',
-                                backgroundColor: 'rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.08)',
-                                border: '1px solid rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.25)',
+                                backgroundColor: 'rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.08)',
+                                border: '1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.25)',
                                 borderRadius: '8px',
                                 marginBottom: '16px'
                               }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--klao-primary)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sails-primary)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
                                   <Sparkles size={16} />
                                   <span>Format Pattern & Date Token Guidance</span>
                                 </div>
-                                <p style={{ margin: '0 0 8px 0', fontSize: '0.8125rem', color: 'var(--klao-text-main)', lineHeight: '1.4' }}>
+                                <p style={{ margin: '0 0 8px 0', fontSize: '0.8125rem', color: 'var(--sails-text-main)', lineHeight: '1.4' }}>
                                   Enter zeros (e.g. <code>0000</code>) to auto-detect padding digits. Insert date tokens anywhere in pattern.
                                 </p>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                                   <div><code>INV-0000</code> ➔ 4 digits (<code>INV-0001</code>)</div>
                                   <div><code>{`{yyyy}`}</code> / <code>{`{YYYY}`}</code> ➔ 4-digit Year</div>
                                   <div><code>INV-{`{yyyy}`}00000</code> ➔ Year + 5 digits</div>
@@ -2398,7 +2398,7 @@ const ObjectManager: React.FC = () => {
                                         onChange={val => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
                                       />
                                       {param.description && (
-                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                        <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
                                           {param.description}
                                         </small>
                                       )}
@@ -2419,7 +2419,7 @@ const ObjectManager: React.FC = () => {
                                         <label className="om-field-label" style={{ margin: 0 }}>{param.label}</label>
                                       </div>
                                       {param.description && (
-                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                        <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
                                           {param.description}
                                         </small>
                                       )}
@@ -2439,7 +2439,7 @@ const ObjectManager: React.FC = () => {
                                         placeholder="Select Target Model"
                                       />
                                       {param.description && (
-                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                        <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
                                           {param.description}
                                         </small>
                                       )}
@@ -2452,7 +2452,7 @@ const ObjectManager: React.FC = () => {
                                     <div key={param.name} className="om-field-group om-field-group--full">
                                       <label className="om-field-label">{param.label}</label>
                                       <textarea
-                                        className="klao-input"
+                                        className="sails-input"
                                         placeholder={param.placeholder}
                                         rows={4}
                                         value={editDynamicConfigValues[param.name] || ''}
@@ -2460,7 +2460,7 @@ const ObjectManager: React.FC = () => {
                                         style={{ resize: 'vertical' }}
                                       />
                                       {param.description && (
-                                        <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                        <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
                                           {param.description}
                                         </small>
                                       )}
@@ -2473,7 +2473,7 @@ const ObjectManager: React.FC = () => {
                                     <label className="om-field-label">{param.label}</label>
                                     <input
                                       type={param.type === 'number' ? 'number' : 'text'}
-                                      className="klao-input"
+                                      className="sails-input"
                                       placeholder={param.placeholder}
                                       min={param.min}
                                       max={param.max}
@@ -2484,7 +2484,7 @@ const ObjectManager: React.FC = () => {
                                       }))}
                                     />
                                     {param.description && (
-                                      <small style={{ color: 'var(--klao-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                      <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
                                         {param.description}
                                       </small>
                                     )}
@@ -2517,7 +2517,7 @@ const ObjectManager: React.FC = () => {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                   <input
                                     type="number"
-                                    className="klao-input"
+                                    className="sails-input"
                                     min={1}
                                     value={resetSeqValue}
                                     onChange={e => setResetSeqValue(Math.max(Number(e.target.value) || 1, 1))}
@@ -2525,7 +2525,7 @@ const ObjectManager: React.FC = () => {
                                   />
                                   <button
                                     type="button"
-                                    className="klao-btn klao-btn--secondary"
+                                    className="sails-btn sails-btn--secondary"
                                     onClick={() => handleResetSequence(editingField.id)}
                                     disabled={isResettingSeq}
                                     style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -2549,13 +2549,13 @@ const ObjectManager: React.FC = () => {
               {editFieldWizardStep === 1 ? (
                 <>
                   <button 
-                    className="klao-btn klao-btn--ghost" 
+                    className="sails-btn sails-btn--ghost" 
                     onClick={() => setEditingField(null)}
                   >
                     Cancel
                   </button>
                   <button 
-                    className="klao-btn klao-btn--primary" 
+                    className="sails-btn sails-btn--primary" 
                     disabled={!editFieldName || !editFieldDbName}
                     onClick={() => setEditFieldWizardStep(2)}
                   >
@@ -2565,13 +2565,13 @@ const ObjectManager: React.FC = () => {
               ) : (
                 <>
                   <button 
-                    className="klao-btn klao-btn--ghost" 
+                    className="sails-btn sails-btn--ghost" 
                     onClick={() => setEditFieldWizardStep(1)}
                   >
                     Back
                   </button>
                   <button 
-                    className="klao-btn klao-btn--primary" 
+                    className="sails-btn sails-btn--primary" 
                     onClick={handleUpdateField}
                   >
                     Save Changes
@@ -2588,16 +2588,16 @@ const ObjectManager: React.FC = () => {
       {errorMsg && createPortal(
         <div className="om-modal-overlay" style={{ zIndex: 10000 }}>
           <div className="om-modal glass-morphism animate-fade-in" style={{ width: '400px', textAlign: 'center', padding: '24px 32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: 'var(--klao-danger, #ef4444)' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: 'var(--sails-danger, #ef4444)' }}>
               <XCircle size={48} />
             </div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: '0 0 8px 0', color: 'white' }}>Action Failed</h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--klao-text-muted)', margin: '0 0 24px 0', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.9rem', color: 'var(--sails-text-muted)', margin: '0 0 24px 0', lineHeight: 1.5 }}>
               {errorMsg}
             </p>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <button 
-                className="klao-btn klao-btn--primary" 
+                className="sails-btn sails-btn--primary" 
                 onClick={() => setErrorMsg(null)}
                 style={{ minWidth: '120px' }}
               >
@@ -2615,7 +2615,7 @@ const ObjectManager: React.FC = () => {
             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
               <div style={{ 
                 background: 'rgba(253, 97, 97, 0.15)', 
-                color: 'var(--klao-danger, #fd6161)', 
+                color: 'var(--sails-danger, #fd6161)', 
                 padding: '12px', 
                 borderRadius: '50%',
                 display: 'flex',
@@ -2629,7 +2629,7 @@ const ObjectManager: React.FC = () => {
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 600, margin: '0 0 8px 0', color: 'white' }}>
                   {deleteConfirmTarget.type === 'table' ? 'Delete Data Model' : 'Remove Field'}
                 </h2>
-                <p style={{ fontSize: '0.875rem', color: 'var(--klao-text-muted)', margin: '0 0 24px 0', lineHeight: 1.5 }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--sails-text-muted)', margin: '0 0 24px 0', lineHeight: 1.5 }}>
                   {deleteConfirmTarget.type === 'table' ? (
                     <>
                       Are you sure you want to delete the data model <strong>"{deleteConfirmTarget.name}"</strong>? This will physically drop the physical database table <code>{deleteConfirmTarget.extra}</code> and permanently destroy all records. This action cannot be undone.
@@ -2642,13 +2642,13 @@ const ObjectManager: React.FC = () => {
                 </p>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                   <button 
-                    className="klao-btn klao-btn--ghost" 
+                    className="sails-btn sails-btn--ghost" 
                     onClick={() => setDeleteConfirmTarget(null)}
                   >
                     Cancel
                   </button>
                   <button 
-                    className="klao-btn" 
+                    className="sails-btn" 
                     onClick={async () => {
                       const { type, id } = deleteConfirmTarget;
                       setDeleteConfirmTarget(null);
@@ -2659,7 +2659,7 @@ const ObjectManager: React.FC = () => {
                       }
                     }}
                     style={{ 
-                      background: 'var(--klao-danger, #fd6161)', 
+                      background: 'var(--sails-danger, #fd6161)', 
                       color: 'white',
                       border: 'none'
                     }}

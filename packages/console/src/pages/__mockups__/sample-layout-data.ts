@@ -5,11 +5,11 @@
  * for a "Leads" table. In production, this data lives in PostgreSQL
  * (core.table_layouts) and is fetched via the API.
  */
-import type { TableLayout, KlaoFieldDefinition } from '@klao/shared';
+import type { TableLayout, SailsFieldDefinition } from '@sails/shared';
 
 // ─── Dummy fields that exist on the "Leads" table ──────────────
 
-export const MOCK_LEADS_FIELDS: KlaoFieldDefinition[] = [
+export const MOCK_LEADS_FIELDS: SailsFieldDefinition[] = [
   { id: 'f_001', tableId: 't_leads', name: 'Lead Name',       fieldName: 'lead_name',       physicalType: 'text',    logicalType: 'short_text', config: {}, isRequired: true,  isSystem: false, createdAt: '' },
   { id: 'f_002', tableId: 't_leads', name: 'Company',         fieldName: 'company',         physicalType: 'text',    logicalType: 'short_text', config: {}, isRequired: false, isSystem: false, createdAt: '' },
   { id: 'f_003', tableId: 't_leads', name: 'Email',           fieldName: 'email',           physicalType: 'text',    logicalType: 'email',      config: {}, isRequired: true,  isSystem: false, createdAt: '' },

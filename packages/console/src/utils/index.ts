@@ -1,5 +1,5 @@
 /**
- * KLAO Utils
+ * SAILS Utils
  */
 
 /**

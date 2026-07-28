@@ -1,4 +1,4 @@
-.klao-mobile-global-bar {
+.sails-mobile-global-bar {
   display: none; /* Hidden on desktop */
   position: fixed;
   bottom: 0;
@@ -14,18 +14,18 @@
 }
 
 @media (max-width: 768px) {
-  .klao-mobile-global-bar {
+  .sails-mobile-global-bar {
     display: flex !important;
     align-items: center;
     height: calc(65px + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom);
     background-color: rgba(255, 255, 255, 0.8);
-    border-top: 1px solid var(--klao-border-color);
+    border-top: 1px solid var(--sails-border-color);
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
   }
 }
 
-.klao-mobile-global-bar__list {
+.sails-mobile-global-bar__list {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -36,16 +36,16 @@
   list-style: none;
 }
 
-.klao-mobile-global-bar__item {
+.sails-mobile-global-bar__item {
   flex: 1;
   display: flex;
   justify-content: center;
 }
 
-.klao-mobile-global-bar__action {
+.sails-mobile-global-bar__action {
   background: none;
   border: none;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   width: 44px;
   height: 44px;
   display: flex;
@@ -58,14 +58,14 @@
   outline: none;
 }
 
-.klao-mobile-global-bar__action:active {
-  background-color: var(--klao-primary) !important;
+.sails-mobile-global-bar__action:active {
+  background-color: var(--sails-primary) !important;
   color: white !important;
   transform: scale(0.9);
 }
 
-.klao-mobile-global-bar__action--profile {
-  background-color: var(--klao-bg-body);
+.sails-mobile-global-bar__action--profile {
+  background-color: var(--sails-bg-body);
   border-radius: 50%;
-  color: var(--klao-primary);
+  color: var(--sails-primary);
 }

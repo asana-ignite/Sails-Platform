@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: klao-db
+    container_name: sails-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: mysecretpassword
@@ -21,8 +21,8 @@ services:
     build:
       context: .
       dockerfile: packages/core/Dockerfile
-    image: klao-core:latest
-    container_name: klao-core
+    image: sails-core:latest
+    container_name: sails-core
     depends_on:
       db:
         condition: service_healthy
@@ -46,8 +46,8 @@ services:
     build:
       context: .
       dockerfile: packages/console/Dockerfile
-    image: klao-console:latest
-    container_name: klao-console
+    image: sails-console:latest
+    container_name: sails-console
     ports:
       - "5173:5173"
     volumes:

@@ -10,7 +10,7 @@ import {
   LayoutGrid, Settings, ArrowRight, ListTree, FolderKanban, Columns,
   Table2, Filter, ShieldAlert, AlertCircle, ChevronDown, ChevronRight,
 } from 'lucide-react';
-import type { KlaoFieldDefinition } from '@klao/shared';
+import type { SailsFieldDefinition } from '@sails/shared';
 import { MOCK_LEADS_FIELDS } from './sample-layout-data';
 import './LayoutBuilder.css';
 
@@ -126,7 +126,7 @@ const MOCK_RELATED_CONTACTS = [
   { name: 'John Smith', email: 'john@acme.com', phone: '+66 89 876 5432' },
 ];
 
-function renderFieldValue(field: KlaoFieldDefinition, record: Record<string, any>): string {
+function renderFieldValue(field: SailsFieldDefinition, record: Record<string, any>): string {
   const val = record[field.fieldName];
   if (val === undefined || val === null) return '—';
   if (field.logicalType === 'currency') return `฿${val.toLocaleString()}`;
@@ -150,7 +150,7 @@ function buildPalette(placedFieldIds: string[]): PaletteItem[] {
   return items;
 }
 
-function evaluateCondition(cond: BlockCondition, record: Record<string, any>, fields: KlaoFieldDefinition[]): boolean {
+function evaluateCondition(cond: BlockCondition, record: Record<string, any>, fields: SailsFieldDefinition[]): boolean {
   const field = fields.find((f) => f.id === cond.fieldId);
   if (!field) return true;
   const val = record[field.fieldName];
@@ -170,7 +170,7 @@ function evaluateCondition(cond: BlockCondition, record: Record<string, any>, fi
   }
 }
 
-function evaluateConditions(conditions: BlockCondition[] | undefined, record: Record<string, any>, fields: KlaoFieldDefinition[]): boolean {
+function evaluateConditions(conditions: BlockCondition[] | undefined, record: Record<string, any>, fields: SailsFieldDefinition[]): boolean {
   if (!conditions || conditions.length === 0) return true;
   let result = evaluateCondition(conditions[0], record, fields);
   for (let i = 1; i < conditions.length; i++) {
@@ -343,13 +343,13 @@ export const LayoutBuilder: React.FC = () => {
       <div className="wys-toolbar">
         <span className="wys-toolbar__brand">Page Layout Builder</span>
         <div className="wys-toolbar__actions">
-          <button className="klao-btn klao-btn--ghost klao-btn--sm" onClick={() => setShowProperties(!showProperties)}>
+          <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowProperties(!showProperties)}>
             <Settings size={14} /> {showProperties ? 'Hide' : 'Show'} Properties
           </button>
-          <button className="klao-btn klao-btn--ghost klao-btn--sm" onClick={() => { setSections([newSection()]); setBlocks([]); setSelectedBlockId(null); sectionCounter = 0; blockCounter = 0; }}>
+          <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => { setSections([newSection()]); setBlocks([]); setSelectedBlockId(null); sectionCounter = 0; blockCounter = 0; }}>
             Reset
           </button>
-          <button className="klao-btn klao-btn--primary klao-btn--sm">Save Layout</button>
+          <button className="sails-btn sails-btn--primary sails-btn--sm">Save Layout</button>
         </div>
       </div>
 
@@ -360,7 +360,7 @@ export const LayoutBuilder: React.FC = () => {
             <h3 className="wys-panel-title"><LayoutGrid size={13} /> Blocks</h3>
             <span className="wys-palette__count">{palette.length}</span>
           </div>
-          <button className="klao-btn klao-btn--ghost klao-btn--sm wys-palette__add-section" onClick={addSection}>
+          <button className="sails-btn sails-btn--ghost sails-btn--sm wys-palette__add-section" onClick={addSection}>
             <Plus size={13} /> Add Section
           </button>
           <div className="wys-palette__fields">
@@ -413,12 +413,12 @@ export const LayoutBuilder: React.FC = () => {
           <div className="wys-canvas__scroll">
             <div className="wys-page">
               {/* ── Mock Data Editor (for testing conditions) ── */}
-              <div className="klao-card" style={{ marginBottom: 16, padding: 0, overflow: 'hidden' }}>
+              <div className="sails-card" style={{ marginBottom: 16, padding: 0, overflow: 'hidden' }}>
                 <button className="wys-section__header" onClick={() => setShowDataEditor(!showDataEditor)} style={{ width: '100%', border: 'none', textAlign: 'left' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {showDataEditor ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                     <span style={{ fontSize: 12, fontWeight: 600 }}>Test Data Editor</span>
-                    <span style={{ fontSize: 10, color: 'var(--klao-text-muted)' }}>— change values to see conditions react</span>
+                    <span style={{ fontSize: 10, color: 'var(--sails-text-muted)' }}>— change values to see conditions react</span>
                   </div>
                 </button>
                 {showDataEditor && (
@@ -427,19 +427,19 @@ export const LayoutBuilder: React.FC = () => {
                       const val = mockRecord[field.fieldName] ?? '';
                       return (
                         <div key={field.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <label style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', color: 'var(--klao-text-muted)' }}>{field.name}</label>
+                          <label style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', color: 'var(--sails-text-muted)' }}>{field.name}</label>
                           {field.logicalType === 'select' ? (
-                            <select className="klao-input" value={val} onChange={(e) => setMockRecord((r) => ({ ...r, [field.fieldName]: e.target.value }))}
+                            <select className="sails-input" value={val} onChange={(e) => setMockRecord((r) => ({ ...r, [field.fieldName]: e.target.value }))}
                               style={{ fontSize: 11, padding: '4px 6px' }}>
                               {(field.config as any)?.options?.map((o: any) => (
                                 <option key={o.value} value={o.value}>{o.label}</option>
                               ))}
                             </select>
                           ) : field.logicalType === 'currency' ? (
-                            <input className="klao-input" type="number" value={val} onChange={(e) => setMockRecord((r) => ({ ...r, [field.fieldName]: Number(e.target.value) }))}
+                            <input className="sails-input" type="number" value={val} onChange={(e) => setMockRecord((r) => ({ ...r, [field.fieldName]: Number(e.target.value) }))}
                               style={{ fontSize: 11, padding: '4px 6px' }} />
                           ) : (
-                            <input className="klao-input" value={val} onChange={(e) => setMockRecord((r) => ({ ...r, [field.fieldName]: e.target.value }))}
+                            <input className="sails-input" value={val} onChange={(e) => setMockRecord((r) => ({ ...r, [field.fieldName]: e.target.value }))}
                               style={{ fontSize: 11, padding: '4px 6px' }} />
                           )}
                         </div>
@@ -612,7 +612,7 @@ export const LayoutBuilder: React.FC = () => {
                 {selectedBlock.blockType === 'field' && (
                   <div className="wys-prop-group">
                     <label className="wys-prop-label">Label</label>
-                    <input className="klao-input" value={selectedBlock.labelOverride || ''}
+                    <input className="sails-input" value={selectedBlock.labelOverride || ''}
                       onChange={(e) => updateBlock(selectedBlock.id, { labelOverride: e.target.value })}
                       placeholder={selectedField?.name} style={{ fontSize: 12, padding: '6px 8px' }} />
                   </div>
@@ -622,7 +622,7 @@ export const LayoutBuilder: React.FC = () => {
                   <>
                     <div className="wys-prop-group">
                       <label className="wys-prop-label">Source Table</label>
-                      <select className="klao-input" value={selectedBlock.relatedTableId}
+                      <select className="sails-input" value={selectedBlock.relatedTableId}
                         onChange={(e) => updateBlock(selectedBlock.id, { relatedTableId: e.target.value })}
                         style={{ fontSize: 12, padding: '6px 8px' }}>
                         <option value="t_tasks">Tasks</option>
@@ -631,7 +631,7 @@ export const LayoutBuilder: React.FC = () => {
                     </div>
                     <div className="wys-prop-group">
                       <label className="wys-prop-label">Max Rows</label>
-                      <input className="klao-input" type="number" value={selectedBlock.relatedMaxRows}
+                      <input className="sails-input" type="number" value={selectedBlock.relatedMaxRows}
                         onChange={(e) => updateBlock(selectedBlock.id, { relatedMaxRows: Number(e.target.value) })}
                         style={{ fontSize: 12, padding: '6px 8px' }} />
                     </div>
@@ -643,7 +643,7 @@ export const LayoutBuilder: React.FC = () => {
                     <label className="wys-prop-label">Tabs</label>
                     {(selectedBlock.tabs || []).map((tab, ti) => (
                       <div key={tab.id} style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
-                        <input className="klao-input" value={tab.label}
+                        <input className="sails-input" value={tab.label}
                           onChange={(e) => {
                             const tabs = [...(selectedBlock.tabs || [])];
                             tabs[ti] = { ...tabs[ti], label: e.target.value };
@@ -655,7 +655,7 @@ export const LayoutBuilder: React.FC = () => {
                         </button>
                       </div>
                     ))}
-                    <button className="klao-btn klao-btn--ghost klao-btn--sm"
+                    <button className="sails-btn sails-btn--ghost sails-btn--sm"
                       onClick={() => {
                         const tabs = [...(selectedBlock.tabs || []), { id: `tab_${Date.now()}`, label: 'New Tab', sectionIds: [] }];
                         updateBlock(selectedBlock.id, { tabs });
@@ -669,7 +669,7 @@ export const LayoutBuilder: React.FC = () => {
                 <div className="wys-prop-group">
                   <div className="wys-prop-label" style={{ justifyContent: 'space-between' }}>
                     <span><Filter size={12} /> Conditions</span>
-                    <button className="klao-btn klao-btn--ghost klao-btn--sm"
+                    <button className="sails-btn sails-btn--ghost sails-btn--sm"
                       onClick={() => {
                         const conds = [...(selectedBlock.conditions || []), {
                           id: `cond_${Date.now()}`,
@@ -684,7 +684,7 @@ export const LayoutBuilder: React.FC = () => {
                     </button>
                   </div>
                   {(selectedBlock.conditions || []).length === 0 ? (
-                    <p style={{ fontSize: 11, color: 'var(--klao-text-muted)', fontStyle: 'italic', margin: 0 }}>
+                    <p style={{ fontSize: 11, color: 'var(--sails-text-muted)', fontStyle: 'italic', margin: 0 }}>
                       No conditions. Block always visible.
                     </p>
                   ) : (
@@ -706,7 +706,7 @@ export const LayoutBuilder: React.FC = () => {
                           </div>
                         )}
                         <div className="wys-cond-body">
-                          <select className="klao-input" value={cond.fieldId}
+                          <select className="sails-input" value={cond.fieldId}
                             onChange={(e) => {
                               const conds = [...(selectedBlock.conditions || [])];
                               conds[ci] = { ...conds[ci], fieldId: e.target.value };
@@ -716,7 +716,7 @@ export const LayoutBuilder: React.FC = () => {
                               <option key={f.id} value={f.id}>{f.name}</option>
                             ))}
                           </select>
-                          <select className="klao-input" value={cond.operator}
+                          <select className="sails-input" value={cond.operator}
                             onChange={(e) => {
                               const conds = [...(selectedBlock.conditions || [])];
                               conds[ci] = { ...conds[ci], operator: e.target.value as ConditionOp };
@@ -733,7 +733,7 @@ export const LayoutBuilder: React.FC = () => {
                             <option value="not_empty">not empty</option>
                           </select>
                           {!['empty', 'not_empty'].includes(cond.operator) && (
-                            <input className="klao-input" value={cond.value}
+                            <input className="sails-input" value={cond.value}
                               onChange={(e) => {
                                 const conds = [...(selectedBlock.conditions || [])];
                                 conds[ci] = { ...conds[ci], value: e.target.value };
@@ -757,7 +757,7 @@ export const LayoutBuilder: React.FC = () => {
                   <div className="wys-prop-group">
                     <div className="wys-prop-label" style={{ justifyContent: 'space-between' }}>
                       <span><ShieldAlert size={12} /> Validation</span>
-                      <button className="klao-btn klao-btn--ghost klao-btn--sm"
+                      <button className="sails-btn sails-btn--ghost sails-btn--sm"
                         onClick={() => {
                           const vals = [...(selectedBlock.validations || []), {
                             id: `val_${Date.now()}`,
@@ -770,14 +770,14 @@ export const LayoutBuilder: React.FC = () => {
                       </button>
                     </div>
                     {(selectedBlock.validations || []).length === 0 ? (
-                      <p style={{ fontSize: 11, color: 'var(--klao-text-muted)', fontStyle: 'italic', margin: 0 }}>
+                      <p style={{ fontSize: 11, color: 'var(--sails-text-muted)', fontStyle: 'italic', margin: 0 }}>
                         No validation rules.
                       </p>
                     ) : (
                       (selectedBlock.validations || []).map((val, vi) => (
                         <div key={val.id} className="wys-cond-card">
                           <div className="wys-cond-body" style={{ flexWrap: 'wrap' }}>
-                            <select className="klao-input" value={val.type}
+                            <select className="sails-input" value={val.type}
                               onChange={(e) => {
                                 const vals = [...(selectedBlock.validations || [])];
                                 vals[vi] = { ...vals[vi], type: e.target.value as ValidationType };
@@ -798,7 +798,7 @@ export const LayoutBuilder: React.FC = () => {
 
                           {val.type === 'cross_field' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 4 }}>
-                              <select className="klao-input" value={val.dependentFieldId || ''}
+                              <select className="sails-input" value={val.dependentFieldId || ''}
                                 onChange={(e) => {
                                   const vals = [...(selectedBlock.validations || [])];
                                   vals[vi] = { ...vals[vi], dependentFieldId: e.target.value };
@@ -810,7 +810,7 @@ export const LayoutBuilder: React.FC = () => {
                                 ))}
                               </select>
                               <div style={{ display: 'flex', gap: 3 }}>
-                                <select className="klao-input" value={val.dependentOperator || 'eq'}
+                                <select className="sails-input" value={val.dependentOperator || 'eq'}
                                   onChange={(e) => {
                                     const vals = [...(selectedBlock.validations || [])];
                                     vals[vi] = { ...vals[vi], dependentOperator: e.target.value as ConditionOp };
@@ -821,7 +821,7 @@ export const LayoutBuilder: React.FC = () => {
                                   <option value="gt">&gt;</option>
                                   <option value="lt">&lt;</option>
                                 </select>
-                                <input className="klao-input" value={val.dependentValue || ''}
+                                <input className="sails-input" value={val.dependentValue || ''}
                                   onChange={(e) => {
                                     const vals = [...(selectedBlock.validations || [])];
                                     vals[vi] = { ...vals[vi], dependentValue: e.target.value };
@@ -832,7 +832,7 @@ export const LayoutBuilder: React.FC = () => {
                           )}
 
                           {val.type === 'regex' && (
-                            <input className="klao-input" value={val.pattern || ''}
+                            <input className="sails-input" value={val.pattern || ''}
                               onChange={(e) => {
                                 const vals = [...(selectedBlock.validations || [])];
                                 vals[vi] = { ...vals[vi], pattern: e.target.value };
@@ -842,13 +842,13 @@ export const LayoutBuilder: React.FC = () => {
 
                           {val.type === 'range' && (
                             <div style={{ display: 'flex', gap: 3, marginTop: 4 }}>
-                              <input className="klao-input" type="number" value={val.min ?? ''}
+                              <input className="sails-input" type="number" value={val.min ?? ''}
                                 onChange={(e) => {
                                   const vals = [...(selectedBlock.validations || [])];
                                   vals[vi] = { ...vals[vi], min: e.target.value ? Number(e.target.value) : undefined };
                                   updateBlock(selectedBlock.id, { validations: vals });
                                 }} placeholder="Min" style={{ fontSize: 10, padding: '3px 4px', flex: 1 }} />
-                              <input className="klao-input" type="number" value={val.max ?? ''}
+                              <input className="sails-input" type="number" value={val.max ?? ''}
                                 onChange={(e) => {
                                   const vals = [...(selectedBlock.validations || [])];
                                   vals[vi] = { ...vals[vi], max: e.target.value ? Number(e.target.value) : undefined };
@@ -857,7 +857,7 @@ export const LayoutBuilder: React.FC = () => {
                             </div>
                           )}
 
-                          <input className="klao-input" value={val.message}
+                          <input className="sails-input" value={val.message}
                             onChange={(e) => {
                               const vals = [...(selectedBlock.validations || [])];
                               vals[vi] = { ...vals[vi], message: e.target.value };

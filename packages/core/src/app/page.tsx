@@ -1,10 +1,10 @@
-// KLAO Core — Headless API Engine
-// No UI is served from this project. See KLAO Console (/klao-console) for the frontend.
+// SAILS Core — Headless API Engine
+// No UI is served from this project. See SAILS Console (/sails-console) for the frontend.
 
 export default function Home() {
   return (
     <main style={{ padding: '2rem', fontFamily: 'monospace', color: '#888' }}>
-      <h1>KLAO Core API</h1>
+      <h1>SAILS Core API</h1>
       <p>This is a headless API engine. No UI is served here.</p>
       <p>API endpoints are available at <code>/api/*</code></p>
       <ul>

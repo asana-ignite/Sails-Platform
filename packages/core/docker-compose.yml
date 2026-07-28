@@ -3,7 +3,7 @@ version: '3.8'
 services:
   db:
     image: postgres:16-alpine
-    container_name: klao-db
+    container_name: sails-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: mysecretpassword
@@ -20,8 +20,8 @@ services:
 
   app:
     build: .
-    image: klao-core:latest
-    container_name: klao-app
+    image: sails-core:latest
+    container_name: sails-app
     depends_on:
       db:
         condition: service_healthy

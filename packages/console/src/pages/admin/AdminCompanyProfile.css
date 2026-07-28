@@ -1,6 +1,6 @@
-/* KLAO Console — Company Profile Plugin Styles (Standard Klao Theme) */
+/* SAILS Console — Company Profile Plugin Styles (Standard Sails Theme) */
 
-.klao-company-profile {
+.sails-company-profile {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -8,17 +8,17 @@
   margin: 0 auto;
 }
 
-/* Standard Klao Bottom-Bordered Tab Navigation */
-.klao-company-profile__nav {
+/* Standard Sails Bottom-Bordered Tab Navigation */
+.sails-company-profile__nav {
   display: flex;
   align-items: center;
   gap: 8px;
-  border-bottom: 1px solid var(--klao-border-color, #e1e9ef);
+  border-bottom: 1px solid var(--sails-border-color, #e1e9ef);
   padding-bottom: 0;
   margin-bottom: 4px;
 }
 
-.klao-company-profile__tab {
+.sails-company-profile__tab {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -26,141 +26,141 @@
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: var(--klao-text-muted, #6b8ba4);
+  color: var(--sails-text-muted, #6b8ba4);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  border-radius: var(--klao-radius-md, 8px) var(--klao-radius-md, 8px) 0 0;
+  border-radius: var(--sails-radius-md, 8px) var(--sails-radius-md, 8px) 0 0;
   transition: all 0.2s ease;
   margin-bottom: -1px;
 }
 
-.klao-company-profile__tab:hover {
-  color: var(--klao-text-main, #344759);
+.sails-company-profile__tab:hover {
+  color: var(--sails-text-main, #344759);
   background: rgba(0, 0, 0, 0.03);
 }
 
-.klao-company-profile__tab--active {
-  color: var(--klao-primary-dark, var(--klao-primary));
-  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
+.sails-company-profile__tab--active {
+  color: var(--sails-primary-dark, var(--sails-primary));
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
   border-bottom: 2px solid transparent;
-  border-image: var(--klao-primary-bg) 1;
+  border-image: var(--sails-primary-bg) 1;
   box-shadow: none;
 }
 
-.klao-company-profile__card {
+.sails-company-profile__card {
   padding: 24px;
-  background: var(--klao-bg-card, #ffffff);
-  border: 1px solid var(--klao-border-color, #e1e9ef);
-  border-radius: var(--klao-radius-lg, 12px);
-  box-shadow: var(--klao-shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.03));
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e1e9ef);
+  border-radius: var(--sails-radius-lg, 12px);
+  box-shadow: var(--sails-shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.03));
 }
 
-.klao-company-profile__section-header {
+.sails-company-profile__section-header {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--klao-border-color, #e1e9ef);
+  border-bottom: 1px solid var(--sails-border-color, #e1e9ef);
 }
 
-.klao-company-profile__section-icon {
+.sails-company-profile__section-icon {
   width: 36px;
   height: 36px;
-  border-radius: var(--klao-radius-md, 8px);
-  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.15);
-  color: var(--klao-primary-dark, #6b8ba4);
+  border-radius: var(--sails-radius-md, 8px);
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.15);
+  color: var(--sails-primary-dark, #6b8ba4);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.klao-company-profile__section-title {
+.sails-company-profile__section-title {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--klao-text-main, #344759);
+  color: var(--sails-text-main, #344759);
 }
 
-.klao-company-profile__section-subtitle {
+.sails-company-profile__section-subtitle {
   margin: 2px 0 0 0;
   font-size: 0.85rem;
-  color: var(--klao-text-muted, #6b8ba4);
+  color: var(--sails-text-muted, #6b8ba4);
 }
 
-.klao-cp-grid-2 {
+.sails-cp-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
 }
 
-.klao-cp-grid-3 {
+.sails-cp-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
-.klao-cp-full {
+.sails-cp-full {
   grid-column: span 2;
 }
 
-.klao-cp-group {
+.sails-cp-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.klao-cp-label {
+.sails-cp-label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--klao-text-main, #344759);
+  color: var(--sails-text-main, #344759);
 }
 
-.klao-cp-help {
+.sails-cp-help {
   font-size: 0.78125rem;
-  color: var(--klao-text-muted, #6b8ba4);
+  color: var(--sails-text-muted, #6b8ba4);
   margin-top: 2px;
 }
 
-.klao-cp-footer {
+.sails-cp-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid var(--klao-border-color, #e1e9ef);
+  border-top: 1px solid var(--sails-border-color, #e1e9ef);
 }
 
-.klao-cp-toast {
+.sails-cp-toast {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  border-radius: var(--klao-radius-md, 6px);
+  border-radius: var(--sails-radius-md, 6px);
   font-size: 0.85rem;
   font-weight: 500;
-  box-shadow: var(--klao-shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.03));
-  animation: klao-fade-in 0.25s ease-out;
+  box-shadow: var(--sails-shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.03));
+  animation: sails-fade-in 0.25s ease-out;
 }
 
-.klao-cp-toast--success {
-  background: var(--klao-success-light, #eaf9f6);
-  border: 1px solid var(--klao-success, #4ec5ad);
-  color: var(--klao-success, #2e7d6e);
+.sails-cp-toast--success {
+  background: var(--sails-success-light, #eaf9f6);
+  border: 1px solid var(--sails-success, #4ec5ad);
+  color: var(--sails-success, #2e7d6e);
 }
 
-.klao-cp-toast--danger {
-  background: var(--klao-danger-light, #ffefef);
-  border: 1px solid var(--klao-danger, #fd6161);
-  color: var(--klao-danger, #fd6161);
+.sails-cp-toast--danger {
+  background: var(--sails-danger-light, #ffefef);
+  border: 1px solid var(--sails-danger, #fd6161);
+  color: var(--sails-danger, #fd6161);
 }
 
 @media (max-width: 768px) {
-  .klao-cp-grid-2, .klao-cp-grid-3 {
+  .sails-cp-grid-2, .sails-cp-grid-3 {
     grid-template-columns: 1fr;
   }
-  .klao-cp-full {
+  .sails-cp-full {
     grid-column: span 1;
   }
 }

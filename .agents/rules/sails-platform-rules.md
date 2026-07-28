@@ -1,9 +1,9 @@
 ---
 trigger: always_on
-description: Mandatory development and deployment rules for the Klao Platform.
+description: Mandatory development and deployment rules for the Sails Platform.
 ---
 
-# Klao Platform Rules
+# Sails Platform Rules
 
 ## 1. Development Environment (Docker)
 - **Mandatory Usage**: Local `docker-compose.yml` for testing.
@@ -23,7 +23,7 @@ description: Mandatory development and deployment rules for the Klao Platform.
 
 ## 4. Plugin Architecture Standards
 - **Rule (Lifted State)**: Plugin UI states (Drawers/Modals) MUST be lifted to `ConsoleContext` to survive platform re-mounts.
-- **Warning (Hit-Box Safety)**: Header containers (`.klao-page-header__left`) MUST use `pointer-events: none` on container and `pointer-events: auto` on children.
+- **Warning (Hit-Box Safety)**: Header containers (`.sails-page-header__left`) MUST use `pointer-events: none` on container and `pointer-events: auto` on children.
 - **Rule (Portaling)**: Use `React Portals` for ALL slide-over drawers to sit at document root.
 - **Rule (Z-Index)**: Administrative overlays MUST use `z-index: 9999 !important`.
 

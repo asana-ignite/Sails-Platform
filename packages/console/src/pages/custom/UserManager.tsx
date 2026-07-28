@@ -82,7 +82,7 @@ const UserManager: React.FC = () => {
 
   // 1. Global Signal Bridge (Guaranteed Communication)
   useEffect(() => {
-    const bridgeName = '__KLAO_OPEN_DRAWER__';
+    const bridgeName = '__SAILS_OPEN_DRAWER__';
     (window as any)[bridgeName] = () => {
       console.log("ACTION: Global Signal Received -> Opening Drawer");
       setShowAddUserDrawer(true);
@@ -94,8 +94,8 @@ const UserManager: React.FC = () => {
   // 2. Stable Header Action Registration
   const memoizedHeaderActions = useMemo(() => (
     <button 
-      id="klao-header-add-user"
-      className="klao-btn klao-btn--primary" 
+      id="sails-header-add-user"
+      className="sails-btn sails-btn--primary" 
       onClick={() => setShowAddUserDrawer(true)}
     >
       <UserPlus size={18} />
@@ -143,7 +143,7 @@ const UserManager: React.FC = () => {
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest('#klao-header-add-user')) {
+      if (target.closest('#sails-header-add-user')) {
         console.log("DOM: Global Click Intercepted -> Opening Drawer");
         setShowAddUserDrawer(true);
       }
@@ -262,20 +262,20 @@ const UserManager: React.FC = () => {
   };
 
   const getSortIcon = (key: keyof User) => {
-    if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown size={14} className="klao-user-manager__sort-icon--idle" />;
+    if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown size={14} className="sails-user-manager__sort-icon--idle" />;
     return sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
   };
 
   return (
-    <div className="klao-user-manager">
+    <div className="sails-user-manager">
       {/* 1. Header Toolbar */}
-      <div className="klao-user-manager__toolbar">
-        <div className="klao-user-manager__search-wrapper">
-          <Search size={18} className="klao-user-manager__search-icon" />
+      <div className="sails-user-manager__toolbar">
+        <div className="sails-user-manager__search-wrapper">
+          <Search size={18} className="sails-user-manager__search-icon" />
           <input
             type="text"
             placeholder="Search users..."
-            className="klao-user-manager__search-input"
+            className="sails-user-manager__search-input"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -283,27 +283,27 @@ const UserManager: React.FC = () => {
             }}
           />
         </div>
-        <div className="klao-user-manager__actions">
-          <div className="klao-user-manager__filter-container">
+        <div className="sails-user-manager__actions">
+          <div className="sails-user-manager__filter-container">
             <button
-              className={`klao-btn ${showFilters ? 'klao-btn--primary' : 'klao-btn--ghost'}`}
+              className={`sails-btn ${showFilters ? 'sails-btn--primary' : 'sails-btn--ghost'}`}
               onClick={() => setShowFilters(!showFilters)}
             >
               <Filter size={16} />
               <span>Filters</span>
-              {(activeFilters.role || activeFilters.status) && <span className="klao-btn__badge"></span>}
+              {(activeFilters.role || activeFilters.status) && <span className="sails-btn__badge"></span>}
             </button>
 
             {/* 1.1 Advanced Filter Popover */}
             {showFilters && (
-              <div className="klao-user-manager__filter-popover">
-                <div className="klao-user-manager__filter-group">
+              <div className="sails-user-manager__filter-popover">
+                <div className="sails-user-manager__filter-group">
                   <label>Filter by Role</label>
-                  <div className="klao-user-manager__filter-options">
+                  <div className="sails-user-manager__filter-options">
                     {['Admin', 'Member', 'Guest'].map(role => (
                       <button
                         key={role}
-                        className={`klao-filter-chip ${activeFilters.role === role ? 'active' : ''}`}
+                        className={`sails-filter-chip ${activeFilters.role === role ? 'active' : ''}`}
                         onClick={() => {
                           setActiveFilters(prev => ({ ...prev, role: prev.role === role ? undefined : role }));
                           setCurrentPage(1);
@@ -314,13 +314,13 @@ const UserManager: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                <div className="klao-user-manager__filter-group">
+                <div className="sails-user-manager__filter-group">
                   <label>Filter by Status</label>
-                  <div className="klao-user-manager__filter-options">
+                  <div className="sails-user-manager__filter-options">
                     {['Active', 'Inactive', 'Pending'].map(status => (
                       <button
                         key={status}
-                        className={`klao-filter-chip ${activeFilters.status === status ? 'active' : ''}`}
+                        className={`sails-filter-chip ${activeFilters.status === status ? 'active' : ''}`}
                         onClick={() => {
                           setActiveFilters(prev => ({ ...prev, status: prev.status === status ? undefined : status }));
                           setCurrentPage(1);
@@ -331,9 +331,9 @@ const UserManager: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                <div className="klao-user-manager__filter-footer">
+                <div className="sails-user-manager__filter-footer">
                   <button
-                    className="klao-user-manager__filter-clear"
+                    className="sails-user-manager__filter-clear"
                     onClick={() => {
                       setActiveFilters({});
                       setCurrentPage(1);
@@ -349,78 +349,78 @@ const UserManager: React.FC = () => {
       </div>
 
       {/* 2. User Data Table */}
-      <div className="klao-card klao-user-manager__table-wrapper">
-        <table className="klao-user-manager__table">
+      <div className="sails-card sails-user-manager__table-wrapper">
+        <table className="sails-user-manager__table">
           <thead>
             <tr>
-              <th className="klao-user-manager__th klao-user-manager__th--checkbox">
+              <th className="sails-user-manager__th sails-user-manager__th--checkbox">
                 <input
                   type="checkbox"
-                  className="klao-checkbox"
+                  className="sails-checkbox"
                   ref={selectAllRef}
                   checked={paginatedUsers.length > 0 && paginatedUsers.every(u => selectedUserIds.has(u.id))}
                   onChange={handleSelectAll}
                 />
               </th>
-              <th className="klao-user-manager__th klao-user-manager__th--sortable" onClick={() => handleSort('name')}>
-                <div className="klao-user-manager__th-content">
+              <th className="sails-user-manager__th sails-user-manager__th--sortable" onClick={() => handleSort('name')}>
+                <div className="sails-user-manager__th-content">
                   <span>User Identity</span>
                   {getSortIcon('name')}
                 </div>
               </th>
-              <th className="klao-user-manager__th klao-user-manager__th--sortable" onClick={() => handleSort('role')}>
-                <div className="klao-user-manager__th-content">
+              <th className="sails-user-manager__th sails-user-manager__th--sortable" onClick={() => handleSort('role')}>
+                <div className="sails-user-manager__th-content">
                   <span>Name & Title</span>
-                  <ArrowUpDown size={14} className="klao-user-manager__sort-icon--idle" />
+                  <ArrowUpDown size={14} className="sails-user-manager__sort-icon--idle" />
                 </div>
               </th>
-              <th className="klao-user-manager__th klao-user-manager__th--sortable" onClick={() => handleSort('status')}>
-                <div className="klao-user-manager__th-content">
+              <th className="sails-user-manager__th sails-user-manager__th--sortable" onClick={() => handleSort('status')}>
+                <div className="sails-user-manager__th-content">
                   <span>Status</span>
                   {getSortIcon('status')}
                 </div>
               </th>
-              <th className="klao-user-manager__th klao-user-manager__th--sortable" onClick={() => handleSort('lastLogin')}>
-                <div className="klao-user-manager__th-content">
+              <th className="sails-user-manager__th sails-user-manager__th--sortable" onClick={() => handleSort('lastLogin')}>
+                <div className="sails-user-manager__th-content">
                   <span>Last Activity</span>
                   {getSortIcon('lastLogin')}
                 </div>
               </th>
-              <th className="klao-user-manager__th klao-user-manager__th--actions"></th>
+              <th className="sails-user-manager__th sails-user-manager__th--actions"></th>
             </tr>
           </thead>
           <tbody>
             {isLoadingUsers ? (
               <tr>
                 <td colSpan={6} style={{ textAlign: 'center', padding: '100px' }}>
-                  <div className="klao-loading-spinner"></div>
-                  <p style={{ marginTop: '16px', color: 'var(--klao-text-muted)' }}>Fetching platform users...</p>
+                  <div className="sails-loading-spinner"></div>
+                  <p style={{ marginTop: '16px', color: 'var(--sails-text-muted)' }}>Fetching platform users...</p>
                 </td>
               </tr>
             ) : paginatedUsers.length === 0 ? (
               <tr>
                 <td colSpan={6} style={{ textAlign: 'center', padding: '100px' }}>
-                  <p style={{ color: 'var(--klao-text-muted)' }}>No users found matching your criteria.</p>
+                  <p style={{ color: 'var(--sails-text-muted)' }}>No users found matching your criteria.</p>
                 </td>
               </tr>
             ) : paginatedUsers.map((user) => (
               <tr
                 key={user.id}
-                className={`klao-user-manager__tr ${selectedUserIds.has(user.id) ? 'klao-user-manager__tr--selected' : ''}`}
+                className={`sails-user-manager__tr ${selectedUserIds.has(user.id) ? 'sails-user-manager__tr--selected' : ''}`}
                 onClick={() => setSelectedUserIdForDetails(user.id)}
                 style={{ cursor: 'pointer' }}
               >
-                <td className="klao-user-manager__td klao-user-manager__td--checkbox" onClick={(e) => e.stopPropagation()}>
+                <td className="sails-user-manager__td sails-user-manager__td--checkbox" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
-                    className="klao-checkbox"
+                    className="sails-checkbox"
                     checked={selectedUserIds.has(user.id)}
                     onChange={() => toggleUserSelection(user.id)}
                   />
                 </td>
-                <td className="klao-user-manager__td">
-                  <div className="klao-user-manager__identity">
-                    <div className="klao-user-manager__avatar">
+                <td className="sails-user-manager__td">
+                  <div className="sails-user-manager__identity">
+                    <div className="sails-user-manager__avatar">
                       {user.avatar ? (
                         <img 
                           src={user.avatar} 
@@ -431,45 +431,45 @@ const UserManager: React.FC = () => {
                         user.name.charAt(0)
                       )}
                     </div>
-                    <div className="klao-user-manager__info">
-                      <span className="klao-user-manager__name">{user.name}</span>
-                      <span className="klao-user-manager__title-label">{user.positionText || 'Unassigned Position'}</span>
-                      <span className="klao-user-manager__email">{user.email}</span>
+                    <div className="sails-user-manager__info">
+                      <span className="sails-user-manager__name">{user.name}</span>
+                      <span className="sails-user-manager__title-label">{user.positionText || 'Unassigned Position'}</span>
+                      <span className="sails-user-manager__email">{user.email}</span>
                     </div>
                   </div>
                 </td>
-                <td className="klao-user-manager__td">
-                  <div className="klao-user-manager__role-tag">
+                <td className="sails-user-manager__td">
+                  <div className="sails-user-manager__role-tag">
                     <Shield size={14} />
                     <span>{user.role}</span>
                   </div>
                 </td>
-                <td className="klao-user-manager__td">
-                  <div className={`klao-status-badge klao-status-badge--${user.status.toLowerCase()}`}>
+                <td className="sails-user-manager__td">
+                  <div className={`sails-status-badge sails-status-badge--${user.status.toLowerCase()}`}>
                     <Circle size={8} fill="currentColor" />
                     <span>{user.status}</span>
                   </div>
                 </td>
-                <td className="klao-user-manager__td">
-                  <span className="klao-user-manager__last-login">{user.lastLogin}</span>
+                <td className="sails-user-manager__td">
+                  <span className="sails-user-manager__last-login">{user.lastLogin}</span>
                 </td>
-                <td className="klao-user-manager__td klao-user-manager__td--actions">
-                  <div className="klao-user-manager__action-wrapper" onClick={(e) => e.stopPropagation()}>
+                <td className="sails-user-manager__td sails-user-manager__td--actions">
+                  <div className="sails-user-manager__action-wrapper" onClick={(e) => e.stopPropagation()}>
                     <button
-                      className={`klao-user-manager__action-btn ${activeMenuUserId === user.id ? 'active' : ''}`}
+                      className={`sails-user-manager__action-btn ${activeMenuUserId === user.id ? 'active' : ''}`}
                       onClick={() => setActiveMenuUserId(activeMenuUserId === user.id ? null : user.id)}
                     >
                       <MoreHorizontal size={18} />
                     </button>
 
                     {activeMenuUserId === user.id && (
-                      <div className="klao-user-manager__context-menu">
-                        <button className="klao-context-item" onClick={() => handleAction('edit', user)}>
+                      <div className="sails-user-manager__context-menu">
+                        <button className="sails-context-item" onClick={() => handleAction('edit', user)}>
                           <Edit2 size={14} />
                           <span>Edit Details</span>
                         </button>
                         <button
-                          className="klao-context-item"
+                          className="sails-context-item"
                           onClick={() => handleAction(user.status === 'Active' ? 'deactivate' : 'activate', user)}
                         >
                           {user.status === 'Active' ? (
@@ -478,16 +478,16 @@ const UserManager: React.FC = () => {
                             <><UserCheck size={14} /><span>Activate User</span></>
                           )}
                         </button>
-                        <button className="klao-context-item" onClick={() => handleAction('reset_password', user)}>
+                        <button className="sails-context-item" onClick={() => handleAction('reset_password', user)}>
                           <Key size={14} />
                           <span>Reset Password</span>
                         </button>
-                        <div className="klao-context-divider"></div>
-                        <button className="klao-context-item" onClick={() => handleAction('copy_id', user)}>
+                        <div className="sails-context-divider"></div>
+                        <button className="sails-context-item" onClick={() => handleAction('copy_id', user)}>
                           <Copy size={14} />
                           <span>Copy User ID</span>
                         </button>
-                        <button className="klao-context-item klao-context-item--danger" onClick={() => handleAction('remove', user)}>
+                        <button className="sails-context-item sails-context-item--danger" onClick={() => handleAction('remove', user)}>
                           <Trash2 size={14} />
                           <span>Remove User</span>
                         </button>
@@ -501,13 +501,13 @@ const UserManager: React.FC = () => {
         </table>
 
         {/* 3. Pagination Footer */}
-        <div className="klao-user-manager__pagination">
-          <div className="klao-user-manager__pagination-info">
-            <span className="klao-user-manager__pagination-range">
+        <div className="sails-user-manager__pagination">
+          <div className="sails-user-manager__pagination-info">
+            <span className="sails-user-manager__pagination-range">
               Showing <strong>{startRange}</strong> to <strong>{endRange}</strong> of <strong>{totalCount}</strong> users
             </span>
-            <div className="klao-user-manager__page-size">
-              <span className="klao-user-manager__page-size-label">Records per page:</span>
+            <div className="sails-user-manager__page-size">
+              <span className="sails-user-manager__page-size-label">Records per page:</span>
               <CustomSelect
                 size="sm"
                 value={pageSize === totalCount ? 'all' : pageSize}
@@ -524,19 +524,19 @@ const UserManager: React.FC = () => {
               />
             </div>
           </div>
-          <div className="klao-user-manager__pagination-controls">
+          <div className="sails-user-manager__pagination-controls">
             <button
-              className="klao-pagination-btn"
+              className="sails-pagination-btn"
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
             >
               <ChevronLeft size={16} />
             </button>
-            <div className="klao-pagination-pages">
+            <div className="sails-pagination-pages">
               {[...Array(totalPages)].map((_, i) => (
                 <button
                   key={i + 1}
-                  className={`klao-pagination-page ${currentPage === i + 1 ? 'klao-pagination-page--active' : ''}`}
+                  className={`sails-pagination-page ${currentPage === i + 1 ? 'sails-pagination-page--active' : ''}`}
                   onClick={() => setCurrentPage(i + 1)}
                 >
                   {i + 1}
@@ -544,7 +544,7 @@ const UserManager: React.FC = () => {
               ))}
             </div>
             <button
-              className="klao-pagination-btn"
+              className="sails-pagination-btn"
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages || totalPages === 0}
             >
@@ -555,11 +555,11 @@ const UserManager: React.FC = () => {
       </div>
       {/* 4. Add/Edit User Ghost Glass Modal */}
       {showAddUserDrawer && createPortal(
-        <div className="klao-modal-overlay">
-          <div className="klao-card" style={{ width: '940px', maxWidth: '95vw', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="sails-modal-overlay">
+          <div className="sails-card" style={{ width: '940px', maxWidth: '95vw', padding: '28px', borderRadius: 'var(--sails-radius-lg, 20px)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <UserPlus size={20} color="var(--klao-primary)" />
+                <UserPlus size={20} color="var(--sails-primary)" />
                 {editingUserId ? 'Edit User Details' : 'Add New User'}
               </h3>
               <button 
@@ -568,7 +568,7 @@ const UserManager: React.FC = () => {
                   setEditingUserId(null);
                   setFormData({ name: '', email: '', phone: '', title: '', positionText: '', role: 'MEMBER' });
                 }}
-                style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
               >
                 <X size={20} />
               </button>
@@ -576,11 +576,11 @@ const UserManager: React.FC = () => {
 
             <div style={{ marginBottom: '24px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div className="klao-form-group">
-                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Full Name</label>
+                <div className="sails-form-group">
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Full Name</label>
                   <input 
                     type="text" 
-                    className="klao-input" 
+                    className="sails-input" 
                     placeholder="e.g. John Doe" 
                     autoFocus 
                     style={{ width: '100%' }}
@@ -589,11 +589,11 @@ const UserManager: React.FC = () => {
                   />
                 </div>
 
-                <div className="klao-form-group">
-                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Email Address</label>
+                <div className="sails-form-group">
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Email Address</label>
                   <input 
                     type="email" 
-                    className="klao-input" 
+                    className="sails-input" 
                     placeholder="john@example.com" 
                     style={{ width: '100%' }}
                     value={formData.email}
@@ -603,11 +603,11 @@ const UserManager: React.FC = () => {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div className="klao-form-group">
-                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Phone Number</label>
+                <div className="sails-form-group">
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Phone Number</label>
                   <input 
                     type="tel" 
-                    className="klao-input" 
+                    className="sails-input" 
                     placeholder="+1 (555) 000-0000" 
                     style={{ width: '100%' }}
                     value={formData.phone}
@@ -615,11 +615,11 @@ const UserManager: React.FC = () => {
                   />
                 </div>
 
-                <div className="klao-form-group">
-                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Job Title</label>
+                <div className="sails-form-group">
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Job Title</label>
                   <input 
                     type="text" 
-                    className="klao-input" 
+                    className="sails-input" 
                     placeholder="e.g. Senior Software Engineer" 
                     style={{ width: '100%' }}
                     value={formData.title}
@@ -628,14 +628,14 @@ const UserManager: React.FC = () => {
                 </div>
               </div>
 
-              <div className="klao-form-group" style={{ marginBottom: '16px' }}>
-                <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Mapped Position (Slot)</label>
+              <div className="sails-form-group" style={{ marginBottom: '16px' }}>
+                <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Mapped Position (Slot)</label>
                 <div 
-                  className="klao-input" 
+                  className="sails-input" 
                   style={{ 
                     width: '100%',
-                    background: 'var(--klao-bg-body)',
-                    color: 'var(--klao-primary, #3b82f6)',
+                    background: 'var(--sails-bg-body)',
+                    color: 'var(--sails-primary, #3b82f6)',
                     fontWeight: 600,
                     display: 'flex',
                     alignItems: 'center'
@@ -645,9 +645,9 @@ const UserManager: React.FC = () => {
                 </div>
               </div>
 
-              <div className="klao-form-group">
-                <label className="klao-label" style={{ display: 'block', marginBottom: '8px' }}>System Role</label>
-                <div className="klao-role-selector">
+              <div className="sails-form-group">
+                <label className="sails-label" style={{ display: 'block', marginBottom: '8px' }}>System Role</label>
+                <div className="sails-role-selector">
                   {[
                     { name: 'Admin', code: 'TENANT_ADMIN', desc: 'Full administrative access to tenant settings' },
                     { name: 'Member', code: 'MEMBER', desc: 'Standard access to platform features' },
@@ -656,16 +656,16 @@ const UserManager: React.FC = () => {
                     <button 
                       key={role.name} 
                       type="button"
-                      className={`klao-role-option ${selectedRole === role.name ? 'active' : ''}`}
+                      className={`sails-role-option ${selectedRole === role.name ? 'active' : ''}`}
                       onClick={() => {
                         setSelectedRole(role.name);
                         setFormData(prev => ({ ...prev, role: role.code }));
                       }}
                     >
                       <Shield size={22} />
-                      <div className="klao-role-info">
-                        <span className="klao-role-name">{role.name}</span>
-                        <span className="klao-role-desc">{role.desc}</span>
+                      <div className="sails-role-info">
+                        <span className="sails-role-name">{role.name}</span>
+                        <span className="sails-role-desc">{role.desc}</span>
                       </div>
                     </button>
                   ))}
@@ -675,7 +675,7 @@ const UserManager: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               <button 
-                className="klao-btn klao-btn--secondary" 
+                className="sails-btn sails-btn--secondary" 
                 onClick={() => {
                   setShowAddUserDrawer(false);
                   setEditingUserId(null);
@@ -686,7 +686,7 @@ const UserManager: React.FC = () => {
                 Cancel
               </button>
               <button 
-                className="klao-btn klao-btn--primary" 
+                className="sails-btn sails-btn--primary" 
                 onClick={handleSubmit}
                 disabled={isSubmitting}
               >
@@ -700,12 +700,12 @@ const UserManager: React.FC = () => {
 
       {/* THEMED DELETE USER CONFIRMATION MODAL */}
       {deleteConfirmUser && createPortal(
-        <div className="klao-modal-overlay">
-          <div className="klao-card" style={{ width: '440px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)' }}>
+        <div className="sails-modal-overlay">
+          <div className="sails-card" style={{ width: '440px', padding: '28px', borderRadius: 'var(--sails-radius-lg, 20px)' }}>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div style={{
                 background: 'rgba(239, 68, 68, 0.12)',
-                color: 'var(--klao-danger, #ef4444)',
+                color: 'var(--sails-danger, #ef4444)',
                 padding: '12px',
                 borderRadius: '50%',
                 display: 'flex',
@@ -716,10 +716,10 @@ const UserManager: React.FC = () => {
                 <Trash2 size={24} />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.2rem', fontWeight: 600, color: 'var(--klao-text-main)' }}>
+                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.2rem', fontWeight: 600, color: 'var(--sails-text-main)' }}>
                   Remove User Account
                 </h3>
-                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--klao-text-muted)', lineHeight: 1.5 }}>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--sails-text-muted)', lineHeight: 1.5 }}>
                   Are you sure you want to remove <strong>"{deleteConfirmUser.name}"</strong> from the platform? This action cannot be undone.
                 </p>
               </div>
@@ -727,13 +727,13 @@ const UserManager: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               <button 
-                className="klao-btn klao-btn--secondary"
+                className="sails-btn sails-btn--secondary"
                 onClick={() => setDeleteConfirmUser(null)}
               >
                 Cancel
               </button>
               <button 
-                className="klao-btn klao-btn--danger"
+                className="sails-btn sails-btn--danger"
                 onClick={async () => {
                   const targetId = deleteConfirmUser.id;
                   setDeleteConfirmUser(null);
@@ -760,18 +760,18 @@ const UserManager: React.FC = () => {
 
       {/* THEMED NOTIFICATION / ERROR MODAL */}
       {notificationMsg && createPortal(
-        <div className="klao-modal-overlay">
-          <div className="klao-card" style={{ width: '400px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)', textAlign: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: notificationMsg.type === 'error' ? 'var(--klao-danger, #ef4444)' : 'var(--klao-primary)' }}>
+        <div className="sails-modal-overlay">
+          <div className="sails-card" style={{ width: '400px', padding: '28px', borderRadius: 'var(--sails-radius-lg, 20px)', textAlign: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: notificationMsg.type === 'error' ? 'var(--sails-danger, #ef4444)' : 'var(--sails-primary)' }}>
               {notificationMsg.type === 'error' ? <Trash2 size={44} /> : <Shield size={44} />}
             </div>
             <h3 style={{ margin: '0 0 8px 0', fontSize: '1.15rem', fontWeight: 600 }}>{notificationMsg.title}</h3>
-            <p style={{ fontSize: '0.88rem', color: 'var(--klao-text-muted)', margin: '0 0 20px 0', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.88rem', color: 'var(--sails-text-muted)', margin: '0 0 20px 0', lineHeight: 1.5 }}>
               {notificationMsg.message}
             </p>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <button 
-                className="klao-btn klao-btn--primary"
+                className="sails-btn sails-btn--primary"
                 onClick={() => setNotificationMsg(null)}
                 style={{ minWidth: '120px' }}
               >

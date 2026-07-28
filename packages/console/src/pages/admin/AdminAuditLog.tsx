@@ -31,11 +31,11 @@ const TABS: { key: TabType; label: string; icon: React.ElementType }[] = [
 ];
 
 const ACTION_COLORS: Record<string, string> = {
-  CREATE: 'var(--klao-success)',
-  UPDATE: 'var(--klao-warning)',
-  DELETE: 'var(--klao-danger)',
-  LOGIN: 'var(--klao-info)',
-  LOGOUT: 'var(--klao-text-muted)',
+  CREATE: 'var(--sails-success)',
+  UPDATE: 'var(--sails-warning)',
+  DELETE: 'var(--sails-danger)',
+  LOGIN: 'var(--sails-info)',
+  LOGOUT: 'var(--sails-text-muted)',
 };
 
 const PAGE_SIZE_OPTIONS = [
@@ -121,11 +121,11 @@ const AdminAuditLog: React.FC = () => {
   };
 
   const openLiveWindow = () => {
-    window.open('/audit-live', 'klao-audit-live', 'width=1100,height=700');
+    window.open('/audit-live', 'sails-audit-live', 'width=1100,height=700');
   };
 
   const headerActions = useMemo(() => (
-    <button className="klao-btn klao-btn--primary" onClick={openLiveWindow}>
+    <button className="sails-btn sails-btn--primary" onClick={openLiveWindow}>
       <Radio size={16} />
       <span>Live Monitor</span>
     </button>
@@ -144,70 +144,70 @@ const AdminAuditLog: React.FC = () => {
     return user.name || user.email || 'Unknown';
   };
 
-  const actionColor = (action?: string) => ACTION_COLORS[action?.toUpperCase() || ''] || 'var(--klao-text-muted)';
+  const actionColor = (action?: string) => ACTION_COLORS[action?.toUpperCase() || ''] || 'var(--sails-text-muted)';
 
   const ActionBadge: React.FC<{ action?: string }> = ({ action }) => {
     const color = actionColor(action);
     return (
-      <span className="klao-audit-badge" style={{ color, background: `${color}18`, borderColor: `${color}40` }}>
+      <span className="sails-audit-badge" style={{ color, background: `${color}18`, borderColor: `${color}40` }}>
         {action}
       </span>
     );
   };
 
   const SortableTh: React.FC<{ field: string; label: string }> = ({ field, label }) => (
-    <th className="klao-audit__th klao-audit__th--sortable" onClick={() => handleSort(field)}>
-      <span className="klao-audit__th-content">
+    <th className="sails-audit__th sails-audit__th--sortable" onClick={() => handleSort(field)}>
+      <span className="sails-audit__th-content">
         {label}
         {sortBy === field
-          ? (sortDir === 'asc' ? <ArrowUp size={12} className="klao-audit__sort-icon--active" /> : <ArrowDown size={12} className="klao-audit__sort-icon--active" />)
-          : <ArrowUpDown size={12} className="klao-audit__sort-icon" />
+          ? (sortDir === 'asc' ? <ArrowUp size={12} className="sails-audit__sort-icon--active" /> : <ArrowDown size={12} className="sails-audit__sort-icon--active" />)
+          : <ArrowUpDown size={12} className="sails-audit__sort-icon" />
         }
       </span>
     </th>
   );
 
   const StaticTh: React.FC<{ label: string }> = ({ label }) => (
-    <th className="klao-audit__th">{label}</th>
+    <th className="sails-audit__th">{label}</th>
   );
 
   const Row: React.FC<{ row: AuditRow }> = ({ row }) => (
-    <tr className="klao-audit-tr">
-      <td className="klao-audit-td klao-audit-td--date">{formatDate(row.createdAt)}</td>
-      <td className="klao-audit-td"><ActionBadge action={row.action} /></td>
-      <td className="klao-audit-td klao-audit-td--object">
+    <tr className="sails-audit-tr">
+      <td className="sails-audit-td sails-audit-td--date">{formatDate(row.createdAt)}</td>
+      <td className="sails-audit-td"><ActionBadge action={row.action} /></td>
+      <td className="sails-audit-td sails-audit-td--object">
         {activeTab === 'data' ? row.objectName : activeTab === 'system' ? row.eventName : `${row.schemaName}.${row.tableName || '*'}`}
       </td>
-      <td className="klao-audit-td">
+      <td className="sails-audit-td">
         {activeTab === 'data'
-          ? <span className="klao-audit-td--id" title={row.recordId || ''}>{row.recordId?.substring(0, 12) || '-'}</span>
+          ? <span className="sails-audit-td--id" title={row.recordId || ''}>{row.recordId?.substring(0, 12) || '-'}</span>
           : activeTab === 'system'
-            ? <span className="klao-audit-badge klao-audit-badge--category">{row.category}</span>
-            : <span className="klao-audit-td--object">{row.tableName || '-'}</span>
+            ? <span className="sails-audit-badge sails-audit-badge--category">{row.category}</span>
+            : <span className="sails-audit-td--object">{row.tableName || '-'}</span>
         }
       </td>
-      <td className="klao-audit-td">{formatUser(row.user)}</td>
-      <td className="klao-audit-td klao-audit-td--json">
+      <td className="sails-audit-td">{formatUser(row.user)}</td>
+      <td className="sails-audit-td sails-audit-td--json">
         {activeTab === 'data' && row.action === 'UPDATE' && (
-          <details className="klao-audit-details">
+          <details className="sails-audit-details">
             <summary>View diff</summary>
-            <pre className="klao-audit-json">{JSON.stringify({ old: row.oldValues, new: row.newValues }, null, 2)}</pre>
+            <pre className="sails-audit-json">{JSON.stringify({ old: row.oldValues, new: row.newValues }, null, 2)}</pre>
           </details>
         )}
         {activeTab === 'system' && row.details && (
-          <details className="klao-audit-details">
+          <details className="sails-audit-details">
             <summary>View details</summary>
-            <pre className="klao-audit-json">{JSON.stringify(row.details, null, 2)}</pre>
+            <pre className="sails-audit-json">{JSON.stringify(row.details, null, 2)}</pre>
           </details>
         )}
         {activeTab === 'ddl' && row.sqlExecuted && (
-          <details className="klao-audit-details">
+          <details className="sails-audit-details">
             <summary>View SQL</summary>
-            <pre className="klao-audit-json">{row.sqlExecuted}</pre>
+            <pre className="sails-audit-json">{row.sqlExecuted}</pre>
           </details>
         )}
         {((activeTab === 'data' && row.action !== 'UPDATE') || (activeTab === 'system' && !row.details) || (activeTab === 'ddl' && !row.sqlExecuted)) && (
-          <span className="klao-audit-muted">-</span>
+          <span className="sails-audit-muted">-</span>
         )}
       </td>
     </tr>
@@ -217,12 +217,12 @@ const AdminAuditLog: React.FC = () => {
   const endRecord = Math.min(page * pageSize, total);
 
   const auditContent = (
-    <div className="klao-audit__inner">
-      <nav className="klao-audit__tabs">
+    <div className="sails-audit__inner">
+      <nav className="sails-audit__tabs">
         {TABS.map(tab => (
           <button
             key={tab.key}
-            className={`klao-audit__tab ${activeTab === tab.key ? 'klao-audit__tab--active' : ''}`}
+            className={`sails-audit__tab ${activeTab === tab.key ? 'sails-audit__tab--active' : ''}`}
             onClick={() => handleTabChange(tab.key)}
           >
             <tab.icon size={16} />
@@ -231,12 +231,12 @@ const AdminAuditLog: React.FC = () => {
         ))}
       </nav>
 
-      <div className="klao-audit__toolbar">
-        <div className="klao-audit__search">
-          <Search size={16} className="klao-audit__search-icon" />
+      <div className="sails-audit__toolbar">
+        <div className="sails-audit__search">
+          <Search size={16} className="sails-audit__search-icon" />
           <input
             type="text"
-            className="klao-audit__search-input"
+            className="sails-audit__search-input"
             placeholder={activeTab === 'data' ? 'Search object name...' : activeTab === 'ddl' ? 'Search table name...' : 'Search event name...'}
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
@@ -249,21 +249,21 @@ const AdminAuditLog: React.FC = () => {
           options={activeTab === 'system' ? SYSTEM_ACTION_OPTIONS : ACTION_OPTIONS}
           onChange={(val) => { setActionFilter(String(val)); setPage(1); }}
         />
-        <button className="klao-btn klao-btn--ghost" onClick={() => fetchData(activeTab, page)} title="Refresh">
+        <button className="sails-btn sails-btn--ghost" onClick={() => fetchData(activeTab, page)} title="Refresh">
           <RefreshCw size={16} />
         </button>
       </div>
 
-      <div className="klao-audit__spacer" />
+      <div className="sails-audit__spacer" />
 
-      <div className="klao-card klao-audit__table-wrapper">
+      <div className="sails-card sails-audit__table-wrapper">
         {loading ? (
-          <div className="klao-audit__loading"><Spinner size={32} label="Loading audit logs..." /></div>
+          <div className="sails-audit__loading"><Spinner size={32} label="Loading audit logs..." /></div>
         ) : error ? (
-          <div className="klao-audit__error">{error}</div>
+          <div className="sails-audit__error">{error}</div>
         ) : (
           <>
-            <table className="klao-audit__table">
+            <table className="sails-audit__table">
               <thead>
                 <tr>
                   <SortableTh field="createdAt" label="Timestamp" />
@@ -280,29 +280,29 @@ const AdminAuditLog: React.FC = () => {
               </thead>
               <tbody>
                 {rows.length === 0 ? (
-                  <tr><td colSpan={6} className="klao-audit__empty">No audit records found.</td></tr>
+                  <tr><td colSpan={6} className="sails-audit__empty">No audit records found.</td></tr>
                 ) : (
                   rows.map(row => <Row key={row.id} row={row} />)
                 )}
               </tbody>
             </table>
-            <div className="klao-audit__pagination">
-              <div className="klao-audit__pagination-info">
+            <div className="sails-audit__pagination">
+              <div className="sails-audit__pagination-info">
                 Showing <strong>{startRecord}</strong> to <strong>{endRecord}</strong> of <strong>{total}</strong> records
               </div>
-              <div className="klao-audit__pagination-controls">
+              <div className="sails-audit__pagination-controls">
                 <button
-                  className="klao-pagination-btn"
+                  className="sails-pagination-btn"
                   onClick={() => setPage(prev => Math.max(1, prev - 1))}
                   disabled={page <= 1}
                 >
                   <ChevronLeft size={16} />
                 </button>
-                <div className="klao-pagination-pages">
+                <div className="sails-pagination-pages">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                     <button
                       key={p}
-                      className={`klao-pagination-page ${page === p ? 'klao-pagination-page--active' : ''}`}
+                      className={`sails-pagination-page ${page === p ? 'sails-pagination-page--active' : ''}`}
                       onClick={() => setPage(p)}
                     >
                       {p}
@@ -310,14 +310,14 @@ const AdminAuditLog: React.FC = () => {
                   ))}
                 </div>
                 <button
-                  className="klao-pagination-btn"
+                  className="sails-pagination-btn"
                   onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={page >= totalPages || totalPages === 0}
                 >
                   <ChevronRight size={16} />
                 </button>
               </div>
-              <div className="klao-audit__page-size">
+              <div className="sails-audit__page-size">
                 <span>Per page:</span>
                 <CustomSelect
                   size="sm"
@@ -333,7 +333,7 @@ const AdminAuditLog: React.FC = () => {
     </div>
   );
 
-  return <div className="klao-audit">{auditContent}</div>;
+  return <div className="sails-audit">{auditContent}</div>;
 };
 
 export default AdminAuditLog;

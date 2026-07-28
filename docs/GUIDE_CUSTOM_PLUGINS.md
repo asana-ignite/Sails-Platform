@@ -10,6 +10,6 @@
 - **Example:** `MySecretTool: lazy(() => import('../../pages/custom/MyNewTool'))`
 
 ## 3. Link via Navigation Menu
-- **Action:** Configure through KLAO Console UI (`/admin/settings`).
+- **Action:** Configure through SAILS Console UI (`/admin/settings`).
 - **Rule:** Select Action Type **"Custom Plugin"** and use the Component Key defined in the Registry.
 - **Security Warning:** Restrict plugin visibility using the "Required Capability" setting.

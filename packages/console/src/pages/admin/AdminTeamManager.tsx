@@ -78,14 +78,14 @@ function ContextMenuPortal({ anchorEl, onClose, children }: { anchorEl: HTMLElem
 
   return createPortal(
     <div
-      className="klao-user-manager__context-menu"
+      className="sails-user-manager__context-menu"
       style={{
         position: 'fixed',
         top: `${top}px`,
         left: `${left}px`,
         width: '180px',
         zIndex: 10000,
-        boxShadow: 'var(--klao-shadow-lg, 0 10px 25px -5px rgba(0,0,0,0.25))'
+        boxShadow: 'var(--sails-shadow-lg, 0 10px 25px -5px rgba(0,0,0,0.25))'
       }}
       onClick={(e) => e.stopPropagation()}
     >
@@ -200,9 +200,9 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
   });
 
   return createPortal(
-    <div className="klao-modal-overlay" style={{ zIndex: 10000, justifyContent: 'center', alignItems: 'center' }}>
+    <div className="sails-modal-overlay" style={{ zIndex: 10000, justifyContent: 'center', alignItems: 'center' }}>
       <div
-        className="klao-card"
+        className="sails-card"
         style={{
           width: '840px',
           maxHeight: '85vh',
@@ -210,30 +210,30 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
           padding: '24px 28px',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: 'var(--klao-shadow-lg)',
-          animation: 'klao-modal-slide-up 0.2s ease-out'
+          boxShadow: 'var(--sails-shadow-lg)',
+          animation: 'sails-modal-slide-up 0.2s ease-out'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid var(--klao-border-color)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid var(--sails-border-color)' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--klao-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Database size={18} color="var(--klao-primary)" />
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--sails-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Database size={18} color="var(--sails-primary)" />
               Manage Data Access — {targetName}
             </h3>
-            <p style={{ margin: '2px 0 0', fontSize: '0.825rem', color: 'var(--klao-text-muted)' }}>
+            <p style={{ margin: '2px 0 0', fontSize: '0.825rem', color: 'var(--sails-text-muted)' }}>
               Configure granular visibility and modify scopes for {targetType === 'user' ? 'Member' : 'Position'}
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer', padding: '4px' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer', padding: '4px' }}>
             <X size={20} />
           </button>
         </div>
 
         <div style={{ position: 'relative', marginBottom: '12px', maxWidth: '300px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--klao-text-muted)' }} />
+          <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sails-text-muted)' }} />
           <input
             type="text"
-            className="klao-input"
+            className="sails-input"
             style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
             placeholder="Search data object..."
             value={searchQuery}
@@ -247,12 +247,12 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
           ) : (
             <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--klao-border-color)' }}>
-                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>OBJECT</th>
-                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', textAlign: 'center' }}>CREATE</th>
-                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', minWidth: '240px' }}>VISIBILITY SCOPE</th>
-                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', minWidth: '240px' }}>MODIFY SCOPE</th>
-                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', textAlign: 'center' }}>DELETE</th>
+                <tr style={{ borderBottom: '1px solid var(--sails-border-color)' }}>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>OBJECT</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'center' }}>CREATE</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', minWidth: '240px' }}>VISIBILITY SCOPE</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', minWidth: '240px' }}>MODIFY SCOPE</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'center' }}>DELETE</th>
                 </tr>
               </thead>
               <tbody>
@@ -274,7 +274,7 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
                       <td style={{ padding: '10px', textAlign: 'center' }}>
                         <input
                           type="checkbox"
-                          className="klao-checkbox"
+                          className="sails-checkbox"
                           checked={perm.canCreate}
                           onChange={(e) => handleUpdatePermDraft(objApiName, { canCreate: e.target.checked })}
                         />
@@ -310,7 +310,7 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
                       <td style={{ padding: '10px', textAlign: 'center' }}>
                         <input
                           type="checkbox"
-                          className="klao-checkbox"
+                          className="sails-checkbox"
                           checked={perm.canDelete}
                           onChange={(e) => handleUpdatePermDraft(objApiName, { canDelete: e.target.checked })}
                         />
@@ -319,18 +319,18 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
                   );
                 })}
                 {allObjects.length === 0 && (
-                  <tr><td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--klao-text-muted)' }}>No data models defined in system.</td></tr>
+                  <tr><td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>No data models defined in system.</td></tr>
                 )}
               </tbody>
             </table>
           )}
         </div>
 
-        <div style={{ paddingTop: '14px', borderTop: '1px solid var(--klao-border-color)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-          <button className="klao-btn klao-btn--secondary" onClick={onClose}>
+        <div style={{ paddingTop: '14px', borderTop: '1px solid var(--sails-border-color)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <button className="sails-btn sails-btn--secondary" onClick={onClose}>
             Cancel
           </button>
-          <button className="klao-btn klao-btn--primary" onClick={handleSaveChanges} disabled={saving}>
+          <button className="sails-btn sails-btn--primary" onClick={handleSaveChanges} disabled={saving}>
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
@@ -489,7 +489,7 @@ export default function AdminTeamManager() {
     setHeaderActions(
       <button 
         onClick={handleOpenCreateModal}
-        className="klao-btn klao-btn--primary"
+        className="sails-btn sails-btn--primary"
       >
         <Plus size={16} /> New Team
       </button>
@@ -801,7 +801,7 @@ export default function AdminTeamManager() {
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
                   background: isSelected ? 'rgba(59,130,246,0.15)' : 'transparent',
-                  color: isSelected ? 'var(--klao-primary)' : 'var(--klao-text-main)',
+                  color: isSelected ? 'var(--sails-primary)' : 'var(--sails-text-main)',
                   fontWeight: isSelected ? 600 : 400
                 }}
               >
@@ -813,14 +813,14 @@ export default function AdminTeamManager() {
                   ) : (
                     <span style={{ width: '14px' }} />
                   )}
-                  {team.isSystemAdmin ? <Shield size={16} color="var(--klao-warning, #f59e0b)" /> : <Users size={16} />}
+                  {team.isSystemAdmin ? <Shield size={16} color="var(--sails-warning, #f59e0b)" /> : <Users size={16} />}
                   <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.9rem' }}>
                     {team.name}
                   </span>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: '10px', color: 'var(--klao-text-muted)' }}>
+                  <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: '10px', color: 'var(--sails-text-muted)' }}>
                     {team.members.length}
                   </span>
                 </div>
@@ -837,34 +837,34 @@ export default function AdminTeamManager() {
   if (loading) return <Spinner />;
 
   return (
-    <div style={{ display: 'flex', height: '100%', gap: 'var(--klao-spacing-md)', fontFamily: 'var(--klao-font-family)' }}>
+    <div style={{ display: 'flex', height: '100%', gap: 'var(--sails-spacing-md)', fontFamily: 'var(--sails-font-family)' }}>
       {/* LEFT PANE: Team Tree */}
-      <div className="klao-card" style={{ width: '300px', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid var(--klao-border-color, rgba(255,255,255,0.1))' }}>
+      <div className="sails-card" style={{ width: '300px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid var(--sails-border-color, rgba(255,255,255,0.1))' }}>
           <h3 style={{ margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <GitBranch size={18} /> Team Hierarchy
           </h3>
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {renderTeamTree(null, 0)}
-          {teams.length === 0 && <p style={{ color: 'var(--klao-text-muted)', fontSize: '0.85rem' }}>No teams found.</p>}
+          {teams.length === 0 && <p style={{ color: 'var(--sails-text-muted)', fontSize: '0.85rem' }}>No teams found.</p>}
         </div>
       </div>
 
       {/* RIGHT PANE: Team Details */}
-      <div className="klao-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div className="sails-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {!selectedTeam ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--klao-text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--sails-text-muted)' }}>
             Select a team from the sidebar to view details.
           </div>
         ) : (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--klao-border-color)', paddingBottom: '15px', marginBottom: '15px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--sails-border-color)', paddingBottom: '15px', marginBottom: '15px' }}>
               <h2 style={{ margin: 0, fontSize: '1.4rem' }}>{selectedTeam.name}</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div 
                   ref={actionMenuRef}
-                  className="klao-user-manager__action-wrapper" 
+                  className="sails-user-manager__action-wrapper" 
                   style={{ position: 'relative' }}
                 >
                   <button 
@@ -872,7 +872,7 @@ export default function AdminTeamManager() {
                       e.stopPropagation();
                       setIsTeamActionMenuOpen(!isTeamActionMenuOpen);
                     }}
-                    className={`klao-btn klao-btn--secondary ${isTeamActionMenuOpen ? 'active' : ''}`}
+                    className={`sails-btn sails-btn--secondary ${isTeamActionMenuOpen ? 'active' : ''}`}
                     style={{ padding: '6px 10px' }}
                     title="Team Options"
                   >
@@ -881,11 +881,11 @@ export default function AdminTeamManager() {
 
                   {isTeamActionMenuOpen && (
                     <div 
-                      className="klao-user-manager__context-menu"
+                      className="sails-user-manager__context-menu"
                       style={{ position: 'absolute', top: '100%', right: 0, marginTop: '4px', width: '170px', zIndex: 100 }}
                     >
                       <button 
-                        className="klao-context-item"
+                        className="sails-context-item"
                         onClick={() => {
                           setIsTeamActionMenuOpen(false);
                           handleOpenAddMembersModal();
@@ -896,7 +896,7 @@ export default function AdminTeamManager() {
                       </button>
 
                       <button 
-                        className="klao-context-item"
+                        className="sails-context-item"
                         onClick={() => {
                           setIsTeamActionMenuOpen(false);
                           handleOpenAddPositionsModal();
@@ -908,9 +908,9 @@ export default function AdminTeamManager() {
 
                       {!selectedTeam.isSystemAdmin && (
                         <>
-                          <div className="klao-context-divider" />
+                          <div className="sails-context-divider" />
                           <button 
-                            className="klao-context-item klao-context-item--danger"
+                            className="sails-context-item sails-context-item--danger"
                             onClick={() => {
                               setIsTeamActionMenuOpen(false);
                               handleDeleteTeamClick({ id: selectedTeam.id, name: selectedTeam.name });
@@ -928,7 +928,7 @@ export default function AdminTeamManager() {
             </div>
 
             {/* TABS */}
-            <div style={{ display: 'flex', gap: '20px', borderBottom: '1px solid var(--klao-border-color)', marginBottom: '15px' }}>
+            <div style={{ display: 'flex', gap: '20px', borderBottom: '1px solid var(--sails-border-color)', marginBottom: '15px' }}>
               <TabBtn active={activeTab === 'members'} onClick={() => setActiveTab('members')} icon={<Users size={16} />} label={`Members (${selectedTeam.members.length})`} />
               <TabBtn active={activeTab === 'positions'} onClick={() => setActiveTab('positions')} icon={<Award size={16} />} label={`Positions (${(selectedTeam.positions || []).length})`} />
               <TabBtn active={activeTab === 'capabilities'} onClick={() => setActiveTab('capabilities')} icon={<Shield size={16} />} label="System Capabilities" />
@@ -943,7 +943,7 @@ export default function AdminTeamManager() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
                     <button 
-                      className="klao-btn klao-btn--secondary klao-btn--sm"
+                      className="sails-btn sails-btn--secondary sails-btn--sm"
                       onClick={handleOpenAddMembersModal}
                     >
                       <UserPlus size={14} />
@@ -952,22 +952,22 @@ export default function AdminTeamManager() {
                   </div>
                   <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid var(--klao-border-color)' }}>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>NAME</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>EMAIL</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>ROLE</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', textAlign: 'right' }}>ACTIONS</th>
+                      <tr style={{ borderBottom: '1px solid var(--sails-border-color)' }}>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>NAME</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>EMAIL</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>ROLE</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'right' }}>ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedTeam.members.map(m => (
                         <tr key={m.userId} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                           <td style={{ padding: '10px' }}>{m.user.name || '-'}</td>
-                          <td style={{ padding: '10px', color: 'var(--klao-text-muted)' }}>{m.user.email}</td>
+                          <td style={{ padding: '10px', color: 'var(--sails-text-muted)' }}>{m.user.email}</td>
                           <td style={{ padding: '10px' }}>
                             <button
                               onClick={() => handleToggleLeader(m.userId, m.isLeader)}
-                              className={`klao-btn ${m.isLeader ? 'klao-btn--primary' : 'klao-btn--secondary'}`}
+                              className={`sails-btn ${m.isLeader ? 'sails-btn--primary' : 'sails-btn--secondary'}`}
                               style={{
                                 fontSize: '0.78rem',
                                 padding: '4px 12px',
@@ -990,7 +990,7 @@ export default function AdminTeamManager() {
                           </td>
                           <td style={{ padding: '10px', textAlign: 'right' }}>
                             <button
-                              className={`klao-user-manager__action-btn ${activeMemberAnchor?.id === m.userId ? 'active' : ''}`}
+                              className={`sails-user-manager__action-btn ${activeMemberAnchor?.id === m.userId ? 'active' : ''}`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setActiveMemberAnchor(activeMemberAnchor?.id === m.userId ? null : { id: m.userId, el: e.currentTarget });
@@ -1002,7 +1002,7 @@ export default function AdminTeamManager() {
                         </tr>
                       ))}
                       {selectedTeam.members.length === 0 && (
-                        <tr><td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: 'var(--klao-text-muted)' }}>No members found.</td></tr>
+                        <tr><td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>No members found.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -1013,11 +1013,11 @@ export default function AdminTeamManager() {
               {activeTab === 'positions' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--klao-text-muted)' }}>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--sails-text-muted)' }}>
                       Positions mapped to {selectedTeam.name} determine role structures and slot occupancies.
                     </p>
                     <button 
-                      className="klao-btn klao-btn--secondary klao-btn--sm"
+                      className="sails-btn sails-btn--secondary sails-btn--sm"
                       onClick={handleOpenAddPositionsModal}
                     >
                       <Plus size={14} />
@@ -1027,11 +1027,11 @@ export default function AdminTeamManager() {
 
                   <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid var(--klao-border-color)' }}>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>PREFIX</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>POSITION NAME</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>HEADCOUNT / SLOTS</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', textAlign: 'right' }}>ACTIONS</th>
+                      <tr style={{ borderBottom: '1px solid var(--sails-border-color)' }}>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>PREFIX</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>POSITION NAME</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>HEADCOUNT / SLOTS</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'right' }}>ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1043,7 +1043,7 @@ export default function AdminTeamManager() {
                             <td style={{ padding: '10px' }}>
                               <span style={{
                                 background: 'rgba(59,130,246,0.15)',
-                                color: 'var(--klao-primary, #3b82f6)',
+                                color: 'var(--sails-primary, #3b82f6)',
                                 padding: '2px 8px',
                                 borderRadius: '6px',
                                 fontWeight: 700,
@@ -1071,7 +1071,7 @@ export default function AdminTeamManager() {
                             </td>
                             <td style={{ padding: '10px', textAlign: 'right' }}>
                               <button
-                                className={`klao-user-manager__action-btn ${activePositionAnchor?.id === pos.id ? 'active' : ''}`}
+                                className={`sails-user-manager__action-btn ${activePositionAnchor?.id === pos.id ? 'active' : ''}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setActivePositionAnchor(activePositionAnchor?.id === pos.id ? null : { id: pos.id, el: e.currentTarget });
@@ -1084,7 +1084,7 @@ export default function AdminTeamManager() {
                         );
                       })}
                       {(!selectedTeam.positions || selectedTeam.positions.length === 0) && (
-                        <tr><td colSpan={4} style={{ padding: '30px', textAlign: 'center', color: 'var(--klao-text-muted)' }}>No positions mapped to this team yet.</td></tr>
+                        <tr><td colSpan={4} style={{ padding: '30px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>No positions mapped to this team yet.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -1095,28 +1095,28 @@ export default function AdminTeamManager() {
               {activeTab === 'capabilities' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   {Object.keys(capabilityCategories).length === 0 ? (
-                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--klao-text-muted)' }}>
+                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>
                       No system capabilities available.
                     </div>
                   ) : (
                     Object.entries(capabilityCategories).map(([category, items]) => (
-                      <div key={category} style={{ background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '8px', border: '1px solid var(--klao-border-color)' }}>
-                        <h4 style={{ margin: '0 0 10px 0', textTransform: 'capitalize', color: 'var(--klao-primary)', fontSize: '0.9rem', fontWeight: 700 }}>{category}</h4>
+                      <div key={category} style={{ background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '8px', border: '1px solid var(--sails-border-color)' }}>
+                        <h4 style={{ margin: '0 0 10px 0', textTransform: 'capitalize', color: 'var(--sails-primary)', fontSize: '0.9rem', fontWeight: 700 }}>{category}</h4>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                           {items.map(item => {
                             const isChecked = (selectedTeam?.systemPermissions || []).some(p => p.capability === item.code);
                             return (
-                              <label key={item.code} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--klao-border-color)', background: isChecked ? 'rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1)' : 'transparent', transition: 'all 0.2s' }}>
+                              <label key={item.code} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--sails-border-color)', background: isChecked ? 'rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1)' : 'transparent', transition: 'all 0.2s' }}>
                                 <input 
                                   type="checkbox" 
-                                  className="klao-checkbox"
+                                  className="sails-checkbox"
                                   checked={isChecked} 
                                   onChange={(e) => handleToggleCapability(item.code, e.target.checked)}
                                   style={{ marginTop: '3px' }}
                                 />
                                 <div>
-                                  <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--klao-text-main)' }}>{item.label}</div>
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)', marginTop: '2px' }}>{item.description}</div>
+                                  <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--sails-text-main)' }}>{item.label}</div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)', marginTop: '2px' }}>{item.description}</div>
                                 </div>
                               </label>
                             );
@@ -1133,10 +1133,10 @@ export default function AdminTeamManager() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <div style={{ position: 'relative', width: '300px' }}>
-                      <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--klao-text-muted)' }} />
+                      <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sails-text-muted)' }} />
                       <input
                         type="text"
-                        className="klao-input"
+                        className="sails-input"
                         style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
                         placeholder="Search data object..."
                         value={teamObjectSearchQuery}
@@ -1145,7 +1145,7 @@ export default function AdminTeamManager() {
                     </div>
 
                     <button
-                      className="klao-btn klao-btn--primary klao-btn--sm"
+                      className="sails-btn sails-btn--primary sails-btn--sm"
                       onClick={handleSaveTeamObjectPerms}
                       disabled={savingTeamObjectPerms}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
@@ -1157,12 +1157,12 @@ export default function AdminTeamManager() {
 
                   <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid var(--klao-border-color)' }}>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)' }}>OBJECT</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', textAlign: 'center' }}>CREATE</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', minWidth: '240px' }}>VISIBILITY SCOPE</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', minWidth: '240px' }}>MODIFY SCOPE</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--klao-text-muted)', textAlign: 'center' }}>DELETE</th>
+                      <tr style={{ borderBottom: '1px solid var(--sails-border-color)' }}>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>OBJECT</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'center' }}>CREATE</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', minWidth: '240px' }}>VISIBILITY SCOPE</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', minWidth: '240px' }}>MODIFY SCOPE</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'center' }}>DELETE</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1189,7 +1189,7 @@ export default function AdminTeamManager() {
                               <td style={{ padding: '10px', textAlign: 'center' }}>
                                 <input
                                   type="checkbox"
-                                  className="klao-checkbox"
+                                  className="sails-checkbox"
                                   checked={perm.canCreate}
                                   onChange={(e) => handleToggleTeamObjectPermDraft(objApiName, { canCreate: e.target.checked })}
                                 />
@@ -1225,7 +1225,7 @@ export default function AdminTeamManager() {
                               <td style={{ padding: '10px', textAlign: 'center' }}>
                                 <input
                                   type="checkbox"
-                                  className="klao-checkbox"
+                                  className="sails-checkbox"
                                   checked={perm.canDelete}
                                   onChange={(e) => handleToggleTeamObjectPermDraft(objApiName, { canDelete: e.target.checked })}
                                 />
@@ -1234,7 +1234,7 @@ export default function AdminTeamManager() {
                           );
                         })}
                       {allObjects.length === 0 && (
-                        <tr><td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--klao-text-muted)' }}>No data models defined in system.</td></tr>
+                        <tr><td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>No data models defined in system.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -1250,7 +1250,7 @@ export default function AdminTeamManager() {
       {activeMemberAnchor && (
         <ContextMenuPortal anchorEl={activeMemberAnchor.el} onClose={() => setActiveMemberAnchor(null)}>
           <button
-            className="klao-context-item"
+            className="sails-context-item"
             onClick={() => {
               const m = selectedTeam?.members.find(mem => mem.userId === activeMemberAnchor.id);
               setActiveMemberAnchor(null);
@@ -1266,9 +1266,9 @@ export default function AdminTeamManager() {
             <Database size={14} />
             <span>Manage Data Access</span>
           </button>
-          <div className="klao-context-divider" />
+          <div className="sails-context-divider" />
           <button
-            className="klao-context-item klao-context-item--danger"
+            className="sails-context-item sails-context-item--danger"
             onClick={() => {
               const id = activeMemberAnchor.id;
               setActiveMemberAnchor(null);
@@ -1285,7 +1285,7 @@ export default function AdminTeamManager() {
       {activePositionAnchor && (
         <ContextMenuPortal anchorEl={activePositionAnchor.el} onClose={() => setActivePositionAnchor(null)}>
           <button
-            className="klao-context-item"
+            className="sails-context-item"
             onClick={() => {
               const tp = (selectedTeam?.positions || []).find(p => p.position.id === activePositionAnchor.id);
               setActivePositionAnchor(null);
@@ -1301,9 +1301,9 @@ export default function AdminTeamManager() {
             <Database size={14} />
             <span>Manage Data Access</span>
           </button>
-          <div className="klao-context-divider" />
+          <div className="sails-context-divider" />
           <button
-            className="klao-context-item klao-context-item--danger"
+            className="sails-context-item sails-context-item--danger"
             onClick={() => {
               const id = activePositionAnchor.id;
               setActivePositionAnchor(null);
@@ -1337,11 +1337,11 @@ export default function AdminTeamManager() {
 
       {/* CREATE TEAM MODAL */}
       {showCreateTeamModal && createPortal(
-        <div className="klao-modal-overlay">
-          <div className="klao-card" style={{ width: '450px', padding: '24px', borderRadius: '16px' }}>
+        <div className="sails-modal-overlay">
+          <div className="sails-card" style={{ width: '450px', padding: '24px', borderRadius: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Create New Team</h3>
-              <button onClick={() => setShowCreateTeamModal(false)} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer' }}>
+              <button onClick={() => setShowCreateTeamModal(false)} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
                 <X size={18} />
               </button>
             </div>
@@ -1351,7 +1351,7 @@ export default function AdminTeamManager() {
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>Team Name</label>
                 <input 
                   type="text" 
-                  className="klao-input" 
+                  className="sails-input" 
                   style={{ width: '100%' }} 
                   placeholder="e.g. Frontend Engineering" 
                   value={newTeamName}
@@ -1366,7 +1366,7 @@ export default function AdminTeamManager() {
                 <div style={{ position: 'relative' }}>
                   <button
                     type="button"
-                    className="klao-input"
+                    className="sails-input"
                     style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', cursor: 'pointer' }}
                     onClick={() => setIsParentSelectOpen(!isParentSelectOpen)}
                   >
@@ -1377,7 +1377,7 @@ export default function AdminTeamManager() {
                   </button>
 
                   {isParentSelectOpen && (
-                    <div className="klao-card" style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', maxHeight: '180px', overflowY: 'auto', zIndex: 100, padding: '4px' }}>
+                    <div className="sails-card" style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', maxHeight: '180px', overflowY: 'auto', zIndex: 100, padding: '4px' }}>
                       <div 
                         style={{ padding: '8px 12px', cursor: 'pointer', borderRadius: '6px', fontSize: '0.85rem' }}
                         onClick={() => { setModalParentTeamId(null); setIsParentSelectOpen(false); }}
@@ -1399,10 +1399,10 @@ export default function AdminTeamManager() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" className="klao-btn klao-btn--secondary" onClick={() => setShowCreateTeamModal(false)}>
+                <button type="button" className="sails-btn sails-btn--secondary" onClick={() => setShowCreateTeamModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="klao-btn klao-btn--primary" disabled={submittingTeam}>
+                <button type="submit" className="sails-btn sails-btn--primary" disabled={submittingTeam}>
                   {submittingTeam ? 'Creating...' : 'Create Team'}
                 </button>
               </div>
@@ -1414,20 +1414,20 @@ export default function AdminTeamManager() {
 
       {/* ADD MEMBERS MODAL */}
       {showAddMembersModal && createPortal(
-        <div className="klao-modal-overlay">
-          <div className="klao-card" style={{ width: '480px', maxHeight: '80vh', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
+        <div className="sails-modal-overlay">
+          <div className="sails-card" style={{ width: '480px', maxHeight: '80vh', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Add Members to {selectedTeam?.name}</h3>
-              <button onClick={() => setShowAddMembersModal(false)} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer' }}>
+              <button onClick={() => setShowAddMembersModal(false)} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
                 <X size={18} />
               </button>
             </div>
 
             <div style={{ position: 'relative', marginBottom: '12px' }}>
-              <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--klao-text-muted)' }} />
+              <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sails-text-muted)' }} />
               <input 
                 type="text"
-                className="klao-input"
+                className="sails-input"
                 style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
                 placeholder="Search user by name or email..."
                 value={memberSearchQuery}
@@ -1450,25 +1450,25 @@ export default function AdminTeamManager() {
                         padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         background: isSelected ? 'rgba(59,130,246,0.1)' : 'transparent',
-                        border: '1px solid ' + (isSelected ? 'var(--klao-primary)' : 'transparent')
+                        border: '1px solid ' + (isSelected ? 'var(--sails-primary)' : 'transparent')
                       }}
                     >
                       <div>
                         <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{u.name || u.email}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)' }}>{u.email}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)' }}>{u.email}</div>
                       </div>
-                      {isSelected && <Check size={16} color="var(--klao-primary)" />}
+                      {isSelected && <Check size={16} color="var(--sails-primary)" />}
                     </div>
                   );
                 })}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button className="klao-btn klao-btn--secondary" onClick={() => setShowAddMembersModal(false)}>
+              <button className="sails-btn sails-btn--secondary" onClick={() => setShowAddMembersModal(false)}>
                 Cancel
               </button>
               <button 
-                className="klao-btn klao-btn--primary" 
+                className="sails-btn sails-btn--primary" 
                 onClick={handleAddMembersSubmit}
                 disabled={submittingAddMembers || selectedUserIdsForAdd.length === 0}
               >
@@ -1482,20 +1482,20 @@ export default function AdminTeamManager() {
 
       {/* ADD POSITIONS MODAL */}
       {showAddPositionsModal && createPortal(
-        <div className="klao-modal-overlay" style={{ zIndex: 10000 }}>
-          <div className="klao-card" style={{ width: '480px', maxHeight: '80vh', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
+        <div className="sails-modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="sails-card" style={{ width: '480px', maxHeight: '80vh', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Add Positions to {selectedTeam?.name}</h3>
-              <button onClick={() => setShowAddPositionsModal(false)} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer' }}>
+              <button onClick={() => setShowAddPositionsModal(false)} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
                 <X size={18} />
               </button>
             </div>
 
             <div style={{ position: 'relative', marginBottom: '12px' }}>
-              <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--klao-text-muted)' }} />
+              <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sails-text-muted)' }} />
               <input 
                 type="text"
-                className="klao-input"
+                className="sails-input"
                 style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
                 placeholder="Search position by name or prefix..."
                 value={positionSearchQuery}
@@ -1518,13 +1518,13 @@ export default function AdminTeamManager() {
                         padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         background: isSelected ? 'rgba(59,130,246,0.1)' : 'transparent',
-                        border: '1px solid ' + (isSelected ? 'var(--klao-primary)' : 'var(--klao-border-color)')
+                        border: '1px solid ' + (isSelected ? 'var(--sails-primary)' : 'var(--sails-border-color)')
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span style={{
                           background: 'rgba(59,130,246,0.15)',
-                          color: 'var(--klao-primary, #3b82f6)',
+                          color: 'var(--sails-primary, #3b82f6)',
                           padding: '2px 6px',
                           borderRadius: '4px',
                           fontWeight: 700,
@@ -1534,26 +1534,26 @@ export default function AdminTeamManager() {
                         </span>
                         <div>
                           <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)' }}>{p.headCount} Headcount Slots</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)' }}>{p.headCount} Headcount Slots</div>
                         </div>
                       </div>
-                      {isSelected && <Check size={16} color="var(--klao-primary)" />}
+                      {isSelected && <Check size={16} color="var(--sails-primary)" />}
                     </div>
                   );
                 })}
               {tenantPositions.filter(p => !(selectedTeam?.positions || []).some(tp => tp.positionId === p.id)).length === 0 && (
-                <div style={{ padding: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--klao-text-muted)' }}>
+                <div style={{ padding: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--sails-text-muted)' }}>
                   All positions have been added to this team.
                 </div>
               )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button className="klao-btn klao-btn--secondary" onClick={() => setShowAddPositionsModal(false)}>
+              <button className="sails-btn sails-btn--secondary" onClick={() => setShowAddPositionsModal(false)}>
                 Cancel
               </button>
               <button 
-                className="klao-btn klao-btn--primary" 
+                className="sails-btn sails-btn--primary" 
                 onClick={handleAddPositionsSubmit}
                 disabled={submittingAddPositions || selectedPositionIdsForAdd.length === 0}
               >
@@ -1567,15 +1567,15 @@ export default function AdminTeamManager() {
 
       {/* THEMED CONFIRMATION MODAL */}
       {deleteConfirmTeam && createPortal(
-        <div className="klao-modal-overlay">
-          <div className="klao-card" style={{ width: '440px', padding: '24px', borderRadius: '16px' }}>
+        <div className="sails-modal-overlay">
+          <div className="sails-card" style={{ width: '440px', padding: '24px', borderRadius: '16px' }}>
             <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
               <div style={{
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
                 background: 'rgba(239, 68, 68, 0.1)',
-                color: 'var(--klao-danger, #ef4444)',
+                color: 'var(--sails-danger, #ef4444)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1584,10 +1584,10 @@ export default function AdminTeamManager() {
                 <Trash2 size={24} />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.2rem', fontWeight: 600, color: 'var(--klao-text-main)' }}>
+                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.2rem', fontWeight: 600, color: 'var(--sails-text-main)' }}>
                   Delete Team
                 </h3>
-                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--klao-text-muted)', lineHeight: 1.5 }}>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--sails-text-muted)', lineHeight: 1.5 }}>
                   Are you sure you want to delete the team <strong>"{deleteConfirmTeam.name}"</strong>? All associated user memberships and permissions for this team will be removed.
                 </p>
               </div>
@@ -1595,13 +1595,13 @@ export default function AdminTeamManager() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               <button 
-                className="klao-btn klao-btn--secondary"
+                className="sails-btn sails-btn--secondary"
                 onClick={() => setDeleteConfirmTeam(null)}
               >
                 Cancel
               </button>
               <button 
-                className="klao-btn klao-btn--danger"
+                className="sails-btn sails-btn--danger"
                 onClick={() => executeDeleteTeam(deleteConfirmTeam.id)}
               >
                 Delete Team
@@ -1614,18 +1614,18 @@ export default function AdminTeamManager() {
 
       {/* THEMED NOTIFICATION / ERROR MODAL */}
       {notificationMsg && createPortal(
-        <div className="klao-modal-overlay">
-          <div className="klao-card" style={{ width: '400px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)', textAlign: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: notificationMsg.type === 'error' ? 'var(--klao-danger, #ef4444)' : 'var(--klao-primary)' }}>
+        <div className="sails-modal-overlay">
+          <div className="sails-card" style={{ width: '400px', padding: '28px', borderRadius: 'var(--sails-radius-lg, 20px)', textAlign: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: notificationMsg.type === 'error' ? 'var(--sails-danger, #ef4444)' : 'var(--sails-primary)' }}>
               {notificationMsg.type === 'error' ? <AlertCircle size={44} /> : <Check size={44} />}
             </div>
             <h3 style={{ margin: '0 0 8px 0', fontSize: '1.15rem', fontWeight: 600 }}>{notificationMsg.title}</h3>
-            <p style={{ fontSize: '0.88rem', color: 'var(--klao-text-muted)', margin: '0 0 20px 0', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.88rem', color: 'var(--sails-text-muted)', margin: '0 0 20px 0', lineHeight: 1.5 }}>
               {notificationMsg.message}
             </p>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <button 
-                className="klao-btn klao-btn--primary"
+                className="sails-btn sails-btn--primary"
                 onClick={() => setNotificationMsg(null)}
                 style={{ minWidth: '120px' }}
               >
@@ -1647,8 +1647,8 @@ function TabBtn({ active, onClick, icon, label }: { active: boolean, onClick: ()
       style={{
         display: 'flex', alignItems: 'center', gap: '8px',
         padding: '10px 15px', cursor: 'pointer',
-        borderBottom: active ? '2px solid var(--klao-primary)' : '2px solid transparent',
-        color: active ? 'var(--klao-primary)' : 'var(--klao-text-muted)',
+        borderBottom: active ? '2px solid var(--sails-primary)' : '2px solid transparent',
+        color: active ? 'var(--sails-primary)' : 'var(--sails-text-muted)',
         fontWeight: active ? 'bold' : 'normal',
         transition: 'all 0.2s'
       }}

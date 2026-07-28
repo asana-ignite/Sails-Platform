@@ -1,4 +1,4 @@
-.klao-loading-screen {
+.sails-loading-screen {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -9,28 +9,28 @@
   gap: 20px;
 }
 
-.klao-loading-screen__spinner {
+.sails-loading-screen__spinner {
   display: flex;
   gap: 8px;
 }
 
-.klao-loading-screen__dot {
+.sails-loading-screen__dot {
   width: 12px;
   height: 12px;
-  background-color: var(--klao-primary);
+  background-color: var(--sails-primary);
   border-radius: 50%;
-  animation: klao-dot-bounce 0.6s infinite alternate;
+  animation: sails-dot-bounce 0.6s infinite alternate;
 }
 
-.klao-loading-screen__dot:nth-child(2) {
+.sails-loading-screen__dot:nth-child(2) {
   animation-delay: 0.2s;
 }
 
-.klao-loading-screen__dot:nth-child(3) {
+.sails-loading-screen__dot:nth-child(3) {
   animation-delay: 0.4s;
 }
 
-@keyframes klao-dot-bounce {
+@keyframes sails-dot-bounce {
   from {
     transform: translateY(0);
     opacity: 0.3;
@@ -41,10 +41,10 @@
   }
 }
 
-.klao-loading-screen__text {
+.sails-loading-screen__text {
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }

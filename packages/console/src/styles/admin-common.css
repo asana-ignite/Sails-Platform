@@ -1,45 +1,45 @@
 /* Shared Admin Module Patterns */
 
-.klao-admin-shell {
+.sails-admin-shell {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--klao-spacing-unit) * 3);
-  animation: klao-fade-in 0.4s ease-out;
+  gap: calc(var(--sails-spacing-unit) * 3);
+  animation: sails-fade-in 0.4s ease-out;
 }
 
-.klao-admin-shell__header {
+.sails-admin-shell__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: calc(var(--klao-spacing-unit) * 2);
+  margin-bottom: calc(var(--sails-spacing-unit) * 2);
 }
 
-.klao-admin-shell__content {
+.sails-admin-shell__content {
   width: 100%;
 }
 
 /* Placeholder/Empty State Pattern */
-.klao-admin-placeholder {
+.sails-admin-placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   padding: 80px 40px;
-  border-radius: var(--klao-radius-lg);
+  border-radius: var(--sails-radius-lg);
   background: rgba(255, 255, 255, 0.3);
-  border: 2px dashed var(--klao-border-color);
+  border: 2px dashed var(--sails-border-color);
 }
 
 /* User Manager Specific Patterns */
-.klao-user-manager {
+.sails-user-manager {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  animation: klao-fade-in 0.4s ease-out;
+  animation: sails-fade-in 0.4s ease-out;
 }
 
-.klao-user-manager__toolbar {
+.sails-user-manager__toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -49,49 +49,49 @@
   /* Ensure toolbar children can fly over the table */
 }
 
-.klao-user-manager__search-wrapper {
+.sails-user-manager__search-wrapper {
   position: relative;
   flex: 1;
   max-width: 320px;
 }
 
-.klao-user-manager__search-icon {
+.sails-user-manager__search-icon {
   position: absolute;
   left: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   width: 18px;
   height: 18px;
   pointer-events: none;
   z-index: 2;
 }
 
-.klao-user-manager__search-input {
+.sails-user-manager__search-input {
   width: 100%;
   padding: 8px 16px 8px 44px;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-md);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
   font-size: 0.85rem;
-  transition: var(--klao-transition);
+  transition: var(--sails-transition);
   position: relative;
   z-index: 1;
 }
 
-.klao-user-manager__search-input:focus {
+.sails-user-manager__search-input:focus {
   background: white;
-  border-color: var(--klao-primary);
-  box-shadow: 0 0 0 4px var(--klao-primary-light);
+  border-color: var(--sails-primary);
+  box-shadow: 0 0 0 4px var(--sails-primary-light);
 }
 
-.klao-user-manager__actions {
+.sails-user-manager__actions {
   display: flex;
   gap: 12px;
 }
 
-.klao-btn__badge {
+.sails-btn__badge {
   width: 8px;
   height: 8px;
   background: #eb5757;
@@ -103,11 +103,11 @@
 }
 
 /* Filter Popover Styles */
-.klao-user-manager__filter-container {
+.sails-user-manager__filter-container {
   position: relative;
 }
 
-.klao-user-manager__filter-popover {
+.sails-user-manager__filter-popover {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
@@ -121,16 +121,16 @@
   -webkit-backdrop-filter: blur(28px);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-top: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: var(--klao-radius-lg);
+  border-radius: var(--sails-radius-lg);
   box-shadow:
     0 20px 50px rgba(0, 0, 0, 0.15),
     0 0 0 1px rgba(0, 0, 0, 0.05);
   z-index: 1000;
   transform-origin: top right;
-  animation: klao-pop-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: sails-pop-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.klao-user-manager__filter-footer {
+.sails-user-manager__filter-footer {
   margin-top: 4px;
   padding-top: 16px;
   border-top: 1px solid rgba(0, 0, 0, 0.05);
@@ -138,7 +138,7 @@
   justify-content: center;
 }
 
-@keyframes klao-pop-in {
+@keyframes sails-pop-in {
   from {
     opacity: 0;
     transform: scale(0.95) translateY(-10px);
@@ -150,67 +150,67 @@
   }
 }
 
-.klao-user-manager__filter-group {
+.sails-user-manager__filter-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.klao-user-manager__filter-group label {
+.sails-user-manager__filter-group label {
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   letter-spacing: 0.5px;
 }
 
-.klao-user-manager__filter-options {
+.sails-user-manager__filter-options {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.klao-filter-chip {
+.sails-filter-chip {
   padding: 6px 12px;
   background: white;
-  border: 1px solid var(--klao-border-color);
+  border: 1px solid var(--sails-border-color);
   border-radius: 100px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.klao-filter-chip:hover {
-  border-color: var(--klao-primary);
-  color: var(--klao-primary);
+.sails-filter-chip:hover {
+  border-color: var(--sails-primary);
+  color: var(--sails-primary);
 }
 
-.klao-filter-chip.active {
-  background: var(--klao-primary);
-  border-color: var(--klao-primary);
+.sails-filter-chip.active {
+  background: var(--sails-primary);
+  border-color: var(--sails-primary);
   color: white;
-  box-shadow: 0 4px 10px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.3);
+  box-shadow: 0 4px 10px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.3);
 }
 
-.klao-user-manager__filter-clear {
+.sails-user-manager__filter-clear {
   background: transparent;
   border: none;
-  color: var(--klao-primary);
+  color: var(--sails-primary);
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
   padding: 4px 12px;
-  border-radius: var(--klao-radius-sm);
+  border-radius: var(--sails-radius-sm);
   transition: all 0.2s;
 }
 
-.klao-user-manager__filter-clear:hover {
-  background: var(--klao-primary-light);
+.sails-user-manager__filter-clear:hover {
+  background: var(--sails-primary-light);
 }
 
-@keyframes klao-slide-down {
+@keyframes sails-slide-down {
   from {
     opacity: 0;
     transform: translateY(-10px);
@@ -223,7 +223,7 @@
 }
 
 /* Data Table Styling */
-.klao-user-manager__table-wrapper {
+.sails-user-manager__table-wrapper {
   padding: 0;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.5);
@@ -231,78 +231,78 @@
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-.klao-user-manager__table {
+.sails-user-manager__table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
 }
 
-.klao-user-manager__th {
+.sails-user-manager__th {
   padding: 10px 24px;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: var(--klao-text-muted);
-  border-bottom: 1px solid var(--klao-border-color);
+  color: var(--sails-text-muted);
+  border-bottom: 1px solid var(--sails-border-color);
   background: rgba(0, 0, 0, 0.02);
   transition: all 0.2s;
 }
 
-.klao-user-manager__th--sortable {
+.sails-user-manager__th--sortable {
   cursor: pointer;
   user-select: none;
 }
 
-.klao-user-manager__th--sortable:hover {
+.sails-user-manager__th--sortable:hover {
   background: rgba(0, 0, 0, 0.05);
-  color: var(--klao-primary);
+  color: var(--sails-primary);
 }
 
-.klao-user-manager__th-content {
+.sails-user-manager__th-content {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.klao-user-manager__sort-icon--idle {
+.sails-user-manager__sort-icon--idle {
   opacity: 0.3;
 }
 
-.klao-user-manager__td {
+.sails-user-manager__td {
   padding: 8px 24px;
   font-size: 0.9rem;
-  border-bottom: 1px solid var(--klao-border-color);
+  border-bottom: 1px solid var(--sails-border-color);
   vertical-align: middle;
 }
 
-.klao-user-manager__tr {
+.sails-user-manager__tr {
   transition: background 0.2s;
 }
 
-.klao-user-manager__tr:hover {
-  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.05);
+.sails-user-manager__tr:hover {
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.05);
 }
 
-.klao-user-manager__tr--selected {
-  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.12) !important;
+.sails-user-manager__tr--selected {
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.12) !important;
 }
 
-.klao-user-manager__tr:last-child .klao-user-manager__td {
+.sails-user-manager__tr:last-child .sails-user-manager__td {
   border-bottom: none;
 }
 
 /* User Identity Column */
-.klao-user-manager__identity {
+.sails-user-manager__identity {
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
-.klao-user-manager__avatar {
+.sails-user-manager__avatar {
   width: 32px;
   height: 32px;
-  background: var(--klao-primary);
+  background: var(--sails-primary);
   color: white;
   border-radius: 50%;
   display: flex;
@@ -310,42 +310,42 @@
   justify-content: center;
   font-weight: 700;
   font-size: 0.8rem;
-  box-shadow: 0 4px 10px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.3);
+  box-shadow: 0 4px 10px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.3);
 }
 
-.klao-user-manager__info {
+.sails-user-manager__info {
   display: flex;
   flex-direction: column;
   line-height: 1.2;
 }
 
-.klao-user-manager__name {
+.sails-user-manager__name {
   font-weight: 600;
   font-size: 0.85rem;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
 }
 
-.klao-user-manager__email {
+.sails-user-manager__email {
   font-size: 0.8rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
 /* Role Tags */
-.klao-user-manager__role-tag {
+.sails-user-manager__role-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  background: var(--klao-bg-body);
-  border-radius: var(--klao-radius-sm);
+  background: var(--sails-bg-body);
+  border-radius: var(--sails-radius-sm);
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--klao-text-main);
-  border: 1px solid var(--klao-border-color);
+  color: var(--sails-text-main);
+  border: 1px solid var(--sails-border-color);
 }
 
 /* Status Badges */
-.klao-status-badge {
+.sails-status-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -356,50 +356,50 @@
   text-transform: uppercase;
 }
 
-.klao-status-badge--active {
+.sails-status-badge--active {
   background: rgba(39, 174, 96, 0.1);
   color: #27ae60;
   box-shadow: 0 0 10px rgba(39, 174, 96, 0.1);
 }
 
-.klao-status-badge--inactive {
+.sails-status-badge--inactive {
   background: rgba(235, 87, 87, 0.1);
   color: #eb5757;
 }
 
-.klao-status-badge--pending {
+.sails-status-badge--pending {
   background: rgba(242, 153, 74, 0.1);
   color: #f2994a;
 }
 
-.klao-user-manager__action-btn {
+.sails-user-manager__action-btn {
   width: 32px;
   height: 32px;
-  border-radius: var(--klao-radius-sm);
+  border-radius: var(--sails-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   transition: all 0.2s;
   cursor: pointer;
   border: none;
   background: transparent;
 }
 
-.klao-user-manager__action-btn:hover,
-.klao-user-manager__action-btn.active {
-  background: var(--klao-bg-body);
-  color: var(--klao-primary);
+.sails-user-manager__action-btn:hover,
+.sails-user-manager__action-btn.active {
+  background: var(--sails-bg-body);
+  color: var(--sails-primary);
 }
 
 /* Context Menu Styles */
-.klao-user-manager__action-wrapper {
+.sails-user-manager__action-wrapper {
   position: relative;
   display: flex;
   justify-content: center;
 }
 
-.klao-user-manager__context-menu {
+.sails-user-manager__context-menu {
   position: absolute;
   top: 100%;
   right: 0;
@@ -408,17 +408,17 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: var(--klao-radius-md);
+  border-radius: var(--sails-radius-md);
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.08),
     0 0 0 1px rgba(0, 0, 0, 0.02);
   z-index: 1001;
   padding: 6px;
   margin-top: 4px;
-  animation: klao-pop-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: sails-pop-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.klao-context-item {
+.sails-context-item {
   width: 100%;
   display: flex;
   align-items: center;
@@ -426,8 +426,8 @@
   padding: 8px 12px;
   border: none;
   background: transparent;
-  border-radius: var(--klao-radius-sm);
-  color: var(--klao-text-main);
+  border-radius: var(--sails-radius-sm);
+  color: var(--sails-text-main);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -435,64 +435,64 @@
   text-align: left;
 }
 
-.klao-context-item:hover {
-  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
-  color: var(--klao-primary);
+.sails-context-item:hover {
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
+  color: var(--sails-primary);
 }
 
-.klao-context-item--danger {
+.sails-context-item--danger {
   color: #eb5757;
 }
 
-.klao-context-item--danger:hover {
+.sails-context-item--danger:hover {
   background: rgba(235, 87, 87, 0.08);
   color: #eb5757;
 }
 
-.klao-context-divider {
+.sails-context-divider {
   height: 1px;
   background: rgba(0, 0, 0, 0.05);
   margin: 6px;
 }
 
 /* Pagination Footer */
-.klao-user-manager__pagination {
+.sails-user-manager__pagination {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 24px;
   background: rgba(255, 255, 255, 0.3);
-  border-top: 1px solid var(--klao-border-color);
+  border-top: 1px solid var(--sails-border-color);
 }
 
-.klao-user-manager__pagination-info {
+.sails-user-manager__pagination-info {
   display: flex;
   align-items: center;
   gap: 20px;
   font-size: 0.8rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
-.klao-user-manager__page-size {
+.sails-user-manager__page-size {
   display: flex;
   align-items: center;
   gap: 8px;
   padding-left: 20px;
-  border-left: 1px solid var(--klao-border-color);
+  border-left: 1px solid var(--sails-border-color);
 }
 
-.klao-user-manager__page-size-label {
+.sails-user-manager__page-size-label {
   white-space: nowrap;
 }
 
-.klao-select-sm {
+.sails-select-sm {
   padding: 4px 10px;
-  border-radius: var(--klao-radius-sm);
-  border: 1px solid var(--klao-border-color);
-  background: var(--klao-bg-card, rgba(30, 30, 45, 0.8));
+  border-radius: var(--sails-radius-sm);
+  border: 1px solid var(--sails-border-color);
+  background: var(--sails-bg-card, rgba(30, 30, 45, 0.8));
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   outline: none;
   cursor: pointer;
   transition: all 0.2s;
@@ -504,117 +504,117 @@
   padding-right: 24px !important;
 }
 
-.klao-select-sm option {
-  background-color: var(--klao-bg-card, #1e1e2d);
-  color: var(--klao-text-main);
+.sails-select-sm option {
+  background-color: var(--sails-bg-card, #1e1e2d);
+  color: var(--sails-text-main);
 }
 
-.klao-select-sm:hover,
-.klao-select-sm:focus {
-  border-color: var(--klao-primary, #9DCEE0);
-  background-color: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
-  box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.2);
+.sails-select-sm:hover,
+.sails-select-sm:focus {
+  border-color: var(--sails-primary, #9DCEE0);
+  background-color: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.2);
 }
 
-.klao-user-manager__pagination-info strong {
-  color: var(--klao-text-main);
+.sails-user-manager__pagination-info strong {
+  color: var(--sails-text-main);
   font-weight: 600;
 }
 
-.klao-user-manager__pagination-controls {
+.sails-user-manager__pagination-controls {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.klao-pagination-pages {
+.sails-pagination-pages {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.klao-pagination-btn {
+.sails-pagination-btn {
   width: 28px;
   height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--klao-radius-sm);
-  border: 1px solid var(--klao-border-color);
+  border-radius: var(--sails-radius-sm);
+  border: 1px solid var(--sails-border-color);
   background: white;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.klao-pagination-btn:disabled {
+.sails-pagination-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
 }
 
-.klao-pagination-btn:not(:disabled):hover {
-  background: var(--klao-bg-body);
-  border-color: var(--klao-primary);
-  color: var(--klao-primary);
+.sails-pagination-btn:not(:disabled):hover {
+  background: var(--sails-bg-body);
+  border-color: var(--sails-primary);
+  color: var(--sails-primary);
 }
 
-.klao-pagination-page {
+.sails-pagination-page {
   min-width: 28px;
   height: 28px;
   padding: 0 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--klao-radius-sm);
+  border-radius: var(--sails-radius-sm);
   border: 1px solid transparent;
   background: transparent;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.klao-pagination-page:hover {
-  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
-  color: var(--klao-primary);
+.sails-pagination-page:hover {
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
+  color: var(--sails-primary);
 }
 
-.klao-pagination-page--active {
-  background: var(--klao-primary);
+.sails-pagination-page--active {
+  background: var(--sails-primary);
   color: white !important;
-  box-shadow: 0 4px 10px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.3);
+  box-shadow: 0 4px 10px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.3);
 }
 
-.klao-admin-placeholder__icon {
+.sails-admin-placeholder__icon {
   width: 80px;
   height: 80px;
-  background: var(--klao-primary-light);
-  color: var(--klao-secondary);
-  border-radius: var(--klao-radius-lg);
+  background: var(--sails-primary-light);
+  color: var(--sails-secondary);
+  border-radius: var(--sails-radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 24px;
-  box-shadow: var(--klao-shadow-sm);
-  border: 1px solid rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.2);
+  box-shadow: var(--sails-shadow-sm);
+  border: 1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.2);
 }
 
-.klao-admin-placeholder__title {
+.sails-admin-placeholder__title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   margin-bottom: 12px;
 }
 
-.klao-admin-placeholder__text {
-  color: var(--klao-text-muted);
+.sails-admin-placeholder__text {
+  color: var(--sails-text-muted);
   max-width: 450px;
   line-height: 1.6;
   margin-bottom: 32px;
 }
 
-.klao-entity-grid {
+.sails-entity-grid {
   margin-top: 32px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -623,22 +623,22 @@
   max-width: 800px;
 }
 
-.klao-entity-item {
+.sails-entity-item {
   height: 80px;
   background: rgba(0, 0, 0, 0.02);
-  border-radius: var(--klao-radius-md);
-  border: 1px solid var(--klao-border-color);
-  transition: var(--klao-transition);
+  border-radius: var(--sails-radius-md);
+  border: 1px solid var(--sails-border-color);
+  transition: var(--sails-transition);
 }
 
-.klao-entity-item:hover {
-  background: var(--klao-primary-light);
-  border-color: var(--klao-primary);
+.sails-entity-item:hover {
+  background: var(--sails-primary-light);
+  border-color: var(--sails-primary);
   transform: translateY(-2px);
 }
 
 /* Add User Drawer (Slide-over) Styles */
-.klao-add-drawer {
+.sails-add-drawer {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -649,7 +649,7 @@
   justify-content: flex-end !important;
 }
 
-.klao-add-drawer__overlay {
+.sails-add-drawer__overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -657,10 +657,10 @@
   bottom: 0;
   background: rgba(0, 0, 0, 0.05);
   backdrop-filter: none !important; /* UNBLUR BACKGROUND */
-  animation: klao-fade-in 0.3s ease-out;
+  animation: sails-fade-in 0.3s ease-out;
 }
 
-.klao-add-drawer__panel {
+.sails-add-drawer__panel {
   position: relative;
   width: 100%;
   max-width: 380px; /* COMPACT WIDTH */
@@ -672,10 +672,10 @@
   box-shadow: -10px 0 40px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  animation: klao-slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: sails-slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.klao-add-drawer__header {
+.sails-add-drawer__header {
   padding: 16px 20px; /* COMPACT PADDING */
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
   display: flex;
@@ -683,39 +683,39 @@
   align-items: flex-start;
 }
 
-.klao-add-drawer__title {
+.sails-add-drawer__title {
   font-size: 0.95rem; /* CONSISTENT FONT SIZE */
   font-weight: 700;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   margin-bottom: 2px;
 }
 
-.klao-add-drawer__subtitle {
+.sails-add-drawer__subtitle {
   font-size: 0.75rem; /* SMALLER SUBTITLE */
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
-.klao-add-drawer__close {
+.sails-add-drawer__close {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px solid var(--klao-border-color);
+  border: 1px solid var(--sails-border-color);
   background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.klao-add-drawer__close:hover {
-  background: var(--klao-bg-body);
-  color: var(--klao-primary);
+.sails-add-drawer__close:hover {
+  background: var(--sails-bg-body);
+  color: var(--sails-primary);
   transform: rotate(90deg);
 }
 
-.klao-add-drawer__body {
+.sails-add-drawer__body {
   flex: 1;
   padding: 16px 20px; /* COMPACT PADDING */
   overflow-y: auto;
@@ -724,48 +724,48 @@
   gap: 12px; /* TIGHTER GAPS */
 }
 
-.klao-form-group {
+.sails-form-group {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.klao-label {
+.sails-label {
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
-.klao-input {
+.sails-input {
   width: 100%;
   height: 38px; /* MATCH SEARCH HEIGHT */
   padding: 8px 12px;
   background: white;
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-sm);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-sm);
   font-size: 14px; /* MATCH SEARCH FONT */
   transition: all 0.2s;
 }
 
-.klao-input:focus {
-  border-color: var(--klao-primary);
-  box-shadow: 0 0 0 3px var(--klao-primary-light);
+.sails-input:focus {
+  border-color: var(--sails-primary);
+  box-shadow: 0 0 0 3px var(--sails-primary-light);
 }
 
-.klao-role-selector {
+.sails-role-selector {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.klao-role-option {
+.sails-role-option {
   width: 100%;
   padding: 16px; /* PROMINENT PADDING */
   background: white;
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-md);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -774,60 +774,60 @@
   text-align: left;
 }
 
-.klao-role-option:hover {
-  border-color: var(--klao-primary);
-  background: var(--klao-primary-light);
+.sails-role-option:hover {
+  border-color: var(--sails-primary);
+  background: var(--sails-primary-light);
   transform: translateY(-2px);
 }
 
-.klao-role-option.active {
-  border-color: var(--klao-primary);
-  background: var(--klao-primary-light);
-  box-shadow: 0 8px 20px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.15);
+.sails-role-option.active {
+  border-color: var(--sails-primary);
+  background: var(--sails-primary-light);
+  box-shadow: 0 8px 20px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.15);
   transform: translateY(-2px);
 }
 
-.klao-role-option.active .lucide-shield {
-  color: var(--klao-primary);
+.sails-role-option.active .lucide-shield {
+  color: var(--sails-primary);
   transform: scale(1.1);
 }
 
-.klao-role-info {
+.sails-role-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.klao-role-name {
+.sails-role-name {
   font-weight: 700;
   font-size: 0.9rem; /* LARGER TITLE */
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
 }
 
-.klao-role-desc {
+.sails-role-desc {
   font-size: 0.75rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   line-height: 1.2;
 }
 
 /* --- High-Fidelity Kinetic Buttons --- */
-.klao-btn {
+.sails-btn {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.klao-btn:hover {
+.sails-btn:hover {
   transform: translateY(-2px);
   filter: brightness(1.05);
 }
 
-.klao-btn:active {
+.sails-btn:active {
   transform: scale(0.96) translateY(1px) !important;
   filter: brightness(0.9) !important;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 /* ------------------------------------- */
 
-.klao-add-drawer__footer {
+.sails-add-drawer__footer {
   padding: 12px 20px; /* COMPACT FOOTER */
   border-top: 1px solid rgba(0, 0, 0, 0.04);
   display: flex;
@@ -836,7 +836,7 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
-@keyframes klao-fade-in {
+@keyframes sails-fade-in {
   from {
     opacity: 0;
     transform: translateY(10px);
@@ -848,7 +848,7 @@
   }
 }
 
-@keyframes klao-slide-in-right {
+@keyframes sails-slide-in-right {
   from {
     transform: translateX(100%);
   }

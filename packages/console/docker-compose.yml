@@ -1,7 +1,7 @@
 services:
-  klao-console:
-    container_name: klao-console
-    image: klao-console:latest
+  sails-console:
+    container_name: sails-console
+    image: sails-console:latest
     build: .
     ports:
       - "5173:5173"

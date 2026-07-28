@@ -1,7 +1,7 @@
 /**
  * test-security.ts
  *
- * Integration test suite for the KLAO Security Pipeline:
+ * Integration test suite for the SAILS Security Pipeline:
  *   Session → AccessGuard (RBAC) → TransactionContext (RLS) → QueryLayer (Audit)
  *
  * Run with:
@@ -49,7 +49,7 @@ async function assertRejects(fn: () => Promise<any>, expectedMsg: string, label:
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 async function run() {
-  console.log('🔐 Starting KLAO Security Integration Tests\n');
+  console.log('🔐 Starting SAILS Security Integration Tests\n');
 
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL ||

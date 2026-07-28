@@ -2,7 +2,7 @@
  * MOCK UP — Layout-Driven Page Styles
  *
  * Shows how the section grid system auto-adjusts from layout config.
- * In production this would be in globals.css under --klao-* tokens.
+ * In production this would be in globals.css under --sails-* tokens.
  */
 
 /* ─── Root ──────────────────────────────────────────────────── */
@@ -24,17 +24,17 @@
   width: 100%;
   padding: 16px 20px;
   border: none;
-  background: var(--klao-bg-secondary, #f8fafc);
-  color: var(--klao-text-primary, #1e293b);
+  background: var(--sails-bg-secondary, #f8fafc);
+  color: var(--sails-text-primary, #1e293b);
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  border-bottom: 1px solid var(--klao-border, #e2e8f0);
+  border-bottom: 1px solid var(--sails-border, #e2e8f0);
 }
 
 .layout-sample__section-header:hover {
-  background: var(--klao-bg-hover, #f1f5f9);
+  background: var(--sails-bg-hover, #f1f5f9);
 }
 
 .layout-sample__section-title {
@@ -43,7 +43,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--klao-text-secondary, #64748b);
+  color: var(--sails-text-secondary, #64748b);
 }
 
 /* ─── Section Grid (1-4 columns from layout.config.columns) ─── */
@@ -75,20 +75,20 @@
 .layout-sample__field-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--klao-text-secondary, #64748b);
+  color: var(--sails-text-secondary, #64748b);
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
 .layout-sample__required {
-  color: var(--klao-danger, #ef4444);
+  color: var(--sails-danger, #ef4444);
   margin-left: 2px;
 }
 
 /* ─── Field Value (DETAIL view — read-only) ─────────────────── */
 .layout-sample__field-value {
   font-size: 14px;
-  color: var(--klao-text-primary, #1e293b);
+  color: var(--sails-text-primary, #1e293b);
   min-height: 20px;
   display: flex;
   align-items: center;
@@ -96,12 +96,12 @@
 }
 
 .layout-sample__null {
-  color: var(--klao-text-muted, #94a3b8);
+  color: var(--sails-text-muted, #94a3b8);
   font-style: italic;
 }
 
 .layout-sample__link {
-  color: var(--klao-primary, #9dcee0);
+  color: var(--sails-primary, #9dcee0);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -123,15 +123,15 @@
   width: 100%;
   padding: 8px 12px;
   font-size: 14px;
-  border: 1px solid var(--klao-border, #e2e8f0);
-  border-radius: var(--klao-radius-sm, 4px);
-  background: var(--klao-bg-primary, #fff);
-  color: var(--klao-text-primary, #1e293b);
+  border: 1px solid var(--sails-border, #e2e8f0);
+  border-radius: var(--sails-radius-sm, 4px);
+  background: var(--sails-bg-primary, #fff);
+  color: var(--sails-text-primary, #1e293b);
 }
 
 .layout-sample__input:focus {
   outline: none;
-  border-color: var(--klao-primary, #9dcee0);
+  border-color: var(--sails-primary, #9dcee0);
   box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.15);
 }
 
@@ -140,16 +140,16 @@
   padding: 8px 12px;
   font-size: 14px;
   font-family: inherit;
-  border: 1px solid var(--klao-border, #e2e8f0);
-  border-radius: var(--klao-radius-sm, 4px);
-  background: var(--klao-bg-primary, #fff);
-  color: var(--klao-text-primary, #1e293b);
+  border: 1px solid var(--sails-border, #e2e8f0);
+  border-radius: var(--sails-radius-sm, 4px);
+  background: var(--sails-bg-primary, #fff);
+  color: var(--sails-text-primary, #1e293b);
   resize: vertical;
 }
 
 .layout-sample__textarea:focus {
   outline: none;
-  border-color: var(--klao-primary, #9dcee0);
+  border-color: var(--sails-primary, #9dcee0);
   box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.15);
 }
 
@@ -163,7 +163,7 @@
 }
 
 .layout-sample__danger {
-  color: var(--klao-danger, #ef4444);
+  color: var(--sails-danger, #ef4444);
 }
 
 .layout-sample__danger:hover {
@@ -182,7 +182,7 @@
 }
 
 .layout-sample__mock-msg {
-  color: var(--klao-text-muted, #94a3b8);
+  color: var(--sails-text-muted, #94a3b8);
   font-style: italic;
   font-size: 13px;
   padding: 16px !important;
@@ -201,29 +201,29 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
-  background: var(--klao-bg-secondary, #f8fafc);
-  border-bottom: 1px solid var(--klao-border, #e2e8f0);
+  background: var(--sails-bg-secondary, #f8fafc);
+  border-bottom: 1px solid var(--sails-border, #e2e8f0);
 }
 
 .layout-sample__related-count {
   font-size: 12px;
-  color: var(--klao-text-muted, #94a3b8);
+  color: var(--sails-text-muted, #94a3b8);
 }
 
 /* ─── Debug panel ───────────────────────────────────────────── */
 .layout-sample__debug {
   margin-top: 32px;
-  border: 1px dashed var(--klao-border, #e2e8f0);
-  border-radius: var(--klao-radius-md, 8px);
+  border: 1px dashed var(--sails-border, #e2e8f0);
+  border-radius: var(--sails-radius-md, 8px);
   overflow: hidden;
 }
 
 .layout-sample__debug-toggle {
   padding: 12px 16px;
   font-size: 12px;
-  color: var(--klao-text-muted, #94a3b8);
+  color: var(--sails-text-muted, #94a3b8);
   cursor: pointer;
-  background: var(--klao-bg-secondary, #f8fafc);
+  background: var(--sails-bg-secondary, #f8fafc);
   user-select: none;
 }
 
@@ -233,8 +233,8 @@
   font-size: 11px;
   font-family: 'SF Mono', 'Fira Code', monospace;
   line-height: 1.5;
-  background: var(--klao-bg-primary, #fff);
-  color: var(--klao-text-primary, #1e293b);
+  background: var(--sails-bg-primary, #fff);
+  color: var(--sails-text-primary, #1e293b);
   max-height: 400px;
   overflow: auto;
   white-space: pre-wrap;
@@ -253,9 +253,9 @@
   padding: 10px 16px;
   margin: 0;
   font-size: 11px;
-  color: var(--klao-text-muted, #94a3b8);
-  background: var(--klao-bg-secondary, #f8fafc);
-  border-top: 1px solid var(--klao-border, #e2e8f0);
+  color: var(--sails-text-muted, #94a3b8);
+  background: var(--sails-bg-secondary, #f8fafc);
+  border-top: 1px solid var(--sails-border, #e2e8f0);
 }
 
 .layout-sample__mock-legend code {

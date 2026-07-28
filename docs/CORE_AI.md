@@ -1,14 +1,14 @@
-# KLAO Core — Internal Operating System Engine
+# SAILS Core — Internal Operating System Engine
 
 ## Product Identity
-- **Product Name**: KLAO (pronounced "ไอ-นิ-ดอส")
+- **Product Name**: SAILS (pronounced "ไอ-นิ-ดอส")
 - **Full Name**: Ignite Idea Operating System
 - **Domain**: Internal usage at Ignite Idea
-- **Backend Packages**: **KLAO Core** (this repository — `/packages/core`)
-- **Frontend Packages**: **KLAO Console** (this repository — `/packages/console`, developed as a PWA and ready for offline usage)
+- **Backend Packages**: **SAILS Core** (this repository — `/packages/core`)
+- **Frontend Packages**: **SAILS Console** (this repository — `/packages/console`, developed as a PWA and ready for offline usage)
 
 ## Project Overview
-KLAO Core is a high-performance, multi-tenant internal operating system engine built with Bun, TypeScript, and PostgreSQL. It operates as a completely **Headless Backend API** — no UI code exists in this project. The frontend (KLAO Console) is fully decoupled. The system enables Ignite Idea to define custom data structures (Sales Leads, Project Tasks, Cases, Timesheets) which are dynamically translated into native PostgreSQL tables in real-time.
+SAILS Core is a high-performance, multi-tenant internal operating system engine built with Bun, TypeScript, and PostgreSQL. It operates as a completely **Headless Backend API** — no UI code exists in this project. The frontend (SAILS Console) is fully decoupled. The system enables Ignite Idea to define custom data structures (Sales Leads, Project Tasks, Cases, Timesheets) which are dynamically translated into native PostgreSQL tables in real-time.
 
 ## Project Documentation
 | File | Purpose |
@@ -19,7 +19,7 @@ KLAO Core is a high-performance, multi-tenant internal operating system engine b
 | **[DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md)** | Single source of truth for architecture, UI standards, security pipelines, and PWA constraints. |
 
 ## Terminology
-| KLAO Term | What It Means |
+| SAILS Term | What It Means |
 |---|---|
 | **Table** | A dynamic data structure defined by the platform (e.g., "Projects"). Prisma model: `TableDefinition`. |
 | **Field** | A column within a Table (e.g., "Deadline"). Prisma model: `FieldDefinition`. |
@@ -27,8 +27,8 @@ KLAO Core is a high-performance, multi-tenant internal operating system engine b
 | **Console App** | A high-level application entry for the App Switcher (e.g., Sales, Timesheets). Prisma model: `ConsoleApp`. |
 | **Console Menu** | A navigation item in the Sidebar, potentially nested. Prisma model: `ConsoleMenu`. |
 
-## API Endpoints (KLAO Core)
-The following key endpoints provide the UI configuration and dynamic data necessary for the **KLAO Console** frontend.
+## API Endpoints (SAILS Core)
+The following key endpoints provide the UI configuration and dynamic data necessary for the **SAILS Console** frontend.
 
 ### UI Metadata
 | Method | Endpoint | Description |
@@ -62,7 +62,7 @@ The following key endpoints provide the UI configuration and dynamic data necess
 - **Validation**: Zod (Dynamic generation from metadata via FieldRegistry plugins)
 
 ## Detailed Folder Structure
-/Users/asana/Repo/KLAO/packages/core
+/Users/asana/Repo/SAILS/packages/core
 ├── prisma/                  ← Metadata Definition
 │   ├── schema.prisma        ← The "Schema of Schemas" — all models in @@schema("core")
 │   └── migrations/          ← Applied migrations (auth_schema_core)
@@ -88,10 +88,10 @@ The following key endpoints provide the UI configuration and dynamic data necess
 │   │       └── dynamic/     ← Data CRUD endpoints (GET/POST/PATCH/DELETE)
 │   │
 │   ├── cli/                 ← Internal Admin Tooling
-│   │   └── klao-cli.ts    ← Script for provisioning, cleanup, and status checks
+│   │   └── sails-cli.ts    ← Script for provisioning, cleanup, and status checks
 │   │
 │   ├── core/
-│   │   ├── engine/          ← The Heart of KLAO
+│   │   ├── engine/          ← The Heart of SAILS
 │   │   │   ├── AlchemaCore.ts       ← Raw DDL Generator (injection-proof via pg-format)
 │   │   │   ├── ConnectionManager.ts ← Central DB resolver (handles isolation modes)
 │   │   │   ├── QueryLayer.ts        ← Secure DML (Audit logs, RBAC, RLS — all atomic)
@@ -126,7 +126,7 @@ The following key endpoints provide the UI configuration and dynamic data necess
 | `AccessGuard.ts` | Enforces Object-Level Permissions. Auto-extracts JWT role from session; `SUPER_ADMIN` fast-path bypasses DB lookup entirely. |
 | `TransactionContext.ts` | Wraps every DB call in a transaction injected with `app.current_user_id` and `app.current_tenant_id` to activate PostgreSQL RLS policies. `resolvedRole` correctly hoisted for `finally`-block safety. |
 | `session.ts` | `getAppSession()` — lazy-loads `next-auth` so it never fails in CLI/Docker contexts. Supports `TEST_SESSION_JSON` env-var override for integration tests. |
-| `authOptions.ts` | NextAuth config: JWT strategy, KLAO `CredentialsProvider` (bcrypt). Callbacks inject `tenantId`, `role`, and `teams` array into JWT token. |
+| `authOptions.ts` | NextAuth config: JWT strategy, SAILS `CredentialsProvider` (bcrypt). Callbacks inject `tenantId`, `role`, and `teams` array into JWT token. |
 | `ConnectionManager.ts` | Abstracts Postgres connection; enables switching to Database-per-tenant without touching business logic. |
 | `TranslatorLayer.ts` | High-level API ensuring Metadata and Database stay in sync. |
 | `FieldRegistry.ts` | Allows adding new field types (e.g., 'Signature', 'Address') without touching core logic. |
@@ -137,14 +137,14 @@ The following key endpoints provide the UI configuration and dynamic data necess
 ## CLI Tool Operations
 ```bash
 # provision initial tenant
-bun src/cli/klao-cli.ts tenant:create "Ignite Idea" admin@igniteidea.ai
-bun src/cli/klao-cli.ts tenant:list
-bun src/cli/klao-cli.ts db:clean
-bun src/cli/klao-cli.ts db:check
+bun src/cli/sails-cli.ts tenant:create "Ignite Idea" admin@igniteidea.ai
+bun src/cli/sails-cli.ts tenant:list
+bun src/cli/sails-cli.ts db:clean
+bun src/cli/sails-cli.ts db:check
 ```
 
 ## Development & Testing with Docker
-KLAO Core uses Docker Compose to provide a unified development and testing environment.
+SAILS Core uses Docker Compose to provide a unified development and testing environment.
 
 ### 1. Start Development Environment
 ```bash

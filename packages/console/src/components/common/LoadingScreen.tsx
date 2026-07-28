@@ -3,13 +3,13 @@ import './LoadingScreen.css';
 
 const LoadingScreen: React.FC = () => {
   return (
-    <div className="klao-loading-screen">
-      <div className="klao-loading-screen__spinner">
-        <div className="klao-loading-screen__dot"></div>
-        <div className="klao-loading-screen__dot"></div>
-        <div className="klao-loading-screen__dot"></div>
+    <div className="sails-loading-screen">
+      <div className="sails-loading-screen__spinner">
+        <div className="sails-loading-screen__dot"></div>
+        <div className="sails-loading-screen__dot"></div>
+        <div className="sails-loading-screen__dot"></div>
       </div>
-      <p className="klao-loading-screen__text">Loading Workspace...</p>
+      <p className="sails-loading-screen__text">Loading Workspace...</p>
     </div>
   );
 };

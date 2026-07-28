@@ -8,7 +8,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: var(--klao-bg-tertiary, #f1f5f9);
+  background: var(--sails-bg-tertiary, #f1f5f9);
   overflow: hidden;
 }
 
@@ -20,15 +20,15 @@
   justify-content: space-between;
   padding: 0 16px;
   height: 44px;
-  background: var(--klao-bg-primary, #fff);
-  border-bottom: 1px solid var(--klao-border, #e2e8f0);
+  background: var(--sails-bg-primary, #fff);
+  border-bottom: 1px solid var(--sails-border, #e2e8f0);
   flex-shrink: 0;
 }
 
 .rb-toolbar__brand {
   font-size: 13px;
   font-weight: 600;
-  color: var(--klao-text-primary, #1e293b);
+  color: var(--sails-text-primary, #1e293b);
 }
 
 .rb-toolbar__actions {
@@ -68,8 +68,8 @@
   align-items: flex-start;
   gap: 14px;
   padding: 20px;
-  background: var(--klao-bg-primary, #fff);
-  border: 1px solid var(--klao-border, #e2e8f0);
+  background: var(--sails-bg-primary, #fff);
+  border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 10px;
   margin-bottom: 8px;
 }
@@ -81,7 +81,7 @@
   width: 40px;
   height: 40px;
   background: rgba(157, 206, 224, 0.12);
-  color: var(--klao-primary, #9dcee0);
+  color: var(--sails-primary, #9dcee0);
   border-radius: 8px;
   flex-shrink: 0;
 }
@@ -97,15 +97,15 @@
   padding: 2px 6px;
   margin: -2px -6px;
   border-radius: 4px;
-  color: var(--klao-text-primary, #1e293b);
+  color: var(--sails-text-primary, #1e293b);
   background: transparent;
   width: 100%;
 }
 
 .rb-process-name:focus {
   outline: none;
-  border-color: var(--klao-primary, #9dcee0);
-  background: var(--klao-bg-primary, #fff);
+  border-color: var(--sails-primary, #9dcee0);
+  background: var(--sails-bg-primary, #fff);
 }
 
 .rb-process-name:hover {
@@ -122,7 +122,7 @@
   padding: 2px 7px;
   border-radius: 10px;
   background: rgba(157, 206, 224, 0.12);
-  color: var(--klao-primary, #9dcee0);
+  color: var(--sails-primary, #9dcee0);
   white-space: nowrap;
 }
 
@@ -137,11 +137,11 @@
 .rb-chain__empty {
   padding: 40px;
   text-align: center;
-  border: 2px dashed var(--klao-border, #e2e8f0);
+  border: 2px dashed var(--sails-border, #e2e8f0);
   border-radius: 8px;
   font-size: 13px;
-  color: var(--klao-text-muted, #94a3b8);
-  background: var(--klao-bg-primary, #fff);
+  color: var(--sails-text-muted, #94a3b8);
+  background: var(--sails-bg-primary, #fff);
 }
 
 /* ─── Drop Zone ─────────────────────────────────────────────── */
@@ -169,7 +169,7 @@
 .rb-connector__line {
   width: 2px;
   height: 16px;
-  background: var(--klao-border, #e2e8f0);
+  background: var(--sails-border, #e2e8f0);
 }
 
 .rb-connector__arrow {
@@ -179,27 +179,27 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--klao-bg-primary, #fff);
-  border: 1px solid var(--klao-border, #e2e8f0);
-  color: var(--klao-text-muted, #94a3b8);
+  background: var(--sails-bg-primary, #fff);
+  border: 1px solid var(--sails-border, #e2e8f0);
+  color: var(--sails-text-muted, #94a3b8);
 }
 
 /* ─── Stage Card ────────────────────────────────────────────── */
 
 .rb-stage {
-  background: var(--klao-bg-primary, #fff);
-  border: 2px solid var(--klao-border, #e2e8f0);
+  background: var(--sails-bg-primary, #fff);
+  border: 2px solid var(--sails-border, #e2e8f0);
   border-radius: 10px;
   overflow: hidden;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .rb-stage:hover {
-  border-color: var(--klao-primary, #9dcee0);
+  border-color: var(--sails-primary, #9dcee0);
 }
 
 .rb-stage--selected {
-  border-color: var(--klao-primary, #9dcee0) !important;
+  border-color: var(--sails-primary, #9dcee0) !important;
   box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.12);
 }
 
@@ -219,7 +219,7 @@
 }
 
 .rb-stage__header:hover {
-  background: var(--klao-bg-secondary, #f8fafc);
+  background: var(--sails-bg-secondary, #f8fafc);
 }
 
 .rb-stage__order {
@@ -238,7 +238,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--klao-primary, #9dcee0);
+  background: var(--sails-primary, #9dcee0);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -249,7 +249,7 @@
   align-items: center;
   border: none;
   background: none;
-  color: var(--klao-text-muted, #94a3b8);
+  color: var(--sails-text-muted, #94a3b8);
   cursor: grab;
   padding: 0;
   flex-shrink: 0;
@@ -267,7 +267,7 @@
 .rb-stage__name {
   font-size: 14px;
   font-weight: 600;
-  color: var(--klao-text-primary, #1e293b);
+  color: var(--sails-text-primary, #1e293b);
   display: block;
 }
 
@@ -284,7 +284,7 @@
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: var(--klao-text-secondary, #64748b);
+  color: var(--sails-text-secondary, #64748b);
 }
 
 .rb-stage__cond-badge {
@@ -332,7 +332,7 @@
 
 .rb-stage__expand-icon {
   transition: transform 0.2s;
-  color: var(--klao-text-muted, #94a3b8);
+  color: var(--sails-text-muted, #94a3b8);
 }
 
 .rb-stage__expand-icon--open {
@@ -348,13 +348,13 @@
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--klao-text-muted, #94a3b8);
+  color: var(--sails-text-muted, #94a3b8);
   cursor: pointer;
 }
 
 .rb-icon-btn:hover {
   background: rgba(0,0,0,0.05);
-  color: var(--klao-text-primary, #1e293b);
+  color: var(--sails-text-primary, #1e293b);
 }
 
 .rb-icon-btn:disabled {
@@ -363,14 +363,14 @@
 }
 
 .rb-icon-btn--danger:hover {
-  color: var(--klao-danger, #ef4444);
+  color: var(--sails-danger, #ef4444);
 }
 
 /* ─── Stage Body (expandable) ───────────────────────────────── */
 
 .rb-stage__body {
   padding: 16px 20px 20px;
-  border-top: 1px solid var(--klao-border, #e2e8f0);
+  border-top: 1px solid var(--sails-border, #e2e8f0);
   animation: rbSlideDown 0.15s ease-out;
 }
 
@@ -400,7 +400,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: var(--klao-text-secondary, #64748b);
+  color: var(--sails-text-secondary, #64748b);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -408,7 +408,7 @@
 
 .rb-form-hint {
   font-size: 10px;
-  color: var(--klao-text-muted, #94a3b8);
+  color: var(--sails-text-muted, #94a3b8);
   font-style: italic;
 }
 
@@ -432,23 +432,23 @@
   align-items: center;
   gap: 5px;
   padding: 5px 10px;
-  border: 1px solid var(--klao-border, #e2e8f0);
+  border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 6px;
   font-size: 11px;
   cursor: pointer;
-  color: var(--klao-text-muted, #94a3b8);
+  color: var(--sails-text-muted, #94a3b8);
   transition: all 0.12s;
   user-select: none;
 }
 
 .rb-cap:hover {
-  border-color: var(--klao-primary, #9dcee0);
+  border-color: var(--sails-primary, #9dcee0);
 }
 
 .rb-cap--active {
   background: rgba(157, 206, 224, 0.08);
-  border-color: var(--klao-primary, #9dcee0);
-  color: var(--klao-primary, #9dcee0);
+  border-color: var(--sails-primary, #9dcee0);
+  color: var(--sails-primary, #9dcee0);
 }
 
 .rb-cap input {
@@ -458,7 +458,7 @@
 /* ─── Actions Section ───────────────────────────────────────── */
 
 .rb-actions-section {
-  border-top: 1px solid var(--klao-border, #e2e8f0);
+  border-top: 1px solid var(--sails-border, #e2e8f0);
   padding-top: 12px;
 }
 
@@ -500,23 +500,23 @@
   align-items: center;
   gap: 3px;
   padding: 3px 7px;
-  border: 1px solid var(--klao-border, #e2e8f0);
+  border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 4px;
-  background: var(--klao-bg-primary, #fff);
+  background: var(--sails-bg-primary, #fff);
   font-size: 10px;
   cursor: pointer;
-  color: var(--klao-text-secondary, #64748b);
+  color: var(--sails-text-secondary, #64748b);
   white-space: nowrap;
   transition: border-color 0.1s;
 }
 
 .rb-action-add-btn:hover {
-  border-color: var(--klao-primary, #9dcee0);
+  border-color: var(--sails-primary, #9dcee0);
 }
 
 .rb-action-empty {
   font-size: 10px;
-  color: var(--klao-text-muted, #94a3b8);
+  color: var(--sails-text-muted, #94a3b8);
   font-style: italic;
   margin: 0;
   text-align: center;
@@ -534,7 +534,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 4px 8px;
-  background: var(--klao-bg-primary, #fff);
+  background: var(--sails-bg-primary, #fff);
   border-radius: 4px;
   font-size: 11px;
 }
@@ -543,7 +543,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--klao-text-primary, #1e293b);
+  color: var(--sails-text-primary, #1e293b);
 }
 
 /* ─── Add Stage Button ──────────────────────────────────────── */
@@ -556,10 +556,10 @@
   width: 100%;
   padding: 10px;
   margin-top: 8px;
-  border: 2px dashed var(--klao-border, #e2e8f0);
+  border: 2px dashed var(--sails-border, #e2e8f0);
   border-radius: 8px;
-  background: var(--klao-bg-primary, #fff);
-  color: var(--klao-text-muted, #94a3b8);
+  background: var(--sails-bg-primary, #fff);
+  color: var(--sails-text-muted, #94a3b8);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -567,8 +567,8 @@
 }
 
 .rb-add-stage-btn:hover {
-  border-color: var(--klao-primary, #9dcee0);
-  color: var(--klao-primary, #9dcee0);
+  border-color: var(--sails-primary, #9dcee0);
+  color: var(--sails-primary, #9dcee0);
 }
 
 /* ─── End Node ──────────────────────────────────────────────── */
@@ -605,8 +605,8 @@
 
 .rb-context {
   padding: 12px;
-  background: var(--klao-bg-secondary, #f8fafc);
-  border-left: 1px solid var(--klao-border, #e2e8f0);
+  background: var(--sails-bg-secondary, #f8fafc);
+  border-left: 1px solid var(--sails-border, #e2e8f0);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -622,12 +622,12 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: var(--klao-text-secondary, #64748b);
+  color: var(--sails-text-secondary, #64748b);
 }
 
 .rb-context__card {
-  background: var(--klao-bg-primary, #fff);
-  border: 1px solid var(--klao-border, #e2e8f0);
+  background: var(--sails-bg-primary, #fff);
+  border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 8px;
   padding: 10px 12px;
   display: flex;
@@ -643,18 +643,18 @@
 
 .rb-context__key {
   font-size: 11px;
-  color: var(--klao-text-muted, #94a3b8);
+  color: var(--sails-text-muted, #94a3b8);
 }
 
 .rb-context__value {
   font-size: 12px;
   font-weight: 600;
-  color: var(--klao-text-primary, #1e293b);
+  color: var(--sails-text-primary, #1e293b);
 }
 
 .rb-context__help {
   font-size: 11px;
-  color: var(--klao-text-secondary, #64748b);
+  color: var(--sails-text-secondary, #64748b);
   line-height: 1.5;
 }
 
@@ -667,7 +667,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: var(--klao-text-primary, #1e293b);
+  color: var(--sails-text-primary, #1e293b);
   margin: 0 0 6px;
 }
 
@@ -687,8 +687,8 @@
   font-size: 10px;
   font-family: 'SF Mono', 'Fira Code', monospace;
   padding: 8px;
-  background: var(--klao-bg-primary, #fff);
-  border: 1px solid var(--klao-border, #e2e8f0);
+  background: var(--sails-bg-primary, #fff);
+  border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 6px;
   max-height: 300px;
   overflow: auto;
@@ -696,5 +696,5 @@
   line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
-  color: var(--klao-text-primary, #1e293b);
+  color: var(--sails-text-primary, #1e293b);
 }

@@ -15,7 +15,7 @@
 ## Feature-Based Folder Structure (Frontend)
 - **Location:** `packages/console/src/features/`
 - **Rule:** Isolate domain logic. Each feature folder MUST contain its own `components/`, `hooks/`, `utils/`, and `types.ts`.
-- **Warning:** Avoid Spaghetti Imports. Do not import `../../../` across feature boundaries. Use Shared Kernel (`@klao/shared`) for common types.
+- **Warning:** Avoid Spaghetti Imports. Do not import `../../../` across feature boundaries. Use Shared Kernel (`@sails/shared`) for common types.
 
 ## Core Architecture (`packages/core/src/`)
 - `api/`: API clients / wrappers.

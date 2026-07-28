@@ -1,6 +1,6 @@
 # Workspace Configuration: Modules & Navigation
 
-This document outlines the standard configuration for the **KLAO** Workspace, including core modules and their navigation structures tailored for Ignite Idea operations.
+This document outlines the standard configuration for the **SAILS** Workspace, including core modules and their navigation structures tailored for Ignite Idea operations.
 
 ## 1. Sales Module
 *Focus: Pipeline management and lead tracking.*
@@ -69,7 +69,7 @@ This document outlines the standard configuration for the **KLAO** Workspace, in
 > [!WARNING]
 > Creating a dynamic table in the database is NOT enough to make it visible in the UI. You MUST create a corresponding `ConsoleMenu` item and link it to an existing `ConsoleApp` using the APIs below.
 
-To provision these via the **KLAO Core** API, use the following patterns:
+To provision these via the **SAILS Core** API, use the following patterns:
 
 ### Create Module (App)
 ```http

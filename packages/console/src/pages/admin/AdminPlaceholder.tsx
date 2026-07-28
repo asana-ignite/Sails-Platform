@@ -12,13 +12,13 @@ const AdminPlaceholder: React.FC = () => {
     .replace(/\b\w/g, l => l.toUpperCase());
 
   return (
-    <div className="klao-admin-placeholder">
-      <div className="klao-admin-placeholder__icon">
+    <div className="sails-admin-placeholder">
+      <div className="sails-admin-placeholder__icon">
         <Settings size={40} />
       </div>
-      <div className="klao-admin-placeholder__content">
-        <h1 className="klao-admin-placeholder__title">{formattedName}</h1>
-        <p className="klao-admin-placeholder__text">
+      <div className="sails-admin-placeholder__content">
+        <h1 className="sails-admin-placeholder__title">{formattedName}</h1>
+        <p className="sails-admin-placeholder__text">
           This administrative module is part of the <strong>Phase 6 Roadmap</strong>.
           <br />
           Currently connected to the <code>{location.pathname}</code> endpoint.

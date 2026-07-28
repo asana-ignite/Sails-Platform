@@ -37,7 +37,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'klao-theme';
+const STORAGE_KEY = 'sails-theme';
 
 function generatePalette(state: ThemeState): Record<string, string> {
   const hexAccent = state.primaryAccentColor;
@@ -72,60 +72,60 @@ function generatePalette(state: ThemeState): Record<string, string> {
     : 'none';
 
   return {
-    '--klao-primary': hexAccent,
-    '--klao-primary-bg': primaryBg,
-    '--klao-primary-r': String(r),
-    '--klao-primary-g': String(g),
-    '--klao-primary-b': String(b),
+    '--sails-primary': hexAccent,
+    '--sails-primary-bg': primaryBg,
+    '--sails-primary-r': String(r),
+    '--sails-primary-g': String(g),
+    '--sails-primary-b': String(b),
 
-    '--klao-secondary': secondary,
+    '--sails-secondary': secondary,
 
-    '--klao-primary-light': isDark
+    '--sails-primary-light': isDark
       ? hslToHex(h, 20, 18)
       : hslToHex(h, 25, 93),
 
-    '--klao-primary-dark': isDark
+    '--sails-primary-dark': isDark
       ? hslToHex(h, 40, 68)
       : hslToHex(h, 45, 38),
 
-    '--klao-bg-body': backgroundBody,
-    '--klao-bg-gradient': bgGrad,
+    '--sails-bg-body': backgroundBody,
+    '--sails-bg-gradient': bgGrad,
 
-    '--klao-bg-sidebar': isDark
+    '--sails-bg-sidebar': isDark
       ? hslToHex(h, 3, 14)
       : '#ffffff',
 
-    '--klao-bg-topbar': isDark
+    '--sails-bg-topbar': isDark
       ? hslToHex(h, 3, 16)
       : '#ffffff',
 
-    '--klao-bg-card': isDark
+    '--sails-bg-card': isDark
       ? hslToHex(h, 3, 16)
       : '#ffffff',
 
-    '--klao-text-main': textMain,
+    '--sails-text-main': textMain,
 
-    '--klao-text-muted': isDark
+    '--sails-text-muted': isDark
       ? hslToHex(h, 4, 65)
       : hslToHex(h, 6, 50),
 
-    '--klao-text-light': '#ffffff',
+    '--sails-text-light': '#ffffff',
 
-    '--klao-text-sidebar': isDark
+    '--sails-text-sidebar': isDark
       ? hslToHex(h, 4, 65)
       : hslToHex(h, 8, 42),
 
-    '--klao-text-sidebar-active': hexAccent,
+    '--sails-text-sidebar-active': hexAccent,
 
-    '--klao-border-color': isDark
+    '--sails-border-color': isDark
       ? hslToHex(h, 4, 17)
       : hslToHex(h, 5, 93),
 
-    '--klao-shadow-sm': isDark
+    '--sails-shadow-sm': isDark
       ? '0 2px 4px rgba(0, 0, 0, 0.3)'
       : '0 2px 4px rgba(0, 0, 0, 0.03)',
 
-    '--klao-shadow-md': isDark
+    '--sails-shadow-md': isDark
       ? '0 4px 12px rgba(0, 0, 0, 0.4)'
       : '0 4px 12px rgba(0, 0, 0, 0.05)',
   };

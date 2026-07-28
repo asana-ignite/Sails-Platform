@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldRegistry } from '@/core/registry/FieldRegistry';
-import { FieldTypeMetadata } from '@klao/shared';
+import { FieldTypeMetadata } from '@sails/shared';
 
 export async function GET(req: NextRequest) {
   try {

@@ -31,27 +31,27 @@ const AdminPermissions: React.FC = () => {
     fetchRegistry();
   }, []);
 
-  if (loading) return <div className="klao-admin-loading">Loading Registry...</div>;
+  if (loading) return <div className="sails-admin-loading">Loading Registry...</div>;
 
   const categories = Array.from(new Set(Object.values(registry).map(p => p.category)));
 
   return (
-    <div className="klao-admin-content">
+    <div className="sails-admin-content">
       {categories.map(cat => (
-        <section key={cat} className="klao-permission-group">
-          <h3 className="klao-permission-category">{cat}</h3>
-          <div className="klao-permission-grid">
+        <section key={cat} className="sails-permission-group">
+          <h3 className="sails-permission-category">{cat}</h3>
+          <div className="sails-permission-grid">
             {Object.entries(registry)
               .filter(([_, def]) => def.category === cat)
               .map(([key, def]) => (
-                <div key={key} className="klao-permission-card">
-                  <div className="klao-permission-info">
-                    <label className="klao-permission-label">{def.label}</label>
-                    <p className="klao-permission-desc">{def.description}</p>
+                <div key={key} className="sails-permission-card">
+                  <div className="sails-permission-info">
+                    <label className="sails-permission-label">{def.label}</label>
+                    <p className="sails-permission-desc">{def.description}</p>
                   </div>
-                  <div className="klao-permission-toggle">
+                  <div className="sails-permission-toggle">
                     <input type="checkbox" id={key} />
-                    <label htmlFor={key} className="klao-switch"></label>
+                    <label htmlFor={key} className="sails-switch"></label>
                   </div>
                 </div>
               ))}

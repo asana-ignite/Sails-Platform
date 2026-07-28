@@ -1,5 +1,5 @@
 import React from 'react';
-import { FieldParameterDefinition, PhysicalType } from '@klao/shared';
+import { FieldParameterDefinition, PhysicalType } from '@sails/shared';
 
 export interface FieldTypePlugin {
   type: string;

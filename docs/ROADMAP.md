@@ -1,13 +1,13 @@
-# KLAO — Internal Data Access & Security Roadmap
+# SAILS — Internal Data Access & Security Roadmap
 
-This document outlines the strategic security implementation plan for **KLAO** (Ignite Idea Operating System).
+This document outlines the strategic security implementation plan for **SAILS** (Ignite Idea Operating System).
 
 **Strategic Architecture:**
-1. **KLAO Core**: Headless Backend API (Owned by **Backend Engineer**).
-2. **KLAO Console**: Frontend UI (Owned by **Frontend Engineer**).
-3. **KLAO Shared**: Type Contracts & Shared Models (Owned by **Platform Architect**).
-4. **KLAO Database**: Metadata & Dynamic Schemas (Owned by **Database Engineer**).
-5. **KLAO QA**: Automated Verification Suite (Owned by **QA Tester**).
+1. **SAILS Core**: Headless Backend API (Owned by **Backend Engineer**).
+2. **SAILS Console**: Frontend UI (Owned by **Frontend Engineer**).
+3. **SAILS Shared**: Type Contracts & Shared Models (Owned by **Platform Architect**).
+4. **SAILS Database**: Metadata & Dynamic Schemas (Owned by **Database Engineer**).
+5. **SAILS QA**: Automated Verification Suite (Owned by **QA Tester**).
 
 ## Identity & Access Management (IAM)
 
@@ -54,7 +54,7 @@ This document outlines the strategic security implementation plan for **KLAO** (
 ---
 
 ## Phase 4: PWA — Offline-First Field Ops (🔲 Pending — DO NOT IMPLEMENT YET)
-> Constraints bind both KLAO Console (UI) and KLAO Core (API).
+> Constraints bind both SAILS Console (UI) and SAILS Core (API).
 
 Please see [DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md) for the consolidated list of pre-declared constraints regarding client-side ID generation, IndexedDB usage, and SyncQueues.
 

@@ -94,9 +94,9 @@ function UserPickerModal({ slotId, tenantUsers, currentUserId, onSelectUser, onC
   }, [tenantUsers, searchTerm]);
 
   return createPortal(
-    <div className="klao-modal-overlay" style={{ zIndex: 10000, justifyContent: 'center', alignItems: 'center' }}>
+    <div className="sails-modal-overlay" style={{ zIndex: 10000, justifyContent: 'center', alignItems: 'center' }}>
       <div
-        className="klao-card"
+        className="sails-card"
         style={{
           width: '440px',
           maxHeight: '75vh',
@@ -104,29 +104,29 @@ function UserPickerModal({ slotId, tenantUsers, currentUserId, onSelectUser, onC
           padding: '24px',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: 'var(--klao-shadow-lg)',
-          animation: 'klao-modal-slide-up 0.18s ease-out'
+          boxShadow: 'var(--sails-shadow-lg)',
+          animation: 'sails-modal-slide-up 0.18s ease-out'
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--klao-text-main)' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--sails-text-main)' }}>
               Map User to Slot {slotId}
             </h3>
-            <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--klao-text-muted)' }}>
+            <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--sails-text-muted)' }}>
               Select a user from your organization
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
             <X size={18} />
           </button>
         </div>
 
         <div style={{ position: 'relative', marginBottom: '14px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--klao-text-muted)' }} />
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sails-text-muted)' }} />
           <input
             type="text"
-            className="klao-input"
+            className="sails-input"
             style={{ width: '100%', paddingLeft: '36px', fontSize: '0.85rem' }}
             placeholder="Search user by name or email..."
             value={searchTerm}
@@ -138,8 +138,8 @@ function UserPickerModal({ slotId, tenantUsers, currentUserId, onSelectUser, onC
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '2px' }}>
           <button
             type="button"
-            className="klao-btn klao-btn--ghost"
-            style={{ justifyContent: 'flex-start', fontSize: '0.825rem', color: 'var(--klao-text-muted)', padding: '10px 12px', borderRadius: '10px' }}
+            className="sails-btn sails-btn--ghost"
+            style={{ justifyContent: 'flex-start', fontSize: '0.825rem', color: 'var(--sails-text-muted)', padding: '10px 12px', borderRadius: '10px' }}
             onClick={() => {
               onSelectUser(null);
               onClose();
@@ -149,7 +149,7 @@ function UserPickerModal({ slotId, tenantUsers, currentUserId, onSelectUser, onC
           </button>
 
           {filtered.length === 0 ? (
-            <div style={{ padding: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--klao-text-muted)' }}>
+            <div style={{ padding: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--sails-text-muted)' }}>
               No users found matching your search.
             </div>
           ) : (
@@ -157,7 +157,7 @@ function UserPickerModal({ slotId, tenantUsers, currentUserId, onSelectUser, onC
               <button
                 key={u.id}
                 type="button"
-                className="klao-btn klao-btn--ghost"
+                className="sails-btn sails-btn--ghost"
                 style={{
                   justifyContent: 'space-between',
                   alignItems: 'center',
@@ -174,10 +174,10 @@ function UserPickerModal({ slotId, tenantUsers, currentUserId, onSelectUser, onC
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 600, color: 'var(--klao-text-main)' }}>{u.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)' }}>{u.email}</div>
+                  <div style={{ fontWeight: 600, color: 'var(--sails-text-main)' }}>{u.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)' }}>{u.email}</div>
                 </div>
-                {currentUserId === u.id && <Check size={16} color="var(--klao-primary, #3b82f6)" />}
+                {currentUserId === u.id && <Check size={16} color="var(--sails-primary, #3b82f6)" />}
               </button>
             ))
           )}
@@ -229,9 +229,9 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
   };
 
   return createPortal(
-    <div className="klao-modal-overlay" style={{ zIndex: 9999, justifyContent: 'center', alignItems: 'center' }}>
+    <div className="sails-modal-overlay" style={{ zIndex: 9999, justifyContent: 'center', alignItems: 'center' }}>
       <div
-        className="klao-card"
+        className="sails-card"
         style={{
           width: '560px',
           maxHeight: '82vh',
@@ -239,18 +239,18 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
           padding: '24px 28px',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: 'var(--klao-shadow-lg)',
-          animation: 'klao-modal-slide-up 0.2s ease-out',
+          boxShadow: 'var(--sails-shadow-lg)',
+          animation: 'sails-modal-slide-up 0.2s ease-out',
           position: 'relative'
         }}
       >
         {/* Modal Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--klao-border-color)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--sails-border-color)' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <span style={{
                 background: 'rgba(59,130,246,0.15)',
-                color: 'var(--klao-primary, #3b82f6)',
+                color: 'var(--sails-primary, #3b82f6)',
                 padding: '2px 8px',
                 borderRadius: '6px',
                 fontWeight: 700,
@@ -258,37 +258,37 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
               }}>
                 {pos.prefix}
               </span>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--klao-text-main)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--sails-text-main)' }}>
                 {pos.name}
               </h3>
             </div>
-            <p style={{ margin: 0, fontSize: '0.825rem', color: 'var(--klao-text-muted)' }}>
+            <p style={{ margin: 0, fontSize: '0.825rem', color: 'var(--sails-text-muted)' }}>
               {pos.description || 'No description provided'}
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer', padding: '4px' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer', padding: '4px' }}>
             <X size={20} />
           </button>
         </div>
 
         {/* Position Summary Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '20px' }}>
-          <div style={{ padding: '10px 12px', background: 'var(--klao-bg-body)', borderRadius: '10px', border: '1px solid var(--klao-border-color)' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--klao-text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Headcount</div>
+          <div style={{ padding: '10px 12px', background: 'var(--sails-bg-body)', borderRadius: '10px', border: '1px solid var(--sails-border-color)' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--sails-text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Headcount</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '2px' }}>{pos.headCount}</div>
           </div>
           <div style={{ padding: '10px 12px', background: 'rgba(34,197,94,0.08)', borderRadius: '10px', border: '1px solid rgba(34,197,94,0.2)' }}>
             <div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600, textTransform: 'uppercase' }}>Occupied</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>{occupiedCount}</div>
           </div>
-          <div style={{ padding: '10px 12px', background: 'var(--klao-bg-body)', borderRadius: '10px', border: '1px solid var(--klao-border-color)' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--klao-text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Vacant</div>
+          <div style={{ padding: '10px 12px', background: 'var(--sails-bg-body)', borderRadius: '10px', border: '1px solid var(--sails-border-color)' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--sails-text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Vacant</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '2px' }}>{vacantCount}</div>
           </div>
         </div>
 
         {/* Slots Detail Section */}
-        <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', fontWeight: 700, color: 'var(--klao-text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', fontWeight: 700, color: 'var(--sails-text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Users size={16} />
           <span>Head Count Slots Mapping</span>
         </h4>
@@ -301,7 +301,7 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
               const isOccupied = Boolean(assignedUserId);
 
               return (
-                <div key={slot.id} className={`klao-slot-card ${isOccupied ? 'klao-slot-card--occupied' : ''}`}>
+                <div key={slot.id} className={`sails-slot-card ${isOccupied ? 'sails-slot-card--occupied' : ''}`}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{
                       padding: '3px 8px',
@@ -309,22 +309,22 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
                       fontWeight: 600,
                       fontSize: '0.8rem',
                       background: isOccupied ? 'rgba(34,197,94,0.15)' : 'rgba(0,0,0,0.06)',
-                      color: isOccupied ? '#15803d' : 'var(--klao-text-muted)'
+                      color: isOccupied ? '#15803d' : 'var(--sails-text-muted)'
                     }}>
                       {slot.id}
                     </span>
                     <div>
                       {assignedUser ? (
                         <>
-                          <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--klao-text-main)' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--sails-text-main)' }}>
                             {assignedUser.name}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--klao-text-muted)' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)' }}>
                             {assignedUser.email}
                           </div>
                         </>
                       ) : (
-                        <div style={{ fontSize: '0.825rem', color: 'var(--klao-text-muted)', fontStyle: 'italic' }}>
+                        <div style={{ fontSize: '0.825rem', color: 'var(--sails-text-muted)', fontStyle: 'italic' }}>
                           Vacant Slot
                         </div>
                       )}
@@ -336,7 +336,7 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
                       <>
                         <button
                           type="button"
-                          className="klao-btn klao-btn--ghost klao-btn--sm"
+                          className="sails-btn sails-btn--ghost sails-btn--sm"
                           style={{ fontSize: '0.75rem', padding: '4px 8px' }}
                           onClick={() => setActiveSearchSlotId(slot.id)}
                         >
@@ -344,8 +344,8 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
                         </button>
                         <button
                           type="button"
-                          className="klao-btn klao-btn--ghost klao-btn--sm"
-                          style={{ fontSize: '0.75rem', padding: '4px 8px', color: 'var(--klao-danger)' }}
+                          className="sails-btn sails-btn--ghost sails-btn--sm"
+                          style={{ fontSize: '0.75rem', padding: '4px 8px', color: 'var(--sails-danger)' }}
                           onClick={() => handleSelectUserForSlot(slot.id, null)}
                         >
                           Unmap
@@ -354,7 +354,7 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
                     ) : (
                       <button
                         type="button"
-                        className="klao-btn klao-btn--secondary klao-btn--sm"
+                        className="sails-btn sails-btn--secondary sails-btn--sm"
                         style={{ fontSize: '0.75rem', padding: '4px 10px' }}
                         onClick={() => setActiveSearchSlotId(slot.id)}
                       >
@@ -381,11 +381,11 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
         )}
 
         {/* Footer with Explicit Save */}
-        <div style={{ paddingTop: '14px', borderTop: '1px solid var(--klao-border-color)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-          <button className="klao-btn klao-btn--secondary" onClick={onClose} disabled={isSaving}>
+        <div style={{ paddingTop: '14px', borderTop: '1px solid var(--sails-border-color)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <button className="sails-btn sails-btn--secondary" onClick={onClose} disabled={isSaving}>
             Cancel
           </button>
-          <button className="klao-btn klao-btn--primary" onClick={handleSave} disabled={isSaving}>
+          <button className="sails-btn sails-btn--primary" onClick={handleSave} disabled={isSaving}>
             {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
@@ -475,7 +475,7 @@ export default function AdminPositionManager() {
   useEffect(() => {
     setHeaderActions(
       <button
-        className="klao-btn klao-btn--primary"
+        className="sails-btn sails-btn--primary"
         onClick={handleOpenCreateModal}
       >
         <Plus size={16} /> New Position
@@ -603,15 +603,15 @@ export default function AdminPositionManager() {
   };
 
   return (
-    <div className="klao-user-manager klao-position-manager">
+    <div className="sails-user-manager sails-position-manager">
       {/* 1. Header Toolbar */}
-      <div className="klao-user-manager__toolbar">
-        <div className="klao-user-manager__search-wrapper">
-          <Search size={18} className="klao-user-manager__search-icon" />
+      <div className="sails-user-manager__toolbar">
+        <div className="sails-user-manager__search-wrapper">
+          <Search size={18} className="sails-user-manager__search-icon" />
           <input
             type="text"
             placeholder="Search positions..."
-            className="klao-user-manager__search-input"
+            className="sails-user-manager__search-input"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -619,8 +619,8 @@ export default function AdminPositionManager() {
             }}
           />
         </div>
-        <div className="klao-user-manager__actions">
-          <button className="klao-btn klao-btn--ghost">
+        <div className="sails-user-manager__actions">
+          <button className="sails-btn sails-btn--ghost">
             <Filter size={16} />
             <span>Filters</span>
           </button>
@@ -628,73 +628,73 @@ export default function AdminPositionManager() {
       </div>
 
       {/* 2. Position Data Table */}
-      <div className="klao-card klao-user-manager__table-wrapper">
-        <table className="klao-user-manager__table">
+      <div className="sails-card sails-user-manager__table-wrapper">
+        <table className="sails-user-manager__table">
           <thead>
             <tr>
-              <th className="klao-user-manager__th klao-user-manager__th--checkbox">
+              <th className="sails-user-manager__th sails-user-manager__th--checkbox">
                 <input
                   type="checkbox"
-                  className="klao-checkbox"
+                  className="sails-checkbox"
                   checked={paginatedPositions.length > 0 && selectedIds.size === paginatedPositions.length}
                   onChange={toggleSelectAll}
                 />
               </th>
-              <th className="klao-user-manager__th klao-user-manager__th--sortable" onClick={() => handleSort('prefix')}>
-                <div className="klao-user-manager__th-content">
+              <th className="sails-user-manager__th sails-user-manager__th--sortable" onClick={() => handleSort('prefix')}>
+                <div className="sails-user-manager__th-content">
                   <span>PREFIX</span>
-                  <ArrowUpDown size={14} className="klao-user-manager__sort-icon--idle" />
+                  <ArrowUpDown size={14} className="sails-user-manager__sort-icon--idle" />
                 </div>
               </th>
-              <th className="klao-user-manager__th klao-user-manager__th--sortable" onClick={() => handleSort('name')}>
-                <div className="klao-user-manager__th-content">
+              <th className="sails-user-manager__th sails-user-manager__th--sortable" onClick={() => handleSort('name')}>
+                <div className="sails-user-manager__th-content">
                   <span>POSITION NAME</span>
-                  <ArrowUpDown size={14} className="klao-user-manager__sort-icon--idle" />
+                  <ArrowUpDown size={14} className="sails-user-manager__sort-icon--idle" />
                 </div>
               </th>
-              <th className="klao-user-manager__th klao-user-manager__th--sortable" onClick={() => handleSort('headCount')}>
-                <div className="klao-user-manager__th-content">
+              <th className="sails-user-manager__th sails-user-manager__th--sortable" onClick={() => handleSort('headCount')}>
+                <div className="sails-user-manager__th-content">
                   <span>HEADCOUNT / SLOTS</span>
-                  <ArrowUpDown size={14} className="klao-user-manager__sort-icon--idle" />
+                  <ArrowUpDown size={14} className="sails-user-manager__sort-icon--idle" />
                 </div>
               </th>
-              <th className="klao-user-manager__th klao-user-manager__th--actions"></th>
+              <th className="sails-user-manager__th sails-user-manager__th--actions"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
                 <td colSpan={5} style={{ textAlign: 'center', padding: '80px' }}>
-                  <div className="klao-loading-spinner"></div>
-                  <p style={{ marginTop: '16px', color: 'var(--klao-text-muted)' }}>Fetching positions...</p>
+                  <div className="sails-loading-spinner"></div>
+                  <p style={{ marginTop: '16px', color: 'var(--sails-text-muted)' }}>Fetching positions...</p>
                 </td>
               </tr>
             ) : paginatedPositions.length === 0 ? (
               <tr>
                 <td colSpan={5} style={{ textAlign: 'center', padding: '80px' }}>
-                  <p style={{ color: 'var(--klao-text-muted)' }}>No positions found matching your criteria.</p>
+                  <p style={{ color: 'var(--sails-text-muted)' }}>No positions found matching your criteria.</p>
                 </td>
               </tr>
             ) : (
               paginatedPositions.map((pos) => (
                 <tr
                   key={pos.id}
-                  className={`klao-user-manager__tr ${selectedIds.has(pos.id) ? 'klao-user-manager__tr--selected' : ''}`}
+                  className={`sails-user-manager__tr ${selectedIds.has(pos.id) ? 'sails-user-manager__tr--selected' : ''}`}
                   onClick={() => setSelectedPositionDetails(pos)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <td className="klao-user-manager__td klao-user-manager__td--checkbox" onClick={(e) => e.stopPropagation()}>
+                  <td className="sails-user-manager__td sails-user-manager__td--checkbox" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
-                      className="klao-checkbox"
+                      className="sails-checkbox"
                       checked={selectedIds.has(pos.id)}
                       onChange={() => toggleSelect(pos.id)}
                     />
                   </td>
-                  <td className="klao-user-manager__td">
+                  <td className="sails-user-manager__td">
                     <span style={{
                       background: 'rgba(59,130,246,0.12)',
-                      color: 'var(--klao-primary, #3b82f6)',
+                      color: 'var(--sails-primary, #3b82f6)',
                       padding: '4px 10px',
                       borderRadius: '6px',
                       fontWeight: 600,
@@ -703,19 +703,19 @@ export default function AdminPositionManager() {
                       {renderHighlightedText(pos.prefix, searchTerm)}
                     </span>
                   </td>
-                  <td className="klao-user-manager__td">
-                    <div className="klao-user-manager__info">
-                      <span className="klao-user-manager__name">
+                  <td className="sails-user-manager__td">
+                    <div className="sails-user-manager__info">
+                      <span className="sails-user-manager__name">
                         {renderHighlightedText(pos.name, searchTerm)}
                       </span>
                       {pos.description && (
-                        <span className="klao-user-manager__email" style={{ marginTop: '2px' }}>
+                        <span className="sails-user-manager__email" style={{ marginTop: '2px' }}>
                           {renderHighlightedText(pos.description, searchTerm)}
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="klao-user-manager__td">
+                  <td className="sails-user-manager__td">
                     <span style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -732,19 +732,19 @@ export default function AdminPositionManager() {
                       {pos.slots.filter((s) => s.userId).length} / {pos.headCount} Occupied
                     </span>
                   </td>
-                  <td className="klao-user-manager__td klao-user-manager__td--actions">
-                    <div className="klao-user-manager__action-wrapper" onClick={(e) => e.stopPropagation()}>
+                  <td className="sails-user-manager__td sails-user-manager__td--actions">
+                    <div className="sails-user-manager__action-wrapper" onClick={(e) => e.stopPropagation()}>
                       <button
-                        className={`klao-user-manager__action-btn ${activeMenuId === pos.id ? 'active' : ''}`}
+                        className={`sails-user-manager__action-btn ${activeMenuId === pos.id ? 'active' : ''}`}
                         onClick={() => setActiveMenuId(activeMenuId === pos.id ? null : pos.id)}
                       >
                         <MoreHorizontal size={18} />
                       </button>
 
                       {activeMenuId === pos.id && (
-                        <div className="klao-user-manager__context-menu">
+                        <div className="sails-user-manager__context-menu">
                           <button
-                            className="klao-context-item"
+                            className="sails-context-item"
                             onClick={() => {
                               setActiveMenuId(null);
                               handleOpenEditModal(pos);
@@ -753,9 +753,9 @@ export default function AdminPositionManager() {
                             <Edit2 size={14} />
                             <span>Edit Details</span>
                           </button>
-                          <div className="klao-context-divider"></div>
+                          <div className="sails-context-divider"></div>
                           <button
-                            className="klao-context-item klao-context-item--danger"
+                            className="sails-context-item sails-context-item--danger"
                             onClick={() => {
                               setActiveMenuId(null);
                               handleDelete(pos.id);
@@ -775,13 +775,13 @@ export default function AdminPositionManager() {
         </table>
 
         {/* 3. Pagination Footer */}
-        <div className="klao-user-manager__pagination">
-          <div className="klao-user-manager__pagination-info">
-            <span className="klao-user-manager__pagination-range">
+        <div className="sails-user-manager__pagination">
+          <div className="sails-user-manager__pagination-info">
+            <span className="sails-user-manager__pagination-range">
               Showing <strong>{startRange}</strong> to <strong>{endRange}</strong> of <strong>{totalCount}</strong> positions
             </span>
-            <div className="klao-user-manager__page-size">
-              <span className="klao-user-manager__page-size-label">Records per page:</span>
+            <div className="sails-user-manager__page-size">
+              <span className="sails-user-manager__page-size-label">Records per page:</span>
               <CustomSelect
                 size="sm"
                 value={pageSize === totalCount ? 'all' : pageSize}
@@ -798,17 +798,17 @@ export default function AdminPositionManager() {
               />
             </div>
           </div>
-          <div className="klao-user-manager__pagination-controls">
+          <div className="sails-user-manager__pagination-controls">
             <button
-              className="klao-pagination-btn"
+              className="sails-pagination-btn"
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="klao-pagination-page active">{currentPage}</span>
+            <span className="sails-pagination-page active">{currentPage}</span>
             <button
-              className="klao-pagination-btn"
+              className="sails-pagination-btn"
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
             >
@@ -820,13 +820,13 @@ export default function AdminPositionManager() {
 
       {/* Create / Edit Modal */}
       {showCreateModal && createPortal(
-        <div className="klao-modal-overlay" style={{ zIndex: 9999 }}>
-          <div className="klao-card" style={{ width: '460px', padding: '28px', borderRadius: '20px' }}>
+        <div className="sails-modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="sails-card" style={{ width: '460px', padding: '28px', borderRadius: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
                 {editingPositionId ? 'Edit Position' : 'Create New Position'}
               </h3>
-              <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer' }}>
+              <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
@@ -842,7 +842,7 @@ export default function AdminPositionManager() {
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>Position Name</label>
                 <input
                   type="text"
-                  className="klao-input"
+                  className="sails-input"
                   style={{ width: '100%' }}
                   placeholder="e.g. Senior Software Engineer"
                   value={formData.name}
@@ -859,11 +859,11 @@ export default function AdminPositionManager() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                     <label style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600 }}>Prefix</label>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--klao-primary, #3b82f6)', fontWeight: 500 }}>Auto-Generated</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--sails-primary, #3b82f6)', fontWeight: 500 }}>Auto-Generated</span>
                   </div>
                   <input
                     type="text"
-                    className="klao-input"
+                    className="sails-input"
                     style={{ width: '100%', textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700 }}
                     placeholder="SSE"
                     maxLength={10}
@@ -881,7 +881,7 @@ export default function AdminPositionManager() {
                     type="number"
                     min={1}
                     max={100}
-                    className="klao-input"
+                    className="sails-input"
                     style={{ width: '100%' }}
                     value={formData.headCount}
                     onChange={(e) => setFormData({ ...formData, headCount: Number(e.target.value) })}
@@ -893,7 +893,7 @@ export default function AdminPositionManager() {
               <div style={{ marginBottom: '24px' }}>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>Description</label>
                 <textarea
-                  className="klao-input"
+                  className="sails-input"
                   style={{ width: '100%', minHeight: '80px', fontFamily: 'inherit' }}
                   placeholder="Responsibilities and position details..."
                   value={formData.description}
@@ -902,10 +902,10 @@ export default function AdminPositionManager() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button type="button" className="klao-btn klao-btn--secondary" onClick={() => setShowCreateModal(false)}>
+                <button type="button" className="sails-btn sails-btn--secondary" onClick={() => setShowCreateModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="klao-btn klao-btn--primary">
+                <button type="submit" className="sails-btn sails-btn--primary">
                   {editingPositionId ? 'Save Changes' : 'Create Position'}
                 </button>
               </div>

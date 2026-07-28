@@ -1,13 +1,13 @@
 /**
- * KLAO Shared Types — API Contract
+ * SAILS Shared Types — API Contract
  * 
  * This file defines all TypeScript interfaces used between
- * KLAO Core (Backend) and KLAO Console (Frontend).
+ * SAILS Core (Backend) and SAILS Console (Frontend).
  * 
  * Both projects should reference these types to ensure
  * type-safe communication across the API boundary.
  * 
- * Source of truth: klao-core/shared/types.ts
+ * Source of truth: sails-core/shared/types.ts
  */
 
 // ─── Core Models ──────────────────────────────────────────────
@@ -20,7 +20,7 @@ export interface Tenant {
   updatedAt: string;
 }
 
-export interface KlaoTableDefinition {
+export interface SailsTableDefinition {
   id: string;
   tenantId: string;
   name: string;        // UI display name (e.g., "Sales Leads")
@@ -29,12 +29,12 @@ export interface KlaoTableDefinition {
   isSystem?: boolean;  // Platform system table indicator
   createdAt: string;
   updatedAt?: string;
-  fields?: KlaoFieldDefinition[];
+  fields?: SailsFieldDefinition[];
   rules?: ValidationRule[];
   _count?: { fields: number };
 }
 
-export interface KlaoFieldDefinition {
+export interface SailsFieldDefinition {
   id: string;
   tableId: string;
   name: string;          // UI display name (e.g., "Email Address")
@@ -67,7 +67,7 @@ export interface Team {
   parentId?: string | null;
 }
 
-export interface KlaoUser {
+export interface SailsUser {
   id: string;
   tenantId: string | null;
   email: string;
@@ -118,7 +118,7 @@ export interface ProvisionTenantRequest {
 
 export interface ProvisionTenantResponse {
   tenant: Tenant;
-  user: KlaoUser;
+  user: SailsUser;
   adminTeam: Team;
 }
 
@@ -320,7 +320,7 @@ export interface AutoNumberFieldConfig {
   digits?: number;
 }
 
-export type KlaoFieldConfig =
+export type SailsFieldConfig =
   | ShortTextFieldConfig
   | LongTextFieldConfig
   | NumberFieldConfig

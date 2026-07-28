@@ -18,7 +18,7 @@ const components = [
   { name: 'AdminAuditLog', label: 'Audit History' }
 ];
 
-const targetDir = '/Users/asana/KLAO/klao-console/src/pages/admin';
+const targetDir = '/Users/asana/SAILS/sails-console/src/pages/admin';
 
 const template = (name, label) => `import React from 'react';
 
@@ -28,23 +28,23 @@ const template = (name, label) => `import React from 'react';
  */
 const ${name}: React.FC = () => {
   return (
-    <div className="klao-admin-scaffold" style={{ padding: '20px' }}>
+    <div className="sails-admin-scaffold" style={{ padding: '20px' }}>
       <div style={{ 
         padding: '30px', 
-        border: '1px dashed var(--klao-border-color)', 
-        borderRadius: 'var(--klao-radius-lg)',
+        border: '1px dashed var(--sails-border-color)', 
+        borderRadius: 'var(--sails-radius-lg)',
         background: 'rgba(255,255,255,0.3)',
         textAlign: 'center'
       }}>
-        <h2 style={{ marginBottom: '10px', color: 'var(--klao-text-main)' }}>${label} Module</h2>
-        <p style={{ color: 'var(--klao-text-muted)', maxWidth: '500px', margin: '0 auto' }}>
+        <h2 style={{ marginBottom: '10px', color: 'var(--sails-text-main)' }}>${label} Module</h2>
+        <p style={{ color: 'var(--sails-text-muted)', maxWidth: '500px', margin: '0 auto' }}>
           This is a scaffolded component for the <strong>${label}</strong> administrative plugin. 
           Ready for implementation logic, data fetching, and UI controls.
         </p>
         
         <div style={{ marginTop: '30px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
           {[1, 2, 3].map(i => (
-            <div key={i} style={{ height: '100px', background: 'rgba(0,0,0,0.05)', borderRadius: 'var(--klao-radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div key={i} style={{ height: '100px', background: 'rgba(0,0,0,0.05)', borderRadius: 'var(--sails-radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: '0.8rem', color: 'rgba(0,0,0,0.2)', fontWeight: 600 }}>WIDGET SLOT {i}</span>
             </div>
           ))}

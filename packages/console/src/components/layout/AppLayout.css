@@ -1,11 +1,11 @@
-.klao-layout-wrapper {
+.sails-layout-wrapper {
   display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100%;
 }
 
-.klao-layout-wrapper__container {
+.sails-layout-wrapper__container {
   flex: 1;
   display: flex;
   flex-direction: row;
@@ -13,9 +13,9 @@
   overflow: hidden;
 }
 
-.klao-main-content {
+.sails-main-content {
   flex: 1;
-  padding: calc(var(--klao-spacing-unit) * 4);
+  padding: calc(var(--sails-spacing-unit) * 4);
   overflow-y: auto;
-  background-color: var(--klao-bg-body);
+  background-color: var(--sails-bg-body);
 }

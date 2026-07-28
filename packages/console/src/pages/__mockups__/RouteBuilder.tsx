@@ -214,8 +214,8 @@ export const RouteBuilder: React.FC = () => {
       <div className="rb-toolbar">
         <span className="rb-toolbar__brand">Routing Process Builder</span>
         <div className="rb-toolbar__actions">
-          <button className="klao-btn klao-btn--ghost klao-btn--sm">Cancel</button>
-          <button className="klao-btn klao-btn--primary klao-btn--sm">Save Process</button>
+          <button className="sails-btn sails-btn--ghost sails-btn--sm">Cancel</button>
+          <button className="sails-btn sails-btn--primary sails-btn--sm">Save Process</button>
         </div>
       </div>
 
@@ -242,7 +242,7 @@ export const RouteBuilder: React.FC = () => {
                     value={process.description}
                     onChange={(e) => setProcess((p) => ({ ...p, description: e.target.value }))}
                     placeholder="Description..."
-                    style={{ border: 'none', background: 'none', fontSize: 12, color: 'var(--klao-text-muted)', flex: 1 }}
+                    style={{ border: 'none', background: 'none', fontSize: 12, color: 'var(--sails-text-muted)', flex: 1 }}
                   />
                 </div>
               </div>
@@ -333,13 +333,13 @@ export const RouteBuilder: React.FC = () => {
                               {/* Name */}
                               <div className="rb-form-group rb-form-group--half">
                                 <label className="rb-form-label">Stage Name</label>
-                                <input className="klao-input" value={stage.name} onChange={(e) => updateStage(stage.id, { name: e.target.value })} />
+                                <input className="sails-input" value={stage.name} onChange={(e) => updateStage(stage.id, { name: e.target.value })} />
                               </div>
 
                               {/* Router Type */}
                               <div className="rb-form-group rb-form-group--half">
                                 <label className="rb-form-label">Router Type</label>
-                                <select className="klao-input" value={stage.routerType} onChange={(e) => updateStage(stage.id, { routerType: e.target.value as RouterType })}>
+                                <select className="sails-input" value={stage.routerType} onChange={(e) => updateStage(stage.id, { routerType: e.target.value as RouterType })}>
                                   {ROUTER_TYPES.map((r) => (
                                     <option key={r.type} value={r.type}>{r.label} — {r.desc}</option>
                                   ))}
@@ -351,7 +351,7 @@ export const RouteBuilder: React.FC = () => {
                                 <label className="rb-form-label">
                                   {stage.routerType === 'field' ? 'Field Name (dynamic)' : 'Router Value'}
                                 </label>
-                                <input className="klao-input" value={stage.routerValue}
+                                <input className="sails-input" value={stage.routerValue}
                                   placeholder={stage.routerType === 'user' ? 'e.g. user@somsak' : stage.routerType === 'team' ? 'e.g. Legal Team' : stage.routerType === 'field' ? 'e.g. manager_id' : ''}
                                   onChange={(e) => updateStage(stage.id, { routerValue: e.target.value })} />
                               </div>
@@ -359,7 +359,7 @@ export const RouteBuilder: React.FC = () => {
                               {/* Display Label */}
                               <div className="rb-form-group rb-form-group--half">
                                 <label className="rb-form-label">Display Label</label>
-                                <input className="klao-input" value={stage.routerLabel} placeholder="e.g. Legal Counsel" onChange={(e) => updateStage(stage.id, { routerLabel: e.target.value })} />
+                                <input className="sails-input" value={stage.routerLabel} placeholder="e.g. Legal Counsel" onChange={(e) => updateStage(stage.id, { routerLabel: e.target.value })} />
                               </div>
 
                               {/* Entry Condition */}
@@ -367,7 +367,7 @@ export const RouteBuilder: React.FC = () => {
                                 <label className="rb-form-label">
                                   <Filter size={11} /> Entry Condition (expression)
                                 </label>
-                                <input className="klao-input rb-code-input" value={stage.entryCondition}
+                                <input className="sails-input rb-code-input" value={stage.entryCondition}
                                   placeholder='e.g. record.amount > 50000 && record.type === "enterprise"'
                                   onChange={(e) => updateStage(stage.id, { entryCondition: e.target.value })} />
                                 <span className="rb-form-hint">Leave empty to always enter this stage. Uses record context variables.</span>
@@ -397,7 +397,7 @@ export const RouteBuilder: React.FC = () => {
                                 <label className="rb-form-label">
                                   <Clock size={11} /> Timeout (hours)
                                 </label>
-                                <input className="klao-input" type="number" value={stage.timeoutHours ?? ''}
+                                <input className="sails-input" type="number" value={stage.timeoutHours ?? ''}
                                   placeholder="No timeout"
                                   onChange={(e) => updateStage(stage.id, { timeoutHours: e.target.value ? Number(e.target.value) : null })} />
                               </div>

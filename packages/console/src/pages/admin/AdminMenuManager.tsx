@@ -4,7 +4,7 @@ import {
   Plus, Edit2, Trash2, ChevronRight, ChevronDown, 
   Database, Layers, Move, GripVertical, X
 } from 'lucide-react';
-import { ConsoleApp, ConsoleMenu } from '@klao/shared';
+import { ConsoleApp, ConsoleMenu } from '@sails/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import './AdminMenuManager.css';
@@ -84,22 +84,22 @@ const AdminMenuManager: React.FC = () => {
 
   const renderMenuItem = (menu: ConsoleMenu, depth = 0) => (
     <React.Fragment key={menu.id}>
-      <div className="klao-menu-item" style={{ marginLeft: `${depth * 24}px` }}>
-        <div className="klao-menu-item__handle"><GripVertical size={16} /></div>
-        <div className="klao-menu-item__icon">
+      <div className="sails-menu-item" style={{ marginLeft: `${depth * 24}px` }}>
+        <div className="sails-menu-item__handle"><GripVertical size={16} /></div>
+        <div className="sails-menu-item__icon">
           <DynamicIcon name={menu.icon || 'Circle'} size={16} />
         </div>
-        <div className="klao-menu-item__info">
+        <div className="sails-menu-item__info">
           <span className="label">{menu.label}</span>
           <span className="path">{menu.path || 'No Path'}</span>
           <span className={`badge badge--${menu.actionType}`}>{menu.actionType}</span>
           {menu.isSystem && (
-            <span style={{ fontSize: '0.7rem', background: 'rgba(59,130,246,0.15)', color: 'var(--klao-primary, #3b82f6)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, marginLeft: '6px' }}>
+            <span style={{ fontSize: '0.7rem', background: 'rgba(59,130,246,0.15)', color: 'var(--sails-primary, #3b82f6)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, marginLeft: '6px' }}>
               System
             </span>
           )}
         </div>
-        <div className="klao-menu-item__actions">
+        <div className="sails-menu-item__actions">
           <button onClick={() => setIsEditing({...menu})} title="Edit Menu"><Edit2 size={14} /></button>
           <button onClick={() => setIsEditing({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: menu.id, order: 0 } as any)} title="Add Submenu"><Plus size={14} /></button>
           {!menu.isSystem && <button className="delete" title="Delete Menu"><Trash2 size={14} /></button>}
@@ -110,10 +110,10 @@ const AdminMenuManager: React.FC = () => {
   );
 
   return (
-    <div className="klao-menu-manager">
-      <div className="klao-menu-manager__header">
-        <div className="klao-app-selector">
-          <label className="klao-label" style={{ marginRight: '10px' }}>Selected Application:</label>
+    <div className="sails-menu-manager">
+      <div className="sails-menu-manager__header">
+        <div className="sails-app-selector">
+          <label className="sails-label" style={{ marginRight: '10px' }}>Selected Application:</label>
           <CustomSelect
             value={selectedAppId}
             options={apps.map(app => ({ value: app.id, label: app.name }))}
@@ -122,7 +122,7 @@ const AdminMenuManager: React.FC = () => {
           />
         </div>
         <button 
-          className="klao-btn klao-btn--primary"
+          className="sails-btn sails-btn--primary"
           onClick={() => setIsEditing({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: null, order: menus.length } as any)}
         >
           <Plus size={18} />
@@ -130,27 +130,27 @@ const AdminMenuManager: React.FC = () => {
         </button>
       </div>
 
-      <div className="klao-menu-tree">
-        {loading ? <div className="klao-admin-loading">Loading Menu Structure...</div> : menus.map(m => renderMenuItem(m))}
+      <div className="sails-menu-tree">
+        {loading ? <div className="sails-admin-loading">Loading Menu Structure...</div> : menus.map(m => renderMenuItem(m))}
       </div>
 
       {isEditing && createPortal(
-        <div className="klao-modal-overlay" style={{ zIndex: 9999 }}>
-          <div className="klao-card" style={{ width: '460px', padding: '28px', borderRadius: 'var(--klao-radius-lg, 20px)' }}>
+        <div className="sails-modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="sails-card" style={{ width: '460px', padding: '28px', borderRadius: 'var(--sails-radius-lg, 20px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
                 {isEditing.id.startsWith('new-') ? 'New Menu Item' : 'Edit Menu Item'}
               </h3>
-              <button onClick={() => setIsEditing(null)} style={{ background: 'none', border: 'none', color: 'var(--klao-text-muted)', cursor: 'pointer' }}>
+              <button onClick={() => setIsEditing(null)} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleSave}>
-              <div className="klao-form-group" style={{ marginBottom: '16px' }}>
-                <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Label</label>
+              <div className="sails-form-group" style={{ marginBottom: '16px' }}>
+                <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Label</label>
                 <input 
                   type="text" 
-                  className="klao-input"
+                  className="sails-input"
                   style={{ width: '100%' }}
                   value={isEditing.label} 
                   onChange={e => setIsEditing({...isEditing, label: e.target.value})} 
@@ -158,18 +158,18 @@ const AdminMenuManager: React.FC = () => {
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                <div className="klao-form-group">
-                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Icon</label>
+                <div className="sails-form-group">
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Icon</label>
                   <input 
                     type="text" 
-                    className="klao-input"
+                    className="sails-input"
                     style={{ width: '100%' }}
                     value={isEditing.icon || ''} 
                     onChange={e => setIsEditing({...isEditing, icon: e.target.value})} 
                   />
                 </div>
-                <div className="klao-form-group">
-                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Action Type</label>
+                <div className="sails-form-group">
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Action Type</label>
                   <CustomSelect
                     value={isEditing.actionType}
                     options={[
@@ -180,11 +180,11 @@ const AdminMenuManager: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="klao-form-group" style={{ marginBottom: '16px' }}>
-                <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Browser Path</label>
+              <div className="sails-form-group" style={{ marginBottom: '16px' }}>
+                <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Browser Path</label>
                 <input 
                   type="text" 
-                  className="klao-input"
+                  className="sails-input"
                   style={{ width: '100%' }}
                   value={isEditing.path || ''} 
                   onChange={e => setIsEditing({...isEditing, path: e.target.value})} 
@@ -192,11 +192,11 @@ const AdminMenuManager: React.FC = () => {
                 />
               </div>
               {isEditing.actionType === 'plugin' && (
-                <div className="klao-form-group" style={{ marginBottom: '20px' }}>
-                  <label className="klao-label" style={{ display: 'block', marginBottom: '6px' }}>Component Key (Registry)</label>
+                <div className="sails-form-group" style={{ marginBottom: '20px' }}>
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Component Key (Registry)</label>
                   <input 
                     type="text" 
-                    className="klao-input"
+                    className="sails-input"
                     style={{ width: '100%' }}
                     value={isEditing.componentKey || ''} 
                     onChange={e => setIsEditing({...isEditing, componentKey: e.target.value})} 
@@ -205,8 +205,8 @@ const AdminMenuManager: React.FC = () => {
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
-                <button type="button" className="klao-btn klao-btn--secondary" onClick={() => setIsEditing(null)}>Cancel</button>
-                <button type="submit" className="klao-btn klao-btn--primary">Save Menu</button>
+                <button type="button" className="sails-btn sails-btn--secondary" onClick={() => setIsEditing(null)}>Cancel</button>
+                <button type="submit" className="sails-btn sails-btn--primary">Save Menu</button>
               </div>
             </form>
           </div>

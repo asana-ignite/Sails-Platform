@@ -1,9 +1,9 @@
-# KLAO Console — Implementation Skill Guide
+# SAILS Console — Implementation Skill Guide
 
-This document outlines the architectural patterns, design standards, and implementation roadmap for building the **KLAO Console**. This guide serves as the long-term source of truth for AI agents working on this codebase.
+This document outlines the architectural patterns, design standards, and implementation roadmap for building the **SAILS Console**. This guide serves as the long-term source of truth for AI agents working on this codebase.
 
 ## 1. Core Principles
-- **Headless First**: The Console is a thin, premium UI layer. Logic for data structures and validation lives in **KLAO Core** (Backend).
+- **Headless First**: The Console is a thin, premium UI layer. Logic for data structures and validation lives in **SAILS Core** (Backend).
 - **Premium Aesthetics**: Replicate the **Aquiry** template’s "rich" feel. Use deep shadows, subtle gradients, and smooth transitions.
 - **Offline Ready**: Every architectural decision must support the future migration to a PWA (IndexedDB caching, Client-side IDs).
 
@@ -16,23 +16,23 @@ This document outlines the architectural patterns, design standards, and impleme
 
 ## 3. Design System (Aquiry-Inspired)
 While we use **Aquiry** as a visual reference, the implementation is custom.
-- **BEM Prefix**: `klao-` (e.g., `.klao-card`, `.klao-card__header`, `.klao-btn--primary`).
+- **BEM Prefix**: `sails-` (e.g., `.sails-card`, `.sails-card__header`, `.sails-btn--primary`).
 - **Interactivity**: Native React state only. NO jQuery, MetisMenu, or SimpleBar.
 - **Assets**: Copy only necessary images/vectors from `_assets_references` into the project.
 
 ### Layout Structure (BEM)
 ```jsx
-<div className="klao-layout">
-  <Topbar className="klao-layout__topbar" />
-  <Sidebar className="klao-layout__sidebar" />
-  <main className="klao-layout__main">
-    <div className="klao-page">
-      <div className="klao-container">
+<div className="sails-layout">
+  <Topbar className="sails-layout__topbar" />
+  <Sidebar className="sails-layout__sidebar" />
+  <main className="sails-layout__main">
+    <div className="sails-page">
+      <div className="sails-container">
         {/* Dynamic Components */}
       </div>
     </div>
   </main>
-  <Footer className="klao-layout__footer" />
+  <Footer className="sails-layout__footer" />
 </div>
 ```
 
@@ -63,16 +63,16 @@ While we use **Aquiry** as a visual reference, the implementation is custom.
 ---
 
 # Skill: Frontend Design System (Aquiry-Inspired)
-> **Load when:** Creating UI components, defining layouts, or writing CSS for the `klao-console` project.
+> **Load when:** Creating UI components, defining layouts, or writing CSS for the `sails-console` project.
 
 ## Structural Conventions
 - **Interactivity:** DO NOT use jQuery, MetisMenu, or SimpleBar. All interactivity (dropdowns, sidebar toggling) MUST be managed natively using React `useState`.
 
 ## Styling Rules (Non-Negotiable)
 - **NO Frameworks:** DO NOT use Tailwind CSS or Bootstrap utility classes (e.g., `container-fluid`, `col-12`, `shadow-sm`).
-- **BEM Methodology:** You MUST write Vanilla CSS using BEM prefixed with `klao-` (e.g., `.klao-card`, `.klao-card__header`, `.klao-btn--primary`).
+- **BEM Methodology:** You MUST write Vanilla CSS using BEM prefixed with `sails-` (e.g., `.sails-card`, `.sails-card__header`, `.sails-btn--primary`).
 - **Icons:** Use `lucide-react` (which matches the clean look of Eva Icons) or inline SVGs. Do not load external icon fonts.
 
 Refer all asset from `_assets_references` but copy asset needed to project folders.
 
-## After Develop, conduct a test in Docker name it `klao-template` and share the test URL
+## After Develop, conduct a test in Docker name it `sails-template` and share the test URL

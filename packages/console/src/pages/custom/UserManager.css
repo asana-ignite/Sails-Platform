@@ -1,89 +1,89 @@
-/* KLAO User Manager Styles */
+/* SAILS User Manager Styles */
 
-.klao-user-manager {
+.sails-user-manager {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--klao-spacing-unit) * 3);
+  gap: calc(var(--sails-spacing-unit) * 3);
   height: 100%;
 }
 
-.klao-user-manager__toolbar {
+.sails-user-manager__toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
 }
 
-.klao-user-manager__search-wrapper {
+.sails-user-manager__search-wrapper {
   position: relative;
   flex: 1;
   max-width: 400px;
 }
 
-.klao-user-manager__search-icon {
+.sails-user-manager__search-icon {
   position: absolute;
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   pointer-events: none;
 }
 
-.klao-user-manager__search-input {
+.sails-user-manager__search-input {
   width: 100%;
   padding: 10px 12px 10px 40px;
-  background: var(--klao-bg-card);
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-md);
+  background: var(--sails-bg-card);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
   font-size: 0.9rem;
   transition: all 0.2s;
 }
 
-.klao-user-manager__search-input:focus {
-  border-color: var(--klao-primary);
-  box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
+.sails-user-manager__search-input:focus {
+  border-color: var(--sails-primary);
+  box-shadow: 0 0 0 3px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
   outline: none;
 }
 
-.klao-user-manager__actions {
+.sails-user-manager__actions {
   display: flex;
   gap: 12px;
 }
 
-.klao-user-manager__filter-container {
+.sails-user-manager__filter-container {
   position: relative;
 }
 
-.klao-user-manager__filter-popover {
+.sails-user-manager__filter-popover {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
   width: 360px;
-  background: var(--klao-bg-card);
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-lg);
-  box-shadow: var(--klao-shadow-lg);
+  background: var(--sails-bg-card);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-lg);
+  box-shadow: var(--sails-shadow-lg);
   z-index: 100;
   overflow: hidden;
-  animation: klao-fade-in 0.2s ease-out;
+  animation: sails-fade-in 0.2s ease-out;
 }
 
-.klao-user-manager__filter-group {
+.sails-user-manager__filter-group {
   padding: 16px;
-  border-bottom: 1px solid var(--klao-border-color);
+  border-bottom: 1px solid var(--sails-border-color);
 }
 
-.klao-user-manager__filter-group label {
+.sails-user-manager__filter-group label {
   display: block;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   margin-bottom: 12px;
 }
 
-.klao-user-manager__filter-options {
+.sails-user-manager__filter-options {
   display: flex;
   flex-wrap: nowrap;
   gap: 8px;
@@ -91,109 +91,109 @@
   padding-bottom: 4px;
 }
 
-.klao-filter-chip {
+.sails-filter-chip {
   padding: 6px 12px;
   border-radius: 100px;
-  border: 1px solid var(--klao-border-color);
-  background: var(--klao-bg-light);
+  border: 1px solid var(--sails-border-color);
+  background: var(--sails-bg-light);
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.klao-filter-chip:hover {
-  background: var(--klao-bg-hover);
+.sails-filter-chip:hover {
+  background: var(--sails-bg-hover);
 }
 
-.klao-filter-chip.active {
-  background: var(--klao-primary);
+.sails-filter-chip.active {
+  background: var(--sails-primary);
   color: white;
-  border-color: var(--klao-primary);
+  border-color: var(--sails-primary);
 }
 
-.klao-user-manager__filter-footer {
+.sails-user-manager__filter-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: var(--klao-bg-light);
+  background: var(--sails-bg-light);
 }
 
-.klao-user-manager__filter-clear {
+.sails-user-manager__filter-clear {
   background: none;
   border: none;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   font-size: 0.85rem;
   cursor: pointer;
   padding: 4px 8px;
 }
 
-.klao-user-manager__filter-clear:hover {
-  color: var(--klao-danger);
+.sails-user-manager__filter-clear:hover {
+  color: var(--sails-danger);
 }
 
 /* Table Styles */
-.klao-user-manager__table-wrapper {
+.sails-user-manager__table-wrapper {
   overflow: visible;
   padding: 0 !important;
 }
 
-.klao-user-manager__table {
+.sails-user-manager__table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
 }
 
-.klao-user-manager__th {
+.sails-user-manager__th {
   padding: 12px 16px;
-  background: var(--klao-bg-light);
+  background: var(--sails-bg-light);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--klao-text-muted);
-  border-bottom: 1px solid var(--klao-border-color);
+  color: var(--sails-text-muted);
+  border-bottom: 1px solid var(--sails-border-color);
 }
 
-.klao-user-manager__th--sortable {
+.sails-user-manager__th--sortable {
   cursor: pointer;
 }
 
-.klao-user-manager__th--sortable:hover {
-  color: var(--klao-text-main);
+.sails-user-manager__th--sortable:hover {
+  color: var(--sails-text-main);
 }
 
-.klao-user-manager__th-content {
+.sails-user-manager__th-content {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.klao-user-manager__td {
+.sails-user-manager__td {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--klao-border-color);
+  border-bottom: 1px solid var(--sails-border-color);
   vertical-align: middle;
 }
 
-.klao-user-manager__tr:hover {
-  background: var(--klao-bg-hover);
+.sails-user-manager__tr:hover {
+  background: var(--sails-bg-hover);
 }
 
-.klao-user-manager__tr--selected {
-  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.05);
+.sails-user-manager__tr--selected {
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.05);
 }
 
-.klao-user-manager__identity {
+.sails-user-manager__identity {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.klao-user-manager__avatar {
+.sails-user-manager__avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--klao-primary);
+  background: var(--sails-primary);
   color: white;
   display: flex;
   align-items: center;
@@ -202,42 +202,42 @@
   font-size: 0.85rem;
 }
 
-.klao-user-manager__info {
+.sails-user-manager__info {
   display: flex;
   flex-direction: column;
 }
 
-.klao-user-manager__name {
+.sails-user-manager__name {
   font-weight: 500;
   font-size: 0.9rem;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
 }
 
-.klao-user-manager__title-label {
+.sails-user-manager__title-label {
   font-size: 0.75rem;
-  color: var(--klao-primary);
+  color: var(--sails-primary);
   font-weight: 500;
   margin-bottom: 2px;
 }
 
-.klao-user-manager__email {
+.sails-user-manager__email {
   font-size: 0.8rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
-.klao-user-manager__role-tag {
+.sails-user-manager__role-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
   background: rgba(0, 0, 0, 0.04);
-  border: 1px solid var(--klao-border-color);
+  border: 1px solid var(--sails-border-color);
   border-radius: 100px;
   font-size: 0.8rem;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
 }
 
-.klao-status-badge {
+.sails-status-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -247,27 +247,27 @@
   font-weight: 600;
 }
 
-.klao-status-badge--active { color: var(--klao-success, #10b981); background: var(--klao-success-light, rgba(16, 185, 129, 0.1)); }
-.klao-status-badge--inactive { color: var(--klao-danger, #ef4444); background: var(--klao-danger-light, rgba(239, 68, 68, 0.1)); }
-.klao-status-badge--pending { color: var(--klao-warning, #f59e0b); background: var(--klao-warning-light, rgba(245, 158, 11, 0.1)); }
+.sails-status-badge--active { color: var(--sails-success, #10b981); background: var(--sails-success-light, rgba(16, 185, 129, 0.1)); }
+.sails-status-badge--inactive { color: var(--sails-danger, #ef4444); background: var(--sails-danger-light, rgba(239, 68, 68, 0.1)); }
+.sails-status-badge--pending { color: var(--sails-warning, #f59e0b); background: var(--sails-warning-light, rgba(245, 158, 11, 0.1)); }
 
-.klao-user-manager__last-login {
+.sails-user-manager__last-login {
   font-size: 0.85rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
 /* Actions Menu */
-.klao-user-manager__action-wrapper {
+.sails-user-manager__action-wrapper {
   position: relative;
 }
 
-.klao-user-manager__action-btn {
+.sails-user-manager__action-btn {
   width: 32px;
   height: 32px;
   border: none;
   background: transparent;
-  border-radius: var(--klao-radius-md);
-  color: var(--klao-text-muted);
+  border-radius: var(--sails-radius-md);
+  color: var(--sails-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -275,27 +275,27 @@
   transition: all 0.2s;
 }
 
-.klao-user-manager__action-btn:hover,
-.klao-user-manager__action-btn.active {
-  background: var(--klao-bg-light);
-  color: var(--klao-text-main);
+.sails-user-manager__action-btn:hover,
+.sails-user-manager__action-btn.active {
+  background: var(--sails-bg-light);
+  color: var(--sails-text-main);
 }
 
-.klao-user-manager__context-menu {
+.sails-user-manager__context-menu {
   position: absolute;
   top: 100%;
   right: 0;
   width: 180px;
-  background: var(--klao-bg-card);
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-md);
-  box-shadow: var(--klao-shadow-lg);
+  background: var(--sails-bg-card);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
+  box-shadow: var(--sails-shadow-lg);
   padding: 4px;
   z-index: 9999 !important;
-  animation: klao-fade-in 0.2s ease-out;
+  animation: sails-fade-in 0.2s ease-out;
 }
 
-.klao-context-item {
+.sails-context-item {
   width: 100%;
   display: flex;
   align-items: center;
@@ -305,124 +305,124 @@
   background: transparent;
   border-radius: 4px;
   font-size: 0.85rem;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.klao-context-item:hover {
-  background: var(--klao-bg-hover);
+.sails-context-item:hover {
+  background: var(--sails-bg-hover);
 }
 
-.klao-context-item--danger {
-  color: var(--klao-danger);
+.sails-context-item--danger {
+  color: var(--sails-danger);
 }
 
-.klao-context-divider {
+.sails-context-divider {
   height: 1px;
-  background: var(--klao-border-color);
+  background: var(--sails-border-color);
   margin: 4px 0;
 }
 
 /* Pagination */
-.klao-user-manager__pagination {
+.sails-user-manager__pagination {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border-top: 1px solid var(--klao-border-color);
+  border-top: 1px solid var(--sails-border-color);
 }
 
-.klao-user-manager__pagination-info {
+.sails-user-manager__pagination-info {
   display: flex;
   align-items: center;
   gap: 24px;
 }
 
-.klao-user-manager__pagination-range {
+.sails-user-manager__pagination-range {
   font-size: 0.85rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
-.klao-user-manager__page-size {
+.sails-user-manager__page-size {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.klao-user-manager__page-size-label {
+.sails-user-manager__page-size-label {
   font-size: 0.85rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
-.klao-pagination-controls {
+.sails-pagination-controls {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.klao-pagination-pages {
+.sails-pagination-pages {
   display: flex;
   gap: 4px;
 }
 
-.klao-pagination-page {
+.sails-pagination-page {
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-md);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
   background: transparent;
   font-size: 0.85rem;
   cursor: pointer;
 }
 
-.klao-pagination-page--active {
-  background: var(--klao-primary);
+.sails-pagination-page--active {
+  background: var(--sails-primary);
   color: white;
-  border-color: var(--klao-primary);
+  border-color: var(--sails-primary);
 }
 
-.klao-pagination-btn {
+.sails-pagination-btn {
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-md);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
   background: transparent;
   cursor: pointer;
 }
 
-.klao-pagination-btn:disabled {
+.sails-pagination-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 /* Spinner */
-.klao-loading-spinner {
+.sails-loading-spinner {
   width: 40px;
   height: 40px;
   border: 3px solid rgba(0, 0, 0, 0.1);
   border-radius: 50%;
-  border-top-color: var(--klao-primary);
-  animation: klao-spin 1s ease-in-out infinite;
+  border-top-color: var(--sails-primary);
+  animation: sails-spin 1s ease-in-out infinite;
   margin: 0 auto;
 }
 
-@keyframes klao-spin {
+@keyframes sails-spin {
   to { transform: rotate(360deg); }
 }
 
-@keyframes klao-fade-in {
+@keyframes sails-fade-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 /* Drawer Styles */
-.klao-add-drawer {
+.sails-add-drawer {
   position: fixed;
   top: 0;
   left: 0;
@@ -433,7 +433,7 @@
   justify-content: flex-end;
 }
 
-.klao-add-drawer__overlay {
+.sails-add-drawer__overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -443,104 +443,104 @@
   backdrop-filter: blur(4px);
 }
 
-.klao-add-drawer__panel {
+.sails-add-drawer__panel {
   position: relative;
   width: 480px;
   height: 100%;
-  background: var(--klao-bg-card);
+  background: var(--sails-bg-card);
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  animation: klao-slide-in 0.3s ease-out;
+  animation: sails-slide-in 0.3s ease-out;
 }
 
-@keyframes klao-slide-in {
+@keyframes sails-slide-in {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
 
-.klao-add-drawer__header {
+.sails-add-drawer__header {
   padding: 24px;
-  border-bottom: 1px solid var(--klao-border-color);
+  border-bottom: 1px solid var(--sails-border-color);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
 }
 
-.klao-add-drawer__title {
+.sails-add-drawer__title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   margin-bottom: 4px;
 }
 
-.klao-add-drawer__subtitle {
+.sails-add-drawer__subtitle {
   font-size: 0.85rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
-.klao-add-drawer__close {
+.sails-add-drawer__close {
   background: none;
   border: none;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   cursor: pointer;
   padding: 4px;
   border-radius: 50%;
   transition: all 0.2s;
 }
 
-.klao-add-drawer__close:hover {
-  background: var(--klao-bg-light);
-  color: var(--klao-text-main);
+.sails-add-drawer__close:hover {
+  background: var(--sails-bg-light);
+  color: var(--sails-text-main);
 }
 
-.klao-add-drawer__body {
+.sails-add-drawer__body {
   flex: 1;
   padding: 24px;
   overflow-y: auto;
 }
 
-.klao-form-group {
+.sails-form-group {
   margin-bottom: 20px;
 }
 
-.klao-label {
+.sails-label {
   display: block;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
   margin-bottom: 8px;
 }
 
-.klao-input {
+.sails-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--klao-border-color);
-  border-radius: var(--klao-radius-md);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
   font-size: 0.9rem;
   transition: all 0.2s;
 }
 
-.klao-input:focus {
-  border-color: var(--klao-primary);
-  box-shadow: 0 0 0 3px rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.1);
+.sails-input:focus {
+  border-color: var(--sails-primary);
+  box-shadow: 0 0 0 3px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
   outline: none;
 }
 
-.klao-role-selector {
+.sails-role-selector {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.klao-role-option {
+.sails-role-option {
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 16px;
-  background: var(--klao-bg-light);
+  background: var(--sails-bg-light);
   border: 2px solid transparent;
-  border-radius: var(--klao-radius-lg);
+  border-radius: var(--sails-radius-lg);
   cursor: pointer;
   text-align: left;
   transition: all 0.2s;
@@ -549,46 +549,46 @@
   flex-shrink: 0;
 }
 
-.klao-role-option:hover {
-  background: var(--klao-bg-hover);
+.sails-role-option:hover {
+  background: var(--sails-bg-hover);
 }
 
-.klao-role-option.active {
-  background: rgba(var(--klao-primary-r), var(--klao-primary-g), var(--klao-primary-b), 0.05);
-  border-color: var(--klao-primary);
+.sails-role-option.active {
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.05);
+  border-color: var(--sails-primary);
 }
 
-.klao-role-option svg {
+.sails-role-option svg {
   flex-shrink: 0;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
 }
 
-.klao-role-option.active svg {
-  color: var(--klao-primary);
+.sails-role-option.active svg {
+  color: var(--sails-primary);
 }
 
-.klao-role-info {
+.sails-role-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
   flex: 1;
 }
 
-.klao-role-name {
+.sails-role-name {
   font-weight: 600;
   font-size: 0.95rem;
-  color: var(--klao-text-main);
+  color: var(--sails-text-main);
 }
 
-.klao-role-desc {
+.sails-role-desc {
   font-size: 0.8rem;
-  color: var(--klao-text-muted);
+  color: var(--sails-text-muted);
   line-height: 1.3;
 }
 
-.klao-add-drawer__footer {
+.sails-add-drawer__footer {
   padding: 24px;
-  border-top: 1px solid var(--klao-border-color);
+  border-top: 1px solid var(--sails-border-color);
   display: flex;
   justify-content: flex-end;
   gap: 12px;

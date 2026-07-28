@@ -1,6 +1,6 @@
-/* KLAO User Details Modal - Ghost Glass DNA */
+/* SAILS User Details Modal - Ghost Glass DNA */
 
-.klao-user-details-overlay {
+.sails-user-details-overlay {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
@@ -11,55 +11,55 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  animation: klaoFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: sailsFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.klao-user-details-modal {
+.sails-user-details-modal {
   width: 940px;
   max-width: 95vw;
   max-height: 88vh;
-  background: var(--klao-bg-card, rgba(255, 255, 255, 0.95));
-  border: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
-  border-radius: var(--klao-radius-lg, 20px);
+  background: var(--sails-bg-card, rgba(255, 255, 255, 0.95));
+  border: 1px solid var(--sails-border, rgba(226, 232, 240, 0.8));
+  border-radius: var(--sails-radius-lg, 20px);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  animation: klaoPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  color: var(--klao-text-main, #0f172a);
+  animation: sailsPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--sails-text-main, #0f172a);
   overflow: hidden;
 }
 
-@keyframes klaoFadeIn {
+@keyframes sailsFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes klaoPopIn {
+@keyframes sailsPopIn {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
 
 /* Header */
-.klao-user-details-modal__header {
+.sails-user-details-modal__header {
   padding: 24px 28px 18px 28px;
-  border-bottom: 1px solid var(--klao-border, rgba(226, 232, 240, 0.6));
+  border-bottom: 1px solid var(--sails-border, rgba(226, 232, 240, 0.6));
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  background: var(--klao-bg-surface, rgba(248, 250, 252, 0.5));
+  background: var(--sails-bg-surface, rgba(248, 250, 252, 0.5));
 }
 
-.klao-user-details-modal__user-summary {
+.sails-user-details-modal__user-summary {
   display: flex;
   gap: 16px;
   align-items: center;
 }
 
-.klao-user-details-modal__avatar {
+.sails-user-details-modal__avatar {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--klao-primary, #3b82f6), #1d4ed8);
+  background: linear-gradient(135deg, var(--sails-primary, #3b82f6), #1d4ed8);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -71,44 +71,44 @@
   overflow: hidden;
 }
 
-.klao-user-details-modal__user-info {
+.sails-user-details-modal__user-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.klao-user-details-modal__name-row {
+.sails-user-details-modal__name-row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.klao-user-details-modal__name {
+.sails-user-details-modal__name {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: var(--klao-text-main, #0f172a);
+  color: var(--sails-text-main, #0f172a);
 }
 
-.klao-user-details-modal__email {
+.sails-user-details-modal__email {
   font-size: 0.88rem;
-  color: var(--klao-text-muted, #64748b);
+  color: var(--sails-text-muted, #64748b);
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.klao-user-details-modal__header-actions {
+.sails-user-details-modal__header-actions {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.klao-user-details-modal__close-btn {
+.sails-user-details-modal__close-btn {
   background: transparent;
   border: none;
-  color: var(--klao-text-muted, #64748b);
+  color: var(--sails-text-muted, #64748b);
   cursor: pointer;
   padding: 6px;
   border-radius: 8px;
@@ -118,24 +118,24 @@
   transition: all 0.15s ease;
 }
 
-.klao-user-details-modal__close-btn:hover {
+.sails-user-details-modal__close-btn:hover {
   background: rgba(0, 0, 0, 0.05);
-  color: var(--klao-text-main, #0f172a);
+  color: var(--sails-text-main, #0f172a);
 }
 
 /* Stat Cards Banner */
-.klao-user-details-modal__stats-banner {
+.sails-user-details-modal__stats-banner {
   padding: 16px 28px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
-  background: var(--klao-bg-body, rgba(241, 245, 249, 0.4));
-  border-bottom: 1px solid var(--klao-border, rgba(226, 232, 240, 0.6));
+  background: var(--sails-bg-body, rgba(241, 245, 249, 0.4));
+  border-bottom: 1px solid var(--sails-border, rgba(226, 232, 240, 0.6));
 }
 
-.klao-stat-card {
-  background: var(--klao-bg-card, rgba(255, 255, 255, 0.9));
-  border: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+.sails-stat-card {
+  background: var(--sails-bg-card, rgba(255, 255, 255, 0.9));
+  border: 1px solid var(--sails-border, rgba(226, 232, 240, 0.8));
   border-radius: 12px;
   padding: 12px 16px;
   display: flex;
@@ -144,12 +144,12 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.klao-stat-card:hover {
+.sails-stat-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.klao-stat-card__icon {
+.sails-stat-card__icon {
   width: 38px;
   height: 38px;
   border-radius: 10px;
@@ -159,59 +159,59 @@
   flex-shrink: 0;
 }
 
-.klao-stat-card__icon--position {
+.sails-stat-card__icon--position {
   background: rgba(59, 130, 246, 0.12);
   color: #3b82f6;
 }
 
-.klao-stat-card__icon--team {
+.sails-stat-card__icon--team {
   background: rgba(16, 185, 129, 0.12);
   color: #10b981;
 }
 
-.klao-stat-card__icon--tables {
+.sails-stat-card__icon--tables {
   background: rgba(139, 92, 246, 0.12);
   color: #8b5cf6;
 }
 
-.klao-stat-card__content {
+.sails-stat-card__content {
   display: flex;
   flex-direction: column;
 }
 
-.klao-stat-card__value {
+.sails-stat-card__value {
   font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.1;
-  color: var(--klao-text-main, #0f172a);
+  color: var(--sails-text-main, #0f172a);
 }
 
-.klao-stat-card__label {
+.sails-stat-card__label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--klao-text-muted, #64748b);
+  color: var(--sails-text-muted, #64748b);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-top: 2px;
 }
 
 /* Tabs Bar */
-.klao-user-details-modal__tabs {
+.sails-user-details-modal__tabs {
   padding: 0 28px;
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid var(--klao-border, rgba(226, 232, 240, 0.6));
-  background: var(--klao-bg-card, #ffffff);
+  border-bottom: 1px solid var(--sails-border, rgba(226, 232, 240, 0.6));
+  background: var(--sails-bg-card, #ffffff);
 }
 
-.klao-tab-btn {
+.sails-tab-btn {
   padding: 14px 16px;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--klao-text-muted, #64748b);
+  color: var(--sails-text-muted, #64748b);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -219,18 +219,18 @@
   transition: all 0.15s ease;
 }
 
-.klao-tab-btn:hover {
-  color: var(--klao-primary, #3b82f6);
+.sails-tab-btn:hover {
+  color: var(--sails-primary, #3b82f6);
 }
 
-.klao-tab-btn--active {
-  color: var(--klao-primary, #3b82f6);
-  border-bottom-color: var(--klao-primary, #3b82f6);
+.sails-tab-btn--active {
+  color: var(--sails-primary, #3b82f6);
+  border-bottom-color: var(--sails-primary, #3b82f6);
 }
 
-.klao-tab-btn__badge {
+.sails-tab-btn__badge {
   background: rgba(59, 130, 246, 0.1);
-  color: var(--klao-primary, #3b82f6);
+  color: var(--sails-primary, #3b82f6);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -238,80 +238,80 @@
 }
 
 /* Content Area */
-.klao-user-details-modal__body {
+.sails-user-details-modal__body {
   flex: 1;
   overflow-y: auto;
   padding: 24px 28px;
-  background: var(--klao-bg-card, #ffffff);
+  background: var(--sails-bg-card, #ffffff);
 }
 
 /* Section Cards & Panels */
-.klao-details-section {
+.sails-details-section {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.klao-details-group {
-  background: var(--klao-bg-surface, rgba(248, 250, 252, 0.6));
-  border: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+.sails-details-group {
+  background: var(--sails-bg-surface, rgba(248, 250, 252, 0.6));
+  border: 1px solid var(--sails-border, rgba(226, 232, 240, 0.8));
   border-radius: 14px;
   padding: 20px;
 }
 
-.klao-details-group__title {
+.sails-details-group__title {
   font-size: 0.95rem;
   font-weight: 700;
   margin: 0 0 16px 0;
-  color: var(--klao-text-main, #0f172a);
+  color: var(--sails-text-main, #0f172a);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.klao-details-grid {
+.sails-details-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
 }
 
-.klao-field-item {
+.sails-field-item {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.klao-field-item__label {
+.sails-field-item__label {
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--klao-text-muted, #64748b);
+  color: var(--sails-text-muted, #64748b);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
-.klao-field-item__value {
+.sails-field-item__value {
   font-size: 0.92rem;
   font-weight: 600;
-  color: var(--klao-text-main, #0f172a);
+  color: var(--sails-text-main, #0f172a);
 }
 
 /* Position Cards */
-.klao-position-card {
+.sails-position-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
   background: #ffffff;
-  border: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+  border: 1px solid var(--sails-border, rgba(226, 232, 240, 0.8));
   border-radius: 10px;
   margin-bottom: 10px;
 }
 
-.klao-position-card:last-child {
+.sails-position-card:last-child {
   margin-bottom: 0;
 }
 
-.klao-position-card__slot {
+.sails-position-card__slot {
   font-size: 0.78rem;
   font-weight: 700;
   font-family: monospace;
@@ -322,55 +322,55 @@
 }
 
 /* Team List Cards */
-.klao-team-item {
+.sails-team-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
   background: #ffffff;
-  border: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+  border: 1px solid var(--sails-border, rgba(226, 232, 240, 0.8));
   border-radius: 10px;
   margin-bottom: 10px;
 }
 
-.klao-team-item:last-child {
+.sails-team-item:last-child {
   margin-bottom: 0;
 }
 
 /* Data Table Access Table */
-.klao-data-access-table {
+.sails-data-access-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  border: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+  border: 1px solid var(--sails-border, rgba(226, 232, 240, 0.8));
   border-radius: 12px;
   overflow: hidden;
 }
 
-.klao-data-access-table th {
-  background: var(--klao-bg-surface, #f8fafc);
+.sails-data-access-table th {
+  background: var(--sails-bg-surface, #f8fafc);
   padding: 12px 14px;
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--klao-text-muted, #64748b);
+  color: var(--sails-text-muted, #64748b);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   text-align: left;
-  border-bottom: 1px solid var(--klao-border, rgba(226, 232, 240, 0.8));
+  border-bottom: 1px solid var(--sails-border, rgba(226, 232, 240, 0.8));
 }
 
-.klao-data-access-table td {
+.sails-data-access-table td {
   padding: 12px 14px;
   font-size: 0.88rem;
-  border-bottom: 1px solid var(--klao-border, rgba(241, 245, 249, 0.8));
-  color: var(--klao-text-main, #0f172a);
+  border-bottom: 1px solid var(--sails-border, rgba(241, 245, 249, 0.8));
+  color: var(--sails-text-main, #0f172a);
 }
 
-.klao-data-access-table tr:last-child td {
+.sails-data-access-table tr:last-child td {
   border-bottom: none;
 }
 
-.klao-scope-badge {
+.sails-scope-badge {
   display: inline-flex;
   align-items: center;
   padding: 3px 8px;
@@ -380,33 +380,33 @@
   text-transform: uppercase;
 }
 
-.klao-scope-badge--all { background: rgba(16, 185, 129, 0.12); color: #059669; }
-.klao-scope-badge--hierarchy { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
-.klao-scope-badge--team { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
-.klao-scope-badge--owner { background: rgba(245, 158, 11, 0.12); color: #d97706; }
-.klao-scope-badge--none { background: rgba(100, 116, 139, 0.12); color: #64748b; }
+.sails-scope-badge--all { background: rgba(16, 185, 129, 0.12); color: #059669; }
+.sails-scope-badge--hierarchy { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+.sails-scope-badge--team { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+.sails-scope-badge--owner { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+.sails-scope-badge--none { background: rgba(100, 116, 139, 0.12); color: #64748b; }
 
-.klao-th-sortable {
+.sails-th-sortable {
   cursor: pointer;
   user-select: none;
   transition: color 0.15s ease;
 }
 
-.klao-th-sortable:hover {
-  color: var(--klao-primary, #3b82f6);
+.sails-th-sortable:hover {
+  color: var(--sails-primary, #3b82f6);
 }
 
-.klao-th-content {
+.sails-th-content {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.klao-sort-icon--idle {
+.sails-sort-icon--idle {
   opacity: 0.35;
   transition: opacity 0.15s ease;
 }
 
-.klao-th-sortable:hover .klao-sort-icon--idle {
+.sails-th-sortable:hover .sails-sort-icon--idle {
   opacity: 0.8;
 }
