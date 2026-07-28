@@ -50,18 +50,22 @@ model TableDefinition {
 }
 
 model TableLayout {
-  id             String          @id @default(cuid())
-  tableId        String          @map("table_id")
-  viewType       String          @map("view_type")
-  name           String
-  isDefault      Boolean         @default(false) @map("is_default")
-  config         Json
-  recordTitleField String?       @map("record_title_field")
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at")
-  table          TableDefinition @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  id               String           @id @default(cuid())
+  tableId          String?          @map("table_id")
+  layoutType       String           @default("data") @map("layout_type")
+  viewType         String           @map("view_type")
+  name             String
+  systemName       String           @map("system_name")
+  description      String?
+  isDefault        Boolean          @default(false) @map("is_default")
+  config           Json
+  recordTitleField String?          @map("record_title_field")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at")
+  table            TableDefinition? @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
   @@unique([tableId, viewType, name])
+  @@unique([tableId, systemName])
   @@index([tableId])
   @@map("table_layouts")
   @@schema("core")

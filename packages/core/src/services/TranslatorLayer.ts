@@ -27,6 +27,26 @@ export class TranslatorLayer {
       },
     });
 
+    // 3. Seed system field definitions for columns that exist on every physical table
+    const SYSTEM_FIELDS = [
+      { name: 'Created Date', fieldName: 'created_at', physicalType: 'timestamp', logicalType: 'date' },
+      { name: 'Last Modified Date', fieldName: 'updated_at', physicalType: 'timestamp', logicalType: 'date' },
+      { name: 'Owner', fieldName: 'owner_id', physicalType: 'lookup', logicalType: 'lookup' },
+    ];
+    for (const sf of SYSTEM_FIELDS) {
+      await db.fieldDefinition.create({
+        data: {
+          tableId: tableDef.id,
+          name: sf.name,
+          fieldName: sf.fieldName,
+          physicalType: sf.physicalType,
+          logicalType: sf.logicalType,
+          isSystem: true,
+          isRequired: false,
+        },
+      });
+    }
+
     return tableDef;
   }
 

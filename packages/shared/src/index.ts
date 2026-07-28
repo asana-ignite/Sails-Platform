@@ -338,13 +338,17 @@ export type SailsFieldConfig =
 
 // ─── Page Layout Contracts ─────────────────────────────────────
 
+export type LayoutType = 'data' | 'custom';
 export type ViewType = 'LIST' | 'DETAIL' | 'FORM';
 
 export interface TableLayout {
   id: string;
-  tableId: string;
+  tableId: string | null;
+  layoutType: LayoutType;
   viewType: ViewType;
   name: string;
+  systemName: string;
+  description?: string | null;
   isDefault: boolean;
   recordTitleField?: string | null;
   config: LayoutConfig;

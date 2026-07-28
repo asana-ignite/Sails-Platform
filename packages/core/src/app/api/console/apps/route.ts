@@ -25,6 +25,11 @@ export async function GET() {
       }
     });
 
+    apps.sort((a, b) => {
+      if (a.isSystem !== b.isSystem) return a.isSystem ? 1 : -1;
+      return (a.order ?? 0) - (b.order ?? 0);
+    });
+
     return NextResponse.json({ success: true, data: apps });
   } catch (error: any) {
     console.error('[API CONSOLE APPS GET]:', error);

@@ -45,12 +45,22 @@ const AppPluginShell: React.FC = () => {
 
   const activeMenu = findMenuByPath(navigationItems, location.pathname);
 
+  // Check if this menu lives under "Platform Studio"
+  const isPlatformStudioMenu = React.useMemo(() => {
+    if (!activeMenu) return false;
+    const isDescendant = (item: ConsoleMenu): boolean =>
+      item.children?.some(c => c.id === activeMenu.id || isDescendant(c)) ?? false;
+    return navigationItems.some(m =>
+      m.label === 'Platform Studio' && isDescendant(m)
+    );
+  }, [activeMenu, navigationItems]);
+
   // Resolve Component from Registry
   const componentKey = activeMenu?.componentKey;
   const PluginComponent = componentKey ? (AdminPluginRegistry as any)[componentKey] : null;
 
   // Header Data with App-level defaults & Component overrides
-  const title = pageTitle || activeMenu?.label || activeApp?.name || 'Workspace';
+  const title = pageTitle || (activeMenu?.label && isPlatformStudioMenu ? `${activeMenu.label} Studio` : activeMenu?.label) || activeApp?.name || 'Workspace';
   const iconName = activeMenu?.icon || activeApp?.icon || 'Box';
   
   // High-fidelity subtitle resolution

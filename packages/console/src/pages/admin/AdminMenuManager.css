@@ -139,3 +139,19 @@
   color: #ff4d4f;
   background: #fff1f0;
 }
+
+/* Drag-and-drop reorder */
+.sails-menu-item--dragging {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+.sails-menu-item--drop-target {
+  border-top: 2px solid var(--sails-primary);
+  border-color: var(--sails-primary);
+  background: var(--sails-primary-light);
+}
+
+.sails-menu-item__handle:active {
+  cursor: grabbing;
+}

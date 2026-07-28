@@ -19,9 +19,9 @@ export const AdminPluginRegistry: Record<string, any> = {
   // Platform Studio
   AdminEntityManager: lazy(() => import('../../pages/custom/ObjectManager')),
   AdminViewManager: lazy(() => import('../../pages/admin/AdminViewManager')),
-  AdminAppManager: lazy(() => import('../../pages/admin/AdminAppManager')),
-  AdminMenuManager: lazy(() => import('../../pages/admin/AdminMenuManager')),
   AdminWorkflowManager: lazy(() => import('../../pages/admin/AdminWorkflowManager')),
+  AdminAppManager: lazy(() => import('../../pages/admin/AdminAppManager')),
+  LayoutStudio: lazy(() => import('../../pages/custom/LayoutStudio')),
 
   // Identity & Security
   AdminSSOConfig: lazy(() => import('../../pages/admin/AdminSSOConfig')),

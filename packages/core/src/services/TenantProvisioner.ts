@@ -100,6 +100,7 @@ export class TenantProvisioner {
         name: 'Settings & Admin',
         icon: 'Settings',
         order: 99,
+        isSystem: true,
         requiredCapability: 'ADMIN',
         menus: {
           create: [
@@ -129,9 +130,9 @@ export class TenantProvisioner {
               children: {
                 create: [
                   { label: 'Data Model', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', componentKey: 'AdminEntityManager', actionType: 'plugin' },
-                  { label: 'Views', icon: 'LayoutTemplate', path: '/admin/views', order: 1, requiredCapability: 'system.schema.manage', componentKey: 'AdminViewManager', actionType: 'plugin' },
-                  { label: 'Console Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 2, requiredCapability: 'system.apps.manage', componentKey: 'AdminAppManager', actionType: 'plugin' },
-                  { label: 'Navigation Menus', icon: 'Menu', path: '/admin/menus', order: 3, requiredCapability: 'system.menus.manage', componentKey: 'AdminMenuManager', actionType: 'plugin' }
+                  { label: 'Layouts', icon: 'LayoutTemplate', path: '/admin/views', order: 1, requiredCapability: 'system.schema.manage', componentKey: 'AdminViewManager', actionType: 'plugin' },
+                  { label: 'Workflow', icon: 'Workflow', path: '/admin/workflow', order: 2, requiredCapability: 'system.schema.manage', componentKey: 'AdminWorkflowManager', actionType: 'plugin' },
+                  { label: 'Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 3, requiredCapability: 'system.apps.manage', componentKey: 'AdminAppManager', actionType: 'plugin' }
                 ]
               }
             },

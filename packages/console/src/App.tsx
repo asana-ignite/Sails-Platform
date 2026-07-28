@@ -17,6 +17,7 @@ const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized'));
 const LayoutDemo = lazy(() => import('./pages/__mockups__/LayoutDemo'));
 const RouteBuilder = lazy(() => import('./pages/__mockups__/RouteBuilder'));
+const LayoutStudio = lazy(() => import('./pages/custom/LayoutStudio'));
 
 /**
  * ProtectedRoute
@@ -106,6 +107,13 @@ function App() {
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/layout-demo" element={<LayoutDemo />} />
             <Route path="/route-builder" element={<RouteBuilder />} />
+            <Route path="/layout-studio/:tableId" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingScreen />}>
+                  <LayoutStudio />
+                </Suspense>
+              </ProtectedRoute>
+            } />
 
             {/* Protected Application Routes */}
             <Route

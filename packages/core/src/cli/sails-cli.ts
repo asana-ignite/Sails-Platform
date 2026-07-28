@@ -18,8 +18,9 @@ const COMMANDS: Record<string, string> = {
   'tenant:create': 'Provision a new tenant. Usage: tenant:create <name> <adminEmail>',
   'tenant:list':   'List all tenants with schema info.',
   'db:clean':      'Drop orphaned schemas and clean metadata.',
-  'db:check':      'Verify metadata matches physical schemas.',
-  'help':          'Show this help message.',
+  'db:check':          'Verify metadata matches physical schemas.',
+  'seed:system-fields': 'Backfill system field definitions (created_at, updated_at, owner_id) for all existing tables.',
+  'help':              'Show this help message.',
 };
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -186,6 +187,58 @@ async function dbCheck() {
   }
 }
 
+async function seedSystemFields() {
+  try {
+    console.log('  Seeding system field definitions for existing tables...');
+    console.log('');
+
+    const tables = await db.tableDefinition.findMany({
+      include: { fields: { select: { fieldName: true } } },
+    });
+
+    const SYSTEM_FIELDS = [
+      { name: 'Created Date', fieldName: 'created_at', physicalType: 'timestamp', logicalType: 'date' },
+      { name: 'Last Modified Date', fieldName: 'updated_at', physicalType: 'timestamp', logicalType: 'date' },
+      { name: 'Owner', fieldName: 'owner_id', physicalType: 'lookup', logicalType: 'lookup' },
+    ];
+
+    let totalCreated = 0;
+
+    for (const table of tables) {
+      const existingNames = new Set(table.fields.map((f) => f.fieldName));
+      const missing = SYSTEM_FIELDS.filter((sf) => !existingNames.has(sf.fieldName));
+
+      if (missing.length === 0) continue;
+
+      for (const sf of missing) {
+        await db.fieldDefinition.create({
+          data: {
+            tableId: table.id,
+            name: sf.name,
+            fieldName: sf.fieldName,
+            physicalType: sf.physicalType,
+            logicalType: sf.logicalType,
+            isSystem: true,
+            isRequired: false,
+          },
+        });
+        totalCreated++;
+        console.log(`    + ${table.tableName}.${sf.fieldName} → "${sf.name}"`);
+      }
+    }
+
+    console.log('');
+    if (totalCreated === 0) {
+      console.log('  ✅ All tables already have system field definitions. Nothing to do.');
+    } else {
+      console.log(`  ✅ Created ${totalCreated} system field definition(s) across ${tables.length} table(s).`);
+    }
+    console.log('');
+  } finally {
+    await db.$disconnect();
+  }
+}
+
 // ─── Entry Point ──────────────────────────────────────────
 
 async function main() {
@@ -219,6 +272,9 @@ async function main() {
         break;
       case 'db:check':
         await dbCheck();
+        break;
+      case 'seed:system-fields':
+        await seedSystemFields();
         break;
       default:
         console.error(`  ❌ Unknown command: ${command}`);

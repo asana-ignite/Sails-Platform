@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { ConsoleApp, ConsoleMenu } from '@sails/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
+import IconPicker from '../../components/common/IconPicker';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import './AdminMenuManager.css';
 
@@ -196,12 +197,9 @@ const AdminMenuManager: React.FC = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div className="sails-form-group">
                   <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Icon</label>
-                  <input 
-                    type="text" 
-                    className="sails-input"
-                    style={{ width: '100%' }}
-                    value={isEditing.icon || ''} 
-                    onChange={e => setIsEditing({...isEditing, icon: e.target.value})} 
+                  <IconPicker
+                    value={isEditing.icon || ''}
+                    onChange={val => setIsEditing({...isEditing, icon: val})}
                   />
                 </div>
                 <div className="sails-form-group">

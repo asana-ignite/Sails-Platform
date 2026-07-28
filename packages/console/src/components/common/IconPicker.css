@@ -1,0 +1,192 @@
+.sails-icon-picker {
+  position: relative;
+}
+
+.sails-icon-picker__trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 38px;
+  padding: 8px 12px;
+  background: var(--sails-input-bg, white);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-sm);
+  color: var(--sails-text-main);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.sails-icon-picker__trigger:hover {
+  border-color: var(--sails-primary);
+}
+
+.sails-icon-picker__trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sails-icon-picker__name {
+  flex: 1;
+  text-align: left;
+}
+
+.sails-icon-picker__chevron {
+  font-size: 0.6rem;
+  opacity: 0.4;
+  transition: transform 0.2s;
+}
+
+.sails-icon-picker__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: sails-fade-in 0.2s ease-out;
+}
+
+.sails-icon-picker__modal {
+  width: 640px;
+  max-width: 95vw;
+  max-height: 80vh;
+  background: var(--sails-bg-card, white);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--sails-shadow-lg);
+}
+
+.sails-icon-picker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 0;
+}
+
+.sails-icon-picker__header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--sails-text-main);
+}
+
+.sails-icon-picker__close {
+  background: none;
+  border: none;
+  color: var(--sails-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.sails-icon-picker__close:hover {
+  background: rgba(0,0,0,0.05);
+  color: var(--sails-text-main);
+}
+
+.sails-icon-picker__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 24px;
+  padding: 8px 12px;
+  height: 38px;
+  background: var(--sails-input-bg, white);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-sm);
+  transition: all 0.2s;
+}
+
+.sails-icon-picker__search:focus-within {
+  border-color: var(--sails-primary);
+  box-shadow: 0 0 0 3px var(--sails-primary-light);
+}
+
+.sails-icon-picker__search svg {
+  flex-shrink: 0;
+  opacity: 0.4;
+  color: var(--sails-text-muted);
+}
+
+.sails-icon-picker__search input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--sails-text-main);
+  font-size: 14px;
+}
+
+.sails-icon-picker__search input::placeholder {
+  color: var(--sails-text-muted);
+}
+
+.sails-icon-picker__clear {
+  background: none;
+  border: none;
+  color: var(--sails-text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.sails-icon-picker__clear:hover {
+  color: var(--sails-text-main);
+}
+
+.sails-icon-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 4px;
+  padding: 0 24px 24px;
+  overflow-y: auto;
+  max-height: 50vh;
+}
+
+.sails-icon-picker__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 4px 8px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--sails-radius-md);
+  color: var(--sails-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 0.65rem;
+  line-height: 1.2;
+}
+
+.sails-icon-picker__item:hover {
+  background: rgba(0,0,0,0.04);
+  color: var(--sails-text-main);
+}
+
+.sails-icon-picker__item--active {
+  background: var(--sails-primary-light);
+  border-color: var(--sails-primary);
+  color: var(--sails-primary);
+}
+
+.sails-icon-picker__item span {
+  word-break: break-all;
+  text-align: center;
+  max-width: 100%;
+}
+
+.sails-icon-picker__empty {
+  grid-column: 1 / -1;
+  padding: 40px;
+  text-align: center;
+  color: var(--sails-text-muted);
+}

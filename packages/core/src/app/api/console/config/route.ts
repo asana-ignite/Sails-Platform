@@ -16,7 +16,6 @@ export async function GET() {
 
     let apps: any[] = [];
 
-    // 1. Try to fetch from Database if tenantId is present
     if (tenantId) {
       apps = await db.consoleApp.findMany({
         where: { tenantId },
@@ -32,6 +31,11 @@ export async function GET() {
             }
           }
         }
+      });
+
+      apps.sort((a, b) => {
+        if (a.isSystem !== b.isSystem) return a.isSystem ? 1 : -1;
+        return (a.order ?? 0) - (b.order ?? 0);
       });
     }
 
@@ -170,6 +174,7 @@ function getMockData() {
       name: 'Settings & Admin',
       icon: 'Settings',
       order: 99,
+      isSystem: true,
       menus: [
         {
           id: 'mock-menu-general',
@@ -200,10 +205,9 @@ function getMockData() {
           order: 2,
           children: [
             { id: 'm-schema', label: 'Data Model', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminEntityManager' },
-            { id: 'm-views', label: 'Views', icon: 'LayoutTemplate', path: '/admin/views', order: 1, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminViewManager' },
-            { id: 'm-apps', label: 'Console Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 2, requiredCapability: 'system.apps.manage', actionType: 'plugin', componentKey: 'AdminAppManager' },
-            { id: 'm-menus', label: 'Navigation Menus', icon: 'Menu', path: '/admin/menus', order: 3, requiredCapability: 'system.menus.manage', actionType: 'plugin', componentKey: 'AdminMenuManager' },
-            { id: 'm-workflow', label: 'Workflow', icon: 'Workflow', path: '/admin/workflow', order: 4, requiredCapability: 'system.workflow.manage', actionType: 'plugin', componentKey: 'AdminWorkflowManager' }
+            { id: 'm-views', label: 'Layouts', icon: 'LayoutTemplate', path: '/admin/views', order: 1, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminViewManager' },
+            { id: 'm-workflow', label: 'Workflow', icon: 'Workflow', path: '/admin/workflow', order: 2, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminWorkflowManager' },
+            { id: 'm-apps', label: 'Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 3, requiredCapability: 'system.apps.manage', actionType: 'plugin', componentKey: 'AdminAppManager' }
           ]
         }
       ]

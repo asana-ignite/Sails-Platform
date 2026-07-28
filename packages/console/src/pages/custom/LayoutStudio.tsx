@@ -1,19 +1,24 @@
 /**
- * MOCK UP — WYSIWYG Layout Builder with Pluggable Blocks
+ * Layout Studio — WYSIWYG Layout Designer
  *
  * Block types: field | related_list | tab_group
  * Each block is a plugin: it renders its own preview and has its own properties.
+ *
+ * Permission: requires SUPER_ADMIN or TENANT_ADMIN role.
+ * TODO: refine when RBAC capability system supports 'layouts.design'
  */
 import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   GripVertical, Plus, X, Eye, EyeOff, Trash2, MoveUp, MoveDown,
   LayoutGrid, Settings, ArrowRight, ListTree, FolderKanban, Columns,
   Table2, Filter, ShieldAlert, AlertCircle,
-  Play, Pause, Pin, PinOff,
+  ArrowLeft, Loader2, Play, Pause, Pin, PinOff,
 } from 'lucide-react';
 import type { SailsFieldDefinition } from '@sails/shared';
-import { MOCK_LEADS_FIELDS } from './sample-layout-data';
-import './LayoutBuilder.css';
+import { useAuth } from '../../contexts/AuthContext';
+import Unauthorized from '../Unauthorized';
+import './LayoutStudio.css';
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -27,7 +32,7 @@ interface BlockCondition {
   fieldId: string;
   operator: ConditionOp;
   value: string;
-  logic: 'and' | 'or'; // for chaining
+  logic: 'and' | 'or';
 }
 
 interface FieldValidation {
@@ -85,6 +90,13 @@ interface PaletteItem {
   description: string;
 }
 
+interface TableMeta {
+  id: string;
+  name: string;
+  tableName: string;
+  fields: SailsFieldDefinition[];
+}
+
 // ─── Helpers ──────────────────────────────────────────────────
 
 let sectionCounter = 0;
@@ -130,7 +142,7 @@ function defaultPropsForBlock(blockType: BlockType, fieldId?: string): Partial<P
   return {};
 }
 
-// ─── Mock data ────────────────────────────────────────────────
+// ─── Mock related data ────────────────────────────────────────
 
 const MOCK_RELATED_TASKS = [
   { title: 'Send proposal', status: 'Done', due_date: '2026-07-01' },
@@ -143,20 +155,45 @@ const MOCK_RELATED_CONTACTS = [
   { name: 'John Smith', email: 'john@acme.com', phone: '+66 89 876 5432' },
 ];
 
+function buildMockRecord(fields: SailsFieldDefinition[]): Record<string, any> {
+  const record: Record<string, any> = {};
+  fields.forEach((f) => {
+    switch (f.logicalType) {
+      case 'text': record[f.fieldName] = 'Sample text'; break;
+      case 'long_text': record[f.fieldName] = 'Lorem ipsum dolor sit amet.'; break;
+      case 'email': record[f.fieldName] = 'user@example.com'; break;
+      case 'phone': record[f.fieldName] = '+66 2 123 4567'; break;
+      case 'currency': record[f.fieldName] = 250000; break;
+      case 'number': record[f.fieldName] = 42; break;
+      case 'date': record[f.fieldName] = '2026-07-28'; break;
+      case 'select': {
+        const opts = (f.config as any)?.options || [];
+        record[f.fieldName] = opts[0]?.value ?? 'option_1';
+        break;
+      }
+      case 'boolean': record[f.fieldName] = true; break;
+      case 'url': record[f.fieldName] = 'https://example.com'; break;
+      default: record[f.fieldName] = `Sample ${f.name}`; break;
+    }
+  });
+  return record;
+}
+
 function renderFieldValue(field: SailsFieldDefinition, record: Record<string, any>): string {
   const val = record[field.fieldName];
   if (val === undefined || val === null) return '—';
   if (field.logicalType === 'currency') return `฿${val.toLocaleString()}`;
+  if (field.logicalType === 'boolean') return val ? 'Yes' : 'No';
   if (field.logicalType === 'select') {
     const options = (field.config as any)?.options || [];
-    return options.find((o: any) => o.value === val)?.label || val;
+    return options.find((o: any) => o.value === val)?.label || String(val);
   }
   return String(val);
 }
 
-function buildPalette(placedFieldIds: string[]): PaletteItem[] {
+function buildPalette(fields: SailsFieldDefinition[], placedFieldIds: string[]): PaletteItem[] {
   const items: PaletteItem[] = [];
-  MOCK_LEADS_FIELDS.forEach((f) => {
+  fields.forEach((f) => {
     if (!placedFieldIds.includes(f.id)) {
       items.push({ id: `pf_${f.id}`, blockType: 'field', fieldId: f.id, label: f.name, icon: null, description: f.logicalType });
     }
@@ -199,7 +236,15 @@ function evaluateConditions(conditions: BlockCondition[] | undefined, record: Re
 
 // ─── Main Component ───────────────────────────────────────────
 
-export const LayoutBuilder: React.FC = () => {
+const LayoutStudio: React.FC = () => {
+  const { tableId } = useParams<{ tableId: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const [tableMeta, setTableMeta] = useState<TableMeta | null>(null);
+  const [fetchLoading, setFetchLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const [sections, setSections] = useState<BuilderSection[]>([newSection()]);
   const [blocks, setBlocks] = useState<PlacedBlock[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
@@ -214,19 +259,33 @@ export const LayoutBuilder: React.FC = () => {
   const [propsWidth, setPropsWidth] = useState(260);
   const [propsResizing, setPropsResizing] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [mockRecord, setMockRecord] = useState<Record<string, any>>({
-    lead_name: 'ACME Corp Deal', company: 'ACME Corporation',
-    email: 'j.doe@acme.com', phone: '+66 2 123 4567',
-    status: 'qualified', source: 'website', budget: 250000,
-    contact_date: '2026-06-15',
-    notes: 'Met at Tech Summit. Interested in Enterprise plan. Follow up Q3.',
-    assigned_to: 'Somsak Chaiyaporn',
-  });
+  const [mockRecord, setMockRecord] = useState<Record<string, any>>({});
   const [resizing, setResizing] = useState<{ blockId: string; startX: number; startSpan: number; sectionElement: HTMLElement | null } | null>(null);
 
-  const allFields = MOCK_LEADS_FIELDS;
+  useEffect(() => {
+    if (!tableId) { setFetchError('No table ID provided'); setFetchLoading(false); return; }
+    const fetchTable = async () => {
+      try {
+        const res = await fetch('/api/metadata/objects');
+        if (!res.ok) throw new Error('Failed to load objects');
+        const data = await res.json();
+        const tables: any[] = Array.isArray(data) ? data : (data.data || []);
+        const found = tables.find((t: any) => t.id === tableId);
+        if (!found) throw new Error('Table not found');
+        setTableMeta({ id: found.id, name: found.name, tableName: found.tableName, fields: found.fields || [] });
+        setMockRecord(buildMockRecord(found.fields || []));
+      } catch (err: any) {
+        setFetchError(err.message || 'Failed to load table metadata');
+      } finally {
+        setFetchLoading(false);
+      }
+    };
+    fetchTable();
+  }, [tableId]);
+
+  const allFields = tableMeta?.fields ?? [];
   const placedFieldIds = blocks.filter((b) => b.blockType === 'field').map((b) => b.fieldId!).filter(Boolean);
-  const palette = buildPalette(placedFieldIds);
+  const palette = useMemo(() => buildPalette(allFields, placedFieldIds), [allFields, placedFieldIds]);
   const selectedBlock = useMemo(
     () => (selectedBlockId ? findBlockInArray(blocks, selectedBlockId) : null),
     [blocks, selectedBlockId],
@@ -252,6 +311,78 @@ export const LayoutBuilder: React.FC = () => {
     });
     return map;
   }, [sections, blocks]);
+
+  useEffect(() => {
+    if (!resizing) return;
+    const onMove = (e: MouseEvent) => {
+      if (!resizing) return;
+      const grid = resizing.sectionElement;
+      if (!grid) return;
+      const colWidth = grid.offsetWidth / 12;
+      const delta = e.clientX - resizing.startX;
+      const colDelta = Math.round(delta / colWidth);
+      const newSpan = Math.max(1, Math.min(12, resizing.startSpan + colDelta));
+      updateBlock(resizing.blockId, { width: newSpan });
+    };
+    const onUp = () => setResizing(null);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+  }, [resizing]);
+
+  useEffect(() => {
+    if (!propsResizing) return;
+    const onMove = (e: MouseEvent) => {
+      const newWidth = Math.max(180, Math.min(500, window.innerWidth - e.clientX));
+      setPropsWidth(newWidth);
+    };
+    const onUp = () => setPropsResizing(false);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+  }, [propsResizing]);
+
+  const doReset = () => {
+    setSections([newSection()]);
+    setBlocks([]);
+    setSelectedBlockId(null);
+    setActiveTabMap({});
+    setDragOverTabBlockId(null);
+    setDragOverChildBlockId(null);
+    setShowResetConfirm(false);
+    sectionCounter = 0;
+    blockCounter = 0;
+  };
+
+  const allowedRoles = ['SUPER_ADMIN', 'TENANT_ADMIN'];
+  if (!allowedRoles.includes(user?.role || '')) {
+    return <Unauthorized />;
+  }
+
+  if (fetchLoading) {
+    return (
+      <div className="ls-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 12 }}>
+        <Loader2 size={24} style={{ animation: 'sails-spin 1s linear infinite' }} />
+        <span style={{ color: 'var(--sails-text-muted)' }}>Loading model fields...</span>
+      </div>
+    );
+  }
+
+  if (fetchError || !tableMeta) {
+    return (
+      <div className="ls-root" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 12 }}>
+        <AlertCircle size={32} style={{ color: 'var(--sails-danger)' }} />
+        <span style={{ color: 'var(--sails-text-main)' }}>{fetchError || 'Table not found'}</span>
+        <button className="sails-btn sails-btn--ghost" onClick={() => navigate(-1)}><ArrowLeft size={14} /> Go back</button>
+      </div>
+    );
+  }
 
   // ── Actions ─────────────────────────────────────────────────
 
@@ -526,7 +657,6 @@ export const LayoutBuilder: React.FC = () => {
         if (!draggedBlock) return;
 
         if (payload.sourceTabBlockId) {
-          // Block came from a tab — move to section
           if (dragOverBlockId) {
             setBlocks((prev) => {
               const mid = prev
@@ -558,7 +688,6 @@ export const LayoutBuilder: React.FC = () => {
             moveBlockToSection(payload.blockId, targetSectionId);
           }
         } else if (targetSectionId === payload.sourceSectionId && dragOverBlockId) {
-          // Same section swap — move to target position
           const sectionBlocks = blocksBySection[targetSectionId] || [];
           const targetIdx = sectionBlocks.findIndex((b) => b.id === dragOverBlockId);
           if (targetIdx === -1) return;
@@ -600,65 +729,23 @@ export const LayoutBuilder: React.FC = () => {
   const handleResizeStart = (e: React.MouseEvent, blockId: string, currentSpan: number) => {
     e.preventDefault();
     e.stopPropagation();
-    const grid = (e.currentTarget as HTMLElement).closest('.wys-section__grid') as HTMLElement;
+    const grid = (e.currentTarget as HTMLElement).closest('.ls-section__grid') as HTMLElement;
     setResizing({ blockId, startX: e.clientX, startSpan: currentSpan, sectionElement: grid });
-  };
-
-  useEffect(() => {
-    if (!resizing) return;
-    const onMove = (e: MouseEvent) => {
-      if (!resizing) return;
-      const grid = resizing.sectionElement;
-      if (!grid) return;
-      const colWidth = grid.offsetWidth / 12;
-      const delta = e.clientX - resizing.startX;
-      const colDelta = Math.round(delta / colWidth);
-      const newSpan = Math.max(1, Math.min(12, resizing.startSpan + colDelta));
-      updateBlock(resizing.blockId, { width: newSpan });
-    };
-    const onUp = () => setResizing(null);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    return () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    };
-  }, [resizing]);
-
-  useEffect(() => {
-    if (!propsResizing) return;
-    const onMove = (e: MouseEvent) => {
-      const newWidth = Math.max(180, Math.min(500, window.innerWidth - e.clientX));
-      setPropsWidth(newWidth);
-    };
-    const onUp = () => setPropsResizing(false);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    return () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    };
-  }, [propsResizing]);
-
-  const doReset = () => {
-    setSections([newSection()]);
-    setBlocks([]);
-    setSelectedBlockId(null);
-    setActiveTabMap({});
-    setDragOverTabBlockId(null);
-    setDragOverChildBlockId(null);
-    setShowResetConfirm(false);
-    sectionCounter = 0;
-    blockCounter = 0;
   };
 
   // ── Render ─────────────────────────────────────────────────
 
   return (
-      <div className={`wys-root ${previewMode ? 'wys-root--preview' : ''}`}>
-      <div className="wys-toolbar">
-        <span className="wys-toolbar__brand">Page Layout Builder</span>
-        <div className="wys-toolbar__actions">
+    <div className={`ls-root ${previewMode ? 'ls-root--preview' : ''}`}>
+      <div className="ls-toolbar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => navigate(-1)} title="Back">
+            <ArrowLeft size={14} />
+          </button>
+          <span className="ls-toolbar__brand">Layout Studio</span>
+          <span style={{ fontSize: 11, color: 'var(--sails-text-muted)' }}>— {tableMeta.name}</span>
+        </div>
+        <div className="ls-toolbar__actions">
           {previewMode ? (
             <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => setPreviewMode(false)}>
               <Pause size={14} /> Exit Preview
@@ -680,55 +767,55 @@ export const LayoutBuilder: React.FC = () => {
         </div>
       </div>
 
-      <div className="wys-body" style={previewMode ? { gridTemplateColumns: '1fr' } : undefined}>
+      <div className="ls-body" style={previewMode ? { gridTemplateColumns: '1fr' } : undefined}>
         {/* ── LEFT: Palette ── */}
         {!previewMode && (
-        <div className="wys-palette">
-          <div className="wys-palette__header">
-            <h3 className="wys-panel-title"><LayoutGrid size={13} /> Blocks</h3>
-            <span className="wys-palette__count">{palette.length}</span>
+        <div className="ls-palette">
+          <div className="ls-palette__header">
+            <h3 className="ls-panel-title"><LayoutGrid size={13} /> Fields</h3>
+            <span className="ls-palette__count">{palette.filter(p => p.blockType === 'field').length}</span>
           </div>
-          <button className="sails-btn sails-btn--ghost sails-btn--sm wys-palette__add-section" onClick={addSection}>
+          <button className="sails-btn sails-btn--ghost sails-btn--sm ls-palette__add-section" onClick={addSection}>
             <Plus size={13} /> Add Section
           </button>
-          <div className="wys-palette__fields">
-            {palette.length === 0 ? (
-              <p className="wys-empty">All blocks placed</p>
+          <div className="ls-palette__fields">
+            {palette.filter(p => p.blockType === 'field').length === 0 && palette.filter(p => p.blockType !== 'field').length === 0 ? (
+              <p className="ls-empty">All blocks placed</p>
             ) : (
               <>
-                {palette.some(p => p.blockType === 'field') && <div className="wys-palette__group-label">DATA FIELDS</div>}
+                {palette.some(p => p.blockType === 'field') && <div className="ls-palette__group-label">DATA FIELDS</div>}
                 {palette.filter(p => p.blockType === 'field').map((item) => {
                   const fd = allFields.find((f) => f.id === item.fieldId);
                   return (
-                    <div key={item.id} className="wys-palette-field" draggable
+                    <div key={item.id} className="ls-palette-field" draggable
                       onDragStart={(e) => handleDragStart(e, { type: 'palette', blockType: item.blockType, fieldId: item.fieldId, paletteId: item.id })}
                       onClick={() => addBlock(item, sections[0]?.id || '')}>
                       <GripVertical size={12} /><span>{item.label}</span>
-                      <span className="wys-type-tag">{fd?.logicalType}</span>
-                      <ArrowRight size={12} className="wys-add-icon" />
+                      <span className="ls-type-tag">{fd?.logicalType}</span>
+                      <ArrowRight size={12} className="ls-add-icon" />
                     </div>
                   );
                 })}
 
-                {palette.some(p => p.blockType === 'related_list') && <div className="wys-palette__group-label">RELATIONS</div>}
+                {palette.some(p => p.blockType === 'related_list') && <div className="ls-palette__group-label">RELATIONS</div>}
                 {palette.filter(p => p.blockType === 'related_list').map((item) => (
-                  <div key={item.id} className="wys-palette-field wys-palette-field--block" draggable
+                  <div key={item.id} className="ls-palette-field ls-palette-field--block" draggable
                     onDragStart={(e) => handleDragStart(e, { type: 'palette', blockType: item.blockType, paletteId: item.id })}
                     onClick={() => addBlock(item, sections[0]?.id || '')}>
                     <GripVertical size={12} />{item.icon}<span>{item.label}</span>
-                    <span className="wys-type-tag">{item.description}</span>
-                    <ArrowRight size={12} className="wys-add-icon" />
+                    <span className="ls-type-tag">{item.description}</span>
+                    <ArrowRight size={12} className="ls-add-icon" />
                   </div>
                 ))}
 
-                {palette.some(p => p.blockType === 'tab_group') && <div className="wys-palette__group-label">LAYOUT</div>}
+                {palette.some(p => p.blockType === 'tab_group') && <div className="ls-palette__group-label">LAYOUT</div>}
                 {palette.filter(p => p.blockType === 'tab_group').map((item) => (
-                  <div key={item.id} className="wys-palette-field wys-palette-field--block" draggable
+                  <div key={item.id} className="ls-palette-field ls-palette-field--block" draggable
                     onDragStart={(e) => handleDragStart(e, { type: 'palette', blockType: item.blockType, paletteId: item.id })}
                     onClick={() => addBlock(item, sections[0]?.id || '')}>
                     <GripVertical size={12} />{item.icon}<span>{item.label}</span>
-                    <span className="wys-type-tag">{item.description}</span>
-                    <ArrowRight size={12} className="wys-add-icon" />
+                    <span className="ls-type-tag">{item.description}</span>
+                    <ArrowRight size={12} className="ls-add-icon" />
                   </div>
                 ))}
               </>
@@ -737,31 +824,31 @@ export const LayoutBuilder: React.FC = () => {
         </div>
         )}
 
-        {/* ── CENTER: WYSIWYG Canvas ── */}
-        <div className="wys-canvas">
-          <div className="wys-canvas__scroll">
-            <div className="wys-page">
+        {/* ── CENTER: Canvas ── */}
+        <div className="ls-canvas">
+          <div className="ls-canvas__scroll">
+            <div className="ls-page">
               {/* ── Page Header ── */}
-              <div className="wys-page__header">
-                <h1 className="wys-page__title">{mockRecord.lead_name}</h1>
-                <p className="wys-page__subtitle">Drag blocks from the palette to build your page layout</p>
+              <div className="ls-page__header">
+                <h1 className="ls-page__title">{tableMeta.name} Detail</h1>
+                <p className="ls-page__subtitle">Drag blocks from the palette to build your page layout</p>
               </div>
 
               {sections.map((section) => {
                 const sectionBlocks = blocksBySection[section.id] || [];
                 return (
                   <div key={section.id}
-                    className={`wys-section ${dragOverSection === section.id ? 'wys-section--drag-over' : ''}`}
+                    className={`ls-section ${dragOverSection === section.id ? 'ls-section--drag-over' : ''}`}
                     onDragOver={(e) => { e.preventDefault(); setDragOverSection(section.id); setDragOverBlockId(null); setDragOverTabBlockId(null); }}
                     onDrop={(e) => handleDrop(e, section.id)}>
-                    <div className="wys-section__header">
-                      <div className="wys-section__col-btn" title="12-column grid"><Columns size={13} /><span>12-col grid</span></div>
-                      <input className="wys-section__title-input" value={section.title} onChange={(e) => updateSection(section.id, { title: e.target.value })} />
-                      <button className="wys-section__remove" onClick={() => removeSection(section.id)} title="Delete section"><X size={14} /></button>
+                    <div className="ls-section__header">
+                      <div className="ls-section__col-btn" title="12-column grid"><Columns size={13} /><span>12-col grid</span></div>
+                      <input className="ls-section__title-input" value={section.title} onChange={(e) => updateSection(section.id, { title: e.target.value })} />
+                      <button className="ls-section__remove" onClick={() => removeSection(section.id)} title="Delete section"><X size={14} /></button>
                     </div>
-                    <div className="wys-section__grid">
+                    <div className="ls-section__grid">
                       {sectionBlocks.length === 0 ? (
-                        <div className="wys-section__empty" style={{ gridColumn: '1 / -1' }}>Drop blocks here from the palette →</div>
+                        <div className="ls-section__empty" style={{ gridColumn: '1 / -1' }}>Drop blocks here from the palette →</div>
                       ) : (
                         sectionBlocks.map((blk, idx) => {
                           const isSelected = selectedBlockId === blk.id;
@@ -769,12 +856,12 @@ export const LayoutBuilder: React.FC = () => {
                           const total = sectionBlocks.length;
 
                           const controlsEl = (
-                            <div className="wys-block__controls">
-                              <button className="wys-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockPosition(blk.id, section.id, 'up'); }} disabled={idx === 0}><MoveUp size={10} /></button>
-                              <button className="wys-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockPosition(blk.id, section.id, 'down'); }} disabled={idx === total - 1}><MoveDown size={10} /></button>
-                              <button className="wys-block__btn" onClick={(e) => { e.stopPropagation(); updateBlock(blk.id, { visible: !blk.visible }); }}>{blk.visible ? <Eye size={10} /> : <EyeOff size={10} />}</button>
-                              <button className="wys-block__btn wys-block__btn--danger" onClick={(e) => { e.stopPropagation(); removeBlock(blk.id); }}><Trash2 size={10} /></button>
-                              <GripVertical size={12} className="wys-block__grip" />
+                            <div className="ls-block__controls">
+                              <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockPosition(blk.id, section.id, 'up'); }} disabled={idx === 0}><MoveUp size={10} /></button>
+                              <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockPosition(blk.id, section.id, 'down'); }} disabled={idx === total - 1}><MoveDown size={10} /></button>
+                              <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); updateBlock(blk.id, { visible: !blk.visible }); }}>{blk.visible ? <Eye size={10} /> : <EyeOff size={10} />}</button>
+                              <button className="ls-block__btn ls-block__btn--danger" onClick={(e) => { e.stopPropagation(); removeBlock(blk.id); }}><Trash2 size={10} /></button>
+                              <GripVertical size={12} className="ls-block__grip" />
                             </div>
                           );
 
@@ -787,22 +874,22 @@ export const LayoutBuilder: React.FC = () => {
 
                             return (
                               <div key={blk.id}
-                                className={`wys-block wys-block--field ${isSelected ? 'wys-block--selected' : ''} ${!blk.visible ? 'wys-block--hidden' : ''} ${dragOverBlockId === blk.id ? 'wys-block--drag-over' : ''} ${isConditionalHidden ? 'wys-block--conditional-hidden' : ''} ${resizing?.blockId === blk.id ? 'wys-block--resizing' : ''}`}
+                                className={`ls-block ls-block--field ${isSelected ? 'ls-block--selected' : ''} ${!blk.visible ? 'ls-block--hidden' : ''} ${dragOverBlockId === blk.id ? 'ls-block--drag-over' : ''} ${isConditionalHidden ? 'ls-block--conditional-hidden' : ''} ${resizing?.blockId === blk.id ? 'ls-block--resizing' : ''}`}
                                 style={{ gridColumn: `span ${blk.width}` }}
                                 draggable onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: blk.id, sourceSectionId: section.id })}
                                 onDragOver={(e) => handleBlockDrop(e, blk.id, section.id)}
                                 onDragLeave={() => setDragOverBlockId(null)}
                                 onClick={() => setSelectedBlockId(blk.id)}>
-                                <div className="wys-block__indicators">
-                                  {hasConditions && <span className="wys-indicator wys-indicator--cond" title="Has conditions"><Filter size={10} /></span>}
-                                  {hasValidations && <span className="wys-indicator wys-indicator--val" title="Has validation"><ShieldAlert size={10} /></span>}
+                                <div className="ls-block__indicators">
+                                  {hasConditions && <span className="ls-indicator ls-indicator--cond" title="Has conditions"><Filter size={10} /></span>}
+                                  {hasValidations && <span className="ls-indicator ls-indicator--val" title="Has validation"><ShieldAlert size={10} /></span>}
                                 </div>
                                 {controlsEl}
-                                <label className="wys-block__label">{blk.labelOverride || field.name}{field.isRequired && <span className="wys-block__required">*</span>}</label>
-                                <div className="wys-block__value">{blk.visible ? renderFieldValue(field, mockRecord) : <em>hidden</em>}</div>
-                                <span className="wys-block__width-badge">{blk.width} cols</span>
-                                <span className="wys-block__type-badge">{field.logicalType}</span>
-                                <div className="wys-block__resize-handle" onMouseDown={(e) => handleResizeStart(e, blk.id, blk.width)} />
+                                <label className="ls-block__label">{blk.labelOverride || field.name}{field.isRequired && <span className="ls-block__required">*</span>}</label>
+                                <div className="ls-block__value">{blk.visible ? renderFieldValue(field, mockRecord) : <em>hidden</em>}</div>
+                                <span className="ls-block__width-badge">{blk.width} cols</span>
+                                <span className="ls-block__type-badge">{field.logicalType}</span>
+                                <div className="ls-block__resize-handle" onMouseDown={(e) => handleResizeStart(e, blk.id, blk.width)} />
                               </div>
                             );
                           }
@@ -813,25 +900,25 @@ export const LayoutBuilder: React.FC = () => {
                             const cols = blk.relatedDisplayFields || ['title', 'status'];
                             return (
                               <div key={blk.id}
-                                className={`wys-block wys-block--related ${isSelected ? 'wys-block--selected' : ''} ${!blk.visible ? 'wys-block--hidden' : ''} ${dragOverBlockId === blk.id ? 'wys-block--drag-over' : ''} ${resizing?.blockId === blk.id ? 'wys-block--resizing' : ''}`}
+                                className={`ls-block ls-block--related ${isSelected ? 'ls-block--selected' : ''} ${!blk.visible ? 'ls-block--hidden' : ''} ${dragOverBlockId === blk.id ? 'ls-block--drag-over' : ''} ${resizing?.blockId === blk.id ? 'ls-block--resizing' : ''}`}
                                 style={{ gridColumn: `span ${blk.width}` }}
                                 draggable onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: blk.id, sourceSectionId: section.id })}
                                 onDragOver={(e) => handleBlockDrop(e, blk.id, section.id)}
                                 onDragLeave={() => setDragOverBlockId(null)}
                                 onClick={() => setSelectedBlockId(blk.id)}>
                                 {controlsEl}
-                                <div className="wys-related__header">
+                                <div className="ls-related__header">
                                   <Table2 size={14} />
-                                  <span className="wys-related__title">{blk.relatedTableId === 't_tasks' ? 'Tasks' : 'Contacts'}</span>
-                                  <span className="wys-related__count">{data.length} records</span>
+                                  <span className="ls-related__title">{blk.relatedTableId === 't_tasks' ? 'Tasks' : 'Contacts'}</span>
+                                  <span className="ls-related__count">{data.length} records</span>
                                 </div>
-                                <table className="wys-related__table">
+                                <table className="ls-related__table">
                                   <thead><tr>{cols.map((c) => <th key={c}>{c.replace(/_/g, ' ')}</th>)}</tr></thead>
                                   <tbody>{data.map((row: any, ri) => <tr key={ri}>{cols.map((c) => <td key={c}>{row[c]}</td>)}</tr>)}</tbody>
                                 </table>
-                                <span className="wys-block__width-badge">{blk.width} cols</span>
-                                <span className="wys-block__type-badge">relation</span>
-                                <div className="wys-block__resize-handle" onMouseDown={(e) => handleResizeStart(e, blk.id, blk.width)} />
+                                <span className="ls-block__width-badge">{blk.width} cols</span>
+                                <span className="ls-block__type-badge">relation</span>
+                                <div className="ls-block__resize-handle" onMouseDown={(e) => handleResizeStart(e, blk.id, blk.width)} />
                               </div>
                             );
                           }
@@ -845,36 +932,36 @@ export const LayoutBuilder: React.FC = () => {
 
                             return (
                               <div key={blk.id}
-                                className={`wys-block wys-block--tabs ${isSelected ? 'wys-block--selected' : ''} ${!blk.visible ? 'wys-block--hidden' : ''} ${dragOverBlockId === blk.id ? 'wys-block--drag-over' : ''} ${resizing?.blockId === blk.id ? 'wys-block--resizing' : ''}`}
+                                className={`ls-block ls-block--tabs ${isSelected ? 'ls-block--selected' : ''} ${!blk.visible ? 'ls-block--hidden' : ''} ${dragOverBlockId === blk.id ? 'ls-block--drag-over' : ''} ${resizing?.blockId === blk.id ? 'ls-block--resizing' : ''}`}
                                 style={{ gridColumn: `span ${blk.width}` }}
                                 onDragOver={(e) => { e.stopPropagation(); handleBlockDrop(e, blk.id, section.id); }}
                                 onDragLeave={() => setDragOverBlockId(null)}
                                 onClick={(e) => { e.stopPropagation(); setSelectedBlockId(blk.id); }}>
-                                <div className="wys-block__controls">
-                                  <button className="wys-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockPosition(blk.id, section.id, 'up'); }} disabled={idx === 0}><MoveUp size={10} /></button>
-                                  <button className="wys-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockPosition(blk.id, section.id, 'down'); }} disabled={idx === total - 1}><MoveDown size={10} /></button>
-                                  <button className="wys-block__btn" onClick={(e) => { e.stopPropagation(); updateBlock(blk.id, { visible: !blk.visible }); }}>{blk.visible ? <Eye size={10} /> : <EyeOff size={10} />}</button>
-                                  <button className="wys-block__btn wys-block__btn--danger" onClick={(e) => { e.stopPropagation(); removeBlock(blk.id); }}><Trash2 size={10} /></button>
-                                  <span className="wys-block__grip" draggable
+                                <div className="ls-block__controls">
+                                  <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockPosition(blk.id, section.id, 'up'); }} disabled={idx === 0}><MoveUp size={10} /></button>
+                                  <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockPosition(blk.id, section.id, 'down'); }} disabled={idx === total - 1}><MoveDown size={10} /></button>
+                                  <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); updateBlock(blk.id, { visible: !blk.visible }); }}>{blk.visible ? <Eye size={10} /> : <EyeOff size={10} />}</button>
+                                  <button className="ls-block__btn ls-block__btn--danger" onClick={(e) => { e.stopPropagation(); removeBlock(blk.id); }}><Trash2 size={10} /></button>
+                                  <span className="ls-block__grip" draggable
                                     onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: blk.id, sourceSectionId: section.id })}>
                                     <GripVertical size={12} />
                                   </span>
                                 </div>
-                                <div className="wys-tabs__bar">
+                                <div className="ls-tabs__bar">
                                   {tabs.map((tab, ti) => (
                                     <div key={tab.id}
-                                      className={`wys-tabs__tab ${ti === activeTabIdx ? 'wys-tabs__tab--active' : ''}`}
+                                      className={`ls-tabs__tab ${ti === activeTabIdx ? 'ls-tabs__tab--active' : ''}`}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setActiveTabMap((prev) => ({ ...prev, [blk.id]: ti }));
                                       }}>
                                       {tab.label}
-                                      {tab.blocks.length > 0 && <span className="wys-tabs__count">{tab.blocks.length}</span>}
+                                      {tab.blocks.length > 0 && <span className="ls-tabs__count">{tab.blocks.length}</span>}
                                     </div>
                                   ))}
                                 </div>
                                 <div
-                                  className={`wys-tabs__body ${dragOverTabBlockId === blk.id ? 'wys-tabs__body--drag-over' : ''}`}
+                                  className={`ls-tabs__body ${dragOverTabBlockId === blk.id ? 'ls-tabs__body--drag-over' : ''}`}
                                   onDragOver={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
@@ -883,20 +970,20 @@ export const LayoutBuilder: React.FC = () => {
                                     setDragOverChildBlockId(null);
                                   }}>
                                   {activeBlocks.length === 0 ? (
-                                    <p className="wys-tabs__hint">Drop fields here from the palette</p>
+                                    <p className="ls-tabs__hint">Drop fields here from the palette</p>
                                   ) : (
-                                    <div className="wys-section__grid">
+                                    <div className="ls-section__grid">
                                       {activeBlocks.map((tb, tIdx) => {
                                         const tbField = tb.fieldId ? allFields.find((f) => f.id === tb.fieldId) : null;
                                         const tbSelected = selectedBlockId === tb.id;
                                         const tbTotal = activeBlocks.length;
                                         const tbControls = (
-                                          <div className="wys-block__controls">
-                                            <button className="wys-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockInTab(blk.id, activeTab.id, tb.id, 'up'); }} disabled={tIdx === 0}><MoveUp size={10} /></button>
-                                            <button className="wys-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockInTab(blk.id, activeTab.id, tb.id, 'down'); }} disabled={tIdx === tbTotal - 1}><MoveDown size={10} /></button>
-                                            <button className="wys-block__btn" onClick={(e) => { e.stopPropagation(); updateBlock(tb.id, { visible: !tb.visible }); }}>{tb.visible ? <Eye size={10} /> : <EyeOff size={10} />}</button>
-                                            <button className="wys-block__btn wys-block__btn--danger" onClick={(e) => { e.stopPropagation(); removeBlock(tb.id); }}><Trash2 size={10} /></button>
-                                            <GripVertical size={12} className="wys-block__grip" />
+                                          <div className="ls-block__controls">
+                                            <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockInTab(blk.id, activeTab.id, tb.id, 'up'); }} disabled={tIdx === 0}><MoveUp size={10} /></button>
+                                            <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockInTab(blk.id, activeTab.id, tb.id, 'down'); }} disabled={tIdx === tbTotal - 1}><MoveDown size={10} /></button>
+                                            <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); updateBlock(tb.id, { visible: !tb.visible }); }}>{tb.visible ? <Eye size={10} /> : <EyeOff size={10} />}</button>
+                                            <button className="ls-block__btn ls-block__btn--danger" onClick={(e) => { e.stopPropagation(); removeBlock(tb.id); }}><Trash2 size={10} /></button>
+                                            <GripVertical size={12} className="ls-block__grip" />
                                           </div>
                                         );
 
@@ -908,7 +995,7 @@ export const LayoutBuilder: React.FC = () => {
                                           const isDragOver = dragOverChildBlockId === tb.id;
                                           return (
                                             <div key={tb.id}
-                                              className={`wys-block wys-block--field ${tbSelected ? 'wys-block--selected' : ''} ${!tb.visible ? 'wys-block--hidden' : ''} ${isCondHidden ? 'wys-block--conditional-hidden' : ''} ${isDragOver ? 'wys-block--drag-over' : ''}`}
+                                              className={`ls-block ls-block--field ${tbSelected ? 'ls-block--selected' : ''} ${!tb.visible ? 'ls-block--hidden' : ''} ${isCondHidden ? 'ls-block--conditional-hidden' : ''} ${isDragOver ? 'ls-block--drag-over' : ''}`}
                                               style={{ gridColumn: `span ${tb.width}` }}
                                               draggable
                                               onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: tb.id, sourceTabBlockId: blk.id, sourceTabId: activeTab.id })}
@@ -916,15 +1003,15 @@ export const LayoutBuilder: React.FC = () => {
                                               onDragLeave={(e) => { e.stopPropagation(); setDragOverChildBlockId(null); }}
                                               onClick={(e) => { e.stopPropagation(); setSelectedBlockId(tb.id); }}>
                                               {tbControls}
-                                              <div className="wys-block__indicators">
-                                                {hasConditions && <span className="wys-indicator wys-indicator--cond"><Filter size={10} /></span>}
-                                                {hasValidations && <span className="wys-indicator wys-indicator--val"><ShieldAlert size={10} /></span>}
+                                              <div className="ls-block__indicators">
+                                                {hasConditions && <span className="ls-indicator ls-indicator--cond"><Filter size={10} /></span>}
+                                                {hasValidations && <span className="ls-indicator ls-indicator--val"><ShieldAlert size={10} /></span>}
                                               </div>
-                                              <label className="wys-block__label">{tb.labelOverride || tbField.name}{tbField.isRequired && <span className="wys-block__required">*</span>}</label>
-                                              <div className="wys-block__value">{tb.visible ? renderFieldValue(tbField, mockRecord) : <em>hidden</em>}</div>
-                                              <span className="wys-block__width-badge">{tb.width} cols</span>
-                                              <span className="wys-block__type-badge">{tbField.logicalType}</span>
-                                              <div className="wys-block__resize-handle" onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, tb.id, tb.width); }} />
+                                              <label className="ls-block__label">{tb.labelOverride || tbField.name}{tbField.isRequired && <span className="ls-block__required">*</span>}</label>
+                                              <div className="ls-block__value">{tb.visible ? renderFieldValue(tbField, mockRecord) : <em>hidden</em>}</div>
+                                              <span className="ls-block__width-badge">{tb.width} cols</span>
+                                              <span className="ls-block__type-badge">{tbField.logicalType}</span>
+                                              <div className="ls-block__resize-handle" onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, tb.id, tb.width); }} />
                                             </div>
                                           );
                                         }
@@ -935,7 +1022,7 @@ export const LayoutBuilder: React.FC = () => {
                                           const isDragOver = dragOverChildBlockId === tb.id;
                                           return (
                                             <div key={tb.id}
-                                              className={`wys-block wys-block--related ${tbSelected ? 'wys-block--selected' : ''} ${!tb.visible ? 'wys-block--hidden' : ''} ${isDragOver ? 'wys-block--drag-over' : ''}`}
+                                              className={`ls-block ls-block--related ${tbSelected ? 'ls-block--selected' : ''} ${!tb.visible ? 'ls-block--hidden' : ''} ${isDragOver ? 'ls-block--drag-over' : ''}`}
                                               style={{ gridColumn: `span ${tb.width}` }}
                                               draggable
                                               onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: tb.id, sourceTabBlockId: blk.id, sourceTabId: activeTab.id })}
@@ -943,18 +1030,18 @@ export const LayoutBuilder: React.FC = () => {
                                               onDragLeave={(e) => { e.stopPropagation(); setDragOverChildBlockId(null); }}
                                               onClick={(e) => { e.stopPropagation(); setSelectedBlockId(tb.id); }}>
                                               {tbControls}
-                                              <div className="wys-related__header">
+                                              <div className="ls-related__header">
                                                 <Table2 size={14} />
-                                                <span className="wys-related__title">{tb.relatedTableId === 't_tasks' ? 'Tasks' : 'Contacts'}</span>
-                                                <span className="wys-related__count">{data.length} records</span>
+                                                <span className="ls-related__title">{tb.relatedTableId === 't_tasks' ? 'Tasks' : 'Contacts'}</span>
+                                                <span className="ls-related__count">{data.length} records</span>
                                               </div>
-                                              <table className="wys-related__table">
+                                              <table className="ls-related__table">
                                                 <thead><tr>{cols.map((c) => <th key={c}>{c.replace(/_/g, ' ')}</th>)}</tr></thead>
                                                 <tbody>{data.map((row: any, ri) => <tr key={ri}>{cols.map((c) => <td key={c}>{row[c]}</td>)}</tr>)}</tbody>
                                               </table>
-                                              <span className="wys-block__width-badge">{tb.width} cols</span>
-                                              <span className="wys-block__type-badge">relation</span>
-                                              <div className="wys-block__resize-handle" onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, tb.id, tb.width); }} />
+                                              <span className="ls-block__width-badge">{tb.width} cols</span>
+                                              <span className="ls-block__type-badge">relation</span>
+                                              <div className="ls-block__resize-handle" onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, tb.id, tb.width); }} />
                                             </div>
                                           );
                                         }
@@ -963,9 +1050,9 @@ export const LayoutBuilder: React.FC = () => {
                                     </div>
                                   )}
                                 </div>
-                                <span className="wys-block__width-badge">{blk.width} cols</span>
-                                <span className="wys-block__type-badge">tabs</span>
-                                <div className="wys-block__resize-handle" onMouseDown={(e) => handleResizeStart(e, blk.id, blk.width)} />
+                                <span className="ls-block__width-badge">{blk.width} cols</span>
+                                <span className="ls-block__type-badge">tabs</span>
+                                <div className="ls-block__resize-handle" onMouseDown={(e) => handleResizeStart(e, blk.id, blk.width)} />
                               </div>
                             );
                           }
@@ -978,7 +1065,7 @@ export const LayoutBuilder: React.FC = () => {
               })}
 
               {sections.length === 0 && (
-                <div className="wys-page__empty"><p>No sections yet. Click <strong>+ Add Section</strong>.</p></div>
+                <div className="ls-page__empty"><p>No sections yet. Click <strong>+ Add Section</strong>.</p></div>
               )}
             </div>
           </div>
@@ -987,45 +1074,45 @@ export const LayoutBuilder: React.FC = () => {
         {/* ── RIGHT: Properties ── */}
         {!previewMode && (
           <div
-            className={`wys-props-outer ${propsPinned ? 'wys-props-outer--pinned' : ''} ${showProperties ? 'wys-props-outer--open' : ''}`}
+            className={`ls-props-outer ${propsPinned ? 'ls-props-outer--pinned' : ''} ${showProperties ? 'ls-props-outer--open' : ''}`}
             style={{ width: propsPinned || showProperties ? propsWidth : 36 }}
             onMouseEnter={() => { if (!propsPinned) setShowProperties(true); }}
             onMouseLeave={() => { if (!propsPinned) setShowProperties(false); }}
           >
             {showProperties && (
               <>
-                <div className="wys-props-resize" onMouseDown={(e) => { e.preventDefault(); setPropsResizing(true); }} />
-                <div className="wys-properties">
-                  <div className="wys-props-header">
-                    <h3 className="wys-panel-title"><Settings size={13} /> Properties</h3>
-                    <button className="wys-block__btn" onClick={() => setPropsPinned(!propsPinned)} title={propsPinned ? 'Unpin panel' : 'Pin panel open'}>
+                <div className="ls-props-resize" onMouseDown={(e) => { e.preventDefault(); setPropsResizing(true); }} />
+                <div className="ls-properties">
+                  <div className="ls-props-header">
+                    <h3 className="ls-panel-title"><Settings size={13} /> Properties</h3>
+                    <button className="ls-block__btn" onClick={() => setPropsPinned(!propsPinned)} title={propsPinned ? 'Unpin panel' : 'Pin panel open'}>
                       {propsPinned ? <PinOff size={12} /> : <Pin size={12} />}
                     </button>
                   </div>
                   {selectedBlock ? (
                     <>
-                <div className="wys-prop__name">
+                <div className="ls-prop__name">
                   {selectedBlock.blockType === 'field' ? selectedField?.name :
                    selectedBlock.blockType === 'related_list' ? (selectedBlock.relatedTableId === 't_tasks' ? 'Related Tasks' : 'Related Contacts') :
                    'Tab Group'}
                 </div>
-                <div className="wys-prop__type">{selectedBlock.blockType}</div>
+                <div className="ls-prop__type">{selectedBlock.blockType}</div>
 
-                <div className="wys-prop-group">
-                  <label className="wys-prop-label">Width</label>
-                  <span className="wys-prop-width-readout">{selectedBlock.width} / 12 columns</span>
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label">Width</label>
+                  <span className="ls-prop-width-readout">{selectedBlock.width} / 12 columns</span>
                 </div>
 
-                <div className="wys-prop-group">
-                  <label className="wys-prop-label">
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label">
                     <input type="checkbox" checked={selectedBlock.visible}
                       onChange={(e) => updateBlock(selectedBlock.id, { visible: e.target.checked })} />{' '}Visible
                   </label>
                 </div>
 
                 {selectedBlock.blockType === 'field' && (
-                  <div className="wys-prop-group">
-                    <label className="wys-prop-label">Label</label>
+                  <div className="ls-prop-group">
+                    <label className="ls-prop-label">Label</label>
                     <input className="sails-input" value={selectedBlock.labelOverride || ''}
                       onChange={(e) => updateBlock(selectedBlock.id, { labelOverride: e.target.value })}
                       placeholder={selectedField?.name} style={{ fontSize: 12, padding: '6px 8px' }} />
@@ -1034,8 +1121,8 @@ export const LayoutBuilder: React.FC = () => {
 
                 {selectedBlock.blockType === 'related_list' && (
                   <>
-                    <div className="wys-prop-group">
-                      <label className="wys-prop-label">Source Table</label>
+                    <div className="ls-prop-group">
+                      <label className="ls-prop-label">Source Table</label>
                       <select className="sails-input" value={selectedBlock.relatedTableId}
                         onChange={(e) => updateBlock(selectedBlock.id, { relatedTableId: e.target.value })}
                         style={{ fontSize: 12, padding: '6px 8px' }}>
@@ -1043,8 +1130,8 @@ export const LayoutBuilder: React.FC = () => {
                         <option value="t_contacts">Contacts</option>
                       </select>
                     </div>
-                    <div className="wys-prop-group">
-                      <label className="wys-prop-label">Max Rows</label>
+                    <div className="ls-prop-group">
+                      <label className="ls-prop-label">Max Rows</label>
                       <input className="sails-input" type="number" value={selectedBlock.relatedMaxRows}
                         onChange={(e) => updateBlock(selectedBlock.id, { relatedMaxRows: Number(e.target.value) })}
                         style={{ fontSize: 12, padding: '6px 8px' }} />
@@ -1053,8 +1140,8 @@ export const LayoutBuilder: React.FC = () => {
                 )}
 
                 {selectedBlock.blockType === 'tab_group' && (
-                  <div className="wys-prop-group">
-                    <label className="wys-prop-label">Tabs</label>
+                  <div className="ls-prop-group">
+                    <label className="ls-prop-label">Tabs</label>
                     {(selectedBlock.tabs || []).map((tab, ti) => (
                       <div key={tab.id} style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
                         <input className="sails-input" value={tab.label}
@@ -1063,7 +1150,7 @@ export const LayoutBuilder: React.FC = () => {
                             tabs[ti] = { ...tabs[ti], label: e.target.value };
                             updateBlock(selectedBlock.id, { tabs });
                           }} style={{ fontSize: 12, padding: '4px 6px', flex: 1 }} />
-                        <button className="wys-block__btn wys-block__btn--danger"
+                        <button className="ls-block__btn ls-block__btn--danger"
                           onClick={() => updateBlock(selectedBlock.id, { tabs: (selectedBlock.tabs || []).filter((_, i) => i !== ti) })}>
                           <X size={12} />
                         </button>
@@ -1080,14 +1167,14 @@ export const LayoutBuilder: React.FC = () => {
                 )}
 
                 {/* ── Conditions (Show/Hide rules) ── */}
-                <div className="wys-prop-group">
-                  <div className="wys-prop-label" style={{ justifyContent: 'space-between' }}>
+                <div className="ls-prop-group">
+                  <div className="ls-prop-label" style={{ justifyContent: 'space-between' }}>
                     <span><Filter size={12} /> Conditions</span>
                     <button className="sails-btn sails-btn--ghost sails-btn--sm"
                       onClick={() => {
                         const conds = [...(selectedBlock.conditions || []), {
                           id: `cond_${Date.now()}`,
-                          fieldId: MOCK_LEADS_FIELDS[0]?.id || '',
+                          fieldId: allFields[0]?.id || '',
                           operator: 'eq' as ConditionOp,
                           value: '',
                           logic: 'and' as const,
@@ -1103,12 +1190,12 @@ export const LayoutBuilder: React.FC = () => {
                     </p>
                   ) : (
                     (selectedBlock.conditions || []).map((cond, ci) => (
-                      <div key={cond.id} className="wys-cond-card">
+                      <div key={cond.id} className="ls-cond-card">
                         {ci > 0 && (
                           <div style={{ display: 'flex', gap: 2, marginBottom: 4 }}>
                             {(['and', 'or'] as const).map((l) => (
                               <button key={l}
-                                className={`wys-cond-logic-btn ${cond.logic === l ? 'wys-cond-logic-btn--active' : ''}`}
+                                className={`ls-cond-logic-btn ${cond.logic === l ? 'ls-cond-logic-btn--active' : ''}`}
                                 onClick={() => {
                                   const conds = [...(selectedBlock.conditions || [])];
                                   conds[ci] = { ...conds[ci], logic: l };
@@ -1119,14 +1206,14 @@ export const LayoutBuilder: React.FC = () => {
                             ))}
                           </div>
                         )}
-                        <div className="wys-cond-body">
+                        <div className="ls-cond-body">
                           <select className="sails-input" value={cond.fieldId}
                             onChange={(e) => {
                               const conds = [...(selectedBlock.conditions || [])];
                               conds[ci] = { ...conds[ci], fieldId: e.target.value };
                               updateBlock(selectedBlock.id, { conditions: conds });
                             }} style={{ fontSize: 10, padding: '3px 4px', flex: 1 }}>
-                            {MOCK_LEADS_FIELDS.map((f) => (
+                            {allFields.map((f) => (
                               <option key={f.id} value={f.id}>{f.name}</option>
                             ))}
                           </select>
@@ -1154,7 +1241,7 @@ export const LayoutBuilder: React.FC = () => {
                                 updateBlock(selectedBlock.id, { conditions: conds });
                               }} placeholder="value" style={{ fontSize: 10, padding: '3px 4px', width: 70 }} />
                           )}
-                          <button className="wys-block__btn wys-block__btn--danger"
+                          <button className="ls-block__btn ls-block__btn--danger"
                             onClick={() => {
                               updateBlock(selectedBlock.id, {
                                 conditions: (selectedBlock.conditions || []).filter((_, i) => i !== ci)
@@ -1168,8 +1255,8 @@ export const LayoutBuilder: React.FC = () => {
 
                 {/* ── Validation Rules ── */}
                 {selectedBlock.blockType === 'field' && (
-                  <div className="wys-prop-group">
-                    <div className="wys-prop-label" style={{ justifyContent: 'space-between' }}>
+                  <div className="ls-prop-group">
+                    <div className="ls-prop-label" style={{ justifyContent: 'space-between' }}>
                       <span><ShieldAlert size={12} /> Validation</span>
                       <button className="sails-btn sails-btn--ghost sails-btn--sm"
                         onClick={() => {
@@ -1189,8 +1276,8 @@ export const LayoutBuilder: React.FC = () => {
                       </p>
                     ) : (
                       (selectedBlock.validations || []).map((val, vi) => (
-                        <div key={val.id} className="wys-cond-card">
-                          <div className="wys-cond-body" style={{ flexWrap: 'wrap' }}>
+                        <div key={val.id} className="ls-cond-card">
+                          <div className="ls-cond-body" style={{ flexWrap: 'wrap' }}>
                             <select className="sails-input" value={val.type}
                               onChange={(e) => {
                                 const vals = [...(selectedBlock.validations || [])];
@@ -1202,7 +1289,7 @@ export const LayoutBuilder: React.FC = () => {
                               <option value="regex">Regex Pattern</option>
                               <option value="range">Min / Max</option>
                             </select>
-                            <button className="wys-block__btn wys-block__btn--danger"
+                            <button className="ls-block__btn ls-block__btn--danger"
                               onClick={() => {
                                 updateBlock(selectedBlock.id, {
                                   validations: (selectedBlock.validations || []).filter((_, i) => i !== vi)
@@ -1219,7 +1306,7 @@ export const LayoutBuilder: React.FC = () => {
                                   updateBlock(selectedBlock.id, { validations: vals });
                                 }} style={{ fontSize: 10, padding: '3px 4px' }}>
                                 <option value="">— depends on field —</option>
-                                {MOCK_LEADS_FIELDS.filter((f) => f.id !== selectedBlock.fieldId).map((f) => (
+                                {allFields.filter((f) => f.id !== selectedBlock.fieldId).map((f) => (
                                   <option key={f.id} value={f.id}>{f.name}</option>
                                 ))}
                               </select>
@@ -1284,26 +1371,25 @@ export const LayoutBuilder: React.FC = () => {
                 )}
               </>
             ) : (
-              <p className="wys-empty">Select a block to edit its properties</p>
+              <p className="ls-empty">Select a block to edit its properties</p>
             )}
           </div>
               </>
             )}
             {!showProperties && (
-              <div className="wys-props-tab" onClick={() => { setShowProperties(true); setPropsPinned(true); }}>
+              <div className="ls-props-tab" onClick={() => { setShowProperties(true); setPropsPinned(true); }}>
                 <Settings size={14} />
               </div>
             )}
           </div>
         )}
       </div>
-
       {showResetConfirm && (
-        <div className="wys-modal-overlay" onClick={() => setShowResetConfirm(false)}>
-          <div className="wys-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 className="wys-modal__title">Reset Layout</h3>
-            <p className="wys-modal__text">This will clear all sections, blocks, and tab configurations. This action cannot be undone.</p>
-            <div className="wys-modal__actions">
+        <div className="ls-modal-overlay" onClick={() => setShowResetConfirm(false)}>
+          <div className="ls-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="ls-modal__title">Reset Layout</h3>
+            <p className="ls-modal__text">This will clear all sections, blocks, and tab configurations. This action cannot be undone.</p>
+            <div className="ls-modal__actions">
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowResetConfirm(false)}>Cancel</button>
               <button className="sails-btn sails-btn--danger sails-btn--sm" onClick={doReset}>Reset</button>
             </div>
@@ -1314,4 +1400,4 @@ export const LayoutBuilder: React.FC = () => {
   );
 };
 
-export default LayoutBuilder;
+export default LayoutStudio;

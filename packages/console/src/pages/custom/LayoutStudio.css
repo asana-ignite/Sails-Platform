@@ -1,5 +1,5 @@
 /**
- * WYSIWYG Layout Builder Styles
+ * Layout Studio Styles
  *
  * Three-panel editor:
  *   Left  = Field Palette + Add Section
@@ -9,7 +9,7 @@
 
 /* ─── Root ──────────────────────────────────────────────────── */
 
-.wys-root {
+.ls-root {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -19,7 +19,7 @@
 
 /* ─── Toolbar ───────────────────────────────────────────────── */
 
-.wys-toolbar {
+.ls-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -30,13 +30,13 @@
   flex-shrink: 0;
 }
 
-.wys-toolbar__brand {
+.ls-toolbar__brand {
   font-size: 13px;
   font-weight: 600;
   color: var(--sails-text-primary, #1e293b);
 }
 
-.wys-toolbar__actions {
+.ls-toolbar__actions {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -44,7 +44,7 @@
 
 /* ─── Body (three-column grid) ──────────────────────────────── */
 
-.wys-body {
+.ls-body {
   display: grid;
   grid-template-columns: 220px 1fr 220px;
   flex: 1;
@@ -53,7 +53,7 @@
 
 /* ─── LEFT: Palette ─────────────────────────────────────────── */
 
-.wys-palette {
+.ls-palette {
   display: flex;
   flex-direction: column;
   background: var(--sails-bg-secondary, #f8fafc);
@@ -61,14 +61,14 @@
   overflow: hidden;
 }
 
-.wys-palette__header {
+.ls-palette__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 12px 4px;
 }
 
-.wys-panel-title {
+.ls-panel-title {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -80,7 +80,7 @@
   color: var(--sails-text-secondary, #64748b);
 }
 
-.wys-palette__count {
+.ls-palette__count {
   font-size: 11px;
   font-weight: 600;
   padding: 1px 7px;
@@ -89,13 +89,13 @@
   border-radius: 10px;
 }
 
-.wys-palette__add-section {
+.ls-palette__add-section {
   margin: 4px 12px 8px;
   width: calc(100% - 24px);
   justify-content: center;
 }
 
-.wys-palette__fields {
+.ls-palette__fields {
   overflow-y: auto;
   flex: 1;
   padding: 0 8px 8px;
@@ -104,7 +104,7 @@
   gap: 3px;
 }
 
-.wys-palette-field {
+.ls-palette-field {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -118,16 +118,16 @@
   color: var(--sails-text-primary, #1e293b);
 }
 
-.wys-palette-field:hover {
+.ls-palette-field:hover {
   border-color: var(--sails-primary, #9dcee0);
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
-.wys-palette-field:active {
+.ls-palette-field:active {
   cursor: grabbing;
 }
 
-.wys-type-tag {
+.ls-type-tag {
   font-size: 9px;
   padding: 1px 5px;
   border-radius: 3px;
@@ -137,18 +137,18 @@
   margin-left: auto;
 }
 
-.wys-add-icon {
+.ls-add-icon {
   color: var(--sails-primary, #9dcee0);
   opacity: 0;
   transition: opacity 0.12s;
   flex-shrink: 0;
 }
 
-.wys-palette-field:hover .wys-add-icon {
+.ls-palette-field:hover .ls-add-icon {
   opacity: 0.7;
 }
 
-.wys-empty {
+.ls-empty {
   font-size: 11px;
   color: var(--sails-text-muted, #94a3b8);
   text-align: center;
@@ -159,45 +159,45 @@
 
 /* ─── CENTER: WYSIWYG Canvas ────────────────────────────────── */
 
-.wys-canvas {
+.ls-canvas {
   overflow: hidden;
   display: flex;
   justify-content: center;
   background: var(--sails-bg-tertiary, #f1f5f9);
 }
 
-.wys-canvas__scroll {
+.ls-canvas__scroll {
   width: 100%;
   max-width: 900px;
   overflow-y: auto;
   padding: 24px 24px 80px;
 }
 
-.wys-page {
+.ls-page {
   display: flex;
   flex-direction: column;
   gap: 0;
 }
 
 /* Page header inside canvas */
-.wys-page__header {
+.ls-page__header {
   margin-bottom: 24px;
 }
 
-.wys-page__title {
+.ls-page__title {
   font-size: 22px;
   font-weight: 700;
   color: var(--sails-text-primary, #1e293b);
   margin: 0 0 4px;
 }
 
-.wys-page__subtitle {
+.ls-page__subtitle {
   font-size: 13px;
   color: var(--sails-text-muted, #94a3b8);
   margin: 0;
 }
 
-.wys-page__empty {
+.ls-page__empty {
   padding: 32px;
   text-align: center;
   background: var(--sails-bg-primary, #fff);
@@ -209,7 +209,7 @@
 
 /* ─── Section (card) ────────────────────────────────────────── */
 
-.wys-section {
+.ls-section {
   background: var(--sails-bg-primary, #fff);
   border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 8px;
@@ -218,13 +218,13 @@
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.wys-section--drag-over {
+.ls-section--drag-over {
   border-color: var(--sails-primary, #9dcee0);
   box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.2);
   background: rgba(157, 206, 224, 0.03);
 }
 
-.wys-section__header {
+.ls-section__header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -233,7 +233,7 @@
   border-bottom: 1px solid var(--sails-border, #e2e8f0);
 }
 
-.wys-section__col-btn {
+.ls-section__col-btn {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -249,11 +249,11 @@
   transition: border-color 0.12s;
 }
 
-.wys-section__col-btn:hover {
+.ls-section__col-btn:hover {
   border-color: var(--sails-primary, #9dcee0);
 }
 
-.wys-section__title-input {
+.ls-section__title-input {
   flex: 1;
   border: 1px solid transparent;
   padding: 4px 8px;
@@ -264,17 +264,17 @@
   border-radius: 3px;
 }
 
-.wys-section__title-input:focus {
+.ls-section__title-input:focus {
   outline: none;
   border-color: var(--sails-primary, #9dcee0);
   background: var(--sails-bg-primary, #fff);
 }
 
-.wys-section__title-input:hover {
+.ls-section__title-input:hover {
   background: rgba(0,0,0,0.02);
 }
 
-.wys-section__remove {
+.ls-section__remove {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -288,21 +288,21 @@
   flex-shrink: 0;
 }
 
-.wys-section__remove:hover {
+.ls-section__remove:hover {
   color: var(--sails-danger, #ef4444);
   background: rgba(239,68,68,0.06);
 }
 
 /* ─── Section grid (the actual field layout) ────────────────── */
 
-.wys-section__grid {
+.ls-section__grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: 20px;
   padding: 20px;
 }
 
-.wys-section__empty {
+.ls-section__empty {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
@@ -315,13 +315,13 @@
   transition: background 0.12s;
 }
 
-.wys-section--drag-over .wys-section__empty {
+.ls-section--drag-over .ls-section__empty {
   background: rgba(157, 206, 224, 0.06);
 }
 
 /* ─── Individual Block Card (WYSIWYG) ───────────────────────── */
 
-.wys-block {
+.ls-block {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -334,34 +334,34 @@
   min-height: 48px;
 }
 
-.wys-block:hover {
+.ls-block:hover {
   border-color: var(--sails-border, #e2e8f0);
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 
-.wys-block--selected {
+.ls-block--selected {
   border-color: var(--sails-primary, #9dcee0) !important;
   box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.15);
   background: rgba(157, 206, 224, 0.06);
 }
 
-.wys-block--drag-over {
+.ls-block--drag-over {
   border-color: var(--sails-primary, #9dcee0) !important;
   background: rgba(157, 206, 224, 0.1) !important;
 }
 
-.wys-block--hidden {
+.ls-block--hidden {
   opacity: 0.5;
 }
 
-.wys-block--resizing {
+.ls-block--resizing {
   cursor: col-resize;
   user-select: none;
 }
 
 /* ─── Block controls bar ────────────────────────────────────── */
 
-.wys-block__controls {
+.ls-block__controls {
   position: absolute;
   top: 0;
   right: 0;
@@ -377,12 +377,12 @@
   z-index: 2;
 }
 
-.wys-block:hover .wys-block__controls,
-.wys-block--selected .wys-block__controls {
+.ls-block:hover .ls-block__controls,
+.ls-block--selected .ls-block__controls {
   opacity: 1;
 }
 
-.wys-block__btn {
+.ls-block__btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -397,28 +397,28 @@
   flex-shrink: 0;
 }
 
-.wys-block__btn:hover {
+.ls-block__btn:hover {
   color: var(--sails-text-primary, #1e293b);
   background: rgba(0,0,0,0.05);
 }
 
-.wys-block__btn:disabled {
+.ls-block__btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
 }
 
-.wys-block__btn--danger:hover {
+.ls-block__btn--danger:hover {
   color: var(--sails-danger, #ef4444);
 }
 
-.wys-block__grip {
+.ls-block__grip {
   color: var(--sails-text-muted, #94a3b8);
   cursor: grab;
 }
 
 /* ─── Resize handle (drag right edge to change column span) ──── */
 
-.wys-block__resize-handle {
+.ls-block__resize-handle {
   position: absolute;
   top: 0;
   right: -3px;
@@ -429,20 +429,20 @@
   transition: background 0.12s;
 }
 
-.wys-block:hover .wys-block__resize-handle,
-.wys-block--selected .wys-block__resize-handle,
-.wys-block--resizing .wys-block__resize-handle {
+.ls-block:hover .ls-block__resize-handle,
+.ls-block--selected .ls-block__resize-handle,
+.ls-block--resizing .ls-block__resize-handle {
   background: var(--sails-primary, #9dcee0);
   opacity: 0.35;
 }
 
-.wys-block__resize-handle:hover {
+.ls-block__resize-handle:hover {
   opacity: 0.6 !important;
 }
 
 /* ─── Block badges ──────────────────────────────────────────── */
 
-.wys-block__width-badge {
+.ls-block__width-badge {
   position: absolute;
   bottom: 4px;
   right: 6px;
@@ -455,7 +455,7 @@
   opacity: 0.7;
 }
 
-.wys-block__type-badge {
+.ls-block__type-badge {
   position: absolute;
   bottom: 4px;
   left: 6px;
@@ -469,9 +469,9 @@
 
 /* ─── Field block label & value ─────────────────────────────── */
 
-.wys-block--field { gap: 4px; padding-top: 14px; padding-bottom: 26px; }
+.ls-block--field { gap: 4px; padding-top: 14px; padding-bottom: 26px; }
 
-.wys-block__label {
+.ls-block__label {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -479,12 +479,12 @@
   color: var(--sails-text-secondary, #64748b);
 }
 
-.wys-block__required {
+.ls-block__required {
   color: var(--sails-danger, #ef4444);
   margin-left: 2px;
 }
 
-.wys-block__value {
+.ls-block__value {
   font-size: 13px;
   color: var(--sails-text-primary, #1e293b);
   line-height: 1.4;
@@ -495,12 +495,12 @@
 
 /* ─── Related List Block ────────────────────────────────────── */
 
-.wys-block--related {
+.ls-block--related {
   padding: 0;
   overflow: hidden;
 }
 
-.wys-related__header {
+.ls-related__header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -509,7 +509,7 @@
   border-bottom: 1px solid var(--sails-border, #e2e8f0);
 }
 
-.wys-related__title {
+.ls-related__title {
   font-size: 13px;
   font-weight: 600;
   color: var(--sails-text-primary, #1e293b);
@@ -517,19 +517,19 @@
   letter-spacing: 0.3px;
 }
 
-.wys-related__count {
+.ls-related__count {
   margin-left: auto;
   font-size: 11px;
   color: var(--sails-text-muted, #94a3b8);
 }
 
-.wys-related__table {
+.ls-related__table {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
 }
 
-.wys-related__table th {
+.ls-related__table th {
   text-align: left;
   padding: 6px 14px;
   font-size: 10px;
@@ -541,30 +541,30 @@
   background: var(--sails-bg-secondary, #f8fafc);
 }
 
-.wys-related__table td {
+.ls-related__table td {
   padding: 6px 14px;
   color: var(--sails-text-primary, #1e293b);
   border-bottom: 1px solid var(--sails-border, #e2e8f0);
 }
 
-.wys-related__table tr:last-child td {
+.ls-related__table tr:last-child td {
   border-bottom: none;
 }
 
 /* ─── Tab Group Block ───────────────────────────────────────── */
 
-.wys-block--tabs {
+.ls-block--tabs {
   padding: 0;
   overflow: hidden;
 }
 
-.wys-tabs__bar {
+.ls-tabs__bar {
   display: flex;
   border-bottom: 2px solid var(--sails-border, #e2e8f0);
   background: var(--sails-bg-secondary, #f8fafc);
 }
 
-.wys-tabs__tab {
+.ls-tabs__tab {
   padding: 10px 16px;
   font-size: 12px;
   font-weight: 500;
@@ -578,13 +578,13 @@
   transition: color 0.12s, border-color 0.12s;
 }
 
-.wys-tabs__tab--active {
+.ls-tabs__tab--active {
   color: var(--sails-primary, #9dcee0);
   border-bottom-color: var(--sails-primary, #9dcee0);
   font-weight: 600;
 }
 
-.wys-tabs__body {
+.ls-tabs__body {
   padding: 12px;
   min-height: 80px;
   display: flex;
@@ -593,22 +593,22 @@
   transition: background 0.12s, outline-color 0.12s;
 }
 
-.wys-tabs__body--drag-over {
+.ls-tabs__body--drag-over {
   background: rgba(157, 206, 224, 0.06);
   outline: 2px dashed var(--sails-primary, #9dcee0);
   outline-offset: -2px;
 }
 
-.wys-tabs__body:has(.wys-tabs__hint) {
+.ls-tabs__body:has(.ls-tabs__hint) {
   align-items: center;
   justify-content: center;
 }
 
-.wys-tabs__body .wys-section__grid {
+.ls-tabs__body .ls-section__grid {
   width: 100%;
 }
 
-.wys-tabs__hint {
+.ls-tabs__hint {
   font-size: 12px;
   color: var(--sails-text-muted, #94a3b8);
   font-style: italic;
@@ -616,7 +616,7 @@
   text-align: center;
 }
 
-.wys-tabs__count {
+.ls-tabs__count {
   margin-left: 6px;
   font-size: 10px;
   font-weight: 600;
@@ -631,7 +631,7 @@
 
 /* ─── Palette group labels ──────────────────────────────────── */
 
-.wys-palette__group-label {
+.ls-palette__group-label {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -642,19 +642,19 @@
   margin-top: 4px;
 }
 
-.wys-palette__group-label:first-child {
+.ls-palette__group-label:first-child {
   border-top: none;
   margin-top: 0;
   padding-top: 4px;
 }
 
-.wys-palette-field--block {
+.ls-palette-field--block {
   border-style: dashed;
 }
 
 /* ─── RIGHT: Properties Panel ───────────────────────────────── */
 
-.wys-properties {
+.ls-properties {
   padding: 12px;
   background: var(--sails-bg-secondary, #f8fafc);
   border-left: 1px solid var(--sails-border, #e2e8f0);
@@ -664,13 +664,13 @@
   overflow-y: auto;
 }
 
-.wys-prop__name {
+.ls-prop__name {
   font-size: 14px;
   font-weight: 600;
   color: var(--sails-text-primary, #1e293b);
 }
 
-.wys-prop__type {
+.ls-prop__type {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 4px;
@@ -680,13 +680,13 @@
   align-self: flex-start;
 }
 
-.wys-prop-group {
+.ls-prop-group {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.wys-prop-label {
+.ls-prop-label {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -698,7 +698,7 @@
   cursor: pointer;
 }
 
-.wys-prop-width-readout {
+.ls-prop-width-readout {
   font-size: 12px;
   font-weight: 600;
   padding: 6px 10px;
@@ -718,7 +718,7 @@
 
 /* ─── Conditions & Validation Cards ─────────────────────────── */
 
-.wys-cond-card {
+.ls-cond-card {
   padding: 6px 8px;
   background: var(--sails-bg-primary, #fff);
   border: 1px solid var(--sails-border, #e2e8f0);
@@ -728,17 +728,17 @@
   gap: 4px;
 }
 
-.wys-cond-card:hover {
+.ls-cond-card:hover {
   border-color: var(--sails-primary, #9dcee0);
 }
 
-.wys-cond-body {
+.ls-cond-body {
   display: flex;
   align-items: center;
   gap: 3px;
 }
 
-.wys-cond-logic-btn {
+.ls-cond-logic-btn {
   padding: 1px 6px;
   border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 3px;
@@ -750,7 +750,7 @@
   transition: all 0.1s;
 }
 
-.wys-cond-logic-btn--active {
+.ls-cond-logic-btn--active {
   border-color: var(--sails-primary, #9dcee0);
   background: rgba(157, 206, 224, 0.15);
   color: var(--sails-primary, #9dcee0);
@@ -758,7 +758,7 @@
 
 /* ─── Block indicators (conditions / validations active) ────── */
 
-.wys-block__indicators {
+.ls-block__indicators {
   position: absolute;
   top: 4px;
   left: 8px;
@@ -769,12 +769,12 @@
   transition: opacity 0.12s;
 }
 
-.wys-block:hover .wys-block__indicators,
-.wys-block--selected .wys-block__indicators {
+.ls-block:hover .ls-block__indicators,
+.ls-block--selected .ls-block__indicators {
   opacity: 1;
 }
 
-.wys-indicator {
+.ls-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -784,24 +784,24 @@
   font-size: 9px;
 }
 
-.wys-indicator--cond {
+.ls-indicator--cond {
   background: rgba(245, 158, 11, 0.15);
   color: #f59e0b;
 }
 
-.wys-indicator--val {
+.ls-indicator--val {
   background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
 }
 
 /* ─── WYSIWYG block conditional state ───────────────────────── */
 
-.wys-block--conditional-hidden {
+.ls-block--conditional-hidden {
   opacity: 0.3;
   border-style: dashed !important;
 }
 
-.wys-block--conditional-hidden::after {
+.ls-block--conditional-hidden::after {
   content: '(conditionally hidden)';
   position: absolute;
   inset: 0;
@@ -817,40 +817,40 @@
 
 /* ─── Preview mode ─────────────────────────────────────────── */
 
-.wys-root--preview .wys-block__controls,
-.wys-root--preview .wys-block__resize-handle,
-.wys-root--preview .wys-block__indicators,
-.wys-root--preview .wys-block__width-badge,
-.wys-root--preview .wys-block__type-badge,
-.wys-root--preview .wys-block--hidden,
-.wys-root--preview .wys-block__grip,
-.wys-root--preview .wys-section__remove,
-.wys-root--preview .wys-section__col-btn,
-.wys-root--preview .wys-section__empty,
-.wys-root--preview .wys-block--conditional-hidden::after {
+.ls-root--preview .ls-block__controls,
+.ls-root--preview .ls-block__resize-handle,
+.ls-root--preview .ls-block__indicators,
+.ls-root--preview .ls-block__width-badge,
+.ls-root--preview .ls-block__type-badge,
+.ls-root--preview .ls-block--hidden,
+.ls-root--preview .ls-block__grip,
+.ls-root--preview .ls-section__remove,
+.ls-root--preview .ls-section__col-btn,
+.ls-root--preview .ls-section__empty,
+.ls-root--preview .ls-block--conditional-hidden::after {
   display: none !important;
 }
 
-.wys-root--preview .wys-block--conditional-hidden {
+.ls-root--preview .ls-block--conditional-hidden {
   opacity: 0.3;
   border-style: dashed !important;
 }
 
-.wys-root--preview .wys-block {
+.ls-root--preview .ls-block {
   cursor: default;
 }
 
-.wys-root--preview .wys-section__grid {
+.ls-root--preview .ls-section__grid {
   row-gap: 12px;
 }
 
-.wys-root--preview .wys-canvas {
+.ls-root--preview .ls-canvas {
   overflow-y: auto;
 }
 
 /* ─── Properties Panel Resize & Hover ──────────────────────── */
 
-.wys-props-outer {
+.ls-props-outer {
   position: relative;
   flex-shrink: 0;
   background: var(--sails-bg-secondary, #f8fafc);
@@ -859,11 +859,11 @@
   overflow: hidden;
 }
 
-.wys-props-outer--open {
+.ls-props-outer--open {
   overflow-y: auto;
 }
 
-.wys-props-resize {
+.ls-props-resize {
   position: absolute;
   left: 0;
   top: 0;
@@ -873,19 +873,19 @@
   z-index: 10;
 }
 
-.wys-props-resize:hover {
+.ls-props-resize:hover {
   background: var(--sails-primary, #9dcee0);
   opacity: 0.4;
 }
 
-.wys-props-header {
+.ls-props-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 12px 4px;
 }
 
-.wys-props-tab {
+.ls-props-tab {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -895,13 +895,13 @@
   transition: color 0.12s;
 }
 
-.wys-props-tab:hover {
+.ls-props-tab:hover {
   color: var(--sails-primary, #9dcee0);
 }
 
 /* ─── Reset Confirmation Modal ──────────────────────────────── */
 
-.wys-modal-overlay {
+.ls-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
@@ -911,7 +911,7 @@
   z-index: 1000;
 }
 
-.wys-modal {
+.ls-modal {
   background: var(--sails-bg-primary, #fff);
   border-radius: 8px;
   padding: 24px;
@@ -920,21 +920,21 @@
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
-.wys-modal__title {
+.ls-modal__title {
   margin: 0 0 8px;
   font-size: 15px;
   font-weight: 600;
   color: var(--sails-text-primary, #1e293b);
 }
 
-.wys-modal__text {
+.ls-modal__text {
   margin: 0 0 20px;
   font-size: 13px;
   color: var(--sails-text-muted, #64748b);
   line-height: 1.5;
 }
 
-.wys-modal__actions {
+.ls-modal__actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
