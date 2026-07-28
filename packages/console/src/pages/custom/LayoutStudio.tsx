@@ -13,7 +13,7 @@ import {
   GripVertical, Plus, X, Eye, EyeOff, Trash2, MoveUp, MoveDown,
   LayoutGrid, Settings, ArrowRight, ListTree, FolderKanban, Columns,
   Table2, Filter, ShieldAlert, AlertCircle,
-  ArrowLeft, Loader2, Play, Pause, Pin, PinOff,
+  ArrowLeft, Loader2, Play, Pause, Minimize2, Maximize2, CheckCircle2,
 } from 'lucide-react';
 import type { SailsFieldDefinition } from '@sails/shared';
 import { useAuth } from '../../contexts/AuthContext';
@@ -237,7 +237,7 @@ function evaluateConditions(conditions: BlockCondition[] | undefined, record: Re
 // ─── Main Component ───────────────────────────────────────────
 
 const LayoutStudio: React.FC = () => {
-  const { tableId } = useParams<{ tableId: string }>();
+  const { tableId, layoutId } = useParams<{ tableId: string; layoutId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -255,15 +255,29 @@ const LayoutStudio: React.FC = () => {
   const [dragOverChildBlockId, setDragOverChildBlockId] = useState<string | null>(null);
   const [showProperties, setShowProperties] = useState(true);
   const [previewMode, setPreviewMode] = useState(false);
-  const [propsPinned, setPropsPinned] = useState(true);
+  const [propsFloating, setPropsFloating] = useState(false);
   const [propsWidth, setPropsWidth] = useState(260);
   const [propsResizing, setPropsResizing] = useState(false);
+  const [paletteFloating, setPaletteFloating] = useState(false);
+  const [paletteWidth, setPaletteWidth] = useState(220);
+  const [paletteResizing, setPaletteResizing] = useState(false);
+  const [paletteVisible, setPaletteVisible] = useState(true);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [mockRecord, setMockRecord] = useState<Record<string, any>>({});
   const [resizing, setResizing] = useState<{ blockId: string; startX: number; startSpan: number; sectionElement: HTMLElement | null } | null>(null);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedSuccessMsg, setSavedSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!tableId) { setFetchError('No table ID provided'); setFetchLoading(false); return; }
+    if (tableId === '_custom') {
+      setTableMeta({ id: '_custom', name: 'Custom Layout', tableName: 'custom', fields: [] });
+      setMockRecord({});
+      setFetchLoading(false);
+      return;
+    }
     const fetchTable = async () => {
       try {
         const res = await fetch('/api/metadata/objects');
@@ -282,6 +296,26 @@ const LayoutStudio: React.FC = () => {
     };
     fetchTable();
   }, [tableId]);
+
+  useEffect(() => {
+    if (!layoutId) return;
+    const loadLayout = async () => {
+      try {
+        const res = await fetch(`/api/console/layouts?id=${layoutId}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Failed to load layout');
+        const layout = json.data;
+        if (layout.config) {
+          const config = typeof layout.config === 'string' ? JSON.parse(layout.config) : layout.config;
+          if (config.sections) setSections(config.sections);
+          if (config.blocks) setBlocks(config.blocks);
+        }
+      } catch (err: any) {
+        console.error('Failed to load layout config:', err);
+      }
+    };
+    loadLayout();
+  }, [layoutId]);
 
   const allFields = tableMeta?.fields ?? [];
   const placedFieldIds = blocks.filter((b) => b.blockType === 'field').map((b) => b.fieldId!).filter(Boolean);
@@ -348,6 +382,21 @@ const LayoutStudio: React.FC = () => {
     };
   }, [propsResizing]);
 
+  useEffect(() => {
+    if (!paletteResizing) return;
+    const onMove = (e: MouseEvent) => {
+      const newWidth = Math.max(160, Math.min(400, e.clientX + 4));
+      setPaletteWidth(newWidth);
+    };
+    const onUp = () => setPaletteResizing(false);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+  }, [paletteResizing]);
+
   const doReset = () => {
     setSections([newSection()]);
     setBlocks([]);
@@ -355,9 +404,44 @@ const LayoutStudio: React.FC = () => {
     setActiveTabMap({});
     setDragOverTabBlockId(null);
     setDragOverChildBlockId(null);
+    setPropsFloating(false);
+    setPaletteFloating(false);
     setShowResetConfirm(false);
     sectionCounter = 0;
     blockCounter = 0;
+  };
+
+  const serializeLayout = () => ({
+    sections,
+    blocks,
+  });
+
+  const handleSaveClick = () => {
+    setSaveError(null);
+    setShowSaveConfirm(true);
+  };
+
+  const doSave = async () => {
+    if (!layoutId) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const config = serializeLayout();
+      const res = await fetch('/api/console/layouts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: layoutId, config }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to save layout');
+      setShowSaveConfirm(false);
+      setSavedSuccessMsg('Layout saved successfully.');
+      setTimeout(() => setSavedSuccessMsg(null), 4000);
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to save layout');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const allowedRoles = ['SUPER_ADMIN', 'TENANT_ADMIN'];
@@ -755,25 +839,51 @@ const LayoutStudio: React.FC = () => {
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setPreviewMode(true)}>
                 <Play size={14} /> Preview
               </button>
-              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => { setShowProperties(!showProperties); setPropsPinned(!showProperties); }}>
-                <Settings size={14} /> {showProperties ? 'Hide' : 'Show'} Properties
-              </button>
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowResetConfirm(true)}>
                 Reset
               </button>
-              <button className="sails-btn sails-btn--primary sails-btn--sm">Save Layout</button>
+              <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={handleSaveClick} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Layout'}
+              </button>
             </>
           )}
         </div>
       </div>
 
-      <div className="ls-body" style={previewMode ? { gridTemplateColumns: '1fr' } : undefined}>
+      {savedSuccessMsg && (
+        <div className="ls-toast-success">
+          <CheckCircle2 size={16} />
+          <span>{savedSuccessMsg}</span>
+        </div>
+      )}
+
+      <div className="ls-body" style={{ gridTemplateColumns: (() => {
+        if (previewMode) return '1fr';
+        const pw = showProperties ? propsWidth : 36;
+        const lw = paletteWidth;
+        const leftCol = paletteFloating ? '' : `${lw}px `;
+        const rightCol = propsFloating ? '' : ` ${pw}px`;
+        return `${leftCol}1fr${rightCol}`;
+      })() }}>
         {/* ── LEFT: Palette ── */}
         {!previewMode && (
-        <div className="ls-palette">
+        <div className={`ls-palette-outer ${paletteFloating ? 'ls-palette-outer--floating' : ''} ${paletteVisible ? 'ls-palette-outer--open' : ''}`}
+          style={{ width: paletteFloating ? (paletteVisible ? paletteWidth : 36) : '100%' }}
+          onMouseEnter={() => { if (paletteFloating) setPaletteVisible(true); }}
+          onMouseLeave={() => { if (paletteFloating) setPaletteVisible(false); }}
+        >
+          {paletteVisible && (
+            <>
+          <div className="ls-palette-resize" onMouseDown={(e) => { e.preventDefault(); setPaletteResizing(true); }} />
+          <div className="ls-palette">
           <div className="ls-palette__header">
             <h3 className="ls-panel-title"><LayoutGrid size={13} /> Fields</h3>
-            <span className="ls-palette__count">{palette.filter(p => p.blockType === 'field').length}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span className="ls-palette__count">{palette.filter(p => p.blockType === 'field').length}</span>
+              <button className="ls-block__btn" onClick={() => setPaletteFloating(!paletteFloating)} title={paletteFloating ? 'Dock palette' : 'Float palette'}>
+                {paletteFloating ? <Maximize2 size={12} /> : <Minimize2 size={12} />}
+              </button>
+            </div>
           </div>
           <button className="sails-btn sails-btn--ghost sails-btn--sm ls-palette__add-section" onClick={addSection}>
             <Plus size={13} /> Add Section
@@ -822,6 +932,14 @@ const LayoutStudio: React.FC = () => {
             )}
           </div>
         </div>
+            </>
+          )}
+          {!paletteVisible && (
+            <div className="ls-palette-tab" onClick={() => setPaletteVisible(true)}>
+              <LayoutGrid size={14} />
+            </div>
+          )}
+          </div>
         )}
 
         {/* ── CENTER: Canvas ── */}
@@ -1074,10 +1192,10 @@ const LayoutStudio: React.FC = () => {
         {/* ── RIGHT: Properties ── */}
         {!previewMode && (
           <div
-            className={`ls-props-outer ${propsPinned ? 'ls-props-outer--pinned' : ''} ${showProperties ? 'ls-props-outer--open' : ''}`}
-            style={{ width: propsPinned || showProperties ? propsWidth : 36 }}
-            onMouseEnter={() => { if (!propsPinned) setShowProperties(true); }}
-            onMouseLeave={() => { if (!propsPinned) setShowProperties(false); }}
+            className={`ls-props-outer ${showProperties ? 'ls-props-outer--open' : ''} ${propsFloating ? 'ls-props-outer--floating' : ''}`}
+            style={{ width: propsFloating ? (showProperties ? propsWidth : 36) : '100%' }}
+            onMouseEnter={() => { if (propsFloating) setShowProperties(true); }}
+            onMouseLeave={() => { if (propsFloating) setShowProperties(false); }}
           >
             {showProperties && (
               <>
@@ -1085,8 +1203,12 @@ const LayoutStudio: React.FC = () => {
                 <div className="ls-properties">
                   <div className="ls-props-header">
                     <h3 className="ls-panel-title"><Settings size={13} /> Properties</h3>
-                    <button className="ls-block__btn" onClick={() => setPropsPinned(!propsPinned)} title={propsPinned ? 'Unpin panel' : 'Pin panel open'}>
-                      {propsPinned ? <PinOff size={12} /> : <Pin size={12} />}
+                    <button className="ls-block__btn" onClick={() => {
+                      const next = !propsFloating;
+                      setPropsFloating(next);
+                      if (!next) setShowProperties(true);
+                    }} title={propsFloating ? 'Dock panel' : 'Float panel over canvas'}>
+                      {propsFloating ? <Maximize2 size={12} /> : <Minimize2 size={12} />}
                     </button>
                   </div>
                   {selectedBlock ? (
@@ -1377,7 +1499,7 @@ const LayoutStudio: React.FC = () => {
               </>
             )}
             {!showProperties && (
-              <div className="ls-props-tab" onClick={() => { setShowProperties(true); setPropsPinned(true); }}>
+              <div className="ls-props-tab" onClick={() => setShowProperties(true)}>
                 <Settings size={14} />
               </div>
             )}
@@ -1392,6 +1514,21 @@ const LayoutStudio: React.FC = () => {
             <div className="ls-modal__actions">
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowResetConfirm(false)}>Cancel</button>
               <button className="sails-btn sails-btn--danger sails-btn--sm" onClick={doReset}>Reset</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showSaveConfirm && (
+        <div className="ls-modal-overlay" onClick={() => { if (!saving) setShowSaveConfirm(false); }}>
+          <div className="ls-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="ls-modal__title">Save Layout</h3>
+            <p className="ls-modal__text">This will overwrite the existing layout configuration. Are you sure you want to continue?</p>
+            {saveError && <p className="ls-modal__error">{saveError}</p>}
+            <div className="ls-modal__actions">
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowSaveConfirm(false)} disabled={saving}>Cancel</button>
+              <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={doSave} disabled={saving}>
+                {saving ? 'Saving...' : 'Save'}
+              </button>
             </div>
           </div>
         </div>

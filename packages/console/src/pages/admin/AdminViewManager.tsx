@@ -25,21 +25,22 @@ const AdminViewManager: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [searchInput, setSearchInput] = useState('');
+  const [pageSize, setPageSize] = useState(25);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletedSuccessMsg, setDeletedSuccessMsg] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'description' | 'tableName' | 'viewType' | 'createdAt' | 'updatedAt'; direction: 'asc' | 'desc' } | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [editingLayout, setEditingLayout] = useState<LayoutRow | null>(null);
   const { setHeaderActions } = useConsole();
 
-  const limit = 25;
-
-  const fetchData = useCallback(async (p: number, q: string) => {
+  const fetchData = useCallback(async (p: number, q: string, ps?: number) => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ page: String(p), limit: String(limit) });
+      const params = new URLSearchParams({ page: String(p), limit: String(ps ?? pageSize) });
       if (q) params.set('search', q);
 
       const res = await fetch(`/api/console/layouts?${params}`);
@@ -53,7 +54,7 @@ const AdminViewManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pageSize]);
 
   useEffect(() => {
     fetchData(page, search);
@@ -119,35 +120,65 @@ const AdminViewManager: React.FC = () => {
     return () => setHeaderActions(null);
   }, [setHeaderActions, headerActions]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this layout?')) return;
+  const handleDelete = (id: string) => {
+    setDeleteError(null);
+    setDeleteConfirmId(id);
+  };
+
+  const doDelete = async () => {
+    const id = deleteConfirmId;
+    if (!id) return;
     setDeleting(id);
+    setDeleteConfirmId(null);
+    setDeleteError(null);
     try {
       const res = await fetch(`/api/console/layouts?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       setRows(prev => prev.filter(r => r.id !== id));
       setTotal(prev => prev - 1);
+      setDeletedSuccessMsg('Layout deleted successfully.');
+      setTimeout(() => setDeletedSuccessMsg(null), 4000);
     } catch (err: any) {
-      alert(err.message);
+      setDeleteError(err.message || 'Failed to delete layout');
     } finally {
       setDeleting(null);
     }
   };
 
+  const deleteTargetRow = deleteConfirmId ? rows.find(r => r.id === deleteConfirmId) : null;
+
   const handleOpenLayoutStudio = (row: LayoutRow) => {
     const targetId = row.table?.id || row.tableId;
-    if (targetId) {
-      window.open(`/layout-studio/${targetId}`, '_blank');
-    }
+    window.open(`/layout-studio/${targetId || '_custom'}/${row.id}`, '_blank');
   };
 
   const handleEdit = (row: LayoutRow) => {
     setEditingLayout(row);
   };
 
-  const startRecord = rows.length > 0 ? (page - 1) * limit + 1 : 0;
-  const endRecord = Math.min(page * limit, total);
+  const startRecord = rows.length > 0 ? (page - 1) * pageSize + 1 : 0;
+  const endRecord = Math.min(page * pageSize, total);
+
+  const renderHighlightedText = (text: string, query: string): React.ReactNode => {
+    if (!query || !query.trim() || !text) return text;
+    const trimmedQuery = query.trim();
+    const escapedQuery = trimmedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    const parts = text.split(regex);
+
+    return (
+      <>
+        {parts.map((part, i) =>
+          part.toLowerCase() === trimmedQuery.toLowerCase() ? (
+            <mark key={i} className="sails-layout-studio__highlight">{part}</mark>
+          ) : (
+            part
+          )
+        )}
+      </>
+    );
+  };
 
   return (
     <div className="sails-layout-studio">
@@ -158,9 +189,8 @@ const AdminViewManager: React.FC = () => {
             type="text"
             className="sails-layout-studio__search-input"
             placeholder="Search layouts by name or table..."
-            value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && (setSearch(searchInput), setPage(1))}
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
       </div>
@@ -243,14 +273,16 @@ const AdminViewManager: React.FC = () => {
                             <LayoutTemplate size={16} />
                           </div>
                           <div className="lav-cell-name__text">
-                            <span className="lav-name-primary">{row.name}</span>
-                            <code className="lav-system-name">/{row.systemName}</code>
+                            <span className="lav-name-primary">{renderHighlightedText(row.name, search)}</span>
+                            <code className="lav-system-name">/{renderHighlightedText(row.systemName, search)}</code>
                           </div>
                         </div>
                       </td>
                       <td>
                         <span className="lav-desc-text">
-                          {row.description || <span className="lav-text-muted">—</span>}
+                          {row.description
+                            ? renderHighlightedText(row.description, search)
+                            : <span className="lav-text-muted">—</span>}
                         </span>
                       </td>
                       <td>
@@ -258,7 +290,7 @@ const AdminViewManager: React.FC = () => {
                           <span className="lav-model-cell">
                             <span className="lav-model-link">
                               <Database size={12} />
-                              {row.table.name}
+                              {renderHighlightedText(row.table.name, search)}
                             </span>
                             {row.isDefault && (
                               <span className="sails-layout-card__badge sails-layout-card__badge--default">Default</span>
@@ -347,11 +379,29 @@ const AdminViewManager: React.FC = () => {
               </tbody>
             </table>
 
-            <div className="lav-pagination-footer">
-              <div className="lav-pagination-info">
-                Showing <strong>{startRecord}</strong> to <strong>{endRecord}</strong> of <strong>{total}</strong> layouts
+            <div className="sails-user-manager__pagination" style={{ borderTop: '1px solid var(--sails-border-color)' }}>
+              <div className="sails-user-manager__pagination-info">
+                <span className="sails-user-manager__pagination-range">
+                  Showing <strong>{startRecord}</strong> to <strong>{endRecord}</strong> of <strong>{total}</strong> layouts
+                </span>
+                <div className="sails-user-manager__page-size">
+                  <span className="sails-user-manager__page-size-label">Records per page:</span>
+                  <CustomSelect
+                    size="sm"
+                    value={pageSize}
+                    options={[
+                      { value: 10, label: '10' },
+                      { value: 25, label: '25' },
+                      { value: 50, label: '50' },
+                    ]}
+                    onChange={(val) => {
+                      setPageSize(Number(val));
+                      setPage(1);
+                    }}
+                  />
+                </div>
               </div>
-              <div className="lav-pagination-controls">
+              <div className="sails-user-manager__pagination-controls">
                 <button
                   className="sails-pagination-btn"
                   onClick={() => setPage(prev => Math.max(1, prev - 1))}
@@ -386,10 +436,12 @@ const AdminViewManager: React.FC = () => {
       {showCreateModal && (
         <CreateLayoutModal
           onClose={() => setShowCreateModal(false)}
-          onCreated={() => {
+          onCreated={(data) => {
             setShowCreateModal(false);
             setPage(1);
             fetchData(1, search);
+            const tid = data.table?.id || data.tableId || '_custom';
+            window.open(`/layout-studio/${tid}/${data.id}`, '_blank');
           }}
         />
       )}
@@ -404,13 +456,45 @@ const AdminViewManager: React.FC = () => {
           }}
         />
       )}
+
+      {deleteConfirmId && deleteTargetRow && createPortal(
+        <div className="sails-modal-overlay" onClick={() => setDeleteConfirmId(null)}>
+          <div className="sails-confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="sails-confirm-modal__header">
+              <AlertTriangle size={20} style={{ color: 'var(--sails-danger, #ef4444)' }} />
+              <span>Delete Layout</span>
+            </div>
+            <div className="sails-confirm-modal__body">
+              Are you sure you want to delete <strong>{deleteTargetRow.name}</strong>? This cannot be undone.
+              {deleteError && <div className="sails-confirm-modal__error">{deleteError}</div>}
+            </div>
+            <div className="sails-confirm-modal__footer">
+              <button className="sails-btn sails-btn--ghost" onClick={() => setDeleteConfirmId(null)}>Cancel</button>
+              <button
+                className="sails-btn sails-btn--danger"
+                onClick={doDelete}
+                disabled={deleting === deleteConfirmId}
+              >
+                {deleting === deleteConfirmId ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {deletedSuccessMsg && (
+        <div className="sails-layout-studio__toast sails-layout-studio__toast--success">
+          <span>{deletedSuccessMsg}</span>
+        </div>
+      )}
     </div>
   );
 };
 
 interface CreateLayoutModalProps {
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (data: LayoutRow) => void;
 }
 
 const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreated }) => {
@@ -478,7 +562,7 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
-      onCreated();
+      onCreated(json.data);
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -626,55 +710,24 @@ interface EditLayoutModalProps {
 }
 
 const EditLayoutModal: React.FC<EditLayoutModalProps> = ({ layout, onClose, onUpdated }) => {
-  const [tables, setTables] = useState<{ id: string; name: string }[]>([]);
   const [name, setName] = useState(layout.name);
   const [description, setDescription] = useState(layout.description || '');
-  const [layoutType, setLayoutType] = useState<LayoutType>(layout.layoutType);
-  const [tableId, setTableId] = useState(layout.tableId || '');
-  const [viewType, setViewType] = useState<ViewType>(layout.viewType);
   const [isDefault, setIsDefault] = useState(layout.isDefault);
   const [saving, setSaving] = useState(false);
-  const [showWarning, setShowWarning] = useState(false);
 
-  useEffect(() => {
-    const fetchTables = async () => {
-      try {
-        const res = await fetch('/api/metadata/objects');
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setTables(data.map((t: any) => ({ id: t.id, name: t.name || t.tableName })));
-        }
-      } catch { /* ignore */ }
-    };
-    fetchTables();
-  }, []);
-
-  const isCustom = layoutType === 'custom';
-
-  const hasDestructiveChange = layoutType !== layout.layoutType || viewType !== layout.viewType || tableId !== (layout.tableId || '');
-
-  const handleSave = () => {
-    if (hasDestructiveChange && !showWarning) {
-      setShowWarning(true);
-      return;
-    }
-    submitUpdate();
-  };
-
-  const submitUpdate = async () => {
+  const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      const payload: any = { id: layout.id, name: name.trim(), description: description.trim() || null };
-      if (layoutType !== layout.layoutType) payload.layoutType = layoutType;
-      if (viewType !== layout.viewType) payload.viewType = viewType;
-      if (tableId !== (layout.tableId || '')) payload.tableId = isCustom ? null : tableId;
-      if (isDefault !== layout.isDefault) payload.isDefault = isDefault;
-
       const res = await fetch('/api/console/layouts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          id: layout.id,
+          name: name.trim(),
+          description: description.trim() || null,
+          ...(isDefault !== layout.isDefault && { isDefault })
+        })
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
@@ -685,6 +738,9 @@ const EditLayoutModal: React.FC<EditLayoutModalProps> = ({ layout, onClose, onUp
       setSaving(false);
     }
   };
+
+  const viewTypeLabel = VIEW_TYPE_LABELS[layout.viewType];
+  const ViewTypeIcon = viewTypeLabel.icon;
 
   return createPortal(
     <div className="sails-layout-overlay" onClick={onClose}>
@@ -702,15 +758,6 @@ const EditLayoutModal: React.FC<EditLayoutModalProps> = ({ layout, onClose, onUp
           <button className="sails-layout-dialog__close" onClick={onClose}><X size={20} /></button>
         </div>
         <div className="sails-layout-dialog__body">
-          {showWarning && (
-            <div className="sails-layout-dialog__warning">
-              <AlertTriangle size={18} />
-              <div className="sails-layout-dialog__warning-text">
-                <strong>Layout design will be lost.</strong> Changing Model, Layout Type, or View Type will reset all layout design (sections, fields, and related records).
-              </div>
-            </div>
-          )}
-
           <div className="sails-layout-dialog__row">
             <div className="sails-layout-dialog__field">
               <label className="sails-layout-dialog__label">Name *</label>
@@ -721,7 +768,7 @@ const EditLayoutModal: React.FC<EditLayoutModalProps> = ({ layout, onClose, onUp
                 onChange={e => setName(e.target.value)}
               />
             </div>
-             <div className="sails-layout-dialog__field">
+            <div className="sails-layout-dialog__field">
               <label className="sails-layout-dialog__label">System Name</label>
               <code className="sails-layout-dialog__system-name-display">{layout.systemName}</code>
               <span className="sails-layout-dialog__hint">System names cannot be changed after creation.</span>
@@ -737,53 +784,26 @@ const EditLayoutModal: React.FC<EditLayoutModalProps> = ({ layout, onClose, onUp
               rows={4}
             />
           </div>
-          <div className="sails-layout-dialog__field">
-            <label className="sails-layout-dialog__label">Layout Type</label>
-            <div className="sails-layout-modal__toggle">
-              <button
-                className={`sails-layout-modal__toggle-option ${layoutType === 'data' ? 'sails-layout-modal__toggle-option--active' : ''}`}
-                onClick={() => { setLayoutType('data'); setShowWarning(false); }}
-              >
-                <Database size={16} />
-                Data
-              </button>
-              <button
-                className={`sails-layout-modal__toggle-option ${layoutType === 'custom' ? 'sails-layout-modal__toggle-option--active' : ''}`}
-                onClick={() => { setLayoutType('custom'); setTableId(''); setShowWarning(false); }}
-              >
-                <LayoutTemplate size={16} />
-                Custom
-              </button>
+          <div className="sails-layout-dialog__row">
+            <div className="sails-layout-dialog__field">
+              <label className="sails-layout-dialog__label">Layout Type</label>
+              <div className="sails-layout-dialog__readonly-badge">
+                {layout.layoutType === 'data' ? <Database size={16} /> : <LayoutTemplate size={16} />}
+                <span>{layout.layoutType === 'data' ? 'Data' : 'Custom'}</span>
+              </div>
+            </div>
+            <div className="sails-layout-dialog__field">
+              <label className="sails-layout-dialog__label">Model</label>
+              <div className="sails-layout-dialog__readonly-text">
+                {layout.table?.name || (layout.layoutType === 'custom' ? 'Custom' : '—')}
+              </div>
             </div>
           </div>
           <div className="sails-layout-dialog__field">
-            <label className="sails-layout-dialog__label">Model</label>
-            <CustomSelect
-              value={tableId}
-              options={tables.map(t => ({ value: t.id, label: t.name }))}
-              onChange={(val) => { setTableId(String(val)); setShowWarning(false); }}
-              placeholder={isCustom ? 'Not applicable for custom layouts' : 'Select a model...'}
-              searchable={true}
-              disabled={isCustom}
-            />
-          </div>
-          <div className="sails-layout-dialog__field">
             <label className="sails-layout-dialog__label">View Type</label>
-            <div className="sails-layout-modal__view-options">
-              {(['LIST', 'DETAIL', 'FORM'] as ViewType[]).map(vt => {
-                const info = VIEW_TYPE_LABELS[vt];
-                const Icon = info.icon;
-                return (
-                  <button
-                    key={vt}
-                    className={`sails-layout-modal__view-option ${viewType === vt ? 'sails-layout-modal__view-option--selected' : ''}`}
-                    onClick={() => { setViewType(vt); setShowWarning(false); }}
-                  >
-                    <Icon size={20} />
-                    <span>{info.label}</span>
-                  </button>
-                );
-              })}
+            <div className="sails-layout-dialog__readonly-badge">
+              <ViewTypeIcon size={18} />
+              <span>{viewTypeLabel.label}</span>
             </div>
           </div>
           <label className="sails-checkbox-label">
@@ -801,9 +821,9 @@ const EditLayoutModal: React.FC<EditLayoutModalProps> = ({ layout, onClose, onUp
           <button
             className="sails-btn sails-btn--primary"
             onClick={handleSave}
-            disabled={!name.trim() || (!isCustom && !tableId) || saving}
+            disabled={!name.trim() || saving}
           >
-            {saving ? 'Saving...' : showWarning ? 'Save Anyway' : 'Save Changes'}
+            {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>

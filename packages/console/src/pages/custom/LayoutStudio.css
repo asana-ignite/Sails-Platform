@@ -46,9 +46,9 @@
 
 .ls-body {
   display: grid;
-  grid-template-columns: 220px 1fr 220px;
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 
 /* ─── LEFT: Palette ─────────────────────────────────────────── */
@@ -56,6 +56,7 @@
 .ls-palette {
   display: flex;
   flex-direction: column;
+  flex: 1;
   background: var(--sails-bg-secondary, #f8fafc);
   border-right: 1px solid var(--sails-border, #e2e8f0);
   overflow: hidden;
@@ -155,6 +156,76 @@
   padding: 20px 8px;
   font-style: italic;
   margin: 0;
+}
+
+/* ─── Palette Panel Resize & Float ────────────────────────── */
+
+.ls-palette-outer {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.ls-palette-outer--open {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.ls-palette-outer--floating {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.1);
+  border-radius: 0 6px 6px 0;
+  transition: width 0.18s ease;
+}
+
+.ls-palette-outer--floating .ls-palette {
+  border-right: none;
+}
+
+.ls-palette-resize {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.12s;
+}
+
+.ls-palette-resize:hover {
+  background: var(--sails-primary, #9dcee0);
+  opacity: 0.5;
+}
+
+.ls-palette-resize:active {
+  background: var(--sails-primary, #9dcee0);
+  opacity: 0.7;
+}
+
+.ls-palette-outer--floating .ls-palette-resize {
+  right: -4px;
+}
+
+.ls-palette-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 16px;
+  cursor: pointer;
+  color: var(--sails-text-muted, #94a3b8);
+  transition: color 0.12s;
+}
+
+.ls-palette-tab:hover {
+  color: var(--sails-primary, #9dcee0);
 }
 
 /* ─── CENTER: WYSIWYG Canvas ────────────────────────────────── */
@@ -855,12 +926,23 @@
   flex-shrink: 0;
   background: var(--sails-bg-secondary, #f8fafc);
   border-left: 1px solid var(--sails-border, #e2e8f0);
-  transition: width 0.18s ease;
   overflow: hidden;
 }
 
 .ls-props-outer--open {
   overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.ls-props-outer--floating {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
+  border-radius: 6px 0 0 6px;
+  transition: width 0.18s ease;
 }
 
 .ls-props-resize {
@@ -868,14 +950,25 @@
   left: 0;
   top: 0;
   bottom: 0;
-  width: 6px;
+  width: 8px;
   cursor: col-resize;
   z-index: 10;
+  background: transparent;
+  transition: background 0.12s;
 }
 
 .ls-props-resize:hover {
   background: var(--sails-primary, #9dcee0);
-  opacity: 0.4;
+  opacity: 0.5;
+}
+
+.ls-props-resize:active {
+  background: var(--sails-primary, #9dcee0);
+  opacity: 0.7;
+}
+
+.ls-props-outer--floating .ls-props-resize {
+  left: -4px;
 }
 
 .ls-props-header {
@@ -938,4 +1031,70 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.ls-modal__error {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--sails-radius-md);
+  font-size: 12px;
+  color: #dc2626;
+  line-height: 1.4;
+}
+
+/* ─── Success Toast ─────────────────────────────────────────── */
+
+.ls-toast-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  padding: 10px 18px;
+  background: var(--sails-success-light, #eaf9f6);
+  border: 1px solid var(--sails-success, #4ec5ad);
+  border-radius: var(--sails-radius-md, 6px);
+  color: var(--sails-success, #2e7d6e);
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  animation: sails-fade-in 0.25s ease-out;
+}
+
+/* ─── Panel content width adaptation ───────────────────────── */
+
+.ls-props-outer .sails-input,
+.ls-props-outer select {
+  width: 100% !important;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.ls-props-outer .ls-cond-card {
+  max-width: 100% !important;
+  overflow: hidden;
+}
+
+.ls-props-outer .ls-cond-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.ls-props-outer .ls-cond-body select,
+.ls-props-outer .ls-cond-body input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ls-properties {
+  width: 100%;
+  overflow-y: auto;
+  padding: 0 10px 16px;
+  box-sizing: border-box;
 }

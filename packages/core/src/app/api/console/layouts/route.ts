@@ -12,6 +12,26 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (id) {
+      const layout = await db.tableLayout.findFirst({
+        where: { id },
+        include: {
+          table: { select: { id: true, name: true, tableName: true } }
+        }
+      });
+      if (!layout) {
+        return NextResponse.json({ success: false, error: 'Layout not found' }, { status: 404 });
+      }
+      if (layout.tableId) {
+        const table = await db.tableDefinition.findUnique({ where: { id: layout.tableId, tenantId } });
+        if (!table) {
+          return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
+        }
+      }
+      return NextResponse.json({ success: true, data: layout });
+    }
+
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '25');
     const search = searchParams.get('search') || '';

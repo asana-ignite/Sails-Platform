@@ -9,7 +9,7 @@ import {
   GripVertical, Plus, X, Eye, EyeOff, Trash2, MoveUp, MoveDown,
   LayoutGrid, Settings, ArrowRight, ListTree, FolderKanban, Columns,
   Table2, Filter, ShieldAlert, AlertCircle,
-  Play, Pause, Pin, PinOff,
+  Play, Pause, Minimize2, Maximize2,
 } from 'lucide-react';
 import type { SailsFieldDefinition } from '@sails/shared';
 import { MOCK_LEADS_FIELDS } from './sample-layout-data';
@@ -210,9 +210,13 @@ export const LayoutBuilder: React.FC = () => {
   const [dragOverChildBlockId, setDragOverChildBlockId] = useState<string | null>(null);
   const [showProperties, setShowProperties] = useState(true);
   const [previewMode, setPreviewMode] = useState(false);
-  const [propsPinned, setPropsPinned] = useState(true);
+  const [propsFloating, setPropsFloating] = useState(false);
   const [propsWidth, setPropsWidth] = useState(260);
   const [propsResizing, setPropsResizing] = useState(false);
+  const [paletteFloating, setPaletteFloating] = useState(false);
+  const [paletteWidth, setPaletteWidth] = useState(220);
+  const [paletteResizing, setPaletteResizing] = useState(false);
+  const [paletteVisible, setPaletteVisible] = useState(true);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [mockRecord, setMockRecord] = useState<Record<string, any>>({
     lead_name: 'ACME Corp Deal', company: 'ACME Corporation',
@@ -640,6 +644,21 @@ export const LayoutBuilder: React.FC = () => {
     };
   }, [propsResizing]);
 
+  useEffect(() => {
+    if (!paletteResizing) return;
+    const onMove = (e: MouseEvent) => {
+      const newWidth = Math.max(160, Math.min(400, e.clientX + 4));
+      setPaletteWidth(newWidth);
+    };
+    const onUp = () => setPaletteResizing(false);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+  }, [paletteResizing]);
+
   const doReset = () => {
     setSections([newSection()]);
     setBlocks([]);
@@ -647,6 +666,8 @@ export const LayoutBuilder: React.FC = () => {
     setActiveTabMap({});
     setDragOverTabBlockId(null);
     setDragOverChildBlockId(null);
+    setPropsFloating(false);
+    setPaletteFloating(false);
     setShowResetConfirm(false);
     sectionCounter = 0;
     blockCounter = 0;
@@ -668,9 +689,6 @@ export const LayoutBuilder: React.FC = () => {
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setPreviewMode(true)}>
                 <Play size={14} /> Preview
               </button>
-              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => { setShowProperties(!showProperties); setPropsPinned(!showProperties); }}>
-                <Settings size={14} /> {showProperties ? 'Hide' : 'Show'} Properties
-              </button>
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowResetConfirm(true)}>
                 Reset
               </button>
@@ -680,13 +698,33 @@ export const LayoutBuilder: React.FC = () => {
         </div>
       </div>
 
-      <div className="wys-body" style={previewMode ? { gridTemplateColumns: '1fr' } : undefined}>
+      <div className="wys-body" style={{ gridTemplateColumns: (() => {
+        if (previewMode) return '1fr';
+        const pw = showProperties ? propsWidth : 36;
+        const lw = paletteFloating ? 0 : paletteWidth;
+        const leftCol = paletteFloating ? '' : `${lw}px `;
+        const rightCol = propsFloating ? '' : ` ${pw}px`;
+        return `${leftCol}1fr${rightCol}`;
+      })() }}>
         {/* ── LEFT: Palette ── */}
         {!previewMode && (
-        <div className="wys-palette">
+        <div className={`wys-palette-outer ${paletteFloating ? 'wys-palette-outer--floating' : ''} ${paletteVisible ? 'wys-palette-outer--open' : ''}`}
+          style={{ width: paletteFloating ? (paletteVisible ? paletteWidth : 36) : '100%' }}
+          onMouseEnter={() => { if (paletteFloating) setPaletteVisible(true); }}
+          onMouseLeave={() => { if (paletteFloating) setPaletteVisible(false); }}
+        >
+          {paletteVisible && (
+            <>
+          <div className="wys-palette-resize" onMouseDown={(e) => { e.preventDefault(); setPaletteResizing(true); }} />
+          <div className="wys-palette">
           <div className="wys-palette__header">
             <h3 className="wys-panel-title"><LayoutGrid size={13} /> Blocks</h3>
-            <span className="wys-palette__count">{palette.length}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span className="wys-palette__count">{palette.length}</span>
+              <button className="wys-block__btn" onClick={() => setPaletteFloating(!paletteFloating)} title={paletteFloating ? 'Dock palette' : 'Float palette'}>
+                {paletteFloating ? <Maximize2 size={12} /> : <Minimize2 size={12} />}
+              </button>
+            </div>
           </div>
           <button className="sails-btn sails-btn--ghost sails-btn--sm wys-palette__add-section" onClick={addSection}>
             <Plus size={13} /> Add Section
@@ -735,6 +773,14 @@ export const LayoutBuilder: React.FC = () => {
             )}
           </div>
         </div>
+            </>
+          )}
+          {!paletteVisible && (
+            <div className="wys-palette-tab" onClick={() => setPaletteVisible(true)}>
+              <LayoutGrid size={14} />
+            </div>
+          )}
+          </div>
         )}
 
         {/* ── CENTER: WYSIWYG Canvas ── */}
@@ -987,10 +1033,10 @@ export const LayoutBuilder: React.FC = () => {
         {/* ── RIGHT: Properties ── */}
         {!previewMode && (
           <div
-            className={`wys-props-outer ${propsPinned ? 'wys-props-outer--pinned' : ''} ${showProperties ? 'wys-props-outer--open' : ''}`}
-            style={{ width: propsPinned || showProperties ? propsWidth : 36 }}
-            onMouseEnter={() => { if (!propsPinned) setShowProperties(true); }}
-            onMouseLeave={() => { if (!propsPinned) setShowProperties(false); }}
+            className={`wys-props-outer ${showProperties ? 'wys-props-outer--open' : ''} ${propsFloating ? 'wys-props-outer--floating' : ''}`}
+            style={{ width: propsFloating ? (showProperties ? propsWidth : 36) : '100%' }}
+            onMouseEnter={() => { if (propsFloating) setShowProperties(true); }}
+            onMouseLeave={() => { if (propsFloating) setShowProperties(false); }}
           >
             {showProperties && (
               <>
@@ -998,8 +1044,12 @@ export const LayoutBuilder: React.FC = () => {
                 <div className="wys-properties">
                   <div className="wys-props-header">
                     <h3 className="wys-panel-title"><Settings size={13} /> Properties</h3>
-                    <button className="wys-block__btn" onClick={() => setPropsPinned(!propsPinned)} title={propsPinned ? 'Unpin panel' : 'Pin panel open'}>
-                      {propsPinned ? <PinOff size={12} /> : <Pin size={12} />}
+                    <button className="wys-block__btn" onClick={() => {
+                      const next = !propsFloating;
+                      setPropsFloating(next);
+                      if (!next) setShowProperties(true);
+                    }} title={propsFloating ? 'Dock panel' : 'Float panel over canvas'}>
+                      {propsFloating ? <Maximize2 size={12} /> : <Minimize2 size={12} />}
                     </button>
                   </div>
                   {selectedBlock ? (
@@ -1290,7 +1340,7 @@ export const LayoutBuilder: React.FC = () => {
               </>
             )}
             {!showProperties && (
-              <div className="wys-props-tab" onClick={() => { setShowProperties(true); setPropsPinned(true); }}>
+              <div className="wys-props-tab" onClick={() => setShowProperties(true)}>
                 <Settings size={14} />
               </div>
             )}

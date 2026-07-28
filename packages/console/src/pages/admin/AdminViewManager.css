@@ -48,6 +48,14 @@
   box-shadow: 0 0 0 4px var(--sails-primary-light);
 }
 
+.sails-layout-studio__highlight {
+  background-color: rgba(245, 158, 11, 0.35);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 3px;
+  font-weight: 600;
+}
+
 /* ─── Data Table ─── */
 
 .om-table-card {
@@ -203,7 +211,7 @@
   top: 100%;
   right: 0;
   margin-top: 4px;
-  width: 210px;
+  width: 250px;
   background: var(--sails-bg-card, #1e1e2d);
   border: 1px solid var(--sails-border-color, rgba(255, 255, 255, 0.1));
   border-radius: var(--sails-radius-md, 8px);
@@ -219,6 +227,7 @@
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
+  white-space: nowrap;
   border: none;
   background: transparent;
   border-radius: 4px;
@@ -250,27 +259,6 @@
   height: 1px;
   background: var(--sails-border-color, rgba(255, 255, 255, 0.1));
   margin: 4px 0;
-}
-
-/* ─── Pagination Footer ─── */
-
-.lav-pagination-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 20px;
-  border-top: 1px solid var(--sails-border-color);
-}
-
-.lav-pagination-info {
-  font-size: 0.8rem;
-  color: var(--sails-text-muted);
-}
-
-.lav-pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
 }
 
 /* ─── Badges (reused from card-based layout, still valid in table) ─── */
@@ -310,6 +298,76 @@
 .sails-layout-card__badge--custom {
   background: rgba(100, 100, 100, 0.1);
   color: #6b7280;
+}
+
+/* ─── Confirm Modal ────────────────────────────── */
+
+.sails-confirm-modal {
+  background: var(--sails-bg-card);
+  border-radius: var(--sails-radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  width: 100%;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid var(--sails-border-color);
+  animation: sails-fade-in 0.2s ease-out;
+}
+
+.sails-confirm-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+}
+
+.sails-confirm-modal__body {
+  font-size: 0.88rem;
+  color: var(--sails-text-muted);
+  line-height: 1.5;
+}
+
+.sails-confirm-modal__error {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--sails-radius-md);
+  color: #dc2626;
+  font-size: 0.8rem;
+}
+
+.sails-confirm-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+/* ─── Toast ────────────────────────────────────── */
+
+.sails-layout-studio__toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  padding: 10px 20px;
+  border-radius: var(--sails-radius-md);
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  animation: sails-fade-in 0.25s ease-out;
+}
+
+.sails-layout-studio__toast--success {
+  background: var(--sails-success-light, #eaf9f6);
+  border: 1px solid var(--sails-success, #4ec5ad);
+  color: var(--sails-success, #2e7d6e);
 }
 
 /* ─── Loading / Error / Empty ─── */
@@ -597,32 +655,23 @@
   color: var(--sails-primary-dark);
 }
 
-/* ─── Edit Warning Banner ─── */
+/* ─── Read-only Display ─── */
 
-.sails-layout-dialog__warning {
+.sails-layout-dialog__readonly-badge {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--sails-bg-body);
+  border: 2px solid var(--sails-border-color);
   border-radius: var(--sails-radius-md);
-  color: #b45309;
   font-size: 0.85rem;
-  line-height: 1.5;
-  animation: sails-fade-in 0.2s ease-out;
+  font-weight: 600;
+  color: var(--sails-text-muted);
 }
 
-.sails-layout-dialog__warning svg {
-  flex-shrink: 0;
-  margin-top: 1px;
-  color: #f59e0b;
-}
-
-.sails-layout-dialog__warning-text {
-  flex: 1;
-}
-
-.sails-layout-dialog__warning-text strong {
-  font-weight: 700;
+.sails-layout-dialog__readonly-text {
+  padding: 8px 0;
+  font-size: 0.85rem;
+  color: var(--sails-text-main);
 }
