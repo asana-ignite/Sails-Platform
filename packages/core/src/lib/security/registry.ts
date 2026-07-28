@@ -47,6 +47,11 @@ export const SYSTEM_PERMISSION_REGISTRY: Record<string, PermissionDefinition> = 
     description: 'Add or remove links and folders in the sidebar navigation.',
     category: 'Platform'
   },
+  'system.workflow.manage': {
+    label: 'Manage Workflows',
+    description: 'Design and automate business workflows across the platform.',
+    category: 'Platform'
+  },
 
   // --- Login & Security ---
   'system.security.sso': {

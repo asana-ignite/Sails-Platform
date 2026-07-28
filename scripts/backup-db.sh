@@ -1,17 +1,45 @@
-#!/bin/bash
-# SAILS Platform - Database Backup Script
-# Generates full data dump and schema-only dump from local PostgreSQL Docker container.
+#!/usr/bin/env bash
+#
+# SAILS full database backup — split into schema + data, timestamped.
+#
+# Usage:
+#   ./scripts/backup-db.sh
+#
+# Output (in ./backups/):
+#   sails_schema_YYYYMMDD_HHMMSS.sql   — structure only (schemas, tables, indexes, FKs, RLS policies)
+#   sails_data_YYYYMMDD_HHMMSS.sql     — data only (COPY statements, all schemas incl. tenant schemas)
+#
+# Notes:
+#   - Requires the sails-db container to be running.
+#   - \restrict / \unrestrict wrapper lines emitted by newer pg_dump are stripped
+#     so the files can be replayed with plain psql.
+#   - Restore procedure: see docs/KB_UNLOADED_CONFIG.md (§ Restore).
+#
+set -euo pipefail
 
-set -e
-
-BACKUP_DIR="$(dirname "$0")/../backups"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+BACKUP_DIR="$ROOT_DIR/backups"
 mkdir -p "$BACKUP_DIR"
 
-echo "📦 Creating full database backup (Data + Schemas)..."
-docker exec -t sails-db pg_dump -U postgres -d postgres --clean --if-exists --create > "$BACKUP_DIR/full_database_backup.sql"
+SCHEMA_FILE="$BACKUP_DIR/sails_schema_${TIMESTAMP}.sql"
+DATA_FILE="$BACKUP_DIR/sails_data_${TIMESTAMP}.sql"
 
-echo "📐 Creating DDL schema-only backup..."
-docker exec -t sails-db pg_dump -U postgres -d postgres --schema-only > "$BACKUP_DIR/schema_only_backup.sql"
+if ! docker ps --format '{{.Names}}' | grep -q '^sails-db$'; then
+  echo "ERROR: sails-db container is not running." >&2
+  exit 1
+fi
 
-echo "✅ Backup successfully created in $BACKUP_DIR:"
-ls -lh "$BACKUP_DIR"
+echo ">> Dumping schema  -> $SCHEMA_FILE"
+docker exec sails-db pg_dump -U postgres -d postgres \
+  --schema-only --no-owner --no-privileges \
+  | grep -vE '^\\(restrict|unrestrict)' > "$SCHEMA_FILE"
+
+echo ">> Dumping data    -> $DATA_FILE"
+docker exec sails-db pg_dump -U postgres -d postgres \
+  --data-only --no-owner --no-privileges --disable-triggers \
+  | grep -vE '^\\(restrict|unrestrict)' > "$DATA_FILE"
+
+echo ""
+echo "Backup complete:"
+ls -lh "$SCHEMA_FILE" "$DATA_FILE"

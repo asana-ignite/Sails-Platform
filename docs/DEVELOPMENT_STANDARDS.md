@@ -2,6 +2,10 @@
 
 This document serves as the single source of truth for system-wide architectural rules, security pipelines, and implementation standards for the SAILS platform.
 
+> **Operational playbooks:** For diagnosing empty navigation / mock-data fallbacks / schema drift after restores or container rebuilds, see `docs/KB_UNLOADED_CONFIG.md`. Root-level agent rules live in `AGENTS.md`.
+>
+> **Runtime mutation ban:** NEVER place seeding, "auto-repair", or "auto-migration" writes inside runtime API GET handlers (e.g., `GET /api/console/config`). Schema/menu changes belong in migrations or one-off scripts only.
+
 ## 1. Database Architecture & Security
 
 ### Schema Segregation Rule

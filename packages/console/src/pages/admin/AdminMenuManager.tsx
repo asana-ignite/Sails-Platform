@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  Plus, Edit2, Trash2, ChevronRight, ChevronDown, 
-  Database, Layers, Move, GripVertical, X
+  Plus, Edit2, Trash2, GripVertical, X
 } from 'lucide-react';
 import { ConsoleApp, ConsoleMenu } from '@sails/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
@@ -15,6 +14,7 @@ const AdminMenuManager: React.FC = () => {
   const [selectedAppId, setSelectedAppId] = useState<string>('');
   const [menus, setMenus] = useState<ConsoleMenu[]>([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState<ConsoleMenu | null>(null);
 
   useEffect(() => {
@@ -63,22 +63,58 @@ const AdminMenuManager: React.FC = () => {
     e.preventDefault();
     if (!isEditing) return;
 
+    setSaving(true);
     const method = isEditing.id.startsWith('new-') ? 'POST' : 'PATCH';
+    const isNew = isEditing.id.startsWith('new-');
+    const { children, ...cleanData } = isEditing as any;
     const payload = { 
-      ...isEditing, 
+      ...cleanData, 
       appId: selectedAppId,
-      id: isEditing.id.startsWith('new-') ? undefined : isEditing.id 
+      id: isNew ? undefined : isEditing.id 
     };
 
-    const res = await fetch('/api/console/menus', {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    
-    if ((await res.json()).success) {
-      setIsEditing(null);
-      fetchMenus(selectedAppId);
+    try {
+      const res = await fetch('/api/console/menus', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      const result = await res.json();
+      if (result.success) {
+        setIsEditing(null);
+        fetchMenus(selectedAppId);
+      } else {
+        alert(result.error || 'Failed to save menu item');
+      }
+    } catch (err) {
+      alert('Network error while saving');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (menu: ConsoleMenu) => {
+    const hasChildren = menu.children && menu.children.length > 0;
+    const message = hasChildren
+      ? `Delete "${menu.label}" and all its sub-menus? This cannot be undone.`
+      : `Delete "${menu.label}"? This cannot be undone.`;
+
+    if (!window.confirm(message)) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/console/menus?id=${menu.id}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (result.success) {
+        fetchMenus(selectedAppId);
+      } else {
+        alert(result.error || 'Failed to delete menu item');
+      }
+    } catch (err) {
+      alert('Network error while deleting');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -102,7 +138,7 @@ const AdminMenuManager: React.FC = () => {
         <div className="sails-menu-item__actions">
           <button onClick={() => setIsEditing({...menu})} title="Edit Menu"><Edit2 size={14} /></button>
           <button onClick={() => setIsEditing({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: menu.id, order: 0 } as any)} title="Add Submenu"><Plus size={14} /></button>
-          {!menu.isSystem && <button className="delete" title="Delete Menu"><Trash2 size={14} /></button>}
+          {!menu.isSystem && <button className="delete" onClick={() => handleDelete(menu)} title="Delete Menu"><Trash2 size={14} /></button>}
         </div>
       </div>
       {menu.children?.map(child => renderMenuItem(child, depth + 1))}
@@ -205,8 +241,10 @@ const AdminMenuManager: React.FC = () => {
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
-                <button type="button" className="sails-btn sails-btn--secondary" onClick={() => setIsEditing(null)}>Cancel</button>
-                <button type="submit" className="sails-btn sails-btn--primary">Save Menu</button>
+                <button type="button" className="sails-btn sails-btn--secondary" onClick={() => setIsEditing(null)} disabled={saving}>Cancel</button>
+                <button type="submit" className="sails-btn sails-btn--primary" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Menu'}
+                </button>
               </div>
             </form>
           </div>

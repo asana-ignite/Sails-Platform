@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAppSession } from '@/lib/auth/session';
-import { ensurePlatformStudioMenus } from '@/lib/menu-repair';
 
 /**
  * GET /api/console/menus
@@ -17,8 +16,6 @@ export async function GET(req: Request) {
     if (!tenantId) {
       return NextResponse.json({ success: false, error: 'Tenant context required' }, { status: 400 });
     }
-
-    await ensurePlatformStudioMenus(tenantId);
 
     const where: any = {
       app: { tenantId }
@@ -99,7 +96,7 @@ export async function PATCH(req: Request) {
     const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
 
     const body = await req.json();
-    const { id, ...updateData } = body;
+    const { id, children: _children, ...updateData } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Menu ID is required' }, { status: 400 });
@@ -165,6 +162,11 @@ export async function DELETE(req: Request) {
     if (existing.isSystem && callerRole !== 'SUPER_ADMIN') {
       return NextResponse.json({ success: false, error: 'System menu items are protected and can only be deleted by Super Admins' }, { status: 403 });
     }
+
+    // Cascade-delete children (self-relation has no onDelete: Cascade)
+    await db.consoleMenu.deleteMany({
+      where: { parentId: id }
+    });
 
     await db.consoleMenu.delete({
       where: { id }
