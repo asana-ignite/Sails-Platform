@@ -49,8 +49,9 @@ Never create ad-hoc dumps with `--create`/`--clean` (they emit `DROP DATABASE`, 
 
 - **Navigation is DB-driven**: `core.console_apps` + `core.console_menus` → `GET /api/console/config` → `ConsoleContext` → `Sidebar.tsx`. Menu items resolve to plugins via `componentKey` in `packages/console/src/features/admin/registry.tsx`. Mock data in `config/route.ts` (`getMockData`) is a fallback for empty DBs — seeing Dashboard/CRM in the UI means the DB query returned nothing.
 - **Tenant data**: `tenant_{schema}` schemas with RLS policies; context injected via `SET LOCAL` in `TransactionContext`.
+- **Zoning Multi-Tenancy Architecture**: Baseline deployment runs as **Zone 01** (`standalone` mode). The platform is architected for **Cell-Based Zoning**, allowing deployment across multiple isolated database servers/clouds with a Global Control Plane and Super Admin War Room. See `docs/ZONING_ARCHITECTURE.md`.
 - **Standards**: `docs/DEVELOPMENT_STANDARDS.md` (security pipeline, schema rules — metadata tables must have `is_system`).
-- **Docs**: `docs/` — see especially `docs/KB_UNLOADED_CONFIG.md` (diagnosis playbook) and `docs/CREATE_APP_NAV.md`.
+- **Docs**: `docs/` — see especially `docs/ZONING_ARCHITECTURE.md` (zoning model), `docs/KB_UNLOADED_CONFIG.md` (diagnosis playbook) and `docs/CREATE_APP_NAV.md`.
 
 ## When You Change Things
 

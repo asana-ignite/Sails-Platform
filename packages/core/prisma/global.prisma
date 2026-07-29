@@ -1,0 +1,75 @@
+// Global Control Plane Prisma Schema (`sails_global_master`)
+// Manages global multi-zone routing, tenant registry, and war room telemetry.
+
+generator globalClient {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/client-global"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("GLOBAL_DATABASE_URL")
+  schemas  = ["global"]
+}
+
+enum TenantStatus {
+  ACTIVE
+  MIGRATING
+  SUSPENDED
+}
+
+enum ZoneStatus {
+  HEALTHY
+  DEGRADED
+  CRITICAL
+  MAINTENANCE
+}
+
+model GlobalZone {
+  id             String             @id // e.g. "zone-us-01"
+  name           String
+  apiUrl         String             @map("api_url")
+  region         String
+  maxTenants     Int                @default(100) @map("max_tenants")
+  currentTenants Int                @default(0) @map("current_tenants")
+  status         ZoneStatus         @default(HEALTHY)
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  tenants        GlobalTenant[]
+  healthMetrics  ZoneHealthMetric[]
+
+  @@map("zones")
+  @@schema("global")
+}
+
+model GlobalTenant {
+  id        String       @id @default(cuid())
+  name      String
+  slug      String       @unique
+  domain    String?      @unique
+  zoneId    String       @map("zone_id")
+  zone      GlobalZone   @relation(fields: [zoneId], references: [id])
+  status    TenantStatus @default(ACTIVE)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@index([zoneId])
+  @@map("tenants")
+  @@schema("global")
+}
+
+model ZoneHealthMetric {
+  id                  String     @id @default(cuid())
+  zoneId              String     @map("zone_id")
+  zone                GlobalZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  memoryUsageMb       Int        @map("memory_usage_mb")
+  activeDbConnections Int        @map("active_db_connections")
+  tenantCount         Int        @map("tenant_count")
+  errorCount15m       Int        @map("error_count_15m")
+  uptimeSeconds       BigInt     @map("uptime_seconds")
+  recordedAt          DateTime   @default(now()) @map("recorded_at")
+
+  @@index([zoneId, recordedAt])
+  @@map("zone_health_metrics")
+  @@schema("global")
+}

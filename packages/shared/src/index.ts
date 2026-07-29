@@ -390,4 +390,44 @@ export interface RelatedRecord {
   orderBy?: string;                   // child field to sort by
 }
 
+// ─── Zoning & Multi-Database Multi-Tenancy Contracts ────────────
+
+export type ZoneHealthStatus = 'healthy' | 'degraded' | 'critical' | 'maintenance';
+export type PlatformMode = 'standalone' | 'zoned';
+
+export interface GlobalZoneDto {
+  id: string;             // e.g. "zone-us-01"
+  name: string;           // e.g. "US Primary Cluster"
+  apiUrl: string;         // e.g. "https://api-us01.sails.app"
+  region: string;         // e.g. "us-east-1"
+  maxTenants: number;
+  currentTenants: number;
+  status: ZoneHealthStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GlobalTenantDto {
+  id: string;             // CUID
+  name: string;
+  slug: string;
+  domain?: string | null;
+  zoneId: string;
+  status: 'ACTIVE' | 'MIGRATING' | 'SUSPENDED';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ZoneTelemetryPayload {
+  zoneId: string;
+  status: ZoneHealthStatus;
+  memoryUsageMB: number;
+  activeDbConnections: number;
+  tenantCount: number;
+  errorCount15m: number;
+  uptimeSeconds: number;
+  timestamp: string;
+}
+
+
 

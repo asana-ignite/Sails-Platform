@@ -35,3 +35,9 @@ description: Mandatory development and deployment rules for the Sails Platform.
 - **Rule (Session Context)**: Always pass a pre-resolved `SessionContext` throughout `QueryLayer` methods to avoid redundant JWT decoding during multi-step transactions.
 - **Rule (Network Latency & RLS)**: When injecting RLS session context via `set_config`, you MUST bundle all variables into a single chained SQL query (`SELECT set_config(...), set_config(...)`) to eliminate redundant network round-trips. Do the same for `RESET`.
 - **Rule (Connection Pooling)**: Database instantiations (Prisma or `pg`) MUST enforce PgBouncer context (`pgbouncer=true` and `connection_limit`) in production environments to prevent `max_connections` exhaustion at 10,000 OPS.
+
+## 6. Zoning & Multi-Database Readiness
+- **Rule (Cell-Based Isolation)**: Design all platform features assuming single-instance deployment operates as **Zone 01**, with capability to scale into multiple isolated database zones (`Zone 01...N`).
+- **Rule (Stateless Core API)**: Core API containers MUST remain stateless, deriving identity from JWT claims or environment variables (`ZONE_ID`). Never introduce stateful in-memory node singletons that assume a single global database.
+- **Rule (Per-Tenant Sequence Isolation)**: Autonumber counters and sequence fields MUST be scoped strictly to `tenant_id` or tenant schema. Never create shared global PostgreSQL sequence generators across tenants.
+- **Rule (Global ID Integrity)**: All primary keys MUST use globally unique CUIDs/time-ordered IDs (`generateTimeOrderedId()`) so record relocation between Zone databases never produces ID collisions.

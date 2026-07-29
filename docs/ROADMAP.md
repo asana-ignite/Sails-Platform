@@ -67,3 +67,15 @@ Please see [DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md) for the consolid
 - **Just-in-Time (JIT) Provisioning**: Automatically create a `core.users` record and assign appropriate roles upon first successful Google login.
 - **Security**: Strictly deny access to the platform if a user's Google domain is not recognized.
 
+---
+
+## Phase 6: Cellular Zoning Architecture & Super Admin War Room (🔲 Planned)
+**Vision:** Evolve SAILS into a Cell-Based Zoning Architecture with global domain routing, dynamic DSN pool resolution, and unified War Room telemetry.
+
+- **Phase 6A — Global Control Plane**: Deploy lightweight global registry (`sails_global_master`) mapping `tenantId -> zoneId -> zone_api_url`.
+- **Phase 6B — Dynamic DSN Pool Router**: Introduce `TenantConnectionManager` in Core to dynamically route queries across isolated Zone databases.
+- **Phase 6C — Zone Telemetry API**: Expose `GET /api/zone/health` on Core API containers for container CPU/RAM and database connection monitoring.
+- **Phase 6D — Super Admin War Room**: Build Console plugin for real-time monitoring of all Zones and tenants across AWS, Azure, and Local instances.
+- **Phase 6E — Zero-Downtime Tenant Relocation**: Build `bun run cli tenant:relocate` script to move tenant schemas across Zone databases with sequence continuation.
+
+

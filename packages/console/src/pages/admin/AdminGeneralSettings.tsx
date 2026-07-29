@@ -14,7 +14,10 @@ import {
   DollarSign,
   Lock,
   Megaphone,
-  Upload
+  Upload,
+  Building2,
+  Layers,
+  ShieldCheck
 } from 'lucide-react';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { ALL_TIMEZONE_OPTIONS } from '../../utils/timezoneHelper';
@@ -257,7 +260,7 @@ const PALETTE_TECHNIQUE_OPTIONS = [
 
 const AdminGeneralSettings: React.FC = () => {
   const { primaryAccentColor, setPrimaryAccentColor, secondaryAccentColor, setSecondaryAccentColor, backgroundAccentColor, setBackgroundAccentColor, fontAccentColor, setFontAccentColor, enableGradient, setEnableGradient, setLogoLightUrl, setLogoDarkUrl, saveBrandingToServer, commitTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<'branding' | 'localization' | 'security' | 'maintenance'>('branding');
+  const [activeTab, setActiveTab] = useState<'branding' | 'localization' | 'security' | 'maintenance' | 'tenant'>('branding');
   const [paletteTechnique, setPaletteTechnique] = useState<ColorMatchingTechnique>('monochromatic');
   const [customSecondary, setCustomSecondary] = useState<string | null>(null);
   const [customBackground, setCustomBackground] = useState<string | null>(null);
@@ -469,6 +472,14 @@ const AdminGeneralSettings: React.FC = () => {
         >
           <AlertTriangle size={16} />
           <span>Maintenance & Alerts</span>
+        </button>
+        <button
+          type="button"
+          className={`sails-general-settings__tab ${activeTab === 'tenant' ? 'sails-general-settings__tab--active' : ''}`}
+          onClick={() => setActiveTab('tenant')}
+        >
+          <Building2 size={16} />
+          <span>Tenant Information</span>
         </button>
       </nav>
 
@@ -915,26 +926,110 @@ const AdminGeneralSettings: React.FC = () => {
             </div>
           )}
 
-          {/* Footer Save Actions */}
-          <div className="sails-gs-footer">
+          {/* TAB 5: Tenant Information */}
+          {activeTab === 'tenant' && (
             <div>
-              {savedSuccessMsg && (
-                <div className="sails-gs-toast">
-                  <CheckCircle2 size={16} />
-                  <span>{savedSuccessMsg}</span>
+              <div className="sails-gs-section-header">
+                <div className="sails-gs-section-icon">
+                  <Building2 size={20} />
                 </div>
-              )}
+                <div>
+                  <h3 className="sails-gs-section-title">Tenant Identity & Architectural Zone</h3>
+                  <p className="sails-gs-section-subtitle">
+                    Overview of tenant identity, assigned architectural zone, and deployment properties.
+                  </p>
+                </div>
+              </div>
+
+              <div className="sails-gs-grid-2">
+                <div className="sails-gs-group">
+                  <label className="sails-gs-label">Tenant ID</label>
+                  <input
+                    type="text"
+                    className="sails-input"
+                    value={localStorage.getItem('sails-tenant-id') || 'clx_tenant_zone01_master'}
+                    readOnly
+                    style={{ fontFamily: 'monospace', opacity: 0.9 }}
+                  />
+                  <span className="sails-gs-help">Unique platform CUID identifier for this tenant organization.</span>
+                </div>
+
+                <div className="sails-gs-group">
+                  <label className="sails-gs-label">Tenant Name</label>
+                  <input
+                    type="text"
+                    className="sails-input"
+                    value="Primary Organization"
+                    readOnly
+                  />
+                  <span className="sails-gs-help">Registered organization name.</span>
+                </div>
+
+                <div className="sails-gs-group">
+                  <label className="sails-gs-label">Tenant Zone</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '8px', border: '1px solid rgba(168, 85, 247, 0.2)', color: '#a855f7', fontWeight: 600 }}>
+                    <Layers size={16} />
+                    <span>Zone 01 (Primary Region)</span>
+                  </div>
+                  <span className="sails-gs-help">Assigned cellular deployment zone.</span>
+                </div>
+
+                <div className="sails-gs-group">
+                  <label className="sails-gs-label">Tenant Isolation Type</label>
+                  <input
+                    type="text"
+                    className="sails-input"
+                    value="Shared Multi-Tenant (Schema-Per-Tenant)"
+                    readOnly
+                  />
+                  <span className="sails-gs-help">Database & environment isolation mode.</span>
+                </div>
+
+                <div className="sails-gs-group">
+                  <label className="sails-gs-label">Environment Mode</label>
+                  <input
+                    type="text"
+                    className="sails-input"
+                    value="Standalone (Baseline)"
+                    readOnly
+                  />
+                  <span className="sails-gs-help">Operating deployment configuration.</span>
+                </div>
+
+                <div className="sails-gs-group">
+                  <label className="sails-gs-label">System Health & Status</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981', fontWeight: 600 }}>
+                    <ShieldCheck size={16} />
+                    <span>Active & Healthy</span>
+                  </div>
+                  <span className="sails-gs-help">Real-time status of tenant data services.</span>
+                </div>
+              </div>
             </div>
-            <button
-              type="submit"
-              className="sails-btn sails-btn--primary"
-              disabled={isSaving}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <Save size={16} />
-              <span>{isSaving ? 'Saving Settings...' : 'Save General Settings'}</span>
-            </button>
-          </div>
+          )}
+
+          {/* Footer Save Actions (Hidden on read-only Tenant Information tab) */}
+          {activeTab !== 'tenant' && (
+            <div className="sails-gs-footer">
+              <div>
+                {savedSuccessMsg && (
+                  <div className="sails-gs-toast">
+                    <CheckCircle2 size={16} />
+                    <span>{savedSuccessMsg}</span>
+                  </div>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="sails-btn sails-btn--primary"
+                disabled={isSaving}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <Save size={16} />
+                <span>{isSaving ? 'Saving Settings...' : 'Save General Settings'}</span>
+              </button>
+            </div>
+          )}
         </div>
       </form>
     </div>

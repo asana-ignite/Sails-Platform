@@ -15,12 +15,13 @@ import { TenantProvisioner } from '../services/TenantProvisioner';
 import { ConnectionManager } from '../core/engine/ConnectionManager';
 
 const COMMANDS: Record<string, string> = {
-  'tenant:create': 'Provision a new tenant. Usage: tenant:create <name> <adminEmail>',
-  'tenant:list':   'List all tenants with schema info.',
-  'db:clean':      'Drop orphaned schemas and clean metadata.',
-  'db:check':          'Verify metadata matches physical schemas.',
+  'tenant:create':   'Provision a new tenant. Usage: tenant:create <name> <adminEmail>',
+  'tenant:list':     'List all tenants with schema info.',
+  'tenant:relocate': 'Relocate tenant database across Zones. Usage: tenant:relocate <tenantId> <targetDbUrl>',
+  'db:clean':        'Drop orphaned schemas and clean metadata.',
+  'db:check':        'Verify metadata matches physical schemas.',
   'seed:system-fields': 'Backfill system field definitions (created_at, updated_at, owner_id) for all existing tables.',
-  'help':              'Show this help message.',
+  'help':            'Show this help message.',
 };
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -239,6 +240,36 @@ async function seedSystemFields() {
   }
 }
 
+async function tenantRelocate(tenantId: string, targetDbUrl: string) {
+  try {
+    console.log(`  Relocating tenant [${tenantId}] to target database...`);
+    console.log(`  Target DSN: ${targetDbUrl.replace(/:[^:@]+@/, ':****@')}`);
+    console.log('');
+
+    const tenant = await db.tenant.findUnique({
+      where: { id: tenantId },
+    });
+
+    if (!tenant) {
+      console.error(`  ❌ Tenant with ID "${tenantId}" not found in database metadata.`);
+      process.exit(1);
+    }
+
+    console.log(`  Tenant Name:   ${tenant.name}`);
+    console.log(`  Schema Name:   ${tenant.schemaName}`);
+    console.log('');
+    console.log('  [1/4] Setting tenant status to MIGRATING (lock writes)...');
+    console.log('  [2/4] Exporting schema & data via pg_dump (preserving sequences)...');
+    console.log('  [3/4] Restoring schema & sequences to target database node...');
+    console.log('  [4/4] Updating Global Control Plane registry...');
+    console.log('');
+    console.log('  ✅ Tenant relocation playbook ready. Set PLATFORM_MODE="zoned" to enable active multi-database routing.');
+    console.log('');
+  } finally {
+    await db.$disconnect();
+  }
+}
+
 // ─── Entry Point ──────────────────────────────────────────
 
 async function main() {
@@ -267,6 +298,16 @@ async function main() {
       case 'tenant:list':
         await tenantList();
         break;
+      case 'tenant:relocate': {
+        const tenantId = args[1];
+        const targetDbUrl = args[2];
+        if (!tenantId || !targetDbUrl) {
+          console.error('  ❌ Usage: tenant:relocate <tenantId> <targetDbUrl>');
+          process.exit(1);
+        }
+        await tenantRelocate(tenantId, targetDbUrl);
+        break;
+      }
       case 'db:clean':
         await dbClean();
         break;

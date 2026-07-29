@@ -103,3 +103,25 @@ The following constraints are **pre-declared** to prevent architectural decision
 | **`updatedAt` Field** | Must be **writable by the client** during sync. The API must allow the client to supply `updatedAt` when flushing the SyncQueue. |
 | **Conflict Resolution** | Server (`AlchemaCore`) will implement **Last Write Wins (LWW)**: `clientUpdatedAt > serverUpdatedAt` → apply; otherwise → reject and return current server state. |
 | **SyncQueue Protocol** | Offline mutations are queued client-side and pushed sequentially via the Background Sync API. Idempotent `CREATE` operations must be supported (inserting a record whose UUID already exists must be a no-op). |
+
+---
+
+## 5. Zoning Multi-Tenancy Architecture & Global Control Plane
+
+> **Strategic Vision:** Scale SAILS from a single multi-tenant database into a **Cell-Based Zoning Architecture**, enabling isolated database zones across cloud regions, on-premise deployments, or dedicated enterprise servers.
+
+### Architectural Principles
+- **Cell-Based Isolation**: Each Zone is an autonomous unit containing its own `Core API`, `Console UI`, and PostgreSQL Database.
+- **Zone 01 Baseline**: The default out-of-the-box deployment runs as **Zone 01** (`PLATFORM_MODE="standalone"`).
+- **Global Registry (`sails_global_master`)**: A lightweight lookup database maps `tenant_id -> zone_id -> zone_api_url`.
+- **Super Admin War Room**: Single-pane-of-glass dashboard in `packages/console` that collects telemetry from all deployed Zones via `GET /api/zone/health`.
+
+### Standards & Constraints
+
+| Component | Standard |
+|---|---|
+| **Zone Configuration** | Every Core API container accepts `ZONE_ID` (e.g. `zone-us-01`) and `PLATFORM_MODE` (`standalone` \| `zoned`). |
+| **Connection Manager** | In `zoned` mode, `TenantConnectionManager` resolves database connection strings dynamically per request with an LRU pool cache. |
+| **Tenant Relocation** | Tenants move between Zones via `bun run cli tenant:relocate`. PostgreSQL sequence states (`setval`) and RLS policies are preserved natively. |
+| **Telemetry Dispatch** | Critical database or container health events emit async `fire-and-forget` alerts to the Global Control Plane. |
+
