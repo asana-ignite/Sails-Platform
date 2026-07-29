@@ -159,6 +159,8 @@ export interface ConsoleApp {
   id: string;
   tenantId: string;
   name: string;
+  slug?: string | null;
+  description?: string | null;
   icon: string | null;
   order: number;
   isSystem?: boolean;

@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Edit2, Trash2, Shield, X, Eye, EyeOff, Search, ArrowLeft, GripVertical, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Plus, Edit2, Trash2, Shield, X, Eye, EyeOff, Search,
+  ArrowLeft, GripVertical, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
+  AlertCircle, Save, Lock
+} from 'lucide-react';
 import { ConsoleApp, ConsoleMenu } from '@sails/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import IconPicker from '../../components/common/IconPicker';
@@ -9,84 +13,26 @@ import { useConsole } from '../../contexts/ConsoleContext';
 import './AdminAppManager.css';
 import './AdminMenuManager.css';
 
+type DetailTab = 'general' | 'navigation' | 'widget' | 'permission';
+
+const EMPTY_MENU: ConsoleMenu = { id: '', label: '', icon: 'Circle', path: '', actionType: 'table', order: 0 };
+
 const AdminAppManager: React.FC = () => {
   const { setHeaderActions } = useConsole();
   const [apps, setApps] = useState<ConsoleApp[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isEditingApp, setIsEditingApp] = useState<ConsoleApp | null>(null);
-
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
-  const [menus, setMenus] = useState<ConsoleMenu[]>([]);
-  const [menusLoading, setMenusLoading] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [isEditingMenu, setIsEditingMenu] = useState<ConsoleMenu | null>(null);
+
+  const [deleteConfirmAppId, setDeleteConfirmAppId] = useState<string | null>(null);
 
   const [appFilter, setAppFilter] = useState('');
   const [showSystemApps, setShowSystemApps] = useState(false);
 
-  const dragItemRef = useRef<string | null>(null);
-  const dropTargetRef = useRef<string | null>(null);
-  const [hasOrderChanges, setHasOrderChanges] = useState(false);
-
   const appDragItemRef = useRef<string | null>(null);
   const appDropTargetRef = useRef<string | null>(null);
   const [hasAppOrderChanges, setHasAppOrderChanges] = useState(false);
-
-  useEffect(() => {
-    fetchApps();
-  }, []);
-
-  useEffect(() => {
-    return () => setHeaderActions(null);
-  }, []);
-
-  useEffect(() => {
-    if (selectedAppId) fetchMenus(selectedAppId);
-  }, [selectedAppId]);
-
-  useEffect(() => {
-    const app = apps.find(a => a.id === selectedAppId) || null;
-    if (app) {
-      setHeaderActions(
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {hasOrderChanges && (
-            <button
-              className="sails-btn sails-btn--primary"
-              onClick={saveOrdering}
-              disabled={saving}
-            >
-              {saving ? 'Saving...' : 'Save Ordering'}
-            </button>
-          )}
-          <button className="sails-btn sails-btn--secondary" onClick={() => setIsEditingApp(app)}><Edit2 size={16} /></button>
-          {!app.isSystem && (
-            <button className="sails-btn sails-btn--danger" onClick={() => handleDeleteApp(app.id)}><Trash2 size={16} /></button>
-          )}
-        </div>
-      );
-    } else {
-      setHeaderActions(
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {hasAppOrderChanges && (
-            <button
-              className="sails-btn sails-btn--primary"
-              onClick={saveAppOrdering}
-              disabled={saving}
-            >
-              {saving ? 'Saving...' : 'Save App Ordering'}
-            </button>
-          )}
-          <button
-            className="sails-btn sails-btn--primary"
-            onClick={() => setIsEditingApp({ id: 'new-' + Date.now(), name: '', icon: 'Box', order: apps.length, requiredCapability: null, tenantId: '', menus: [] })}
-          >
-            <Plus size={18} />
-            <span>New App</span>
-          </button>
-        </div>
-      );
-    }
-  }, [selectedAppId, apps, menus.length, hasOrderChanges, hasAppOrderChanges, saving]);
 
   const fetchApps = async () => {
     try {
@@ -101,60 +47,56 @@ const AdminAppManager: React.FC = () => {
     }
   };
 
-  const fetchMenus = async (appId: string) => {
-    setMenusLoading(true);
-    const res = await fetch(`/api/console/menus?appId=${appId}`);
-    const result = await res.json();
-    if (result.success) {
-      const menuMap: Record<string, ConsoleMenu> = {};
-      const roots: ConsoleMenu[] = [];
-      result.data.forEach((m: ConsoleMenu) => {
-        menuMap[m.id] = { ...m, children: [] };
-      });
-      result.data.forEach((m: ConsoleMenu) => {
-        if (m.parentId && menuMap[m.parentId]) {
-          menuMap[m.parentId].children?.push(menuMap[m.id]);
-        } else {
-          roots.push(menuMap[m.id]);
-        }
-      });
-      setMenus(roots);
-    }
-    setMenusLoading(false);
-  };
+  useEffect(() => { fetchApps(); }, []);
+  useEffect(() => { return () => setHeaderActions(null); }, []);
 
-  const handleSaveApp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isEditingApp) return;
-    const method = isEditingApp.id.startsWith('new-') ? 'POST' : 'PATCH';
-    const payload = isEditingApp.id.startsWith('new-') ? { ...isEditingApp, id: undefined } : isEditingApp;
-    try {
-      const response = await fetch('/api/console/apps', {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const result = await response.json();
-      if (result.success) {
-        setIsEditingApp(null);
-        fetchApps();
-      }
-    } catch (error) {
-      console.error('Save failed:', error);
+  useEffect(() => {
+    if (selectedAppId) {
+      setHeaderActions(null);
+    } else {
+      setHeaderActions(
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {hasAppOrderChanges && (
+            <button className="sails-btn sails-btn--primary" onClick={saveAppOrdering} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Ordering'}
+            </button>
+          )}
+          <button className="sails-btn sails-btn--primary" onClick={() => setShowCreateModal(true)}>
+            <Plus size={18} />
+            <span>New App</span>
+          </button>
+        </div>
+      );
     }
-  };
+  }, [selectedAppId, hasAppOrderChanges, saving]);
 
   const handleDeleteApp = async (appId: string) => {
-    if (!window.confirm('Delete this app and all its menus? This cannot be undone.')) return;
+    setDeleteConfirmAppId(appId);
+  };
+
+  const confirmDeleteApp = async () => {
+    if (!deleteConfirmAppId) return;
     try {
-      const response = await fetch(`/api/console/apps/${appId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/console/apps/${deleteConfirmAppId}`, { method: 'DELETE' });
       if (response.ok) {
-        if (selectedAppId === appId) setSelectedAppId(null);
+        if (selectedAppId === deleteConfirmAppId) setSelectedAppId(null);
+        setDeleteConfirmAppId(null);
         fetchApps();
       }
     } catch (error) {
       console.error('Delete failed:', error);
     }
+  };
+
+  const reorderApps = (fromId: string, toId: string) => {
+    const fromIdx = apps.findIndex(a => a.id === fromId);
+    const toIdx = apps.findIndex(a => a.id === toId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const updated = [...apps];
+    const [moved] = updated.splice(fromIdx, 1);
+    updated.splice(toIdx, 0, moved);
+    setApps(updated);
+    setHasAppOrderChanges(true);
   };
 
   const handleAppDragStart = (e: React.DragEvent, appId: string) => {
@@ -168,23 +110,18 @@ const AdminAppManager: React.FC = () => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     if (!appDragItemRef.current || appDragItemRef.current === appId) return;
-
     const target = e.currentTarget as HTMLElement;
-
     if (appDropTargetRef.current && appDropTargetRef.current !== appId) {
       const prev = document.querySelector(`[data-app-id="${appDropTargetRef.current}"]`);
       if (prev) prev.classList.remove('sails-app-card--drop-target');
     }
-
     appDropTargetRef.current = appId;
     target.classList.add('sails-app-card--drop-target');
   };
 
   const handleAppDragLeave = (e: React.DragEvent) => {
     const el = e.currentTarget as HTMLElement;
-    if (!el.contains(e.relatedTarget as Node)) {
-      el.classList.remove('sails-app-card--drop-target');
-    }
+    if (!el.contains(e.relatedTarget as Node)) el.classList.remove('sails-app-card--drop-target');
   };
 
   const handleAppDragEnd = () => {
@@ -201,19 +138,6 @@ const AdminAppManager: React.FC = () => {
     handleAppDragEnd();
     if (!dragId || dragId === targetId) return;
     reorderApps(dragId, targetId);
-  };
-
-  const reorderApps = (fromId: string, toId: string) => {
-    const fromIdx = apps.findIndex(a => a.id === fromId);
-    const toIdx = apps.findIndex(a => a.id === toId);
-    if (fromIdx < 0 || toIdx < 0) return;
-
-    const updated = [...apps];
-    const [moved] = updated.splice(fromIdx, 1);
-    updated.splice(toIdx, 0, moved);
-
-    setApps(updated);
-    setHasAppOrderChanges(true);
   };
 
   const handleAppMoveUp = (appId: string) => {
@@ -247,6 +171,465 @@ const AdminAppManager: React.FC = () => {
     }
   };
 
+  if (loading) return <div className="sails-admin-loading">Syncing Apps...</div>;
+
+  const selectedApp = apps.find(a => a.id === selectedAppId) || null;
+  const filteredApps = apps.filter(app => {
+    if (!showSystemApps && app.isSystem) return false;
+    if (appFilter && !app.name.toLowerCase().includes(appFilter.toLowerCase())) return false;
+    return true;
+  });
+
+  return (
+    <div className="sails-app-manager">
+      {selectedApp ? (
+        <AppDetailView
+          app={selectedApp}
+          onBack={() => { setSelectedAppId(null); fetchApps(); }}
+          onDelete={handleDeleteApp}
+          onRefresh={fetchApps}
+        />
+      ) : (
+        <>
+          <div className="sails-app-manager__actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: 1 }}>
+              <div style={{ position: 'relative', flex: 1, maxWidth: '320px' }}>
+                <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--sails-text-muted)' }} />
+                <input type="text" className="sails-input" placeholder="Search apps..." value={appFilter}
+                  onChange={e => setAppFilter(e.target.value)} style={{ paddingLeft: '36px' }} />
+              </div>
+              <button className="sails-btn sails-btn--secondary" onClick={() => setShowSystemApps(!showSystemApps)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                {showSystemApps ? <EyeOff size={16} /> : <Eye size={16} />}
+                <span>{showSystemApps ? 'Hide System' : 'Show System'}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="sails-app-grid">
+            {filteredApps.length === 0 ? (
+              <div className="sails-card" style={{ textAlign: 'center', padding: '40px', gridColumn: '1 / -1', color: 'var(--sails-text-muted)' }}>
+                {appFilter ? 'No apps match your search.' : 'No apps to display.'}
+              </div>
+            ) : (
+              filteredApps.map((app) => {
+                const appIdx = apps.findIndex(a => a.id === app.id);
+                return (
+                  <div key={app.id} className="sails-app-card" data-app-id={app.id} draggable
+                    onDragStart={(e) => handleAppDragStart(e, app.id)}
+                    onDragOver={(e) => handleAppDragOver(e, app.id)}
+                    onDragLeave={handleAppDragLeave}
+                    onDrop={(e) => handleAppDrop(e, app.id)}
+                    onDragEnd={handleAppDragEnd}>
+                    <div className="sails-app-card__top">
+                      <div className="sails-app-card__drag-handle" onClick={e => e.stopPropagation()}>
+                        <GripVertical size={16} />
+                      </div>
+                      <div className="sails-app-card__icon">
+                        <DynamicIcon name={app.icon || 'Box'} size={24} />
+                        {app.isSystem && <span className="sails-app-card__system-badge"><Shield size={10} /></span>}
+                      </div>
+                      <div className="sails-app-card__info" onClick={() => setSelectedAppId(app.id)} style={{ cursor: 'pointer' }}>
+                        <h3 style={{ margin: 0 }}>{app.name}</h3>
+                        {app.description && <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--sails-text-muted)' }}>{app.description}</p>}
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--sails-text-muted)' }}>{app._count?.menus || 0} Menu Items</p>
+                        {app.requiredCapability && (
+                          <div className="sails-app-card__capability sails-app-card__capability--active">
+                            <Shield size={12} />
+                            <span>{app.requiredCapability}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="sails-app-card__actions" onClick={e => e.stopPropagation()}>
+                      <button onClick={() => handleAppMoveUp(app.id)} disabled={appIdx === 0}
+                        title="Move Left" style={appIdx === 0 ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}>
+                        <ChevronLeft size={14} />
+                      </button>
+                      <button onClick={() => handleAppMoveDown(app.id)} disabled={appIdx >= apps.length - 1}
+                        title="Move Right" style={appIdx >= apps.length - 1 ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}>
+                        <ChevronRight size={14} />
+                      </button>
+                      {!app.isSystem && <button className="delete" onClick={() => handleDeleteApp(app.id)} title="Delete App"><Trash2 size={16} /></button>}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </>
+      )}
+
+      {showCreateModal && (
+        <CreateAppModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={() => { setShowCreateModal(false); fetchApps(); }}
+        />
+      )}
+
+      {deleteConfirmAppId && createPortal(
+        <div className="sails-app-overlay">
+          <div className="sails-app-confirm-dialog">
+            <div className="sails-app-confirm-dialog__header">
+              <Trash2 size={22} style={{ color: 'var(--sails-danger)' }} />
+              <span>Delete App</span>
+            </div>
+            <div className="sails-app-confirm-dialog__body">
+              This will permanently delete <strong>"{apps.find(a => a.id === deleteConfirmAppId)?.name}"</strong> and all its menus. This action cannot be undone.
+            </div>
+            <div className="sails-app-confirm-dialog__footer">
+              <button className="sails-btn sails-btn--ghost" onClick={() => setDeleteConfirmAppId(null)}>Cancel</button>
+              <button className="sails-btn sails-app-confirm-dialog__btn-danger" onClick={confirmDeleteApp}>Delete App</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+};
+
+const CreateAppModal: React.FC<{ onClose: () => void; onCreated: () => void }> = ({ onClose, onCreated }) => {
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [description, setDescription] = useState('');
+  const [icon, setIcon] = useState('Box');
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/console/apps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, slug: slug || undefined, description: description || undefined, icon }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        onCreated();
+      } else {
+        alert(result.error || 'Failed to create app');
+      }
+    } catch (err) {
+      alert('Network error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return createPortal(
+    <div className="sails-app-overlay">
+      <div className="sails-app-create-dialog">
+        <div className="sails-app-create-dialog__header">
+          <div className="sails-app-create-dialog__header-info">
+            <div className="sails-app-create-dialog__header-icon">
+              <DynamicIcon name="LayoutGrid" size={22} />
+            </div>
+            <div>
+              <h3>Create New App</h3>
+              <p>Configure your application settings</p>
+            </div>
+          </div>
+          <button className="sails-app-create-dialog__close" onClick={onClose}><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="sails-app-create-dialog__body">
+          <div className="sails-app-form-grid">
+            <div className="sails-app-field-group">
+              <label className="sails-app-field-label">App Name <span className="sails-app-required">*</span></label>
+              <input type="text" className="sails-input" value={name} onChange={e => {
+                const val = e.target.value;
+                setName(val);
+                setSlug(val.replace(/[^a-zA-Z0-9]/g, '').toLowerCase());
+              }}
+                placeholder="e.g. Customer Portal" required />
+              <span className="sails-app-field-hint">Display name shown in the app switcher.</span>
+            </div>
+            <div className="sails-app-field-group">
+              <label className="sails-app-field-label">System Name (Slug)</label>
+              <input type="text" className="sails-input" value={slug} onChange={e => setSlug(e.target.value)}
+                placeholder="e.g. customer-portal" />
+              <span className="sails-app-field-hint">Unique URL-safe identifier. Leave blank to auto-generate.</span>
+            </div>
+          </div>
+          <div className="sails-app-field-group sails-app-field-group--full">
+            <label className="sails-app-field-label">Description</label>
+            <textarea className="sails-input sails-input--textarea" value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Briefly describe the purpose of this app..."
+              rows={5} />
+          </div>
+          <div className="sails-app-field-group">
+            <label className="sails-app-field-label">Icon</label>
+            <IconPicker value={icon} onChange={setIcon} />
+          </div>
+          <div className="sails-app-create-dialog__footer">
+            <button type="button" className="sails-btn sails-btn--ghost" onClick={onClose}>Cancel</button>
+            <button type="submit" className="sails-btn sails-btn--primary" disabled={saving || !name.trim()}>
+              {saving ? 'Creating...' : 'Create App'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+const AppDetailView: React.FC<{
+  app: ConsoleApp;
+  onBack: () => void;
+  onDelete: (id: string) => void;
+  onRefresh: () => void;
+}> = ({ app, onBack, onDelete, onRefresh }) => {
+  const [activeTab, setActiveTab] = useState<DetailTab>('general');
+  const [pendingTabSwitch, setPendingTabSwitch] = useState<DetailTab | null>(null);
+
+  const [name, setName] = useState(app.name);
+  const [slug, setSlug] = useState(app.slug || '');
+  const [description, setDescription] = useState(app.description || '');
+  const [icon, setIcon] = useState(app.icon || 'Box');
+  const [isSavingTab, setIsSavingTab] = useState(false);
+
+  const [savedGeneral, setSavedGeneral] = useState({
+    name: app.name,
+    slug: app.slug || '',
+    description: app.description || '',
+    icon: app.icon || 'Box',
+  });
+
+  const isGeneralDirty =
+    name !== savedGeneral.name ||
+    slug !== savedGeneral.slug ||
+    description !== savedGeneral.description ||
+    icon !== savedGeneral.icon;
+
+  const isCurrentTabDirty = (tab?: DetailTab) => {
+    const t = tab || activeTab;
+    if (t === 'general') return isGeneralDirty;
+    return false;
+  };
+
+  const handleTabClick = (targetTab: DetailTab) => {
+    if (targetTab === activeTab) return;
+    if (isCurrentTabDirty()) {
+      setPendingTabSwitch(targetTab);
+    } else {
+      setActiveTab(targetTab);
+    }
+  };
+
+  const handleDiscardAndSwitch = () => {
+    setName(savedGeneral.name);
+    setSlug(savedGeneral.slug);
+    setDescription(savedGeneral.description);
+    setIcon(savedGeneral.icon);
+    if (pendingTabSwitch) {
+      setActiveTab(pendingTabSwitch);
+      setPendingTabSwitch(null);
+    }
+  };
+
+  const handleSaveAndSwitch = async () => {
+    await saveGeneralSettings();
+    if (pendingTabSwitch) {
+      setActiveTab(pendingTabSwitch);
+      setPendingTabSwitch(null);
+    }
+  };
+
+  const saveGeneralSettings = async () => {
+    setIsSavingTab(true);
+    try {
+      const res = await fetch('/api/console/apps', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: app.id,
+          name,
+          slug: slug || undefined,
+          description: description || undefined,
+          icon,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setSavedGeneral({ name, slug, description, icon });
+        onRefresh();
+      } else {
+        alert(result.error || 'Failed to save');
+      }
+    } catch (err) {
+      alert('Network error');
+    } finally {
+      setIsSavingTab(false);
+    }
+  };
+
+  return (
+    <div className="sails-app-detail">
+      <div className="sails-app-detail__header">
+        <div className="sails-app-detail__header-left">
+          <button className="sails-btn sails-btn--secondary sails-app-detail__back-btn" onClick={onBack}>
+            <ArrowLeft size={16} />
+            <span>All Apps</span>
+          </button>
+          <div className="sails-app-detail__app-icon">
+            <DynamicIcon name={app.icon || 'Box'} size={22} />
+          </div>
+          <div>
+            <h3 className="sails-app-detail__app-name">{app.name}</h3>
+            {app.isSystem && <span className="sails-app-detail__system-badge">System Protected</span>}
+          </div>
+        </div>
+        <div className="sails-app-detail__header-actions">
+          {!app.isSystem && (
+            <button className="sails-btn sails-btn--danger" onClick={() => onDelete(app.id)}>
+              <Trash2 size={16} />
+              <span>Delete</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      <nav className="sails-app-detail__tabs">
+        {(['general', 'navigation', 'widget', 'permission'] as DetailTab[]).map(tab => (
+          <button
+            key={tab}
+            className={`sails-app-detail__tab ${activeTab === tab ? 'sails-app-detail__tab--active' : ''}`}
+            onClick={() => handleTabClick(tab)}
+          >
+            <span>{tab === 'general' ? 'General Setting' : tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
+            {tab === 'general' && isGeneralDirty && <span className="sails-app-detail__dirty-dot" title="Unsaved changes" />}
+          </button>
+        ))}
+      </nav>
+
+      <div className="sails-app-detail__body">
+        {activeTab === 'general' && (
+          <div className="sails-app-detail__section">
+            <div className="sails-app-form-grid">
+              <div className="sails-app-field-group">
+                <label className="sails-app-field-label">App Name</label>
+                <input type="text" className="sails-input" value={name} onChange={e => setName(e.target.value)} />
+              </div>
+              <div className="sails-app-field-group">
+                <label className="sails-app-field-label">System Name (Slug)</label>
+                <div className="sails-app-field-input-wrapper">
+                  <input type="text" className="sails-input sails-app-field-input--locked" value={slug} readOnly disabled />
+                  <Lock size={14} className="sails-app-field-lock-icon" />
+                </div>
+                <span className="sails-app-field-hint">System name cannot be changed after creation.</span>
+              </div>
+            </div>
+            <div className="sails-app-field-group">
+              <label className="sails-app-field-label">Description</label>
+              <textarea className="sails-input sails-input--textarea" value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="Describe the purpose of this app..."
+                rows={5} />
+            </div>
+            <div className="sails-app-field-group">
+              <label className="sails-app-field-label">Icon</label>
+              <IconPicker value={icon} onChange={setIcon} />
+            </div>
+            <div className="sails-app-detail__save-row">
+              <button
+                className="sails-btn sails-btn--primary"
+                onClick={saveGeneralSettings}
+                disabled={!isGeneralDirty || isSavingTab}
+              >
+                <Save size={16} />
+                <span>{isSavingTab ? 'Saving...' : 'Save General Settings'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'navigation' && (
+          <NavigationTab appId={app.id} onRefresh={onRefresh} />
+        )}
+
+        {activeTab === 'widget' && (
+          <div className="sails-app-detail__section sails-app-detail__placeholder">
+            <div className="sails-app-detail__placeholder-icon">
+              <DynamicIcon name="Blocks" size={48} />
+            </div>
+            <h4>Widget Configuration</h4>
+            <p>Utility strip widgets, taskbar plugins, and embedded tools will be configurable here.</p>
+            <span className="sails-app-detail__coming-soon">Coming Soon</span>
+          </div>
+        )}
+
+        {activeTab === 'permission' && (
+          <div className="sails-app-detail__section sails-app-detail__placeholder">
+            <div className="sails-app-detail__placeholder-icon">
+              <DynamicIcon name="ShieldCheck" size={48} />
+            </div>
+            <h4>Permission Settings</h4>
+            <p>Role-based access control and capability assignments will be managed here.</p>
+            <span className="sails-app-detail__coming-soon">Coming Soon</span>
+          </div>
+        )}
+      </div>
+
+      {pendingTabSwitch && createPortal(
+        <div className="sails-app-overlay">
+          <div className="sails-app-confirm-dialog">
+            <div className="sails-app-confirm-dialog__header">
+              <AlertCircle size={22} style={{ color: 'var(--sails-warning)' }} />
+              <span>Unsaved Changes</span>
+            </div>
+            <div className="sails-app-confirm-dialog__body">
+              You have unsaved changes in the General Settings tab. If you switch tabs without saving, your modifications will be discarded.
+            </div>
+            <div className="sails-app-confirm-dialog__footer">
+              <button className="sails-btn sails-btn--ghost" onClick={() => setPendingTabSwitch(null)}>Stay on Tab</button>
+              <button className="sails-btn sails-app-confirm-dialog__btn-discard" onClick={handleDiscardAndSwitch}>Discard Changes</button>
+              <button className="sails-btn sails-btn--primary" onClick={handleSaveAndSwitch}>Save &amp; Switch</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+};
+
+const NavigationTab: React.FC<{ appId: string; onRefresh: () => void }> = ({ appId, onRefresh }) => {
+  const [menus, setMenus] = useState<ConsoleMenu[]>([]);
+  const [menusLoading, setMenusLoading] = useState(false);
+  const [isEditingMenu, setIsEditingMenu] = useState<ConsoleMenu | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [hasOrderChanges, setHasOrderChanges] = useState(false);
+  const [deleteConfirmMenu, setDeleteConfirmMenu] = useState<ConsoleMenu | null>(null);
+
+  const dragItemRef = useRef<string | null>(null);
+  const dropTargetRef = useRef<string | null>(null);
+
+  useEffect(() => { fetchMenus(); }, [appId]);
+
+  const fetchMenus = async () => {
+    setMenusLoading(true);
+    const res = await fetch(`/api/console/menus?appId=${appId}`);
+    const result = await res.json();
+    if (result.success) {
+      const menuMap: Record<string, ConsoleMenu> = {};
+      const roots: ConsoleMenu[] = [];
+      result.data.forEach((m: ConsoleMenu) => { menuMap[m.id] = { ...m, children: [] }; });
+      result.data.forEach((m: ConsoleMenu) => {
+        if (m.parentId && menuMap[m.parentId]) {
+          menuMap[m.parentId].children?.push(menuMap[m.id]);
+        } else {
+          roots.push(menuMap[m.id]);
+        }
+      });
+      setMenus(roots);
+    }
+    setMenusLoading(false);
+  };
+
   const handleSaveMenu = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEditingMenu) return;
@@ -254,21 +637,13 @@ const AdminAppManager: React.FC = () => {
     const method = isEditingMenu.id.startsWith('new-') ? 'POST' : 'PATCH';
     const isNew = isEditingMenu.id.startsWith('new-');
     const { children, ...cleanData } = isEditingMenu as any;
-    const payload = {
-      ...cleanData,
-      appId: selectedAppId,
-      id: isNew ? undefined : isEditingMenu.id
-    };
+    const payload = { ...cleanData, appId, id: isNew ? undefined : isEditingMenu.id };
     try {
-      const res = await fetch('/api/console/menus', {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const res = await fetch('/api/console/menus', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const result = await res.json();
       if (result.success) {
         setIsEditingMenu(null);
-        if (selectedAppId) fetchMenus(selectedAppId);
+        fetchMenus();
       } else {
         alert(result.error || 'Failed to save menu item');
       }
@@ -279,18 +654,19 @@ const AdminAppManager: React.FC = () => {
     }
   };
 
-  const handleDeleteMenu = async (menu: ConsoleMenu) => {
-    const hasChildren = menu.children && menu.children.length > 0;
-    const message = hasChildren
-      ? `Delete "${menu.label}" and all its sub-menus? This cannot be undone.`
-      : `Delete "${menu.label}"? This cannot be undone.`;
-    if (!window.confirm(message)) return;
+  const handleDeleteMenu = (menu: ConsoleMenu) => {
+    setDeleteConfirmMenu(menu);
+  };
+
+  const confirmDeleteMenu = async () => {
+    if (!deleteConfirmMenu) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/console/menus?id=${menu.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/console/menus?id=${deleteConfirmMenu.id}`, { method: 'DELETE' });
       const result = await res.json();
       if (result.success) {
-        if (selectedAppId) fetchMenus(selectedAppId);
+        setDeleteConfirmMenu(null);
+        fetchMenus();
       } else {
         alert(result.error || 'Failed to delete menu item');
       }
@@ -299,6 +675,42 @@ const AdminAppManager: React.FC = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const findMenuWithParent = (
+    items: ConsoleMenu[], id: string, parentId: string | null
+  ): { arr: ConsoleMenu[]; idx: number; parentId: string | null } | null => {
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].id === id) return { arr: items, idx: i, parentId };
+      if (items[i].children) {
+        const found = findMenuWithParent(items[i].children!, id, items[i].id);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const replaceChildren = (items: ConsoleMenu[], parentId: string, replacement: ConsoleMenu[]): ConsoleMenu[] =>
+    items.map(m =>
+      m.id === parentId ? { ...m, children: replacement } :
+        m.children ? { ...m, children: replaceChildren(m.children, parentId, replacement) } : m
+    );
+
+  const reorderItem = (fromId: string, toId: string) => {
+    const from = findMenuWithParent(menus, fromId, null);
+    const to = findMenuWithParent(menus, toId, null);
+    if (!from || !to || from.parentId !== to.parentId) return;
+    const siblings = [...from.arr];
+    const [moved] = siblings.splice(from.idx, 1);
+    const toPos = siblings.findIndex(m => m.id === toId);
+    if (toPos < 0) return;
+    siblings.splice(toPos + (from.idx < to.idx ? 1 : 0), 0, moved);
+    if (!from.parentId) {
+      setMenus(siblings);
+    } else {
+      setMenus(replaceChildren([...menus], from.parentId, siblings));
+    }
+    setHasOrderChanges(true);
   };
 
   const handleDragStart = (e: React.DragEvent, menuId: string) => {
@@ -312,23 +724,18 @@ const AdminAppManager: React.FC = () => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     if (!dragItemRef.current || dragItemRef.current === menuId) return;
-
     const target = e.currentTarget as HTMLElement;
-
     if (dropTargetRef.current && dropTargetRef.current !== menuId) {
       const prev = document.querySelector(`[data-menu-id="${dropTargetRef.current}"]`);
       if (prev) prev.classList.remove('sails-menu-item--drop-target');
     }
-
     dropTargetRef.current = menuId;
     target.classList.add('sails-menu-item--drop-target');
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     const el = e.currentTarget as HTMLElement;
-    if (!el.contains(e.relatedTarget as Node)) {
-      el.classList.remove('sails-menu-item--drop-target');
-    }
+    if (!el.contains(e.relatedTarget as Node)) el.classList.remove('sails-menu-item--drop-target');
   };
 
   const handleDragEnd = () => {
@@ -343,54 +750,8 @@ const AdminAppManager: React.FC = () => {
     e.preventDefault();
     const dragId = dragItemRef.current;
     handleDragEnd();
-    if (!dragId || dragId === targetId || !selectedAppId) return;
+    if (!dragId || dragId === targetId) return;
     reorderItem(dragId, targetId);
-  };
-
-  const findMenuWithParent = (
-    items: ConsoleMenu[],
-    id: string,
-    parentId: string | null
-  ): { arr: ConsoleMenu[]; idx: number; parentId: string | null } | null => {
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].id === id) return { arr: items, idx: i, parentId };
-      if (items[i].children) {
-        const found = findMenuWithParent(items[i].children!, id, items[i].id);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-
-  const replaceChildren = (
-    items: ConsoleMenu[],
-    parentId: string,
-    replacement: ConsoleMenu[]
-  ): ConsoleMenu[] =>
-    items.map(m =>
-      m.id === parentId
-        ? { ...m, children: replacement }
-        : m.children ? { ...m, children: replaceChildren(m.children, parentId, replacement) } : m
-    );
-
-  const reorderItem = (fromId: string, toId: string) => {
-    const from = findMenuWithParent(menus, fromId, null);
-    const to = findMenuWithParent(menus, toId, null);
-    if (!from || !to || from.parentId !== to.parentId) return;
-
-    const siblings = [...from.arr];
-    const [moved] = siblings.splice(from.idx, 1);
-    const toPos = siblings.findIndex(m => m.id === toId);
-    if (toPos < 0) return;
-
-    siblings.splice(toPos + (from.idx < to.idx ? 1 : 0), 0, moved);
-
-    if (!from.parentId) {
-      setMenus(siblings);
-    } else {
-      setMenus(replaceChildren([...menus], from.parentId, siblings));
-    }
-    setHasOrderChanges(true);
   };
 
   const handleMoveUp = (menuId: string) => {
@@ -412,7 +773,6 @@ const AdminAppManager: React.FC = () => {
         { ...m, order: i, parentId },
         ...flatten(m.children || [], m.id)
       ]);
-
     const ordered = flatten(menus, null);
     try {
       for (const item of ordered) {
@@ -423,7 +783,7 @@ const AdminAppManager: React.FC = () => {
         });
       }
       setHasOrderChanges(false);
-      if (selectedAppId) fetchMenus(selectedAppId);
+      fetchMenus();
     } catch (err) {
       alert('Failed to save ordering');
     } finally {
@@ -433,21 +793,15 @@ const AdminAppManager: React.FC = () => {
 
   const renderMenuItem = (menu: ConsoleMenu, depth = 0, idx = 0, siblingCount = 1) => (
     <React.Fragment key={menu.id}>
-      <div
-        className="sails-menu-item"
-        style={{ marginLeft: `${depth * 24}px` }}
-        data-menu-id={menu.id}
-        draggable
+      <div className="sails-menu-item" style={{ marginLeft: `${depth * 24}px` }}
+        data-menu-id={menu.id} draggable
         onDragStart={(e) => handleDragStart(e, menu.id)}
         onDragOver={(e) => handleDragOver(e, menu.id)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, menu.id)}
-        onDragEnd={handleDragEnd}
-      >
+        onDragEnd={handleDragEnd}>
         <div className="sails-menu-item__handle"><GripVertical size={16} /></div>
-        <div className="sails-menu-item__icon">
-          <DynamicIcon name={menu.icon || 'Circle'} size={16} />
-        </div>
+        <div className="sails-menu-item__icon"><DynamicIcon name={menu.icon || 'Circle'} size={16} /></div>
         <div className="sails-menu-item__info">
           <span className="label">{menu.label}</span>
           <span className="path">{menu.path || 'No Path'}</span>
@@ -459,259 +813,108 @@ const AdminAppManager: React.FC = () => {
           )}
         </div>
         <div className="sails-menu-item__actions">
-          <button
-            onClick={() => handleMoveUp(menu.id)}
-            disabled={idx === 0}
-            title="Move Up"
-            style={idx === 0 ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}
-          >
+          <button onClick={() => handleMoveUp(menu.id)} disabled={idx === 0}
+            title="Move Up" style={idx === 0 ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}>
             <ChevronUp size={14} />
           </button>
-          <button
-            onClick={() => handleMoveDown(menu.id)}
-            disabled={idx >= siblingCount - 1}
-            title="Move Down"
-            style={idx >= siblingCount - 1 ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}
-          >
+          <button onClick={() => handleMoveDown(menu.id)} disabled={idx >= siblingCount - 1}
+            title="Move Down" style={idx >= siblingCount - 1 ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}>
             <ChevronDown size={14} />
           </button>
-          <button onClick={() => setIsEditingMenu({...menu})} title="Edit Menu"><Edit2 size={14} /></button>
-          <button onClick={() => setIsEditingMenu({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: menu.id, order: 0 } as any)} title="Add Submenu"><Plus size={14} /></button>
+          <button onClick={() => setIsEditingMenu({ ...menu })} title="Edit Menu"><Edit2 size={14} /></button>
+          <button onClick={() => setIsEditingMenu({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: menu.id, order: 0 } as any)}
+            title="Add Submenu"><Plus size={14} /></button>
           {!menu.isSystem && <button className="delete" onClick={() => handleDeleteMenu(menu)} title="Delete Menu"><Trash2 size={14} /></button>}
         </div>
       </div>
       {menu.children?.map((child, childIdx) => renderMenuItem(child, depth + 1, childIdx, menu.children!.length))}
     </React.Fragment>
   );
-  if (loading) return <div className="sails-admin-loading">Syncing Apps v2...</div>;
-
-  const selectedApp = apps.find(a => a.id === selectedAppId) || null;
-  const filteredApps = apps.filter(app => {
-    if (!showSystemApps && app.isSystem) return false;
-    if (appFilter && !app.name.toLowerCase().includes(appFilter.toLowerCase())) return false;
-    return true;
-  });
 
   return (
-    <div className="sails-app-manager">
-      {selectedApp ? (
-        <>
-          <div className="sails-menu-manager__header" style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <button
-                className="sails-btn sails-btn--secondary"
-                onClick={() => { setSelectedAppId(null); setMenus([]); setHasOrderChanges(false); }}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
-              >
-                <ArrowLeft size={16} />
-                <span>All Apps</span>
-              </button>
-              <div className="sails-app-card__icon" style={{ width: 36, height: 36 }}>
-                <DynamicIcon name={selectedApp.icon || 'Box'} size={20} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>{selectedApp.name}</h3>
-                {selectedApp.isSystem && (
-                  <span style={{ fontSize: '0.7rem', background: 'rgba(59,130,246,0.15)', color: 'var(--sails-primary, #3b82f6)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                    System Protected
-                  </span>
-                )}
-              </div>
-            </div>
+    <div className="sails-app-detail__section">
+      <div className="sails-menu-manager__header">
+        <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+          Navigation Menus
+          {hasOrderChanges && <span style={{ fontSize: '0.75rem', color: 'var(--sails-primary)', fontWeight: 400, marginLeft: '8px' }}>(unsaved)</span>}
+        </span>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {hasOrderChanges && (
+            <button className="sails-btn sails-btn--primary" onClick={saveOrdering} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Ordering'}
+            </button>
+          )}
+          <button className="sails-btn sails-btn--primary"
+            onClick={() => setIsEditingMenu({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: null, order: menus.length } as any)}>
+            <Plus size={16} />
+            <span>Add Root Menu</span>
+          </button>
+        </div>
+      </div>
+      <div className="sails-menu-tree">
+        {menusLoading ? (
+          <div className="sails-admin-loading">Loading Menu Structure...</div>
+        ) : menus.length === 0 ? (
+          <div className="sails-card" style={{ textAlign: 'center', padding: '40px', color: 'var(--sails-text-muted)' }}>
+            No menu items yet. Add your first root menu above.
           </div>
+        ) : (
+          menus.map((m, i) => renderMenuItem(m, 0, i, menus.length))
+        )}
+      </div>
 
-          <div className="sails-menu-manager__header" style={{ marginBottom: '16px' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
-              Navigation Menus
-              {hasOrderChanges && (
-                <span style={{ fontSize: '0.75rem', color: 'var(--sails-primary)', fontWeight: 400, marginLeft: '8px' }}>(unsaved)</span>
+      {isEditingMenu && createPortal(
+        <div className="sails-app-overlay">
+          <div className="sails-app-create-dialog sails-app-create-dialog--menu">
+            <div className="sails-app-create-dialog__header">
+              <div className="sails-app-create-dialog__header-info">
+                <div className="sails-app-create-dialog__header-icon">
+                  <DynamicIcon name={isEditingMenu.icon || 'Circle'} size={22} />
+                </div>
+                <div>
+                  <h3>{isEditingMenu.id.startsWith('new-') ? 'New Menu Item' : 'Edit Menu Item'}</h3>
+                  <p>Configure navigation entry</p>
+                </div>
+              </div>
+              <button className="sails-app-create-dialog__close" onClick={() => setIsEditingMenu(null)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSaveMenu} className="sails-app-create-dialog__body">
+              <div className="sails-app-field-group">
+                <label className="sails-app-field-label">Label</label>
+                <input type="text" className="sails-input" value={isEditingMenu.label}
+                  onChange={e => setIsEditingMenu({ ...isEditingMenu, label: e.target.value })} required />
+              </div>
+              <div className="sails-app-form-grid">
+                <div className="sails-app-field-group">
+                  <label className="sails-app-field-label">Icon</label>
+                  <IconPicker value={isEditingMenu.icon || ''}
+                    onChange={val => setIsEditingMenu({ ...isEditingMenu, icon: val })} />
+                </div>
+                <div className="sails-app-field-group">
+                  <label className="sails-app-field-label">Action Type</label>
+                  <CustomSelect
+                    value={isEditingMenu.actionType}
+                    options={[{ value: 'table', label: 'Data Table' }, { value: 'plugin', label: 'Custom Plugin' }]}
+                    onChange={val => setIsEditingMenu({ ...isEditingMenu, actionType: String(val) })} />
+                </div>
+              </div>
+              <div className="sails-app-field-group">
+                <label className="sails-app-field-label">Browser Path</label>
+                <input type="text" className="sails-input" value={isEditingMenu.path || ''}
+                  onChange={e => setIsEditingMenu({ ...isEditingMenu, path: e.target.value })} placeholder="/crm/leads" />
+              </div>
+              {isEditingMenu.actionType === 'plugin' && (
+                <div className="sails-app-field-group">
+                  <label className="sails-app-field-label">Component Key (Registry)</label>
+                  <input type="text" className="sails-input" value={isEditingMenu.componentKey || ''}
+                    onChange={e => setIsEditingMenu({ ...isEditingMenu, componentKey: e.target.value })} placeholder="AdminUserManager" />
+                </div>
               )}
-            </span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {hasOrderChanges && (
-                <button className="sails-btn sails-btn--primary" onClick={saveOrdering} disabled={saving}>
-                  {saving ? 'Saving...' : 'Save Ordering'}
+              <div className="sails-app-create-dialog__footer">
+                <button type="button" className="sails-btn sails-btn--ghost" onClick={() => setIsEditingMenu(null)} disabled={saving}>Cancel</button>
+                <button type="submit" className="sails-btn sails-btn--primary" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Menu'}
                 </button>
-              )}
-              <button
-                className="sails-btn sails-btn--primary"
-                onClick={() => setIsEditingMenu({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: null, order: menus.length } as any)}
-              >
-                <Plus size={16} />
-                <span>Add Root Menu</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="sails-menu-tree">
-            {menusLoading ? (
-              <div className="sails-admin-loading">Loading Menu Structure...</div>
-            ) : menus.length === 0 ? (
-              <div className="sails-card" style={{ textAlign: 'center', padding: '40px', color: 'var(--sails-text-muted)' }}>
-                No menu items yet. Add your first root menu above.
-              </div>
-            ) : (
-              menus.map((m, i) => renderMenuItem(m, 0, i, menus.length))
-            )}
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="sails-app-manager__actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px' }}>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: 1 }}>
-              <div style={{ position: 'relative', flex: 1, maxWidth: '320px' }}>
-                <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--sails-text-muted)' }} />
-                <input
-                  type="text"
-                  className="sails-input"
-                  placeholder="Search apps..."
-                  value={appFilter}
-                  onChange={e => setAppFilter(e.target.value)}
-                  style={{ paddingLeft: '36px' }}
-                />
-              </div>
-              <button
-                className="sails-btn sails-btn--secondary"
-                onClick={() => setShowSystemApps(!showSystemApps)}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
-              >
-                {showSystemApps ? <EyeOff size={16} /> : <Eye size={16} />}
-                <span>{showSystemApps ? 'Hide System' : 'Show System'}</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="sails-app-grid">
-            {filteredApps.length === 0 ? (
-              <div className="sails-card" style={{ textAlign: 'center', padding: '40px', gridColumn: '1 / -1', color: 'var(--sails-text-muted)' }}>
-                {appFilter ? 'No apps match your search.' : 'No apps to display.'}
-              </div>
-            ) : (
-              filteredApps.map((app) => { const appIdx = apps.findIndex(a => a.id === app.id); return (
-                <div
-                  key={app.id}
-                  className="sails-app-card"
-                  data-app-id={app.id}
-                  draggable
-                  onDragStart={(e) => handleAppDragStart(e, app.id)}
-                  onDragOver={(e) => handleAppDragOver(e, app.id)}
-                  onDragLeave={handleAppDragLeave}
-                  onDrop={(e) => handleAppDrop(e, app.id)}
-                  onDragEnd={handleAppDragEnd}
-                >
-                  <div className="sails-app-card__top">
-                    <div
-                      className="sails-app-card__drag-handle"
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <GripVertical size={16} />
-                    </div>
-                    <div className="sails-app-card__icon">
-                      <DynamicIcon name={app.icon || 'Box'} size={24} />
-                      {app.isSystem && (
-                        <span className="sails-app-card__system-badge">
-                          <Shield size={10} />
-                        </span>
-                      )}
-                    </div>
-                    <div className="sails-app-card__info" onClick={() => setSelectedAppId(app.id)} style={{ cursor: 'pointer' }}>
-                      <h3 style={{ margin: 0 }}>{app.name}</h3>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--sails-text-muted)' }}>{app._count?.menus || 0} Menu Items</p>
-                      <div className={`sails-app-card__capability${app.requiredCapability ? ' sails-app-card__capability--active' : ''}`}>
-                        {app.requiredCapability && (
-                          <>
-                            <Shield size={12} />
-                            <span>{app.requiredCapability}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="sails-app-card__actions" onClick={e => e.stopPropagation()}>
-                    <button
-                      onClick={() => handleAppMoveUp(app.id)}
-                      disabled={appIdx === 0}
-                      title="Move Left"
-                      style={appIdx === 0 ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}
-                    >
-                      <ChevronLeft size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleAppMoveDown(app.id)}
-                      disabled={appIdx >= apps.length - 1}
-                      title="Move Right"
-                      style={appIdx >= apps.length - 1 ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}
-                    >
-                      <ChevronRight size={14} />
-                    </button>
-                    <button onClick={() => setIsEditingApp(app)} title="Edit App"><Edit2 size={16} /></button>
-                    {!app.isSystem && (
-                      <button className="delete" onClick={() => handleDeleteApp(app.id)} title="Delete App"><Trash2 size={16} /></button>
-                    )}
-                  </div>
-                </div>
-              ) })
-            )}
-          </div>
-        </>
-      )}
-
-      {isEditingApp && createPortal(
-        <div className="sails-modal-overlay" style={{ zIndex: 9999 }}>
-          <div className="sails-card" style={{ width: '460px', padding: '28px', borderRadius: 'var(--sails-radius-lg, 20px)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
-                {isEditingApp.id.startsWith('new-') ? 'Create App' : 'Edit App'}
-              </h3>
-              <button onClick={() => setIsEditingApp(null)} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleSaveApp}>
-              <div className="sails-form-group" style={{ marginBottom: '16px' }}>
-                <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>App Name</label>
-                <input
-                  type="text"
-                  className="sails-input"
-                  style={{ width: '100%' }}
-                  value={isEditingApp.name}
-                  onChange={e => setIsEditingApp({...isEditingApp, name: e.target.value})}
-                  required
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                <div className="sails-form-group">
-                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Icon</label>
-                  <IconPicker
-                    value={isEditingApp.icon || ''}
-                    onChange={val => setIsEditingApp({...isEditingApp, icon: val})}
-                  />
-                </div>
-                <div className="sails-form-group">
-                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Order</label>
-                  <input
-                    type="number"
-                    className="sails-input"
-                    style={{ width: '100%' }}
-                    value={isEditingApp.order}
-                    onChange={e => setIsEditingApp({...isEditingApp, order: parseInt(e.target.value)})}
-                  />
-                </div>
-              </div>
-              <div className="sails-form-group" style={{ marginBottom: '24px' }}>
-                <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Required Capability (Optional)</label>
-                <input
-                  type="text"
-                  className="sails-input"
-                  style={{ width: '100%' }}
-                  value={isEditingApp.requiredCapability || ''}
-                  onChange={e => setIsEditingApp({...isEditingApp, requiredCapability: e.target.value})}
-                  placeholder="e.g. system.users.manage"
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button type="button" className="sails-btn sails-btn--secondary" onClick={() => setIsEditingApp(null)}>Cancel</button>
-                <button type="submit" className="sails-btn sails-btn--primary">Save Changes</button>
               </div>
             </form>
           </div>
@@ -719,80 +922,26 @@ const AdminAppManager: React.FC = () => {
         document.body
       )}
 
-      {isEditingMenu && createPortal(
-        <div className="sails-modal-overlay" style={{ zIndex: 9999 }}>
-          <div className="sails-card" style={{ width: '460px', padding: '28px', borderRadius: 'var(--sails-radius-lg, 20px)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
-                {isEditingMenu.id.startsWith('new-') ? 'New Menu Item' : 'Edit Menu Item'}
-              </h3>
-              <button onClick={() => setIsEditingMenu(null)} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
-                <X size={20} />
+      {deleteConfirmMenu && createPortal(
+        <div className="sails-app-overlay">
+          <div className="sails-app-confirm-dialog">
+            <div className="sails-app-confirm-dialog__header">
+              <Trash2 size={22} style={{ color: 'var(--sails-danger)' }} />
+              <span>Delete Menu Item</span>
+            </div>
+            <div className="sails-app-confirm-dialog__body">
+              {deleteConfirmMenu.children && deleteConfirmMenu.children.length > 0 ? (
+                <>This will delete <strong>"{deleteConfirmMenu.label}"</strong>. Its child items will be moved up one level.</>
+              ) : (
+                <>This will permanently delete <strong>"{deleteConfirmMenu.label}"</strong>. This action cannot be undone.</>
+              )}
+            </div>
+            <div className="sails-app-confirm-dialog__footer">
+              <button className="sails-btn sails-btn--ghost" onClick={() => setDeleteConfirmMenu(null)} disabled={saving}>Cancel</button>
+              <button className="sails-btn sails-app-confirm-dialog__btn-danger" onClick={confirmDeleteMenu} disabled={saving}>
+                {saving ? 'Deleting...' : 'Delete'}
               </button>
             </div>
-            <form onSubmit={handleSaveMenu}>
-              <div className="sails-form-group" style={{ marginBottom: '16px' }}>
-                <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Label</label>
-                <input
-                  type="text"
-                  className="sails-input"
-                  style={{ width: '100%' }}
-                  value={isEditingMenu.label}
-                  onChange={e => setIsEditingMenu({...isEditingMenu, label: e.target.value})}
-                  required
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                <div className="sails-form-group">
-                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Icon</label>
-                  <IconPicker
-                    value={isEditingMenu.icon || ''}
-                    onChange={val => setIsEditingMenu({...isEditingMenu, icon: val})}
-                  />
-                </div>
-                <div className="sails-form-group">
-                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Action Type</label>
-                  <CustomSelect
-                    value={isEditingMenu.actionType}
-                    options={[
-                      { value: 'table', label: 'Data Table' },
-                      { value: 'plugin', label: 'Custom Plugin' }
-                    ]}
-                    onChange={val => setIsEditingMenu({ ...isEditingMenu, actionType: String(val) })}
-                  />
-                </div>
-              </div>
-              <div className="sails-form-group" style={{ marginBottom: '16px' }}>
-                <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Browser Path</label>
-                <input
-                  type="text"
-                  className="sails-input"
-                  style={{ width: '100%' }}
-                  value={isEditingMenu.path || ''}
-                  onChange={e => setIsEditingMenu({...isEditingMenu, path: e.target.value})}
-                  placeholder="/crm/leads"
-                />
-              </div>
-              {isEditingMenu.actionType === 'plugin' && (
-                <div className="sails-form-group" style={{ marginBottom: '20px' }}>
-                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Component Key (Registry)</label>
-                  <input
-                    type="text"
-                    className="sails-input"
-                    style={{ width: '100%' }}
-                    value={isEditingMenu.componentKey || ''}
-                    onChange={e => setIsEditingMenu({...isEditingMenu, componentKey: e.target.value})}
-                    placeholder="AdminUserManager"
-                  />
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
-                <button type="button" className="sails-btn sails-btn--secondary" onClick={() => setIsEditingMenu(null)} disabled={saving}>Cancel</button>
-                <button type="submit" className="sails-btn sails-btn--primary" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save Menu'}
-                </button>
-              </div>
-            </form>
           </div>
         </div>,
         document.body

@@ -113,6 +113,8 @@ model ConsoleApp {
   id                 String        @id @default(cuid())
   tenantId           String        @map("tenant_id")
   name               String
+  slug               String?
+  description        String?
   icon               String?
   order              Int           @default(0)
   isSystem           Boolean       @default(false) @map("is_system")
@@ -123,6 +125,7 @@ model ConsoleApp {
   menus              ConsoleMenu[]
 
   @@unique([tenantId, name])
+  @@unique([tenantId, slug])
   @@index([tenantId])
   @@map("console_apps")
   @@schema("core")

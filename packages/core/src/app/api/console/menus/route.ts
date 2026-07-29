@@ -133,7 +133,7 @@ export async function PATCH(req: Request) {
 
 /**
  * DELETE /api/console/menus
- * Removes a menu item and its children.
+ * Removes a menu item and promotes its children to the parent's level.
  */
 export async function DELETE(req: Request) {
   try {
@@ -163,9 +163,10 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: false, error: 'System menu items are protected and can only be deleted by Super Admins' }, { status: 403 });
     }
 
-    // Cascade-delete children (self-relation has no onDelete: Cascade)
-    await db.consoleMenu.deleteMany({
-      where: { parentId: id }
+    // Promote children to the grandparent level
+    await db.consoleMenu.updateMany({
+      where: { parentId: id },
+      data: { parentId: existing.parentId ?? null }
     });
 
     await db.consoleMenu.delete({

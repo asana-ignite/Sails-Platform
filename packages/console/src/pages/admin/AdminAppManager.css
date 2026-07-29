@@ -1,3 +1,7 @@
+/* ===========================
+   App Manager - List View (kept)
+   =========================== */
+
 .sails-app-manager {
   display: flex;
   flex-direction: column;
@@ -16,15 +20,11 @@
 }
 
 @media (max-width: 1100px) {
-  .sails-app-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .sails-app-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 768px) {
-  .sails-app-grid {
-    grid-template-columns: 1fr;
-  }
+  .sails-app-grid { grid-template-columns: 1fr; }
 }
 
 .sails-app-card {
@@ -124,9 +124,7 @@
   transition: opacity 0.2s;
 }
 
-.sails-app-card:hover .sails-app-card__actions {
-  opacity: 1;
-}
+.sails-app-card:hover .sails-app-card__actions { opacity: 1; }
 
 .sails-app-card__actions button {
   padding: 6px;
@@ -145,74 +143,6 @@
   background: #fff1f0;
 }
 
-/* Modal Styling */
-.sails-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.sails-modal {
-  background: white;
-  width: 100%;
-  max-width: 500px;
-  border-radius: var(--sails-radius-lg);
-  padding: 32px;
-  box-shadow: var(--sails-shadow-lg);
-  animation: modal-slide-up 0.3s ease-out;
-}
-
-.sails-modal h2 {
-  font-size: 1.5rem;
-  margin-bottom: 24px;
-}
-
-.sails-form-group {
-  margin-bottom: 20px;
-}
-
-.sails-form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.sails-form-group label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--sails-text-muted);
-  margin-bottom: 8px;
-}
-
-.sails-form-group input {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--sails-border-color);
-  border-radius: var(--sails-radius-md);
-  font-size: 0.95rem;
-}
-
-.sails-form-group input:focus {
-  border-color: var(--sails-primary);
-  box-shadow: 0 0 0 3px var(--sails-primary-light);
-}
-
-.sails-modal__footer {
-  margin-top: 32px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
 .sails-app-card__drag-handle {
   color: var(--sails-text-muted);
   cursor: grab;
@@ -223,26 +153,482 @@
   flex-shrink: 0;
 }
 
-.sails-app-card:hover .sails-app-card__drag-handle {
-  opacity: 1;
-}
+.sails-app-card:hover .sails-app-card__drag-handle { opacity: 1; }
+.sails-app-card__drag-handle:active { cursor: grabbing; }
 
-.sails-app-card__drag-handle:active {
-  cursor: grabbing;
-}
-
-.sails-app-card--dragging {
-  opacity: 0.4;
-  border-style: dashed;
-}
-
+.sails-app-card--dragging { opacity: 0.4; border-style: dashed; }
 .sails-app-card--drop-target {
   border-top: 2px solid var(--sails-primary);
   border-color: var(--sails-primary);
   background: var(--sails-primary-light);
 }
 
-@keyframes modal-slide-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ===========================
+   Modal Overlay (shared)
+   =========================== */
+
+.sails-app-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999 !important;
+  animation: sails-fade-in 0.2s ease-out;
+}
+
+/* ===========================
+   Create / Edit Dialog (standard theme ~780px)
+   =========================== */
+
+.sails-app-create-dialog {
+  width: 780px;
+  max-width: 95vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border-radius: var(--sails-radius-lg, 16px);
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--sails-border-color);
+  overflow: hidden;
+  animation: sails-modal-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sails-app-create-dialog--menu {
+  width: 520px;
+  max-height: 90vh;
+}
+
+.sails-app-create-dialog__header {
+  padding: 28px 36px;
+  border-bottom: 1px solid var(--sails-border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sails-app-create-dialog__header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sails-app-create-dialog__header-icon {
+  width: 44px;
+  height: 44px;
+  background: var(--sails-primary-light);
+  color: var(--sails-primary);
+  border-radius: var(--sails-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sails-app-create-dialog__header-info h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+  margin: 0;
+}
+
+.sails-app-create-dialog__header-info p {
+  font-size: 0.825rem;
+  color: var(--sails-text-muted);
+  margin: 4px 0 0 0;
+}
+
+.sails-app-create-dialog__close {
+  background: transparent;
+  border: none;
+  color: var(--sails-text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.sails-app-create-dialog__close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--sails-text-main);
+}
+
+.sails-app-create-dialog__body {
+  padding: 32px 36px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.sails-app-create-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--sails-border-color);
+  margin-top: 4px;
+}
+
+/* ===========================
+   Form Elements
+   =========================== */
+
+.sails-app-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.sails-app-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sails-app-field-group--full {
+  grid-column: 1 / -1;
+}
+
+.sails-app-field-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--sails-text-main);
+}
+
+.sails-app-required { color: var(--sails-danger); }
+
+.sails-app-field-hint {
+  font-size: 0.775rem;
+  color: var(--sails-text-muted);
+}
+
+.sails-input--textarea {
+  height: auto !important;
+  padding: 10px 14px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 38px;
+  font-family: inherit;
+}
+
+/* Locked field */
+.sails-app-field-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sails-app-field-input--locked {
+  background: var(--sails-bg-body) !important;
+  color: var(--sails-text-muted) !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
+  padding-right: 32px !important;
+  user-select: none;
+}
+
+.sails-app-field-lock-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--sails-text-muted);
+  pointer-events: none;
+}
+
+/* ===========================
+   App Detail View
+   =========================== */
+
+.sails-app-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  animation: sails-fade-in 0.25s ease-out;
+}
+
+.sails-app-detail__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sails-app-detail__header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sails-app-detail__back-btn {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.sails-app-detail__app-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--sails-primary-light);
+  color: var(--sails-primary);
+  border-radius: var(--sails-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sails-app-detail__app-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+  margin: 0;
+}
+
+.sails-app-detail__system-badge {
+  font-size: 0.72rem;
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--sails-primary, #3b82f6);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.sails-app-detail__header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ===========================
+   Tab Navigation
+   =========================== */
+
+.sails-app-detail__tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--sails-border-color);
+  margin-bottom: 0;
+}
+
+.sails-app-detail__tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--sails-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  border-radius: var(--sails-radius-md) var(--sails-radius-md) 0 0;
+}
+
+.sails-app-detail__tab:hover {
+  color: var(--sails-text-main);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.sails-app-detail__tab--active {
+  color: var(--sails-primary-dark);
+  border-bottom-color: var(--sails-primary-dark);
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.08);
+}
+
+.sails-app-detail__dirty-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--sails-warning);
+  display: inline-block;
+}
+
+/* ===========================
+   Tab Body
+   =========================== */
+
+.sails-app-detail__body {
+  padding: 0;
+}
+
+.sails-app-detail__section {
+  background: var(--sails-bg-card);
+  border: 1px solid var(--sails-border-color);
+  border-top: none;
+  border-radius: 0 0 var(--sails-radius-lg) var(--sails-radius-lg);
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sails-app-detail__save-row {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid var(--sails-border-color);
+}
+
+/* ===========================
+   Placeholder Tabs (Widget / Permission)
+   =========================== */
+
+.sails-app-detail__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 32px;
+  text-align: center;
+  gap: 16px;
+  min-height: 320px;
+}
+
+.sails-app-detail__placeholder-icon {
+  color: var(--sails-text-muted);
+  opacity: 0.4;
+  margin-bottom: 8px;
+}
+
+.sails-app-detail__placeholder h4 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+  margin: 0;
+}
+
+.sails-app-detail__placeholder p {
+  font-size: 0.9rem;
+  color: var(--sails-text-muted);
+  max-width: 420px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.sails-app-detail__coming-soon {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sails-primary);
+  background: var(--sails-primary-light);
+  padding: 4px 14px;
+  border-radius: 100px;
+}
+
+/* ===========================
+   Confirmation Dialog
+   =========================== */
+
+.sails-app-confirm-dialog {
+  background: var(--sails-bg-card);
+  border-radius: var(--sails-radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 460px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border: 1px solid var(--sails-border-color);
+  animation: sails-fade-in 0.2s ease-out;
+}
+
+.sails-app-confirm-dialog__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+}
+
+.sails-app-confirm-dialog__body {
+  font-size: 0.9rem;
+  color: var(--sails-text-muted);
+  line-height: 1.5;
+}
+
+.sails-app-confirm-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.sails-app-confirm-dialog__btn-discard {
+  background: var(--sails-danger-light) !important;
+  color: var(--sails-danger) !important;
+  border: 1px solid rgba(253, 97, 97, 0.3) !important;
+}
+
+.sails-app-confirm-dialog__btn-danger {
+  background: var(--sails-danger) !important;
+  color: #fff !important;
+  border: 1px solid var(--sails-danger) !important;
+}
+
+.sails-app-confirm-dialog__btn-danger:hover {
+  background: var(--sails-danger-dark, #dc2626) !important;
+}
+
+/* ===========================
+   Animations
+   =========================== */
+
+@keyframes sails-modal-pop {
+  from { opacity: 0; transform: scale(0.96) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes sails-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ===========================
+   Responsive
+   =========================== */
+
+@media (max-width: 768px) {
+  .sails-app-create-dialog {
+    width: 100%;
+    max-width: 100vw;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .sails-app-create-dialog__header { padding: 20px 20px; }
+  .sails-app-create-dialog__body { padding: 24px 20px; }
+  .sails-app-create-dialog__footer { padding: 16px 20px; }
+
+  .sails-app-form-grid { grid-template-columns: 1fr; }
+
+  .sails-app-detail__section { padding: 20px 16px; }
+  .sails-app-detail__tabs { overflow-x: auto; }
+  .sails-app-detail__tab { padding: 10px 14px; white-space: nowrap; font-size: 0.82rem; }
+
+  .sails-app-confirm-dialog { margin: 16px; }
 }
