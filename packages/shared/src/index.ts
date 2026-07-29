@@ -165,8 +165,27 @@ export interface ConsoleApp {
   order: number;
   isSystem?: boolean;
   requiredCapability?: string | null;
+  widgetBarEnabled?: boolean;
   menus: ConsoleMenu[];
+  widgets?: ConsoleWidget[];
   _count?: { menus: number };
+}
+
+export interface ConsoleWidget {
+  id: string;
+  tenantId?: string;
+  appId?: string | null;
+  label: string;
+  icon: string | null;
+  componentKey?: string | null;
+  openIn?: string;
+  config?: Record<string, any> | null;
+  order: number;
+  enabled?: boolean;
+  isSystem?: boolean;
+  requiredCapability?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ─── Physical Type Enum ───────────────────────────────────────
@@ -359,9 +378,47 @@ export interface TableLayout {
 }
 
 export interface LayoutConfig {
-  sections: LayoutSection[];
-  fields: LayoutField[];
+  sections?: LayoutSection[];
+  fields?: LayoutField[];
   relatedRecords?: RelatedRecord[];    // only for DETAIL view
+
+  // LIST/Table view config
+  columns?: LayoutColumn[];
+  filters?: LayoutFilter[];
+  sortBy?: LayoutSort[];
+  summaryFields?: SummaryField[];
+}
+
+export interface LayoutColumn {
+  id: string;
+  fieldId: string;
+  position: number;
+  visible: boolean;
+  width?: number;
+  widthUnit?: 'px' | '%';
+  labelOverride?: string;
+  allowSorting: boolean;
+  allowFiltering: boolean;
+  alignment?: 'left' | 'center' | 'right';
+  wrapText?: boolean;
+}
+
+export interface SummaryField {
+  id: string;
+  fieldId: string;
+}
+
+export interface LayoutFilter {
+  id: string;
+  fieldId: string;
+  operator: string;
+  value: string;
+  logic: 'and' | 'or';
+}
+
+export interface LayoutSort {
+  fieldId: string;
+  direction: 'asc' | 'desc';
 }
 
 export interface LayoutSection {

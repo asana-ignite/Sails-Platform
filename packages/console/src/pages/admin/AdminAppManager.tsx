@@ -10,6 +10,7 @@ import DynamicIcon from '../../components/common/DynamicIcon';
 import IconPicker from '../../components/common/IconPicker';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { useConsole } from '../../contexts/ConsoleContext';
+import WidgetsTab from './WidgetsTab';
 import './AdminAppManager.css';
 import './AdminMenuManager.css';
 
@@ -552,14 +553,7 @@ const AppDetailView: React.FC<{
         )}
 
         {activeTab === 'widget' && (
-          <div className="sails-app-detail__section sails-app-detail__placeholder">
-            <div className="sails-app-detail__placeholder-icon">
-              <DynamicIcon name="Blocks" size={48} />
-            </div>
-            <h4>Widget Configuration</h4>
-            <p>Utility strip widgets, taskbar plugins, and embedded tools will be configurable here.</p>
-            <span className="sails-app-detail__coming-soon">Coming Soon</span>
-          </div>
+          <WidgetsTab appId={app.id} widgetBarEnabled={app.widgetBarEnabled || false} />
         )}
 
         {activeTab === 'permission' && (

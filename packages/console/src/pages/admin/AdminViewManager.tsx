@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { LayoutTemplate, Search, Plus, ChevronLeft, ChevronRight, MoreHorizontal, Trash2, Database, List, FileText, ClipboardList, X, ArrowUpDown, ChevronUp, ChevronDown, Calendar, Edit2, AlertTriangle } from 'lucide-react';
+import { LayoutTemplate, Search, Plus, ChevronLeft, ChevronRight, MoreHorizontal, Trash2, Database, List, FileText, ClipboardList, X, ArrowUpDown, ChevronUp, ChevronDown, Calendar, AlertTriangle } from 'lucide-react';
 import Spinner from '../../components/common/Spinner';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { useConsole } from '../../contexts/ConsoleContext';
@@ -33,7 +33,6 @@ const AdminViewManager: React.FC = () => {
   const [deletedSuccessMsg, setDeletedSuccessMsg] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'description' | 'tableName' | 'viewType' | 'createdAt' | 'updatedAt'; direction: 'asc' | 'desc' } | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  const [editingLayout, setEditingLayout] = useState<LayoutRow | null>(null);
   const { setHeaderActions } = useConsole();
 
   const fetchData = useCallback(async (p: number, q: string, ps?: number) => {
@@ -151,10 +150,6 @@ const AdminViewManager: React.FC = () => {
   const handleOpenLayoutStudio = (row: LayoutRow) => {
     const targetId = row.table?.id || row.tableId;
     window.open(`/layout-studio/${targetId || '_custom'}/${row.id}`, '_blank');
-  };
-
-  const handleEdit = (row: LayoutRow) => {
-    setEditingLayout(row);
   };
 
   const startRecord = rows.length > 0 ? (page - 1) * pageSize + 1 : 0;
@@ -338,17 +333,6 @@ const AdminViewManager: React.FC = () => {
                                 className="lav-context-item"
                                 onClick={() => {
                                   setActiveMenuId(null);
-                                  handleEdit(row);
-                                }}
-                              >
-                                <Edit2 size={14} />
-                                <span>Edit Details</span>
-                              </button>
-
-                              <button
-                                className="lav-context-item"
-                                onClick={() => {
-                                  setActiveMenuId(null);
                                   handleOpenLayoutStudio(row);
                                 }}
                               >
@@ -442,17 +426,6 @@ const AdminViewManager: React.FC = () => {
             fetchData(1, search);
             const tid = data.table?.id || data.tableId || '_custom';
             window.open(`/layout-studio/${tid}/${data.id}`, '_blank');
-          }}
-        />
-      )}
-
-      {editingLayout && (
-        <EditLayoutModal
-          layout={editingLayout}
-          onClose={() => setEditingLayout(null)}
-          onUpdated={(updated: LayoutRow) => {
-            setRows(prev => prev.map(r => r.id === updated.id ? updated : r));
-            setEditingLayout(null);
           }}
         />
       )}
@@ -695,135 +668,6 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
             disabled={!name || !systemName || (!isCustom && !tableId) || submitting}
           >
             {submitting ? 'Creating...' : 'Create Layout'}
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-};
-
-interface EditLayoutModalProps {
-  layout: LayoutRow;
-  onClose: () => void;
-  onUpdated: (updated: LayoutRow) => void;
-}
-
-const EditLayoutModal: React.FC<EditLayoutModalProps> = ({ layout, onClose, onUpdated }) => {
-  const [name, setName] = useState(layout.name);
-  const [description, setDescription] = useState(layout.description || '');
-  const [isDefault, setIsDefault] = useState(layout.isDefault);
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    if (!name.trim()) return;
-    setSaving(true);
-    try {
-      const res = await fetch('/api/console/layouts', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: layout.id,
-          name: name.trim(),
-          description: description.trim() || null,
-          ...(isDefault !== layout.isDefault && { isDefault })
-        })
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error);
-      onUpdated(json.data);
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const viewTypeLabel = VIEW_TYPE_LABELS[layout.viewType];
-  const ViewTypeIcon = viewTypeLabel.icon;
-
-  return createPortal(
-    <div className="sails-layout-overlay" onClick={onClose}>
-      <div className="sails-layout-dialog" style={{ height: 'auto', maxHeight: '88vh' }} onClick={e => e.stopPropagation()}>
-        <div className="sails-layout-dialog__header">
-          <div className="sails-layout-dialog__header-info">
-            <div className="sails-layout-dialog__icon">
-              <LayoutTemplate size={24} />
-            </div>
-            <div>
-              <h2 className="sails-layout-dialog__title">Edit Layout</h2>
-              <p className="sails-layout-dialog__subtitle">Update details for <strong>{layout.name}</strong>.</p>
-            </div>
-          </div>
-          <button className="sails-layout-dialog__close" onClick={onClose}><X size={20} /></button>
-        </div>
-        <div className="sails-layout-dialog__body">
-          <div className="sails-layout-dialog__row">
-            <div className="sails-layout-dialog__field">
-              <label className="sails-layout-dialog__label">Name *</label>
-              <input
-                type="text"
-                className="sails-input"
-                value={name}
-                onChange={e => setName(e.target.value)}
-              />
-            </div>
-            <div className="sails-layout-dialog__field">
-              <label className="sails-layout-dialog__label">System Name</label>
-              <code className="sails-layout-dialog__system-name-display">{layout.systemName}</code>
-              <span className="sails-layout-dialog__hint">System names cannot be changed after creation.</span>
-            </div>
-          </div>
-          <div className="sails-layout-dialog__field">
-            <label className="sails-layout-dialog__label">Description</label>
-            <textarea
-              className="sails-input"
-              placeholder="Optional description of this layout"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              rows={4}
-            />
-          </div>
-          <div className="sails-layout-dialog__row">
-            <div className="sails-layout-dialog__field">
-              <label className="sails-layout-dialog__label">Layout Type</label>
-              <div className="sails-layout-dialog__readonly-badge">
-                {layout.layoutType === 'data' ? <Database size={16} /> : <LayoutTemplate size={16} />}
-                <span>{layout.layoutType === 'data' ? 'Data' : 'Custom'}</span>
-              </div>
-            </div>
-            <div className="sails-layout-dialog__field">
-              <label className="sails-layout-dialog__label">Model</label>
-              <div className="sails-layout-dialog__readonly-text">
-                {layout.table?.name || (layout.layoutType === 'custom' ? 'Custom' : '—')}
-              </div>
-            </div>
-          </div>
-          <div className="sails-layout-dialog__field">
-            <label className="sails-layout-dialog__label">View Type</label>
-            <div className="sails-layout-dialog__readonly-badge">
-              <ViewTypeIcon size={18} />
-              <span>{viewTypeLabel.label}</span>
-            </div>
-          </div>
-          <label className="sails-checkbox-label">
-            <input
-              type="checkbox"
-              className="sails-checkbox"
-              checked={isDefault}
-              onChange={e => setIsDefault(e.target.checked)}
-            />
-            Set as default view
-          </label>
-        </div>
-        <div className="sails-layout-dialog__footer">
-          <button className="sails-btn sails-btn--ghost" onClick={onClose}>Cancel</button>
-          <button
-            className="sails-btn sails-btn--primary"
-            onClick={handleSave}
-            disabled={!name.trim() || saving}
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>

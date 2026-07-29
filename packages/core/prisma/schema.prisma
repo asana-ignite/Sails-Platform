@@ -18,6 +18,7 @@ model Tenant {
   systemEventLogs SystemEventLog[]
   ddlLogs         DdlLog[]
   consoleApps     ConsoleApp[]
+  consoleWidgets  ConsoleWidget[]
   tables          TableDefinition[]
   teams           Team[]
   users           User[]
@@ -121,8 +122,10 @@ model ConsoleApp {
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @default(now()) @updatedAt @map("updated_at")
   requiredCapability String?       @map("required_capability")
+  widgetBarEnabled   Boolean       @default(false) @map("widget_bar_enabled")
   tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   menus              ConsoleMenu[]
+  widgets            ConsoleWidget[]
 
   @@unique([tenantId, name])
   @@unique([tenantId, slug])
@@ -150,6 +153,31 @@ model ConsoleMenu {
   @@index([appId])
   @@index([parentId])
   @@map("console_menus")
+  @@schema("core")
+}
+
+model ConsoleWidget {
+  id                 String     @id @default(cuid())
+  tenantId           String     @map("tenant_id")
+  appId              String?    @map("app_id")
+  label              String
+  icon               String?
+  componentKey       String?    @map("component_key")
+  openIn             String     @default("bar") @map("open_in")
+  config             Json?      @map("config")
+  order              Int        @default(0)
+  enabled            Boolean    @default(true)
+  isSystem           Boolean    @default(false) @map("is_system")
+  requiredCapability String?    @map("required_capability")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  app    ConsoleApp? @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([appId])
+  @@map("console_widgets")
   @@schema("core")
 }
 

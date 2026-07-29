@@ -58,6 +58,19 @@ export class AlchemaCore {
     const sql = format('CREATE SCHEMA IF NOT EXISTS %I', schemaName);
     const result = await this.pool.query(sql);
     await this.logDdlAction(schemaName, null, 'CREATE_SCHEMA', sql);
+
+    const usageSql = format('GRANT USAGE ON SCHEMA %I TO rls_user', schemaName);
+    await this.pool.query(usageSql);
+    await this.logDdlAction(schemaName, null, 'GRANT_USAGE', usageSql);
+
+    const defaultPrivsSql = format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rls_user', schemaName);
+    await this.pool.query(defaultPrivsSql);
+    await this.logDdlAction(schemaName, null, 'ALTER_DEFAULT_PRIVILEGES', defaultPrivsSql);
+
+    const defaultSeqPrivsSql = format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT USAGE ON SEQUENCES TO rls_user', schemaName);
+    await this.pool.query(defaultSeqPrivsSql);
+    await this.logDdlAction(schemaName, null, 'ALTER_DEFAULT_SEQUENCE_PRIVILEGES', defaultSeqPrivsSql);
+
     return result;
   }
 
@@ -106,6 +119,10 @@ export class AlchemaCore {
     );
     await this.pool.query(sql);
     await this.logDdlAction(schemaName, tableName, 'CREATE_TABLE', sql);
+
+    const grantSql = format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE %I.%I TO rls_user', schemaName, tableName);
+    await this.pool.query(grantSql);
+    await this.logDdlAction(schemaName, tableName, 'GRANT_TABLE', grantSql);
  
     // Enable and Force RLS
     await this.pool.query(format('ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY', schemaName, tableName));
@@ -268,6 +285,10 @@ export class AlchemaCore {
     );
     await this.pool.query(createSeqSql);
     await this.logDdlAction(schemaName, tableName, 'CREATE_SEQUENCE', createSeqSql);
+
+    const grantSeqSql = format('GRANT USAGE ON SEQUENCE %I.%I TO rls_user', schemaName, seqName);
+    await this.pool.query(grantSeqSql);
+    await this.logDdlAction(schemaName, tableName, 'GRANT_SEQUENCE', grantSeqSql);
 
     // 2. Build DEFAULT expression with date tokens support
     const defaultExpr = buildAutoNumberSqlExpression(schemaName, seqName, config);

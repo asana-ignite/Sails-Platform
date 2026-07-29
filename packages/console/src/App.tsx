@@ -17,8 +17,8 @@ const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized'));
 const LayoutDemo = lazy(() => import('./pages/__mockups__/LayoutDemo'));
 const RouteBuilder = lazy(() => import('./pages/__mockups__/RouteBuilder'));
-const TableBuilder = lazy(() => import('./pages/__mockups__/TableBuilder'));
 const LayoutStudio = lazy(() => import('./pages/custom/LayoutStudio'));
+const TableBuilder = lazy(() => import('./pages/__mockups__/TableBuilder'));
 
 /**
  * ProtectedRoute

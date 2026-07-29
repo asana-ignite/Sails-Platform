@@ -243,14 +243,17 @@ export const LayoutSample: React.FC<LayoutSampleProps> = ({ demoView }) => {
 
   // Resolve sections + their fields from config
   const sections = useMemo(() => {
-    return layout.config.sections
+    const cfgFields = (layout.config.fields || []) as LayoutField[];
+    const cfgSections = (layout.config.sections || []) as LayoutSection[];
+    return cfgSections
       .sort((a, b) => a.position - b.position)
       .map((sec) => ({
         section: sec,
-        fields: fieldsForSection(layout.config.fields, sec.id),
+        fields: fieldsForSection(cfgFields, sec.id),
       }));
   }, [layout]);
 
+  const configFields = (layout.config.fields || []) as LayoutField[];
   const titleValue = MOCK_RECORD[layout.recordTitleField || 'lead_name'];
   const isDetail = demoView === 'DETAIL';
   const isForm = demoView === 'FORM';
@@ -299,7 +302,7 @@ export const LayoutSample: React.FC<LayoutSampleProps> = ({ demoView }) => {
           <table className="sails-table">
             <thead>
               <tr>
-                {layout.config.fields
+                {configFields
                   .filter((f) => f.visible)
                   .sort((a, b) => a.position - b.position)
                   .map((lf) => {
@@ -310,7 +313,7 @@ export const LayoutSample: React.FC<LayoutSampleProps> = ({ demoView }) => {
             </thead>
             <tbody>
               <tr className="layout-sample__mock-row">
-                {layout.config.fields
+                {configFields
                   .filter((f) => f.visible)
                   .sort((a, b) => a.position - b.position)
                   .map((lf) => {
@@ -326,7 +329,7 @@ export const LayoutSample: React.FC<LayoutSampleProps> = ({ demoView }) => {
             </tbody>
           </table>
           <p className="layout-sample__mock-legend">
-            ↳ <strong>LIST view:</strong> Columns are driven by <code>layout.config.fields</code> — only visible,
+            ↳ <strong>LIST view:</strong> Columns are driven by <code>layout.config.fields || []</code> — only visible,
             sorted by position. No hardcoded &lt;th&gt; elements.
           </p>
         </div>

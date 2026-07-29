@@ -632,3 +632,223 @@
 
   .sails-app-confirm-dialog { margin: 16px; }
 }
+
+/* ===========================
+   General Settings — Toggle Row
+   =========================== */
+
+.sails-app-detail__setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  gap: 16px;
+}
+
+.sails-app-detail__setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sails-app-detail__setting-info .sails-app-field-label {
+  margin-bottom: 0;
+}
+
+/* ===========================
+   Toggle Switch
+   =========================== */
+
+.sails-toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.sails-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.sails-toggle__slider {
+  position: absolute;
+  inset: 0;
+  background: var(--sails-border-color);
+  border-radius: 11px;
+  transition: background 0.2s ease;
+}
+
+.sails-toggle__slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.sails-toggle input:checked + .sails-toggle__slider {
+  background: var(--sails-primary);
+}
+
+.sails-toggle input:checked + .sails-toggle__slider::after {
+  transform: translateX(18px);
+}
+
+/* ===========================
+   Widgets Tab
+   =========================== */
+
+.sails-widgets-tab {
+  padding: 24px 28px;
+}
+
+.sails-widgets-tab__divider {
+  height: 1px;
+  background: var(--sails-border-color);
+  margin: 16px 0;
+}
+
+.sails-widgets-tab__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sails-widgets-tab__header h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+}
+
+.sails-widgets-tab__add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sails-widgets-tab__select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--sails-bg-card);
+  color: var(--sails-text-main);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-sm);
+  padding: 5px 28px 5px 10px;
+  font-family: var(--sails-font-family);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.sails-widgets-tab__empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--sails-text-muted);
+  font-size: 0.85rem;
+}
+
+.sails-widgets-tab__list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
+  overflow: hidden;
+}
+
+.sails-widgets-tab__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--sails-bg-card);
+  border-bottom: 1px solid var(--sails-border-color);
+  transition: background 0.15s;
+}
+
+.sails-widgets-tab__row:last-child {
+  border-bottom: none;
+}
+
+.sails-widgets-tab__row:hover {
+  background: var(--sails-bg-body);
+}
+
+.sails-widgets-tab__row--disabled {
+  opacity: 0.5;
+}
+
+.sails-widgets-tab__drag {
+  color: var(--sails-text-muted);
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.sails-widgets-tab__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sails-widgets-tab__label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--sails-text-main);
+}
+
+.sails-widgets-tab__key {
+  font-size: 0.72rem;
+  color: var(--sails-text-muted);
+  font-family: monospace;
+}
+
+.sails-widgets-tab__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.sails-widgets-tab__btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--sails-radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--sails-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sails-widgets-tab__btn-icon:hover:not(:disabled) {
+  background: var(--sails-primary-light);
+  color: var(--sails-primary);
+}
+
+.sails-widgets-tab__btn-icon:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.sails-widgets-tab__btn-icon--danger:hover:not(:disabled) {
+  background: var(--sails-danger-light);
+  color: var(--sails-danger);
+}

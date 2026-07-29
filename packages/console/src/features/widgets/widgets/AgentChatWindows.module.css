@@ -1,0 +1,120 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--sails-success-light);
+  border: 1px solid rgba(78, 197, 173, 0.15);
+  flex-shrink: 0;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sails-success);
+  animation: agent-pulse 2s infinite;
+}
+
+@keyframes agent-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sails-success);
+  line-height: 1;
+}
+
+.label {
+  font-size: 9px;
+  color: rgba(78, 197, 173, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.chats {
+  display: flex;
+  gap: 6px;
+}
+
+.chat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: var(--sails-bg-body);
+  border: 1px solid var(--sails-border-color);
+  min-width: 160px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.chat:hover {
+  background: var(--sails-primary-light);
+  border-color: var(--sails-primary);
+}
+
+.chatInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.customerName {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sails-text-main);
+  line-height: 1.2;
+}
+
+.lastMessage {
+  font-size: 10px;
+  color: var(--sails-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 110px;
+}
+
+.chatMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.timestamp {
+  font-size: 9px;
+  color: var(--sails-text-muted);
+}
+
+.unreadBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--sails-primary);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}

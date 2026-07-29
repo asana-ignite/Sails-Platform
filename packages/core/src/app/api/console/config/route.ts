@@ -103,10 +103,35 @@ export async function GET() {
 
     console.log(`[CONFIG] Returning ${filteredApps.length} apps`);
 
+    // 5. Fetch Widgets for the Widget Bar
+    let widgets: any[] = [];
+    try {
+      widgets = await db.consoleWidget.findMany({
+        where: {
+          tenantId,
+          enabled: true,
+          OR: [
+            { appId: null },
+            { appId: { in: filteredApps.map(a => a.id) } }
+          ]
+        },
+        orderBy: { order: 'asc' }
+      });
+
+      if (!isSystemAdmin) {
+        widgets = widgets.filter(w => {
+          if (!w.requiredCapability) return true;
+          return userCapabilities.includes(w.requiredCapability);
+        });
+      }
+    } catch (err: any) {
+      console.warn('[CONFIG] Widget fetch failed (table may not exist yet):', err.message);
+    }
+
     return NextResponse.json({
       success: true,
       _debug: { version: '6.5.0', timestamp: new Date().toISOString(), tenantId },
-      data: { apps: filteredApps }
+      data: { apps: filteredApps, widgets }
     }, {
       headers: {
         'Cache-Control': 'no-store, max-age=0'

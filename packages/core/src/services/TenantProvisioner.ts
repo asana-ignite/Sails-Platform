@@ -72,6 +72,7 @@ export class TenantProvisioner {
 
     await this.provisionSystemApps(tenant.id);
     await this.provisionBusinessApps(tenant.id);
+    await this.provisionDefaultWidgets(tenant.id);
     await this.provisionStandardDataModels(tenant.id);
     
     return {
@@ -254,6 +255,46 @@ export class TenantProvisioner {
       WHERE core.console_menus.parent_id = parent_id_table.id
       AND core.console_menus.app_id IS NULL
     `);
+  }
+
+  async provisionDefaultWidgets(tenantId: string) {
+    const existingWidgets = await db.consoleWidget.findMany({
+      where: { tenantId }
+    });
+
+    if (existingWidgets.length > 0) {
+      console.log(`[PROVISIONER] Widgets already exist for tenant ${tenantId}. Skipping.`);
+      return;
+    }
+
+    await db.consoleWidget.createMany({
+      data: [
+        {
+          tenantId,
+          label: 'Quick Accept',
+          icon: 'CheckCircle',
+          componentKey: 'OmniChannelQuickAccept',
+          openIn: 'bar',
+          order: 0,
+          enabled: true,
+          isSystem: true,
+          requiredCapability: 'ADMIN'
+        },
+        {
+          tenantId,
+          label: 'Agent Chat',
+          icon: 'MessageSquare',
+          componentKey: 'AgentChatWindows',
+          openIn: 'bar',
+          order: 1,
+          enabled: true,
+          isSystem: true,
+          requiredCapability: 'ADMIN'
+        }
+      ]
+    });
+
+    console.log(`[PROVISIONER] Seeded default widgets for tenant ${tenantId}`);
   }
 
   async provisionStandardDataModels(tenantId: string) {

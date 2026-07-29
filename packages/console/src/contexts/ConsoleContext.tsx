@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ConsoleApp, ConsoleMenu } from '@sails/shared';
+import { ConsoleApp, ConsoleMenu, ConsoleWidget } from '@sails/shared';
 
-export type { ConsoleApp, ConsoleMenu };
+export type { ConsoleApp, ConsoleMenu, ConsoleWidget };
 import { useAuth } from './AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -9,6 +9,7 @@ interface ConsoleContextType {
   apps: ConsoleApp[];
   activeApp: ConsoleApp | null;
   navigationItems: ConsoleMenu[];
+  widgets: ConsoleWidget[];
   isLoading: boolean;
   error: string | null;
   setActiveApp: (appId: string) => void;
@@ -27,6 +28,7 @@ const ConsoleContext = createContext<ConsoleContextType | undefined>(undefined);
 export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [apps, setApps] = useState<ConsoleApp[]>([]);
+  const [widgets, setWidgets] = useState<ConsoleWidget[]>([]);
   const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +47,7 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const result = await response.json();
         if (result.success) {
           const fetchedApps = result.data.apps;
+          const fetchedWidgets = result.data.widgets || [];
           
           // ROLE-BASED FILTERING:
           // Filter apps based on requiredCapability and user role.
@@ -60,6 +63,7 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           });
           
           setApps(filteredApps);
+          setWidgets(fetchedWidgets);
           
           // Try to find which app contains the current URL path
           const currentPath = location.pathname;
@@ -146,7 +150,8 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     <ConsoleContext.Provider value={{ 
       apps, 
       activeApp, 
-      navigationItems, 
+      navigationItems,
+      widgets, 
       isLoading, 
       error, 
       setActiveApp,

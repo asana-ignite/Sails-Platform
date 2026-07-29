@@ -1,0 +1,105 @@
+/* ── Detection zone — thin strip at viewport bottom ──────────── */
+.sails-widget-bar__detector {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  z-index: 499;
+}
+
+/* ── Widget Bar — fixed at bottom, overlays everything ───────── */
+.sails-widget-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--sails-bg-card);
+  border-top: 1px solid var(--sails-border-color);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+  transition: transform 0.22s cubic-bezier(0.25, 0.8, 0.25, 1);
+  pointer-events: auto;
+}
+
+/* ── Hidden state — slid below viewport ──────────────────────── */
+.sails-widget-bar--hidden {
+  transform: translateY(100%);
+}
+
+/* ── Items row ───────────────────────────────────────────────── */
+.sails-widget-bar__items {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+  height: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.sails-widget-bar__items::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Individual widget slot ──────────────────────────────────── */
+.sails-widget-bar__item {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 8px;
+  border-left: 1px solid var(--sails-border-color);
+}
+
+.sails-widget-bar__item:first-child {
+  border-left: none;
+  padding-left: 0;
+}
+
+/* ── Loading / fallback label ────────────────────────────────── */
+.sails-widget-bar__label {
+  font-size: 11px;
+  color: var(--sails-text-muted);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+/* ── Pin / unpin toggle ──────────────────────────────────────── */
+.sails-widget-bar__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--sails-radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--sails-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, border-color 0.15s;
+  margin-left: 6px;
+}
+
+.sails-widget-bar:hover .sails-widget-bar__toggle {
+  opacity: 1;
+}
+
+.sails-widget-bar__toggle:hover {
+  background: var(--sails-primary-light);
+  border-color: var(--sails-primary);
+  color: var(--sails-primary);
+}
+
+/* ── Mobile ──────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sails-widget-bar,
+  .sails-widget-bar__detector {
+    display: none;
+  }
+}

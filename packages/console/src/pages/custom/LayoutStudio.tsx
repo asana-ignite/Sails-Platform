@@ -12,10 +12,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   GripVertical, Plus, X, Eye, EyeOff, Trash2, MoveUp, MoveDown,
   LayoutGrid, Settings, ArrowRight, ListTree, FolderKanban, Columns,
-  Table2, Filter, ShieldAlert, AlertCircle,
+  Table2, Filter, ShieldAlert, AlertCircle, ArrowUpDown,
   ArrowLeft, Loader2, Play, Pause, Minimize2, Maximize2, CheckCircle2,
+  Layers, Search, ArrowUp, ArrowDown, ChevronLeft, ChevronRight,
+  RotateCcw, AlignLeft, AlignCenter, AlignRight,
 } from 'lucide-react';
-import type { SailsFieldDefinition } from '@sails/shared';
+import type { SailsFieldDefinition, LayoutColumn, LayoutFilter, LayoutSort, ViewType, SummaryField } from '@sails/shared';
+import { CustomSelect } from '../../components/common/CustomSelect';
 import { useAuth } from '../../contexts/AuthContext';
 import Unauthorized from '../Unauthorized';
 import './LayoutStudio.css';
@@ -234,6 +237,73 @@ function evaluateConditions(conditions: BlockCondition[] | undefined, record: Re
   return result;
 }
 
+// ─── LIST View Helpers ─────────────────────────────────────
+
+let listColCounter = 0;
+function listColId(): string { listColCounter++; return `col_${Date.now()}_${listColCounter}`; }
+
+let listFiltCounter = 0;
+function listFiltId(): string { listFiltCounter++; return `filt_${Date.now()}_${listFiltCounter}`; }
+
+function buildDefaultListColumns(fields: SailsFieldDefinition[]): LayoutColumn[] {
+  listColCounter = 0;
+  return fields.slice(0, 5).map((f, i) => ({
+    id: listColId(), fieldId: f.id, position: i, visible: true,
+    allowSorting: false, allowFiltering: false, alignment: 'left', wrapText: false,
+  }));
+}
+
+function buildMockRows(fields: SailsFieldDefinition[]): Record<string, any>[] {
+  const base = buildMockRecord(fields);
+  return Array.from({ length: 5 }, (_, i) => {
+    const rec: Record<string, any> = {};
+    Object.keys(base).forEach((k) => { rec[k] = base[k]; });
+    fields.forEach((f) => {
+      const val = rec[f.fieldName];
+      if (f.logicalType === 'currency') rec[f.fieldName] = Math.round((Number(val) || 1000) * (1 + i * 0.3));
+      else if (f.logicalType === 'number') rec[f.fieldName] = (Number(val) || 10) + i * 10;
+      else if (f.logicalType === 'select' && i > 0) {
+        const opts = ((f.config as any)?.options || []) as { label: string; value: string }[];
+        if (opts.length > 0) rec[f.fieldName] = opts[i % opts.length]?.value || val;
+      }
+    });
+    return rec;
+  });
+}
+
+function renderListFieldValue(field: SailsFieldDefinition, record: Record<string, any>): string {
+  const val = record[field.fieldName];
+  if (val === undefined || val === null) return '\u2014';
+  if (field.logicalType === 'currency') return `\u0E3F${val.toLocaleString()}`;
+  if (field.logicalType === 'boolean') return val ? 'Yes' : 'No';
+  if (field.logicalType === 'select') {
+    const options = (field.config as any)?.options || [];
+    return options.find((o: any) => o.value === val)?.label || String(val);
+  }
+  return String(val);
+}
+
+let listSummCounter = 0;
+function listSummId(): string { listSummCounter++; return `summ_${Date.now()}_${listSummCounter}`; }
+
+const LIST_PER_PAGE_OPTIONS = [
+  { value: 5, label: '5' },
+  { value: 10, label: '10' },
+  { value: 25, label: '25' },
+  { value: 50, label: '50' },
+  { value: 100, label: '100' },
+];
+
+function listOperatorLabel(op: string): string {
+  const labels: Record<string, string> = {
+    eq: '=', neq: '\u2260', gt: '>', gte: '\u2265', lt: '<', lte: '\u2264',
+    contains: 'contains', is_empty: 'is empty', is_not_empty: 'is not empty',
+  };
+  return labels[op] || op;
+}
+
+const MAX_SORT_RULES = 3;
+
 // ─── Main Component ───────────────────────────────────────────
 
 const LayoutStudio: React.FC = () => {
@@ -269,6 +339,39 @@ const LayoutStudio: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedSuccessMsg, setSavedSuccessMsg] = useState<string | null>(null);
+  const [viewType, setViewType] = useState<ViewType>('DETAIL');
+
+  // ── LIST mode state ──
+  const [listColumns, setListColumns] = useState<LayoutColumn[]>([]);
+  const [listFilters, setListFilters] = useState<LayoutFilter[]>([]);
+  const [listSortBy, setListSortBy] = useState<LayoutSort[]>([]);
+  const [listSelectedColId, setListSelectedColId] = useState<string | null>(null);
+  const [listSelectedFiltId, setListSelectedFiltId] = useState<string | null>(null);
+  const [listDragOverColId, setListDragOverColId] = useState<string | null>(null);
+  const [listMockRows, setListMockRows] = useState<Record<string, any>[]>([]);
+  const [listColResizing, setListColResizing] = useState<{ columnId: string; startX: number; startWidth: number; widthUnit: string } | null>(null);
+
+  // ── New LIST state (from TableBuilder mockup) ──
+  const [listSummaryFields, setListSummaryFields] = useState<SummaryField[]>([]);
+  const [listOverlayMode, setListOverlayMode] = useState<'edit-sort' | 'edit-filter' | null>(null);
+  const [listEditingFilterId, setListEditingFilterId] = useState<string | null>(null);
+  const [listRuntimeSortRules, setListRuntimeSortRules] = useState<LayoutSort[]>([]);
+  const [listRuntimeFilters, setListRuntimeFilters] = useState<Record<string, string>>({});
+  const [listActivePreviewFilter, setListActivePreviewFilter] = useState<string | null>(null);
+  const [listAllowMultiSelect, setListAllowMultiSelect] = useState(false);
+  const [listAllowPaging, setListAllowPaging] = useState(false);
+  const [listRecordsPerPage, setListRecordsPerPage] = useState(25);
+  const [listPagingMode, setListPagingMode] = useState<'fixed' | 'dynamic'>('fixed');
+  const [listSelectedIndices, setListSelectedIndices] = useState<Set<number>>(new Set());
+  const [listCurrentPage, setListCurrentPage] = useState(1);
+  const [layoutName, setLayoutName] = useState('');
+  const [layoutDescription, setLayoutDescription] = useState('');
+  const [layoutIsDefault, setLayoutIsDefault] = useState(false);
+  const [layoutSystemName, setLayoutSystemName] = useState('');
+  const [listSavingMeta, setListSavingMeta] = useState(false);
+  const [showEditMetaOverlay, setShowEditMetaOverlay] = useState(false);
+  const [showListDeleteConfirm, setShowListDeleteConfirm] = useState(false);
+  const [listDeleteLoading, setListDeleteLoading] = useState(false);
 
   useEffect(() => {
     if (!tableId) { setFetchError('No table ID provided'); setFetchLoading(false); return; }
@@ -288,6 +391,7 @@ const LayoutStudio: React.FC = () => {
         if (!found) throw new Error('Table not found');
         setTableMeta({ id: found.id, name: found.name, tableName: found.tableName, fields: found.fields || [] });
         setMockRecord(buildMockRecord(found.fields || []));
+        setListMockRows(buildMockRows(found.fields || []));
       } catch (err: any) {
         setFetchError(err.message || 'Failed to load table metadata');
       } finally {
@@ -305,10 +409,23 @@ const LayoutStudio: React.FC = () => {
         const json = await res.json();
         if (!json.success) throw new Error(json.error || 'Failed to load layout');
         const layout = json.data;
+        const vType = (layout.viewType as ViewType) || 'DETAIL';
+        setViewType(vType);
+        setLayoutName(layout.name || '');
+        setLayoutDescription(layout.description || '');
+        setLayoutIsDefault(layout.isDefault || false);
+        setLayoutSystemName(layout.systemName || '');
         if (layout.config) {
           const config = typeof layout.config === 'string' ? JSON.parse(layout.config) : layout.config;
-          if (config.sections) setSections(config.sections);
-          if (config.blocks) setBlocks(config.blocks);
+          if (vType === 'LIST') {
+            if (config.columns && config.columns.length > 0) setListColumns(config.columns);
+            if (config.filters) setListFilters(config.filters);
+            if (config.sortBy) setListSortBy(config.sortBy);
+            if (config.summaryFields) setListSummaryFields(config.summaryFields);
+          } else {
+            if (config.sections) setSections(config.sections);
+            if (config.blocks) setBlocks(config.blocks);
+          }
         }
       } catch (err: any) {
         console.error('Failed to load layout config:', err);
@@ -318,6 +435,14 @@ const LayoutStudio: React.FC = () => {
   }, [layoutId]);
 
   const allFields = tableMeta?.fields ?? [];
+
+  // Auto-initialize LIST columns when fields load for a new/empty LIST layout
+  useEffect(() => {
+    if (viewType === 'LIST' && allFields.length > 0 && listColumns.length === 0) {
+      setListColumns(buildDefaultListColumns(allFields));
+    }
+  }, [viewType, allFields, listColumns.length]);
+
   const placedFieldIds = blocks.filter((b) => b.blockType === 'field').map((b) => b.fieldId!).filter(Boolean);
   const palette = useMemo(() => buildPalette(allFields, placedFieldIds), [allFields, placedFieldIds]);
   const selectedBlock = useMemo(
@@ -345,6 +470,136 @@ const LayoutStudio: React.FC = () => {
     });
     return map;
   }, [sections, blocks]);
+
+  // ── LIST computed values ──
+  const sortedListColumns = useMemo(
+    () => [...listColumns].sort((a, b) => a.position - b.position),
+    [listColumns]
+  );
+  const visibleListColumns = useMemo(
+    () => sortedListColumns.filter((c) => c.visible),
+    [sortedListColumns]
+  );
+  const listColumnFieldIds = useMemo(
+    () => listColumns.map((c) => c.fieldId),
+    [listColumns]
+  );
+  const listSelectedCol = useMemo(
+    () => listColumns.find((c) => c.id === listSelectedColId) ?? null,
+    [listColumns, listSelectedColId]
+  );
+  const listSelectedFilter = useMemo(
+    () => listFilters.find((f) => f.id === listSelectedFiltId) ?? null,
+    [listFilters, listSelectedFiltId]
+  );
+  const listEditingFilter = useMemo(
+    () => (listEditingFilterId ? listFilters.find((f) => f.id === listEditingFilterId) ?? null : null),
+    [listFilters, listEditingFilterId]
+  );
+
+  // Runtime preview computed values
+  const listFilteredRecords = useMemo(() => {
+    return listMockRows.filter((rec) => {
+      if (listFilters.length === 0) return true;
+      let result = true;
+      for (let i = 0; i < listFilters.length; i++) {
+        const f = listFilters[i];
+        const field = allFields.find((fd) => fd.id === f.fieldId);
+        if (!field) continue;
+        const val = rec[field.fieldName];
+        const cmp = f.value;
+        let match = true;
+        switch (f.operator) {
+          case 'eq':          match = String(val) === cmp; break;
+          case 'neq':         match = String(val) !== cmp; break;
+          case 'contains':    match = String(val || '').toLowerCase().includes(cmp.toLowerCase()); break;
+          case 'is_empty':    match = val === undefined || val === null || String(val).trim() === ''; break;
+          case 'is_not_empty':match = val !== undefined && val !== null && String(val).trim() !== ''; break;
+          case 'gt':          match = Number(val) > Number(cmp); break;
+          case 'gte':         match = Number(val) >= Number(cmp); break;
+          case 'lt':          match = Number(val) < Number(cmp); break;
+          case 'lte':         match = Number(val) <= Number(cmp); break;
+        }
+        result = i === 0 ? match : (f.logic === 'or' ? (result || match) : (result && match));
+      }
+      return result;
+    });
+  }, [listMockRows, listFilters, allFields]);
+
+  const listSortedRecords = useMemo(() => {
+    if (listSortBy.length === 0) return listFilteredRecords;
+    return [...listFilteredRecords].sort((a, b) => {
+      for (const rule of listSortBy) {
+        const sf = allFields.find((f) => f.id === rule.fieldId);
+        if (!sf) continue;
+        const av = a[sf.fieldName]; const bv = b[sf.fieldName];
+        if (av == null && bv == null) continue;
+        if (av == null) return 1; if (bv == null) return -1;
+        const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
+        if (cmp !== 0) return rule.direction === 'asc' ? cmp : -cmp;
+      }
+      return 0;
+    });
+  }, [listFilteredRecords, listSortBy, allFields]);
+
+  const listRuntimeRecords = useMemo(() => {
+    let records = listFilteredRecords;
+    Object.entries(listRuntimeFilters).forEach(([fieldId, filterText]) => {
+      if (!filterText.trim()) return;
+      const field = allFields.find((f) => f.id === fieldId);
+      if (!field) return;
+      const lower = filterText.toLowerCase();
+      records = records.filter((rec) => String(rec[field.fieldName] ?? '').toLowerCase().includes(lower));
+    });
+    if (listRuntimeSortRules.length > 0) {
+      records = [...records].sort((a, b) => {
+        for (const rule of listRuntimeSortRules) {
+          const sf = allFields.find((f) => f.id === rule.fieldId);
+          if (!sf) continue;
+          const av = a[sf.fieldName]; const bv = b[sf.fieldName];
+          if (av == null && bv == null) continue;
+          if (av == null) return 1; if (bv == null) return -1;
+          const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
+          if (cmp !== 0) return rule.direction === 'asc' ? cmp : -cmp;
+        }
+        return 0;
+      });
+    } else {
+      records = listSortedRecords;
+    }
+    return records;
+  }, [listFilteredRecords, listSortedRecords, listRuntimeSortRules, listRuntimeFilters, allFields]);
+
+  const listTotalPages = useMemo(() => {
+    if (!listAllowPaging) return 1;
+    return Math.max(1, Math.ceil(listRuntimeRecords.length / listRecordsPerPage));
+  }, [listAllowPaging, listRuntimeRecords.length, listRecordsPerPage]);
+
+  const listSafeCurrentPage = useMemo(() => {
+    return Math.max(1, Math.min(listCurrentPage, listTotalPages));
+  }, [listCurrentPage, listTotalPages]);
+
+  const listCurrentPageRecords = useMemo(() => {
+    if (!listAllowPaging) return listRuntimeRecords;
+    const start = (listSafeCurrentPage - 1) * listRecordsPerPage;
+    return listRuntimeRecords.slice(start, start + listRecordsPerPage);
+  }, [listAllowPaging, listRuntimeRecords, listSafeCurrentPage, listRecordsPerPage]);
+
+  const listAllSelectedOnPage = useMemo(() => {
+    if (listCurrentPageRecords.length === 0) return false;
+    return listCurrentPageRecords.every((_, i) => listSelectedIndices.has(i));
+  }, [listCurrentPageRecords, listSelectedIndices]);
+
+  const listPageNumbers = useMemo(() => {
+    const items: (number | 'ellipsis')[] = [];
+    for (let p = 1; p <= listTotalPages; p++) {
+      if (p === 1 || p === listTotalPages || Math.abs(p - listSafeCurrentPage) <= 1) {
+        if (items.length > 0 && p - (items[items.length - 1] as number) > 1) items.push('ellipsis');
+        items.push(p);
+      }
+    }
+    return items;
+  }, [listTotalPages, listSafeCurrentPage]);
 
   useEffect(() => {
     if (!resizing) return;
@@ -397,24 +652,77 @@ const LayoutStudio: React.FC = () => {
     };
   }, [paletteResizing]);
 
+  useEffect(() => {
+    if (!listColResizing) return;
+    const onMove = (e: MouseEvent) => {
+      const delta = e.clientX - listColResizing.startX;
+      const newWidthPx = Math.max(30, listColResizing.startWidth + delta);
+      const unit = listColResizing.widthUnit || 'px';
+      setListColumns((c) =>
+        c.map((col) => {
+          if (col.id !== listColResizing.columnId) return col;
+          if (unit === '%') {
+            const table = document.querySelector('.ls-preview-table') as HTMLElement;
+            if (!table) return { ...col, width: newWidthPx, widthUnit: 'px' } as LayoutColumn;
+            const pct = Math.round((newWidthPx / table.offsetWidth) * 100);
+            return { ...col, width: Math.max(3, Math.min(90, pct)), widthUnit: '%' } as LayoutColumn;
+          }
+          return { ...col, width: newWidthPx, widthUnit: 'px' } as LayoutColumn;
+        })
+      );
+    };
+    const onUp = () => setListColResizing(null);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+  }, [listColResizing]);
+
   const doReset = () => {
-    setSections([newSection()]);
-    setBlocks([]);
-    setSelectedBlockId(null);
-    setActiveTabMap({});
-    setDragOverTabBlockId(null);
-    setDragOverChildBlockId(null);
+    if (viewType === 'LIST') {
+      const f = allFields;
+      setListColumns(f.length > 0 ? buildDefaultListColumns(f) : []);
+      setListFilters([]);
+      setListSortBy([]);
+      setListSummaryFields([]);
+      setListSelectedColId(null);
+      setListSelectedFiltId(null);
+      setListDragOverColId(null);
+      setListColResizing(null);
+      setListOverlayMode(null);
+      setListEditingFilterId(null);
+      setListRuntimeSortRules([]);
+      setListRuntimeFilters({});
+      setListActivePreviewFilter(null);
+      setListAllowMultiSelect(false);
+      setListAllowPaging(false);
+      setListRecordsPerPage(25);
+      setListPagingMode('fixed');
+      setListSelectedIndices(new Set());
+      setListCurrentPage(1);
+    } else {
+      setSections([newSection()]);
+      setBlocks([]);
+      setSelectedBlockId(null);
+      setActiveTabMap({});
+      setDragOverTabBlockId(null);
+      setDragOverChildBlockId(null);
+      sectionCounter = 0;
+      blockCounter = 0;
+    }
+    setShowResetConfirm(false);
     setPropsFloating(false);
     setPaletteFloating(false);
-    setShowResetConfirm(false);
-    sectionCounter = 0;
-    blockCounter = 0;
   };
 
-  const serializeLayout = () => ({
-    sections,
-    blocks,
-  });
+  const serializeLayout = () => {
+    if (viewType === 'LIST') {
+      return { columns: listColumns, filters: listFilters, sortBy: listSortBy, summaryFields: listSummaryFields };
+    }
+    return { sections, blocks };
+  };
 
   const handleSaveClick = () => {
     setSaveError(null);
@@ -463,7 +771,7 @@ const LayoutStudio: React.FC = () => {
       <div className="ls-root" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 12 }}>
         <AlertCircle size={32} style={{ color: 'var(--sails-danger)' }} />
         <span style={{ color: 'var(--sails-text-main)' }}>{fetchError || 'Table not found'}</span>
-        <button className="sails-btn sails-btn--ghost" onClick={() => navigate(-1)}><ArrowLeft size={14} /> Go back</button>
+        <button className="sails-btn sails-btn--ghost" onClick={() => navigate('/admin/views')}><ArrowLeft size={14} /> Go back</button>
       </div>
     );
   }
@@ -654,6 +962,211 @@ const LayoutStudio: React.FC = () => {
     });
   };
 
+  // ── LIST View Actions ─────────────────────────────────────
+
+  const addListColumn = (fieldId: string) => {
+    const col: LayoutColumn = { id: listColId(), fieldId, position: listColumns.length, visible: true, allowSorting: false, allowFiltering: false, alignment: 'left', wrapText: false };
+    setListColumns((c) => [...c, col]);
+    setListSelectedColId(col.id);
+    setListSelectedFiltId(null);
+  };
+
+  const removeListColumn = (columnId: string) => {
+    setListColumns((c) => {
+      const filtered = c.filter((col) => col.id !== columnId);
+      return filtered.map((col, i) => ({ ...col, position: i } as LayoutColumn));
+    });
+    if (listSelectedColId === columnId) setListSelectedColId(null);
+  };
+
+  const toggleListColumnVisible = (columnId: string) => {
+    setListColumns((c) => c.map((col) => col.id === columnId ? { ...col, visible: !col.visible } as LayoutColumn : col));
+  };
+
+  const moveListColumn = (columnId: string, direction: 'up' | 'down') => {
+    setListColumns((c) => {
+      const sorted = [...c].sort((a, b) => a.position - b.position);
+      const idx = sorted.findIndex((col) => col.id === columnId);
+      if (idx === -1) return c;
+      const otherIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (otherIdx < 0 || otherIdx >= sorted.length) return c;
+      return c.map((col) => {
+        if (col.id === sorted[idx].id) return { ...col, position: otherIdx } as LayoutColumn;
+        if (col.id === sorted[otherIdx].id) return { ...col, position: idx } as LayoutColumn;
+        return col;
+      });
+    });
+  };
+
+  const updateListColumn = (columnId: string, patch: Partial<LayoutColumn>) => {
+    setListColumns((c) => c.map((col) => col.id === columnId ? { ...col, ...patch } as LayoutColumn : col));
+  };
+
+  const handleListColumnDrop = (sourceId: string, targetId: string) => {
+    const sorted = [...listColumns].sort((a, b) => a.position - b.position);
+    const srcIdx = sorted.findIndex((c) => c.id === sourceId);
+    const tgtIdx = sorted.findIndex((c) => c.id === targetId);
+    if (srcIdx === -1 || tgtIdx === -1 || srcIdx === tgtIdx) return;
+    const reordered = [...sorted];
+    const [moved] = reordered.splice(srcIdx, 1);
+    reordered.splice(tgtIdx, 0, moved);
+    setListColumns(reordered.map((c, i) => ({ ...c, position: i } as LayoutColumn)));
+  };
+
+  const addListFilter = () => {
+    const f: LayoutFilter = { id: listFiltId(), fieldId: allFields[0]?.id || '', operator: 'eq', value: '', logic: 'and' };
+    setListFilters((fs) => [...fs, f]);
+    setListSelectedColId(null);
+    setListEditingFilterId(f.id);
+    setListOverlayMode('edit-filter');
+  };
+
+  const removeListFilter = (filterId: string) => {
+    setListFilters((fs) => fs.filter((f) => f.id !== filterId));
+    if (listSelectedFiltId === filterId) setListSelectedFiltId(null);
+    if (listEditingFilterId === filterId) { setListEditingFilterId(null); setListOverlayMode(null); }
+  };
+
+  const updateListFilter = (filterId: string, patch: Partial<LayoutFilter>) => {
+    setListFilters((fs) => fs.map((f) => f.id === filterId ? { ...f, ...patch } : f));
+  };
+
+  const addListSortRule = () => {
+    setListSortBy((prev) => {
+      if (prev.length >= MAX_SORT_RULES) return prev;
+      const usedFieldIds = prev.map((r) => r.fieldId);
+      const nextField = allFields.find((f) => !usedFieldIds.includes(f.id));
+      return [...prev, { fieldId: nextField?.id || allFields[0]?.id || '', direction: 'asc' as const }];
+    });
+  };
+
+  const removeListSortRule = (index: number) => {
+    setListSortBy((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateListSortRule = (index: number, patch: Partial<LayoutSort>) => {
+    setListSortBy((prev) => prev.map((r, i) => i === index ? { ...r, ...patch } : r));
+  };
+
+  const moveListSortRule = (index: number, direction: 'up' | 'down') => {
+    setListSortBy((prev) => {
+      const targetIdx = direction === 'up' ? index - 1 : index + 1;
+      if (targetIdx < 0 || targetIdx >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[targetIdx]] = [next[targetIdx], next[index]];
+      return next;
+    });
+  };
+
+  // ── Summary Actions ──
+  const addListSummaryField = (fieldId: string) => {
+    if (listSummaryFields.some((sf) => sf.fieldId === fieldId)) return;
+    setListSummaryFields((prev) => [...prev, { id: listSummId(), fieldId }]);
+  };
+
+  const removeListSummaryField = (fieldId: string) => {
+    setListSummaryFields((prev) => prev.filter((sf) => sf.fieldId !== fieldId));
+  };
+
+  // ── Overlay Actions ──
+  const openListFilterEditor = (filterId: string) => {
+    setListOverlayMode('edit-filter');
+    setListEditingFilterId(filterId);
+  };
+
+  const openListSortEditor = () => {
+    setListOverlayMode('edit-sort');
+  };
+
+  const closeListOverlay = () => {
+    setListOverlayMode(null);
+    setListEditingFilterId(null);
+  };
+
+  const saveListMetadata = async () => {
+    if (!layoutId) return;
+    setListSavingMeta(true);
+    try {
+      const res = await fetch('/api/console/layouts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: layoutId,
+          name: layoutName.trim() || layoutSystemName,
+          description: layoutDescription.trim() || null,
+          isDefault: layoutIsDefault,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to save');
+      setShowEditMetaOverlay(false);
+    } catch (err: any) {
+      console.error('Failed to save layout details:', err);
+      alert(err.message);
+    } finally {
+      setListSavingMeta(false);
+    }
+  };
+
+  const deleteListLayout = async () => {
+    if (!layoutId) return;
+    setListDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/console/layouts?id=${layoutId}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to delete');
+      navigate('/admin/views');
+    } catch (err: any) {
+      console.error('Failed to delete layout:', err);
+      alert(err.message);
+    } finally {
+      setListDeleteLoading(false);
+      setShowListDeleteConfirm(false);
+    }
+  };
+
+  // ── Runtime Preview Actions ──
+  const handleListRuntimeSort = (columnId: string) => {
+    const col = listColumns.find((c) => c.id === columnId);
+    if (!col) return;
+    setListRuntimeSortRules((prev) => {
+      if (prev.length > 0 && prev[0].fieldId === col.fieldId) {
+        if (prev[0].direction === 'asc') return [{ fieldId: col.fieldId, direction: 'desc' }];
+        return [];
+      }
+      return [{ fieldId: col.fieldId, direction: 'asc' }];
+    });
+  };
+
+  const handleListRuntimeFilter = (fieldId: string, value: string) => {
+    setListRuntimeFilters((prev) => ({ ...prev, [fieldId]: value }));
+  };
+
+  const toggleListSelectRecord = (rowIndex: number) => {
+    setListSelectedIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowIndex)) next.delete(rowIndex);
+      else next.add(rowIndex);
+      return next;
+    });
+  };
+
+  const toggleListSelectAll = () => {
+    setListSelectedIndices((prev) => {
+      const next = new Set(prev);
+      if (listAllSelectedOnPage) {
+        listCurrentPageRecords.forEach((_, i) => next.delete(i));
+      } else {
+        listCurrentPageRecords.forEach((_, i) => next.add(i));
+      }
+      return next;
+    });
+  };
+
+  const goToListPage = (page: number) => {
+    setListCurrentPage(Math.max(1, Math.min(listTotalPages, page)));
+  };
+
   const handleDragStart = (e: React.DragEvent, payload: DragPayload) => {
     if (previewMode) { e.preventDefault(); return; }
     e.dataTransfer.setData('application/json', JSON.stringify(payload));
@@ -823,11 +1336,11 @@ const LayoutStudio: React.FC = () => {
     <div className={`ls-root ${previewMode ? 'ls-root--preview' : ''}`}>
       <div className="ls-toolbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => navigate(-1)} title="Back">
+          <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => navigate('/admin/views')} title="Back">
             <ArrowLeft size={14} />
           </button>
           <span className="ls-toolbar__brand">Layout Studio</span>
-          <span style={{ fontSize: 11, color: 'var(--sails-text-muted)' }}>— {tableMeta.name}</span>
+          <span style={{ fontSize: 11, color: 'var(--sails-text-muted)' }}>— {tableMeta.name}{viewType === 'LIST' ? ' (List View)' : ''}</span>
         </div>
         <div className="ls-toolbar__actions">
           {previewMode ? (
@@ -841,6 +1354,9 @@ const LayoutStudio: React.FC = () => {
               </button>
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowResetConfirm(true)}>
                 Reset
+              </button>
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowEditMetaOverlay(true)}>
+                <Settings size={12} /> Edit Details
               </button>
               <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={handleSaveClick} disabled={saving}>
                 {saving ? 'Saving...' : 'Save Layout'}
@@ -877,14 +1393,46 @@ const LayoutStudio: React.FC = () => {
           <div className="ls-palette-resize" onMouseDown={(e) => { e.preventDefault(); setPaletteResizing(true); }} />
           <div className="ls-palette">
           <div className="ls-palette__header">
-            <h3 className="ls-panel-title"><LayoutGrid size={13} /> Fields</h3>
+            <h3 className="ls-panel-title"><LayoutGrid size={13} /> {viewType === 'LIST' ? 'Fields' : 'Fields'}</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span className="ls-palette__count">{palette.filter(p => p.blockType === 'field').length}</span>
+              <span className="ls-palette__count">{viewType === 'LIST' ? allFields.filter((f) => !listColumnFieldIds.includes(f.id)).length : palette.filter(p => p.blockType === 'field').length}</span>
               <button className="ls-block__btn" onClick={() => setPaletteFloating(!paletteFloating)} title={paletteFloating ? 'Dock palette' : 'Float palette'}>
                 {paletteFloating ? <Maximize2 size={12} /> : <Minimize2 size={12} />}
               </button>
             </div>
           </div>
+          {viewType === 'LIST' ? (
+            <div className="ls-palette__fields">
+              <div className="ls-palette__group-label">AVAILABLE FIELDS</div>
+              {allFields.filter((f) => !listColumnFieldIds.includes(f.id)).map((f) => (
+                <div key={f.id} className="ls-palette-field"
+                  draggable
+                  onDragStart={(e) => e.dataTransfer.setData('application/json', JSON.stringify({ fieldId: f.id }))}
+                  onClick={() => addListColumn(f.id)}>
+                  <GripVertical size={12} /><span>{f.name}</span>
+                  <span className="ls-type-tag">{f.logicalType}</span>
+                  <ArrowRight size={12} className="ls-add-icon" />
+                </div>
+              ))}
+              {listColumnFieldIds.length > 0 && (
+                <>
+                  <div className="ls-palette__group-label">IN VIEW</div>
+                  {listColumnFieldIds.map((pfId) => {
+                    const f = allFields.find((ff) => ff.id === pfId);
+                    if (!f) return null;
+                    return (
+                      <div key={pfId} className="ls-palette-field ls-palette-field--placed">
+                        <span>{f.name}</span>
+                        <span className="ls-type-tag">{f.logicalType}</span>
+                        <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); const col = listColumns.find((c) => c.fieldId === pfId); if (col) removeListColumn(col.id); }} title="Remove column"><X size={10} /></button>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          ) : (
+            <>
           <button className="sails-btn sails-btn--ghost sails-btn--sm ls-palette__add-section" onClick={addSection}>
             <Plus size={13} /> Add Section
           </button>
@@ -931,6 +1479,8 @@ const LayoutStudio: React.FC = () => {
               </>
             )}
           </div>
+            </>
+          )}
         </div>
             </>
           )}
@@ -945,7 +1495,277 @@ const LayoutStudio: React.FC = () => {
         {/* ── CENTER: Canvas ── */}
         <div className="ls-canvas">
           <div className="ls-canvas__scroll">
-            <div className="ls-page">
+            <div className="ls-page" onClick={(e) => { if (e.target === e.currentTarget) setListSelectedColId(null); }}>
+              {viewType === 'LIST' ? (
+                <>
+              {/* ── View Name ── */}
+              <div className="ls-page__header">
+                <h1 className="ls-page__title">{tableMeta.name}</h1>
+                <p className="ls-page__subtitle">Select columns, define filters and sort order to build your list view.</p>
+              </div>
+
+              {/* ── Summary Panel ── */}
+              <div className="ls-table-card ls-summary-panel"
+                onDragOver={(e) => { e.preventDefault(); }}
+                onDrop={(e) => {
+                  try {
+                    const payload = JSON.parse(e.dataTransfer.getData('application/json'));
+                    if (payload.fieldId) addListSummaryField(payload.fieldId);
+                  } catch { /* ignore */ }
+                }}>
+                <div className="ls-table-card__header">
+                  <Layers size={13} />
+                  <span className="ls-table-card__title">Summary Panel</span>
+                  {listSummaryFields.length > 0 && <span className="ls-table-card__badge">{listSummaryFields.length}</span>}
+                </div>
+                <div className="ls-summary-panel__body">
+                  {listSummaryFields.length === 0 ? (
+                    <div className="ls-summary-panel__placeholder">
+                      <Layers size={18} className="ls-summary-panel__placeholder-icon" />
+                      <span>Drag fields here to group or summarize</span>
+                    </div>
+                  ) : (
+                    <div className="ls-summary-fields">
+                      {listSummaryFields.map((sf) => {
+                        const f = allFields.find((ff) => ff.id === sf.fieldId);
+                        if (!f) return null;
+                        return (
+                          <div key={sf.id} className="ls-summary-field">
+                            <span className="ls-summary-field__name">{f.name}</span>
+                            <span className="ls-summary-field__tag">Group By</span>
+                            <button className="ls-block__btn ls-block__btn--danger" onClick={() => removeListSummaryField(sf.fieldId)}><X size={11} /></button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Columns + Table ── */}
+              <div className="ls-table-card">
+                <div className="ls-table-card__header">
+                  <Columns size={13} />
+                  <span className="ls-table-card__title">{previewMode ? tableMeta.name : 'Columns'}</span>
+                  {!previewMode && (
+                    <>
+                      <span className="ls-table-card__badge">{listColumns.length}</span>
+                      <span style={{ fontSize: 11, color: 'var(--sails-text-muted)', marginLeft: 4 }}>({visibleListColumns.length} visible)</span>
+                    </>
+                  )}
+                  <span className="ls-table-card__badge" style={{ marginLeft: 'auto' }}>
+                    {previewMode ? listRuntimeRecords.length : listMockRows.length} rows
+                  </span>
+                  {previewMode && listAllowMultiSelect && listSelectedIndices.size > 0 && (
+                    <span className="ls-table-card__badge" style={{ background: 'rgba(157,206,224,0.25)', color: 'var(--sails-primary)' }}>
+                      {listSelectedIndices.size} selected
+                    </span>
+                  )}
+                  {previewMode && listRuntimeSortRules.length > 0 && (
+                    <button className="ls-block__btn" onClick={() => setListRuntimeSortRules([])} title="Reset sort" style={{ marginLeft: 4 }}>
+                      <RotateCcw size={11} />
+                    </button>
+                  )}
+                </div>
+                <div className="ls-table-card__body" style={{ padding: 0 }}>
+                  {listColumns.length === 0 ? (
+                    <div style={{ padding: 16 }}><p className="ls-empty">No columns added. Click a field from the palette.</p></div>
+                  ) : previewMode ? (
+                    /* ── Runtime Preview Table ── */
+                    <div className="ls-preview-wrap">
+                      <table className="ls-runtime-table">
+                        <thead>
+                          <tr>
+                            {listAllowMultiSelect && (
+                              <th className="ls-rth ls-rth--cb" style={{ width: 40, minWidth: 40 }}>
+                                <div className="ls-rth__inner" style={{ justifyContent: 'center' }}>
+                                  <input type="checkbox" checked={listCurrentPageRecords.length > 0 && listAllSelectedOnPage}
+                                    ref={(el) => { if (el) el.indeterminate = !listAllSelectedOnPage && listCurrentPageRecords.some((_, i) => listSelectedIndices.has(i)); }}
+                                    onChange={toggleListSelectAll} title="Select all on page" />
+                                </div>
+                              </th>
+                            )}
+                            {sortedListColumns.filter((c) => c.visible).map((col) => {
+                              const f = allFields.find((ff) => ff.id === col.fieldId);
+                              if (!f) return null;
+                              const runtimeSortIdx = listRuntimeSortRules.findIndex((r) => r.fieldId === col.fieldId);
+                              const isSorted = runtimeSortIdx !== -1;
+                              const sortDir = isSorted ? listRuntimeSortRules[runtimeSortIdx].direction : null;
+                              const isFiltering = !!listRuntimeFilters[col.fieldId]?.trim();
+                              return (
+                                <th key={col.id}
+                                  className={`ls-rth ${col.allowSorting ? 'ls-rth--sortable' : ''} ${isSorted ? 'ls-rth--sorted' : ''}`}
+                                  style={{ ...(col.width ? { width: `${col.width}${col.widthUnit || 'px'}` } : {}), textAlign: col.alignment || 'left' }}>
+                                  <div className="ls-rth__inner">
+                                    {col.allowSorting ? (
+                                      <button className="ls-rth__sort-btn" onClick={() => handleListRuntimeSort(col.id)}>
+                                        <span className="ls-rth__label">{col.labelOverride || f.name}</span>
+                                        <span className="ls-rth__sort-indicator">
+                                          {isSorted ? (
+                                            sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                                          ) : (
+                                            <ArrowUpDown size={11} className="ls-rth__sort-icon" />
+                                          )}
+                                        </span>
+                                      </button>
+                                    ) : (
+                                      <span className="ls-rth__label">{col.labelOverride || f.name}</span>
+                                    )}
+                                    {col.allowFiltering && (
+                                      <div className="ls-rth__filter-wrap">
+                                        <button className={`ls-rth__filter-btn ${isFiltering ? 'ls-rth__filter-btn--active' : ''}`}
+                                          onClick={(e) => { e.stopPropagation(); setListActivePreviewFilter(listActivePreviewFilter === col.fieldId ? null : col.fieldId); }}
+                                          title="Filter this column"><Search size={11} /></button>
+                                        {listActivePreviewFilter === col.fieldId && (
+                                          <div className="ls-rth__filter-popover" onClick={(e) => e.stopPropagation()}>
+                                            <input className="sails-input" value={listRuntimeFilters[col.fieldId] || ''}
+                                              onChange={(e) => handleListRuntimeFilter(col.fieldId, e.target.value)}
+                                              placeholder={`Filter ${col.labelOverride || f.name}...`} autoFocus
+                                              style={{ fontSize: 12, padding: '5px 8px', width: 180 }} />
+                                            {listRuntimeFilters[col.fieldId]?.trim() && (
+                                              <button className="ls-rth__filter-clear" onClick={() => { handleListRuntimeFilter(col.fieldId, ''); setListActivePreviewFilter(null); }}>
+                                                <X size={12} /> Clear
+                                              </button>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </th>
+                              );
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {listCurrentPageRecords.map((rec, ri) => {
+                            const globalIndex = listAllowPaging ? (listSafeCurrentPage - 1) * listRecordsPerPage + ri : ri;
+                            return (
+                              <tr key={ri} className={`ls-rtd-row ${listSelectedIndices.has(globalIndex) ? 'ls-rtd-row--selected' : ''}`}>
+                                {listAllowMultiSelect && (
+                                  <td className="ls-rtd ls-rtd--cb" onClick={(e) => e.stopPropagation()}>
+                                    <input type="checkbox" checked={listSelectedIndices.has(globalIndex)} onChange={() => toggleListSelectRecord(globalIndex)} />
+                                  </td>
+                                )}
+                                {sortedListColumns.filter((c) => c.visible).map((col) => {
+                                  const f = allFields.find((ff) => ff.id === col.fieldId);
+                                  if (!f) return <td key={col.id} className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''}`} style={{ textAlign: col.alignment || 'left' }}>—</td>;
+                                  return (
+                                    <td key={col.id} className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''}`} style={{ textAlign: col.alignment || 'left' }}>
+                                      {renderListFieldValue(f, rec)}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      {listRuntimeRecords.length === 0 && (
+                        <div style={{ padding: 32, textAlign: 'center' }}><p className="ls-empty">No records match the current filters.</p></div>
+                      )}
+                      {listAllowPaging && listRuntimeRecords.length > 0 && (
+                        <div className="ls-pagination">
+                          <div className="ls-pagination__info">
+                            <span className="ls-pagination__range">
+                              Showing <strong>{(listSafeCurrentPage - 1) * listRecordsPerPage + 1}</strong> to <strong>{Math.min(listSafeCurrentPage * listRecordsPerPage, listRuntimeRecords.length)}</strong> of <strong>{listRuntimeRecords.length}</strong>
+                            </span>
+                            {listPagingMode === 'dynamic' && (
+                              <div className="ls-pagination__page-size">
+                                <span className="ls-pagination__page-size-label">Records per page:</span>
+                                <CustomSelect value={listRecordsPerPage} options={LIST_PER_PAGE_OPTIONS}
+                                  onChange={(v: number) => { setListRecordsPerPage(v); setListCurrentPage(1); }} size="sm" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="ls-pagination__controls">
+                            <button className="ls-pagination__btn" disabled={listSafeCurrentPage <= 1} onClick={() => goToListPage(listSafeCurrentPage - 1)}><ChevronLeft size={14} /></button>
+                            {listPageNumbers.map((p, i) =>
+                              p === 'ellipsis' ? <span key={`e-${i}`} className="ls-pagination__ellipsis">...</span>
+                                : listSafeCurrentPage === p
+                                  ? <span key={p} className="ls-pagination-page ls-pagination-page--active">{p}</span>
+                                  : <button key={p} className="ls-pagination-page ls-pagination-page--clickable" onClick={() => goToListPage(p)}>{p}</button>
+                            )}
+                            <button className="ls-pagination__btn" disabled={listSafeCurrentPage >= listTotalPages} onClick={() => goToListPage(listSafeCurrentPage + 1)}><ChevronRight size={14} /></button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* ── Builder Table ── */
+                    <div className="ls-preview-wrap">
+                      <table className="ls-preview-table">
+                        <thead>
+                          <tr>
+                            {listAllowMultiSelect && (
+                              <th className="ls-th ls-th--cb" style={{ width: 40, minWidth: 40, cursor: 'default' }}>
+                                <div className="ls-th__inner" style={{ justifyContent: 'center' }}>
+                                  <input type="checkbox" disabled title="Selection preview — active in builder mode" />
+                                </div>
+                              </th>
+                            )}
+                            {sortedListColumns.map((col) => {
+                              const f = allFields.find((ff) => ff.id === col.fieldId);
+                              if (!f) return null;
+                              const isSelected = listSelectedColId === col.id;
+                              const isDragOver = listDragOverColId === col.id;
+                              return (
+                                <th key={col.id}
+                                  className={`ls-th ${isSelected ? 'ls-th--selected' : ''} ${!col.visible ? 'ls-th--hidden' : ''} ${isDragOver ? 'ls-th--drag-over' : ''} ${listColResizing?.columnId === col.id ? 'ls-th--resizing' : ''}`}
+                                  draggable={!listColResizing}
+                                  onDragStart={(e) => { if (listColResizing) return; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('application/json', JSON.stringify({ columnId: col.id })); }}
+                                  onDragOver={(e) => { if (listColResizing) return; e.preventDefault(); e.stopPropagation(); setListDragOverColId(col.id); }}
+                                  onDragLeave={() => setListDragOverColId(null)}
+                                  onDrop={(e) => { e.preventDefault(); try { const p = JSON.parse(e.dataTransfer.getData('application/json')); if (p.columnId) handleListColumnDrop(p.columnId, col.id); } catch {} setListDragOverColId(null); }}
+                                  onClick={() => setListSelectedColId(col.id)}
+                                  style={col.width ? { width: `${col.width}${col.widthUnit || 'px'}` } : undefined}>
+                                  <div className="ls-th__inner">
+                                    <GripVertical size={12} className="ls-th__grip" />
+                                    <span className="ls-th__label">{col.labelOverride || f.name}</span>
+                                    {!col.visible && <span className="ls-th__hidden-badge">hidden</span>}
+                                    <span className="ls-th__type">{f.logicalType}</span>
+                                    <div className="ls-th__actions">
+                                      <button className="ls-th__action" onClick={(e) => { e.stopPropagation(); toggleListColumnVisible(col.id); }} title={col.visible ? 'Hide column' : 'Show column'}>
+                                        {col.visible ? <Eye size={11} /> : <EyeOff size={11} />}
+                                      </button>
+                                      <button className="ls-th__action ls-th__action--remove" onClick={(e) => { e.stopPropagation(); removeListColumn(col.id); }} title="Remove column"><X size={11} /></button>
+                                    </div>
+                                  </div>
+                                  <div className="ls-th__resize" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); const th = (e.currentTarget as HTMLElement).closest('th') as HTMLElement; setListColResizing({ columnId: col.id, startX: e.clientX, startWidth: th.offsetWidth, widthUnit: col.widthUnit || 'px' }); }} />
+                                </th>
+                              );
+                            })}
+                            <th className="ls-th ls-th--add" onClick={() => { const next = allFields.find((f) => !listColumnFieldIds.includes(f.id)); if (next) addListColumn(next.id); }} title="Add a column"><Plus size={14} /></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {listMockRows.map((rec, ri) => (
+                            <tr key={ri}>
+                              {listAllowMultiSelect && (
+                                <td className="ls-td ls-td--cb" style={{ width: 40, minWidth: 40, textAlign: 'center', padding: '8px 0' }}>
+                                  <input type="checkbox" disabled title="Selection preview" />
+                                </td>
+                              )}
+                              {sortedListColumns.map((col) => {
+                                const f = allFields.find((ff) => ff.id === col.fieldId);
+                                if (!f) return <td key={col.id} className={`ls-td ${!col.visible ? 'ls-td--hidden' : ''}`} style={{ textAlign: col.alignment || 'left' }}>—</td>;
+                                return (
+                                  <td key={col.id} className={`ls-td ${!col.visible ? 'ls-td--hidden' : ''} ${col.wrapText ? 'ls-td--wrap' : ''}`} style={{ textAlign: col.alignment || 'left' }}>
+                                    {renderListFieldValue(f, rec)}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+                </>
+              ) : (
+                <>
               {/* ── Page Header ── */}
               <div className="ls-page__header">
                 <h1 className="ls-page__title">{tableMeta.name} Detail</h1>
@@ -1185,6 +2005,8 @@ const LayoutStudio: React.FC = () => {
               {sections.length === 0 && (
                 <div className="ls-page__empty"><p>No sections yet. Click <strong>+ Add Section</strong>.</p></div>
               )}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1211,7 +2033,232 @@ const LayoutStudio: React.FC = () => {
                       {propsFloating ? <Maximize2 size={12} /> : <Minimize2 size={12} />}
                     </button>
                   </div>
-                  {selectedBlock ? (
+                  {viewType === 'LIST' ? (
+                    <>
+                      {listSelectedCol ? (
+                      <>
+                <div className="ls-section-divider">Column Properties</div>
+                <div className="ls-prop__name">{allFields.find((f) => f.id === listSelectedCol.fieldId)?.name || listSelectedCol.fieldId}</div>
+                <div className="ls-prop__type">{allFields.find((f) => f.id === listSelectedCol.fieldId)?.logicalType || ''}</div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="checkbox" checked={listSelectedCol.allowSorting}
+                      onChange={() => updateListColumn(listSelectedCol.id, { allowSorting: !listSelectedCol.allowSorting } as Partial<LayoutColumn>)} /> Allow Sorting
+                  </label>
+                  <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '2px 0 0 22px' }}>
+                    Enables sorting on this column during runtime
+                  </p>
+                </div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="checkbox" checked={listSelectedCol.allowFiltering}
+                      onChange={() => updateListColumn(listSelectedCol.id, { allowFiltering: !listSelectedCol.allowFiltering } as Partial<LayoutColumn>)} /> Allow Filtering
+                  </label>
+                  <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '2px 0 0 22px' }}>
+                    Enables filtering on this column during runtime
+                  </p>
+                </div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="checkbox" checked={listSelectedCol.visible} onChange={() => toggleListColumnVisible(listSelectedCol.id)} /> Visible
+                  </label>
+                </div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label">Alignment</label>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className={`sails-btn sails-btn--ghost sails-btn--sm ${listSelectedCol.alignment === 'left' ? 'ls-btn--active' : ''}`}
+                      onClick={() => updateListColumn(listSelectedCol.id, { alignment: 'left' } as Partial<LayoutColumn>)}
+                      title="Align Left" style={{ flex: 1, justifyContent: 'center' }}><AlignLeft size={14} /></button>
+                    <button className={`sails-btn sails-btn--ghost sails-btn--sm ${listSelectedCol.alignment === 'center' ? 'ls-btn--active' : ''}`}
+                      onClick={() => updateListColumn(listSelectedCol.id, { alignment: 'center' } as Partial<LayoutColumn>)}
+                      title="Align Center" style={{ flex: 1, justifyContent: 'center' }}><AlignCenter size={14} /></button>
+                    <button className={`sails-btn sails-btn--ghost sails-btn--sm ${listSelectedCol.alignment === 'right' ? 'ls-btn--active' : ''}`}
+                      onClick={() => updateListColumn(listSelectedCol.id, { alignment: 'right' } as Partial<LayoutColumn>)}
+                      title="Align Right" style={{ flex: 1, justifyContent: 'center' }}><AlignRight size={14} /></button>
+                  </div>
+                </div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="checkbox" checked={listSelectedCol.wrapText || false}
+                      onChange={() => updateListColumn(listSelectedCol.id, { wrapText: !listSelectedCol.wrapText } as Partial<LayoutColumn>)} /> Wrap Text
+                  </label>
+                  <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '2px 0 0 22px' }}>
+                    {listSelectedCol.wrapText ? 'Text wraps to multiple lines' : 'Truncates with ...'}
+                  </p>
+                </div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label">Label Override</label>
+                  <input className="sails-input" value={listSelectedCol.labelOverride || ''}
+                    onChange={(e) => updateListColumn(listSelectedCol.id, { labelOverride: e.target.value || undefined } as Partial<LayoutColumn>)}
+                    placeholder={allFields.find((f) => f.id === listSelectedCol.fieldId)?.name}
+                    style={{ fontSize: 12, padding: '5px 7px' }} />
+                </div>
+
+                    <div className="ls-prop-group">
+                      <label className="ls-prop-label">Column Width</label>
+                      <div style={{ display: 'flex', gap: 4, minWidth: 0 }}>
+                        <input className="sails-input" type="number" value={listSelectedCol.width || ''}
+                          onChange={(e) => { const v = e.target.value ? Number(e.target.value) : undefined; updateListColumn(listSelectedCol.id, { width: v } as Partial<LayoutColumn>); }}
+                          placeholder="auto" style={{ fontSize: 12, padding: '5px 7px', flex: 1, minWidth: 0 }} />
+                        <CustomSelect
+                          value={listSelectedCol.widthUnit || 'px'}
+                          options={[{ value: 'px', label: 'px' }, { value: '%', label: '%' }]}
+                          onChange={(v) => updateListColumn(listSelectedCol.id, { widthUnit: v as 'px' | '%' } as Partial<LayoutColumn>)}
+                          size="sm"
+                          style={{ flexShrink: 0 }}
+                        />
+                      </div>
+                    </div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label">Position</label>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className="sails-btn sails-btn--ghost sails-btn--sm"
+                      onClick={() => moveListColumn(listSelectedCol.id, 'up')}
+                      disabled={listSelectedCol.position === 0}><ArrowLeft size={12} /> Left</button>
+                    <button className="sails-btn sails-btn--ghost sails-btn--sm"
+                      onClick={() => moveListColumn(listSelectedCol.id, 'down')}
+                      disabled={listSelectedCol.position >= listColumns.length - 1}><ArrowRight size={12} /> Right</button>
+                  </div>
+                </div>
+
+                <div className="ls-prop-group">
+                  <button className="sails-btn sails-btn--danger sails-btn--sm" onClick={() => removeListColumn(listSelectedCol.id)}
+                    style={{ width: '100%', justifyContent: 'center' }}><Trash2 size={12} /> Remove Column</button>
+                </div>
+                      </>
+                    ) : (
+                      <>
+                <div className="ls-section-divider">View Properties</div>
+
+                <div className="ls-prop-group">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <label className="ls-prop-label" style={{ marginBottom: 0 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <ArrowUpDown size={12} /> Sort By
+                      </span>
+                    </label>
+                    <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={openListSortEditor}
+                      disabled={listSortBy.length >= MAX_SORT_RULES}
+                      style={{ fontSize: 10, padding: '2px 8px' }}><Plus size={11} /> Add</button>
+                  </div>
+                  {listSortBy.length === 0 ? (
+                    <p className="ls-vp-empty">No sort rules configured</p>
+                  ) : (
+                    <div className="ls-vp-sort-list">
+                      {listSortBy.map((rule, idx) => {
+                        const sf = allFields.find((f) => f.id === rule.fieldId);
+                        return (
+                          <div key={idx} className="ls-vp-sort-rule" onClick={() => openListSortEditor()}>
+                            <span className="ls-vp-sort-rule__seq">{idx + 1}</span>
+                            <span className="ls-vp-sort-rule__field">{sf?.name || rule.fieldId}</span>
+                            <span className="ls-vp-sort-rule__dir">{rule.direction === 'asc' ? '\u25B2' : '\u25BC'}</span>
+                            <button className="ls-vp-sort-rule__remove" onClick={(e) => { e.stopPropagation(); removeListSortRule(idx); }}><X size={10} /></button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="ls-prop-group">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <label className="ls-prop-label" style={{ marginBottom: 0 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Filter size={12} /> Filters
+                      </span>
+                    </label>
+                    <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={addListFilter}
+                      style={{ fontSize: 10, padding: '2px 8px' }}><Plus size={11} /> Add</button>
+                  </div>
+                  {listFilters.length === 0 ? (
+                    <p className="ls-vp-empty">No filters applied</p>
+                  ) : (
+                    <div className="ls-vp-filter-list">
+                      {listFilters.map((f, i) => {
+                        const ff = allFields.find((fd) => fd.id === f.fieldId);
+                        return (
+                          <div key={f.id} className="ls-vp-filter-row" onClick={() => openListFilterEditor(f.id)}>
+                            {i > 0 && <span className="ls-vp-filter-logic">{f.logic.toUpperCase()}</span>}
+                            <span className="ls-vp-filter-field">{ff?.name || f.fieldId}</span>
+                            <span className="ls-vp-filter-op">{listOperatorLabel(f.operator)}</span>
+                            {!['is_empty', 'is_not_empty'].includes(f.operator) && (
+                              <span className="ls-vp-filter-value">{f.value || '(empty)'}</span>
+                            )}
+                            <button className="ls-vp-filter-remove" onClick={(e) => { e.stopPropagation(); removeListFilter(f.id); }}><X size={10} /></button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="checkbox" checked={listAllowMultiSelect}
+                      onChange={() => setListAllowMultiSelect((v) => !v)} /> Allow Multiple Selection
+                  </label>
+                  <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '2px 0 0 22px' }}>
+                    Adds checkboxes to select records during runtime
+                  </p>
+                </div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="checkbox" checked={listAllowPaging}
+                      onChange={() => { setListAllowPaging((v) => !v); setListCurrentPage(1); }} /> Allow Paging
+                  </label>
+                  <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '2px 0 0 22px' }}>
+                    Paginates records during runtime
+                  </p>
+                </div>
+
+                {listAllowPaging && (
+                  <>
+                    <div className="ls-prop-group" style={{ paddingLeft: 24 }}>
+                      <label className="ls-prop-label" style={{ marginBottom: 6 }}>Paging Mode</label>
+                      <div style={{ display: 'flex', gap: 16 }}>
+                        <label className="ls-radio-label">
+                          <input type="radio" name="listPagingMode" checked={listPagingMode === 'fixed'}
+                            onChange={() => setListPagingMode('fixed')} /> Fixed
+                        </label>
+                        <label className="ls-radio-label">
+                          <input type="radio" name="listPagingMode" checked={listPagingMode === 'dynamic'}
+                            onChange={() => setListPagingMode('dynamic')} /> Dynamic
+                        </label>
+                      </div>
+                      <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '4px 0 0' }}>
+                        {listPagingMode === 'fixed' ? 'Records per page is set by the builder' : 'User can select their own records per page at runtime'}
+                      </p>
+                    </div>
+                    {listPagingMode === 'fixed' && (
+                      <div className="ls-prop-group" style={{ paddingLeft: 24 }}>
+                        <label className="ls-prop-label">Records Per Page</label>
+                        <CustomSelect value={listRecordsPerPage} options={LIST_PER_PAGE_OPTIONS}
+                          onChange={(v: number) => { setListRecordsPerPage(v); setListCurrentPage(1); }}
+                          size="sm" style={{ width: '100%' }} />
+                      </div>
+                    )}
+                  </>
+                )}
+                      </>
+                    )}
+                    <div className="ls-prop-group" style={{ marginTop: 'auto', paddingTop: 12 }}>
+                      <button className="sails-btn sails-btn--danger sails-btn--sm"
+                        onClick={() => setShowListDeleteConfirm(true)}
+                        style={{ width: '100%', justifyContent: 'center' }}>
+                        <Trash2 size={12} /> Delete Layout
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                    <>{selectedBlock ? (
                     <>
                 <div className="ls-prop__name">
                   {selectedBlock.blockType === 'field' ? selectedField?.name :
@@ -1494,7 +2541,8 @@ const LayoutStudio: React.FC = () => {
               </>
             ) : (
               <p className="ls-empty">Select a block to edit its properties</p>
-            )}
+            )}</>
+                  )}
           </div>
               </>
             )}
@@ -1506,6 +2554,197 @@ const LayoutStudio: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* ── Floating Overlay for Sort/Filter Editing ── */}
+      {listOverlayMode && (
+        <div className="ls-overlay" onClick={closeListOverlay}>
+          <div className="ls-overlay-card" onClick={(e) => e.stopPropagation()}>
+            <div className="ls-overlay-card__header">
+              <h3 className="ls-overlay-card__title">
+                {listOverlayMode === 'edit-sort' ? (
+                  <><ArrowUpDown size={14} /> Edit Sort</>
+                ) : (
+                  <><Filter size={14} /> {listEditingFilterId ? 'Edit Filter' : 'Add Filter'}</>
+                )}
+              </h3>
+              <button className="ls-block__btn" onClick={closeListOverlay}><X size={14} /></button>
+            </div>
+            <div className="ls-overlay-card__body">
+              {listOverlayMode === 'edit-sort' ? (
+                <>
+                  {listSortBy.length === 0 && <p className="ls-empty" style={{ padding: 20 }}>No sort rules configured.</p>}
+                  {listSortBy.map((rule, idx) => {
+                    const sf = allFields.find((f) => f.id === rule.fieldId);
+                    return (
+                      <div key={idx} className="ls-prop-group" style={idx === 0 ? { borderTop: 'none', paddingTop: 0 } : undefined}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                          <label className="ls-prop-label" style={{ marginBottom: 0 }}>Rule {idx + 1}</label>
+                          <button className="ls-block__btn ls-block__btn--danger" onClick={() => removeListSortRule(idx)} title="Remove sort rule"><Trash2 size={12} /></button>
+                        </div>
+                        <CustomSelect
+                          value={rule.fieldId}
+                          options={allFields.map((f) => ({ value: f.id, label: f.name }))}
+                          onChange={(v) => updateListSortRule(idx, { fieldId: String(v) })}
+                          size="sm"
+                          searchable
+                          style={{ marginBottom: 6 }}
+                        />
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          {(['asc', 'desc'] as const).map((d) => (
+                            <button key={d} className={`ls-btn-sort ${rule.direction === d ? 'ls-btn-sort--active' : ''}`}
+                              onClick={() => updateListSortRule(idx, { direction: d })}>
+                              {d === 'asc' ? '\u25B2 ASC' : '\u25BC DESC'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="ls-prop-group">
+                    <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={addListSortRule}
+                      disabled={listSortBy.length >= MAX_SORT_RULES}
+                      style={{ width: '100%', justifyContent: 'center' }}><Plus size={12} /> Add Sort Rule</button>
+                  </div>
+                  <div className="ls-prop-group" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={closeListOverlay}>Done</button>
+                  </div>
+                </>
+               ) : listEditingFilter && (
+                <>
+                 <div className="ls-prop-group" style={{ borderTop: 'none', paddingTop: 0 }}>
+                    <label className="ls-prop-label">Field</label>
+                    <CustomSelect
+                      value={listEditingFilter.fieldId}
+                      options={allFields.map((f) => ({ value: f.id, label: f.name }))}
+                      onChange={(v) => updateListFilter(listEditingFilter.id, { fieldId: String(v) })}
+                      size="sm" searchable
+                    />
+                  </div>
+                  <div className="ls-prop-group">
+                    <label className="ls-prop-label">Operator</label>
+                    <CustomSelect
+                      value={listEditingFilter.operator}
+                      options={[
+                        { value: 'eq', label: '= equals' },
+                        { value: 'neq', label: '\u2260 not equal' },
+                        { value: 'gt', label: '> greater than' },
+                        { value: 'gte', label: '\u2265 gte' },
+                        { value: 'lt', label: '< less than' },
+                        { value: 'lte', label: '\u2264 lte' },
+                        { value: 'contains', label: 'contains' },
+                        { value: 'is_empty', label: 'is empty' },
+                        { value: 'is_not_empty', label: 'is not empty' },
+                      ]}
+                      onChange={(v) => updateListFilter(listEditingFilter.id, { operator: String(v) })}
+                      size="sm" searchable
+                    />
+                  </div>
+                  {!['is_empty', 'is_not_empty'].includes(listEditingFilter.operator) && (
+                    <div className="ls-prop-group">
+                      <label className="ls-prop-label">Value</label>
+                      {(() => {
+                        const eff = allFields.find((f) => f.id === listEditingFilter.fieldId);
+                        const effOptions: { label: string; value: string }[] = (eff?.config as any)?.options || [];
+                        return effOptions.length > 0 ? (
+                          <CustomSelect
+                            value={listEditingFilter.value}
+                            options={effOptions}
+                            onChange={(v) => updateListFilter(listEditingFilter.id, { value: String(v) })}
+                            size="sm"
+                            searchable
+                            placeholder="— select —"
+                          />
+                        ) : (
+                          <input className="sails-input" value={listEditingFilter.value}
+                            onChange={(e) => updateListFilter(listEditingFilter.id, { value: e.target.value })}
+                            placeholder="value..." style={{ fontSize: 12, padding: '5px 7px' }} />
+                        );
+                      })()}
+                    </div>
+                  )}
+                  <div className="ls-prop-group">
+                    <label className="ls-prop-label">Logic (if chained)</label>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {(['and', 'or'] as const).map((l) => (
+                        <button key={l} className={`ls-btn-logic ls-btn-logic--large ${listEditingFilter.logic === l ? 'ls-btn-logic--active' : ''}`}
+                          onClick={() => updateListFilter(listEditingFilter.id, { logic: l })}>{l.toUpperCase()}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="ls-prop-group" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={closeListOverlay}>Done</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Details Modal ── */}
+      {showEditMetaOverlay && (
+        <div className="ls-overlay" onClick={() => setShowEditMetaOverlay(false)}>
+          <div className="ls-overlay-card" onClick={(e) => e.stopPropagation()}>
+            <div className="ls-overlay-card__header">
+              <h3 className="ls-overlay-card__title">
+                <Settings size={14} /> Edit Layout Details
+              </h3>
+              <button className="ls-block__btn" onClick={() => setShowEditMetaOverlay(false)}><X size={14} /></button>
+            </div>
+            <div className="ls-overlay-card__body">
+              <div className="ls-prop-group" style={{ borderTop: 'none', paddingTop: 0 }}>
+                <label className="ls-prop-label">View Name *</label>
+                <input className="sails-input" value={layoutName}
+                  onChange={(e) => setLayoutName(e.target.value)}
+                  style={{ fontSize: 12, padding: '5px 7px' }} />
+              </div>
+              <div className="ls-prop-group">
+                <label className="ls-prop-label">System Name</label>
+                <code style={{ fontSize: 11, padding: '5px 7px', display: 'block', background: 'var(--sails-bg-secondary, #f8fafc)', borderRadius: 4, border: '1px solid var(--sails-border, #e2e8f0)', color: 'var(--sails-text-muted, #94a3b8)' }}>{layoutSystemName}</code>
+                <span style={{ fontSize: 10, color: 'var(--sails-text-muted, #94a3b8)' }}>System names cannot be changed after creation.</span>
+              </div>
+              <div className="ls-prop-group">
+                <label className="ls-prop-label">Description</label>
+                <textarea className="sails-input" value={layoutDescription}
+                  onChange={(e) => setLayoutDescription(e.target.value)}
+                  rows={3}
+                  style={{ fontSize: 12, padding: '5px 7px', resize: 'vertical' }}
+                  placeholder="Optional description of this layout" />
+              </div>
+              <div className="ls-prop-group">
+                <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 0 }}>
+                  <input type="checkbox" checked={layoutIsDefault}
+                    onChange={() => setLayoutIsDefault((v) => !v)} /> Set as default view
+                </label>
+              </div>
+              <div className="ls-prop-group" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowEditMetaOverlay(false)}>Cancel</button>
+                <button className="sails-btn sails-btn--primary sails-btn--sm"
+                  onClick={saveListMetadata} disabled={!layoutName.trim() || listSavingMeta}>
+                  {listSavingMeta ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Confirmation Modal ── */}
+      {showListDeleteConfirm && (
+        <div className="ls-modal-overlay" onClick={() => setShowListDeleteConfirm(false)}>
+          <div className="ls-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="ls-modal__title">Delete Layout</h3>
+            <p className="ls-modal__text">This will permanently delete this layout and all its configuration. This action cannot be undone.</p>
+            <div className="ls-modal__actions">
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowListDeleteConfirm(false)} disabled={listDeleteLoading}>Cancel</button>
+              <button className="sails-btn sails-btn--danger sails-btn--sm" onClick={deleteListLayout} disabled={listDeleteLoading}>
+                {listDeleteLoading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showResetConfirm && (
         <div className="ls-modal-overlay" onClick={() => setShowResetConfirm(false)}>
           <div className="ls-modal" onClick={(e) => e.stopPropagation()}>

@@ -1,0 +1,133 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--sails-danger-light);
+  border: 1px solid rgba(253, 97, 97, 0.15);
+  flex-shrink: 0;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sails-danger);
+  animation: omni-pulse 2s infinite;
+}
+
+@keyframes omni-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sails-danger);
+  line-height: 1;
+}
+
+.label {
+  font-size: 9px;
+  color: rgba(253, 97, 97, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.requests {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.request {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--sails-bg-body);
+  border: 1px solid var(--sails-border-color);
+  white-space: nowrap;
+  animation: omni-slideIn 0.25s ease-out;
+}
+
+@keyframes omni-slideIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.channel {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.channelIcon {
+  font-size: 10px;
+}
+
+.channelLabel {
+  font-size: 9px;
+  color: var(--sails-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+}
+
+.customer {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sails-text-main);
+}
+
+.waitTime {
+  font-size: 9px;
+  color: var(--sails-text-muted);
+}
+
+.acceptBtn {
+  padding: 2px 7px;
+  border: none;
+  border-radius: 3px;
+  background: var(--sails-primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  line-height: 1;
+}
+
+.acceptBtn:hover {
+  background: var(--sails-primary-dark);
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--sails-text-muted);
+  font-size: 11px;
+}
+
+.checkmark {
+  color: var(--sails-success);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.emptyText {
+  font-size: 11px;
+  font-weight: 500;
+}

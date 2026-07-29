@@ -254,6 +254,7 @@
   display: flex;
   justify-content: center;
   background: var(--sails-bg-tertiary, #f1f5f9);
+  height: 100%;
 }
 
 .tb-canvas__scroll {
@@ -267,6 +268,7 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  min-height: 100%;
 }
 
 .tb-page__header {
@@ -310,7 +312,6 @@
   border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 8px;
   margin-bottom: 16px;
-  overflow: hidden;
 }
 
 .tb-card__header {
@@ -434,7 +435,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .tb-preview-table thead {
@@ -455,7 +456,6 @@
   border-bottom: 2px solid var(--sails-border, #e2e8f0);
   transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
   position: relative;
-  min-width: 80px;
 }
 
 .tb-th:hover {
@@ -622,6 +622,8 @@
   color: var(--sails-text-primary, #1e293b);
   border-bottom: 1px solid var(--sails-border, #e2e8f0);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tb-td--hidden {
@@ -868,4 +870,661 @@
   background: var(--sails-bg-secondary, #f8fafc);
   border-top: 1px solid var(--sails-border, #e2e8f0);
   border-bottom: 1px solid var(--sails-border, #e2e8f0);
+}
+
+/* ─── Summary Panel ──────────────────────────────────────────── */
+
+.tb-summary-panel {
+  margin-bottom: 16px;
+}
+
+.tb-summary-panel__body {
+  padding: 14px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  border: 2px dashed transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.tb-summary-panel__body:hover {
+  border-color: var(--sails-border, #e2e8f0);
+}
+
+.tb-summary-panel__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 12px;
+  color: var(--sails-text-muted, #94a3b8);
+  font-style: italic;
+}
+
+.tb-summary-panel__placeholder-icon {
+  color: var(--sails-text-muted, #94a3b8);
+  opacity: 0.5;
+}
+
+.tb-summary-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tb-summary-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: rgba(157, 206, 224, 0.1);
+  border: 1px solid rgba(157, 206, 224, 0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--sails-text-primary, #1e293b);
+}
+
+.tb-summary-field__name {
+  font-weight: 600;
+}
+
+.tb-summary-field__tag {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(157, 206, 224, 0.2);
+  color: var(--sails-primary, #9dcee0);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ─── View Properties (right panel — no column selected) ────── */
+
+.tb-vp-sort-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tb-vp-sort-rule {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: var(--sails-bg-primary, #fff);
+  border: 1px solid var(--sails-border, #e2e8f0);
+  border-radius: 5px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.tb-vp-sort-rule:hover {
+  border-color: var(--sails-primary, #9dcee0);
+  background: rgba(157, 206, 224, 0.04);
+}
+
+.tb-vp-sort-rule__seq {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sails-text-muted, #94a3b8);
+  min-width: 14px;
+}
+
+.tb-vp-sort-rule__field {
+  font-weight: 600;
+  color: var(--sails-text-primary, #1e293b);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tb-vp-sort-rule__dir {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(157, 206, 224, 0.15);
+  color: var(--sails-primary, #9dcee0);
+  flex-shrink: 0;
+}
+
+.tb-vp-sort-rule__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 1px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+}
+
+.tb-vp-sort-rule__remove:hover {
+  color: var(--sails-danger, #ef4444);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.tb-vp-filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.tb-vp-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  background: var(--sails-bg-primary, #fff);
+  border: 1px solid var(--sails-border, #e2e8f0);
+  border-radius: 5px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.tb-vp-filter-row:hover {
+  border-color: var(--sails-primary, #9dcee0);
+  background: rgba(157, 206, 224, 0.04);
+}
+
+.tb-vp-filter-logic {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(157, 206, 224, 0.15);
+  color: var(--sails-primary, #9dcee0);
+  flex-shrink: 0;
+}
+
+.tb-vp-filter-field {
+  font-weight: 600;
+  color: var(--sails-text-primary, #1e293b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100px;
+}
+
+.tb-vp-filter-op {
+  color: var(--sails-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.tb-vp-filter-value {
+  color: var(--sails-primary, #9dcee0);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80px;
+}
+
+.tb-vp-filter-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 1px;
+  border-radius: 3px;
+  margin-left: auto;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+}
+
+.tb-vp-filter-remove:hover {
+  color: var(--sails-danger, #ef4444);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.tb-vp-empty {
+  font-size: 11px;
+  color: var(--sails-text-muted, #94a3b8);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ─── Floating Overlay (filter/sort editor) ──────────────────── */
+
+.tb-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+}
+
+.tb-overlay-card {
+  background: var(--sails-bg-primary, #fff);
+  border-radius: 10px;
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.tb-overlay-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--sails-bg-secondary, #f8fafc);
+  border-bottom: 1px solid var(--sails-border, #e2e8f0);
+}
+
+.tb-overlay-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sails-text-primary, #1e293b);
+  margin: 0;
+}
+
+.tb-overlay-card__body {
+  padding: 4px 0;
+}
+
+.tb-overlay-card__body .tb-prop-group:first-child {
+  padding-top: 0;
+}
+
+/* ─── Runtime Preview Table ──────────────────────────────────── */
+
+.tb-runtime-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
+
+.tb-runtime-table thead {
+  background: var(--sails-bg-secondary, #f8fafc);
+}
+
+.tb-rth {
+  padding: 0;
+  text-align: left;
+  font-weight: 600;
+  color: var(--sails-text-secondary, #64748b);
+  white-space: nowrap;
+  user-select: none;
+  border-bottom: 2px solid var(--sails-border, #e2e8f0);
+  position: relative;
+}
+
+.tb-rth--sortable {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.tb-rth--sortable:hover {
+  background: rgba(157, 206, 224, 0.06);
+}
+
+.tb-rth--sorted {
+  background: rgba(157, 206, 224, 0.08);
+  border-bottom-color: var(--sails-primary, #9dcee0);
+}
+
+.tb-rth__inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.tb-rth__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+.tb-rth__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+
+.tb-rth__sort-indicator {
+  display: inline-flex;
+  align-items: center;
+  color: var(--sails-primary, #9dcee0);
+  flex-shrink: 0;
+}
+
+.tb-rth__sort-icon {
+  color: var(--sails-text-muted, #94a3b8);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.tb-rth--sortable:hover .tb-rth__sort-icon {
+  opacity: 0.6;
+}
+
+.tb-rth__filter-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.tb-rth__filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 3px;
+  transition: color 0.12s, background 0.12s;
+}
+
+.tb-rth__filter-btn:hover {
+  color: var(--sails-text-primary, #1e293b);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.tb-rth__filter-btn--active {
+  color: var(--sails-primary, #9dcee0);
+  background: rgba(157, 206, 224, 0.15);
+}
+
+.tb-rth__filter-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  background: var(--sails-bg-primary, #fff);
+  border: 1px solid var(--sails-border, #e2e8f0);
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.tb-rth__filter-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: none;
+  background: var(--sails-bg-secondary, #f8fafc);
+  color: var(--sails-text-secondary, #64748b);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 3px 10px;
+  border-radius: 4px;
+  transition: color 0.12s;
+  align-self: flex-end;
+}
+
+.tb-rth__filter-clear:hover {
+  color: var(--sails-danger, #ef4444);
+}
+
+/* ── Runtime Data Rows ── */
+
+.tb-rtd-row {
+  transition: background 0.1s;
+}
+
+.tb-rtd-row:hover {
+  background: rgba(157, 206, 224, 0.04);
+}
+
+.tb-rtd {
+  padding: 10px 12px;
+  color: var(--sails-text-primary, #1e293b);
+  border-bottom: 1px solid var(--sails-border, #e2e8f0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+}
+
+.tb-runtime-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ─── Wrap Text ──────────────────────────────────────────────── */
+
+.tb-td--wrap,
+.tb-rtd--wrap {
+  white-space: normal;
+  word-wrap: break-word;
+  overflow: visible;
+  text-overflow: clip;
+  vertical-align: top;
+}
+
+/* ─── Active Toggle Button ───────────────────────────────────── */
+
+.tb-btn--active {
+  background: rgba(157, 206, 224, 0.15);
+  color: var(--sails-primary, #9dcee0);
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+/* ─── Checkbox Column (runtime) ──────────────────────────────── */
+
+.tb-rth--cb {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  text-align: center;
+}
+
+.tb-rth--cb .tb-rth__inner {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.tb-rtd--cb {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.tb-rtd--cb input[type="checkbox"],
+.tb-rth--cb input[type="checkbox"] {
+  accent-color: var(--sails-primary, #9dcee0);
+  cursor: pointer;
+}
+
+.tb-rtd-row--selected {
+  background: rgba(157, 206, 224, 0.06);
+}
+
+.tb-rtd-row--selected:hover {
+  background: rgba(157, 206, 224, 0.1);
+}
+
+/* ─── Pagination ─────────────────────────────────────────────── */
+
+.tb-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--sails-border, #e2e8f0);
+  background: var(--sails-bg-secondary, #f8fafc);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tb-pagination__info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.tb-pagination__range {
+  font-size: 11px;
+  color: var(--sails-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.tb-pagination__range strong {
+  font-weight: 700;
+  color: var(--sails-text-secondary, #64748b);
+}
+
+.tb-pagination__page-size {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tb-pagination__page-size-label {
+  font-size: 11px;
+  color: var(--sails-text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.tb-pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tb-pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--sails-border, #e2e8f0);
+  border-radius: 4px;
+  background: var(--sails-bg-primary, #fff);
+  color: var(--sails-text-secondary, #64748b);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.tb-pagination__btn:hover:not(:disabled) {
+  border-color: var(--sails-primary, #9dcee0);
+  color: var(--sails-primary, #9dcee0);
+}
+
+.tb-pagination__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tb-pagination-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  color: var(--sails-text-secondary, #64748b);
+  background: transparent;
+}
+
+.tb-pagination-page--active {
+  background: rgba(157, 206, 224, 0.18);
+  color: var(--sails-primary, #9dcee0);
+  font-weight: 700;
+}
+
+.tb-pagination-page--clickable {
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.tb-pagination-page--clickable:hover {
+  border-color: var(--sails-primary, #9dcee0);
+  background: rgba(157, 206, 224, 0.06);
+}
+
+.tb-pagination__ellipsis {
+  font-size: 11px;
+  color: var(--sails-text-muted, #94a3b8);
+  padding: 4px 2px;
+}
+
+/* ─── Radio Labels ───────────────────────────────────────────── */
+
+.tb-radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--sails-text-primary, #1e293b);
+  cursor: pointer;
+}
+
+.tb-radio-label input[type="radio"] {
+  accent-color: var(--sails-primary, #9dcee0);
+}
+
+/* ─── Standard Themed Select (matches Ghost Glass) ──────────── */
+
+.tb-select-sm {
+  padding: 4px 28px 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--sails-border, #e2e8f0);
+  background: var(--sails-bg-primary, #fff);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--sails-text-primary, #1e293b);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+}
+
+.tb-select-sm:hover {
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+.tb-select-sm:focus {
+  border-color: var(--sails-primary, #9dcee0);
+  box-shadow: 0 0 0 2px rgba(157, 206, 224, 0.25);
+}
+
+.tb-select-sm option {
+  background: var(--sails-bg-primary, #fff);
+  color: var(--sails-text-primary, #1e293b);
 }

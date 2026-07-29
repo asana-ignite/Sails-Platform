@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import Topbar from './Topbar';
 import Sidebar from './Sidebar';
+import WidgetBar from './WidgetBar';
 import MobileNav from './MobileNav';
 import MobileGlobalBar from './MobileGlobalBar';
 import MobileSearchBar from './MobileSearchBar';
 import MobileAppSwitcher from './MobileAppSwitcher';
+import { useConsole } from '../../contexts/ConsoleContext';
 import './AppLayout.css';
 
 interface AppLayoutProps {
@@ -17,6 +19,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(false);
   const [isMobileSearchVisible, setIsMobileSearchVisible] = useState(false);
   const [isMobileAppSwitcherVisible, setIsMobileAppSwitcherVisible] = useState(false);
+  const { widgets, activeApp } = useConsole();
+
+  const showWidgetBar = activeApp?.widgetBarEnabled === true && widgets.length > 0;
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
@@ -72,6 +77,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {children}
         </main>
       </div>
+      {showWidgetBar && <WidgetBar widgets={widgets} />}
       <MobileNav isVisible={isMobileNavVisible} />
       <MobileGlobalBar 
         onMenuToggle={toggleMobileNav} 
