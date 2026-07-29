@@ -22,6 +22,7 @@ import {
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { ALL_TIMEZONE_OPTIONS } from '../../utils/timezoneHelper';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import './AdminGeneralSettings.css';
 
 export interface GeneralSettingsData {
@@ -259,6 +260,7 @@ const PALETTE_TECHNIQUE_OPTIONS = [
 ];
 
 const AdminGeneralSettings: React.FC = () => {
+  const { user } = useAuth();
   const { primaryAccentColor, setPrimaryAccentColor, secondaryAccentColor, setSecondaryAccentColor, backgroundAccentColor, setBackgroundAccentColor, fontAccentColor, setFontAccentColor, enableGradient, setEnableGradient, setLogoLightUrl, setLogoDarkUrl, saveBrandingToServer, commitTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<'branding' | 'localization' | 'security' | 'maintenance' | 'tenant'>('branding');
   const [paletteTechnique, setPaletteTechnique] = useState<ColorMatchingTechnique>('monochromatic');
@@ -947,7 +949,7 @@ const AdminGeneralSettings: React.FC = () => {
                   <input
                     type="text"
                     className="sails-input"
-                    value={localStorage.getItem('sails-tenant-id') || 'clx_tenant_zone01_master'}
+                    value={user?.tenantId || localStorage.getItem('sails-tenant-id') || 'clx_tenant_zone01_master'}
                     readOnly
                     style={{ fontFamily: 'monospace', opacity: 0.9 }}
                   />
