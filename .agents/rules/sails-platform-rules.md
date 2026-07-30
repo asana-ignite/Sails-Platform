@@ -41,3 +41,10 @@ description: Mandatory development and deployment rules for the Sails Platform.
 - **Rule (Stateless Core API)**: Core API containers MUST remain stateless, deriving identity from JWT claims or environment variables (`ZONE_ID`). Never introduce stateful in-memory node singletons that assume a single global database.
 - **Rule (Per-Tenant Sequence Isolation)**: Autonumber counters and sequence fields MUST be scoped strictly to `tenant_id` or tenant schema. Never create shared global PostgreSQL sequence generators across tenants.
 - **Rule (Global ID Integrity)**: All primary keys MUST use globally unique CUIDs/time-ordered IDs (`generateTimeOrderedId()`) so record relocation between Zone databases never produces ID collisions.
+
+## 7. Layout Engine & Dynamic Table Standards
+- **Rule (Layout Alignment)**: Dynamic table pages MUST map list properties (`config.columns`, `config.filters`, `config.sortBy`, `allowMultiSelect`, `allowPaging`, `recordsPerPage`) to real database query data using the Layout Studio runtime component structure (`.ls-table-card`, `.ls-runtime-table`, `.ls-rth`, `.ls-rtd`, `.ls-pagination`).
+- **Rule (System Field Exclusion)**: Default fallback column generation for unconfigured tables MUST automatically exclude internal platform system/audit fields (`is_active`, `is_system`, `tenant_id`, `owner_id`) from table views.
+- **Rule (Layout Activation Sync)**: Activating or publishing a layout (`action === 'activate'`) MUST atomically update both `config` and `publishedConfig` in database records to ensure instant runtime layout propagation.
+- **Rule (Tenant Admin Bypass)**: AccessGuard object permission checks MUST include fast-path permission approval for both `SUPER_ADMIN` and `TENANT_ADMIN` roles across dynamic tenant objects.
+- **Rule (Dropdown & Popover Overflow)**: Dropdown controls inside bottom containers (such as pagination footers) MUST specify upward dropup direction (`direction="up"`) or boundary detection, and parent containers (`.ls-table-card`, `.ls-pagination`) MUST enforce `overflow: visible` to prevent popover clipping.

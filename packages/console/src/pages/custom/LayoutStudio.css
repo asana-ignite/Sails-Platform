@@ -926,6 +926,73 @@
   overflow-y: auto;
 }
 
+/* ─── Read-only mode ───────────────────────────────────────── */
+
+.ls-root--readonly .ls-block__controls,
+.ls-root--readonly .ls-block__resize-handle,
+.ls-root--readonly .ls-block__indicators,
+.ls-root--readonly .ls-block__width-badge,
+.ls-root--readonly .ls-block__type-badge,
+.ls-root--readonly .ls-block--hidden,
+.ls-root--readonly .ls-block__grip,
+.ls-root--readonly .ls-section__remove,
+.ls-root--readonly .ls-section__col-btn,
+.ls-root--readonly .ls-section__empty,
+.ls-root--readonly .ls-block--conditional-hidden::after {
+  display: none !important;
+}
+
+.ls-root--readonly .ls-block {
+  cursor: default;
+  pointer-events: none;
+}
+
+.ls-root--readonly .ls-section__grid {
+  row-gap: 12px;
+}
+
+.ls-root--readonly .ls-palette {
+  display: none !important;
+}
+
+.ls-root--readonly .ls-palette-outer {
+  display: none !important;
+}
+
+.ls-root--readonly .ls-palette-tab {
+  display: none !important;
+}
+
+.ls-root--readonly .ls-body {
+  grid-template-columns: 1fr 260px !important;
+}
+
+/* ─── Status Banner ─────────────────────────────────────────── */
+
+.ls-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+}
+
+.ls-status-banner--active {
+  background: rgba(39, 174, 96, 0.08);
+  color: #27ae60;
+}
+
+.ls-status-banner--draft {
+  background: rgba(156, 163, 175, 0.1);
+  color: #6b7280;
+}
+
+.ls-status-banner strong {
+  font-weight: 700;
+}
+
 /* ─── Properties Panel Resize & Hover ──────────────────────── */
 
 .ls-props-outer {
@@ -1313,3 +1380,7 @@
 
 .ls-btn--active { background: rgba(157, 206, 224, 0.18) !important; color: var(--sails-primary, #9dcee0) !important; border-color: var(--sails-primary, #9dcee0) !important; }
 .ls-radio-label { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--sails-text-secondary, #64748b); cursor: pointer; }
+
+/* ─── Edit Details Overlay Styles ──────────────────────────── */
+
+.ls-overlay-card__set-default { min-width: 140px; }

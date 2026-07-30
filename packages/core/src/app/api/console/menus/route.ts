@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
 
     const body = await req.json();
-    const { appId, label, icon, path, actionType, parentId, order, componentKey, requiredCapability } = body;
+    const { appId, label, icon, path, actionType, parentId, order, componentKey, requiredCapability, dataModelId, listViewId } = body;
 
     if (!appId || !label) {
       return NextResponse.json({ success: false, error: 'appId and label are required' }, { status: 400 });
@@ -71,11 +71,13 @@ export async function POST(req: Request) {
         label,
         icon,
         path,
-        actionType: actionType || 'table',
+        actionType: actionType || 'data_model',
         parentId,
         order: order || 0,
         componentKey,
-        requiredCapability
+        requiredCapability,
+        dataModelId,
+        listViewId
       }
     });
 

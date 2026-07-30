@@ -1,25 +1,28 @@
-/* Full Width Object Manager Container */
+/* ===========================
+   Object Manager — Data Model Studio
+   =========================== */
 .object-manager-container-full {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    padding: 0;
-    color: var(--sails-text-main);
-    box-sizing: border-box;
+    padding: 24px;
 }
 
-/* Toolbar & Search */
+/* ── List View ── */
+.om-list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Toolbar */
 .om-toolbar {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    gap: 12px;
 }
 
 .om-search-wrapper {
     position: relative;
-    width: 100%;
-    max-width: 400px;
+    flex: 1;
+    max-width: 420px;
 }
 
 .om-search-icon {
@@ -27,74 +30,65 @@
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--sails-text-muted);
-    pointer-events: none;
+    color: var(--sails-text-muted, #94a3b8);
 }
 
 .om-search-input {
     width: 100%;
-    padding: 10px 12px 10px 40px;
-    background: var(--sails-bg-card);
-    border: 1px solid var(--sails-border-color);
-    border-radius: var(--sails-radius-md);
-    font-size: 0.9rem;
-    color: var(--sails-text-main);
-    transition: all 0.2s;
+    padding: 8px 12px 8px 38px;
+    border: 1px solid var(--sails-border-color, rgba(255, 255, 255, 0.1));
+    border-radius: var(--sails-radius-md, 8px);
+    background: var(--sails-bg-card, rgba(255, 255, 255, 0.04));
+    color: var(--sails-text-main, #f3f4f6);
+    font-size: 0.875rem;
 }
 
-.om-search-input:focus {
-    border-color: var(--sails-primary);
-    box-shadow: 0 0 0 3px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
-    outline: none;
+.om-search-input::placeholder {
+    color: var(--sails-text-muted, #64748b);
 }
 
-/* Master Table Layout */
+/* Master Table */
 .om-table-card {
-    border-radius: var(--sails-radius-lg);
-    background: var(--sails-bg-card);
-    border: 1px solid var(--sails-border-color);
-    overflow: visible;
-    box-shadow: var(--sails-shadow-sm);
+    overflow: hidden;
 }
 
 .om-list-table {
     width: 100%;
     border-collapse: collapse;
-    text-align: left;
 }
 
-.om-list-table th {
-    padding: 16px 20px;
-    font-size: 0.75rem;
+.om-list-table thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--sails-text-muted, #94a3b8);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--sails-text-muted);
-    border-bottom: 1px solid var(--sails-border-color);
-    background: rgba(255, 255, 255, 0.01);
-    font-weight: 600;
+    border-bottom: 1px solid var(--sails-border-color, rgba(255, 255, 255, 0.08));
 }
 
-.om-list-table td {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--sails-border-color);
-    font-size: 0.9rem;
+.om-list-table tbody td {
+    padding: 12px 16px;
+    font-size: 0.875rem;
+    color: var(--sails-text-main, #e2e8f0);
+    border-bottom: 1px solid var(--sails-border-color, rgba(255, 255, 255, 0.04));
     vertical-align: middle;
 }
 
 .om-clickable-row {
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: background 0.15s ease;
 }
 
 .om-clickable-row:hover {
-    background-color: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.03);
 }
 
-/* Custom Table Cells */
 .om-table-cell-name {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .om-table-icon-wrapper {
@@ -103,487 +97,72 @@
     justify-content: center;
     width: 36px;
     height: 36px;
-    background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
-    color: var(--sails-primary);
-    border-radius: var(--sails-radius-md);
+    border-radius: var(--sails-radius-md, 8px);
+    background: rgba(var(--sails-primary-r, 59), var(--sails-primary-g, 130), var(--sails-primary-b, 246), 0.12);
+    color: var(--sails-primary, #3b82f6);
+    flex-shrink: 0;
 }
 
 .om-name-primary {
-    font-weight: 600;
-    color: var(--sails-text-main);
+    font-weight: 500;
+    color: var(--sails-text-main, #f3f4f6);
 }
 
 .om-name-secondary {
     font-size: 0.75rem;
-    color: var(--sails-text-muted);
+    color: var(--sails-text-muted, #94a3b8);
     margin-top: 2px;
-}
-
-.om-desc-text {
-    color: var(--sails-text-muted);
-    font-size: 0.85rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
 }
 
 .om-badge {
     display: inline-flex;
     align-items: center;
-    padding: 4px 8px;
-    border-radius: 100px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
-    color: var(--sails-primary);
-    border: 1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.2);
-}
-
-.om-date-cell {
-    display: inline-flex;
-    align-items: center;
-    color: var(--sails-text-muted);
-    font-size: 0.85rem;
-}
-
-.om-search-highlight {
-    background-color: rgba(245, 158, 11, 0.35);
-    color: inherit;
-    border-radius: 3px;
-    padding: 0 3px;
-    font-weight: 600;
-}
-
-/* Empty State */
-.om-empty-state-row {
-    text-align: center;
-    padding: 64px 32px !important;
-    color: var(--sails-text-muted);
-}
-
-.om-empty-icon {
-    margin-bottom: 16px;
-    opacity: 0.5;
-    color: var(--sails-text-muted);
-}
-
-.om-empty-state-row h3 {
-    margin: 0 0 8px 0;
-    font-size: 1.1rem;
-    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    background: rgba(255, 255, 255, 0.06);
     color: var(--sails-text-main);
-}
-
-.om-empty-state-row p {
-    margin: 0;
-    font-size: 0.9rem;
-}
-
-/* Detail View Layout */
-.om-detail-view-full {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
-.om-detail-header-full {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--sails-border-color);
-    padding-bottom: 20px;
-}
-
-.om-back-btn {
-    background: transparent;
-    border: none;
-    color: var(--sails-text-muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px;
-    border-radius: 50%;
-    transition: all 0.2s;
-}
-
-.om-back-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--sails-text-main);
-}
-
-.om-detail-title-text {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin: 0;
-}
-
-.om-detail-meta-text {
-    font-size: 0.85rem;
-    color: var(--sails-text-muted);
-    margin-top: 4px;
-    padding-left: 36px;
-}
-
-/* Stats grid */
-.om-stats-grid-full {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-}
-
-.om-stat-card-full {
-    padding: 20px;
-    border-radius: var(--sails-radius-lg);
-    background: var(--sails-bg-card);
     border: 1px solid var(--sails-border-color);
-    box-shadow: var(--sails-shadow-sm);
 }
 
-.om-stat-card-full label {
-    display: block;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    color: var(--sails-text-muted);
-    letter-spacing: 0.08em;
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-/* Section Header */
-.om-section-full {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.om-section-header-full h2 {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin: 0;
-}
-
-/* Status Tags */
 .om-status-tag {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 12px;
 }
 
 .om-status-tag--required {
-    background: rgba(239, 68, 68, 0.1);
-    color: rgb(239, 68, 68);
-    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.2);
 }
 
 .om-status-tag--optional {
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--sails-text-muted, #94a3b8);
+}
+
+.om-desc-text {
+    font-size: 0.85rem;
     color: var(--sails-text-muted);
-    border: 1px solid var(--sails-border-color);
-}
-
-/* Modals & Overlays */
-.om-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999 !important; /* Administrative overlay rule */
-}
-
-.om-modal {
-    width: 480px;
-    padding: 32px;
-    border-radius: var(--sails-radius-xl);
-    background: var(--sails-bg-card);
-    border: 1px solid var(--sails-border-color);
-    box-shadow: var(--sails-shadow-lg);
-    animation: sails-fade-in 0.2s ease-out;
-}
-
-/* Big Modal Screen (Replaces Slide-over Sidebars) */
-.om-big-modal {
-    width: 1040px;
-    max-width: 95vw;
-    height: 820px;
-    max-height: 88vh;
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-    border-radius: var(--sails-radius-lg, 16px);
-    background: var(--sails-bg-card, #ffffff);
-    border: 1px solid var(--sails-border-color, #e2e8f0);
-    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--sails-border-color);
+    max-width: 320px;
     overflow: hidden;
-    animation: sails-modal-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
 }
 
-.om-big-modal--md {
-    width: 780px;
-    height: 480px;
-    max-height: 85vh;
-}
-
-
-@keyframes sails-modal-pop {
-    from { opacity: 0; transform: scale(0.96) translateY(12px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.om-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 28px 36px;
-    border-bottom: 1px solid var(--sails-border-color);
-    background: var(--sails-bg-card);
-}
-
-.om-modal-header-info {
+.om-date-cell {
     display: flex;
     align-items: center;
-    gap: 16px;
-}
-
-.om-modal-icon-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    background: var(--sails-primary-light);
-    color: var(--sails-primary-dark);
-    border: 1px solid var(--sails-border-color);
-    flex-shrink: 0;
-}
-
-.om-modal-title {
-    font-size: 1.45rem;
-    font-weight: 700;
-    margin: 0 0 4px 0;
-    color: var(--sails-text-main);
-    letter-spacing: -0.02em;
-}
-
-.om-modal-subtitle {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--sails-text-muted);
-    margin: 0;
-    line-height: 1.4;
 }
 
-.om-modal-close {
-    background: transparent;
-    border: 1px solid var(--sails-border-color);
-    color: var(--sails-text-muted);
-    padding: 8px;
-    border-radius: var(--sails-radius-md);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--sails-transition);
-}
-
-.om-modal-close:hover {
-    background: var(--sails-bg-body);
-    color: var(--sails-text-main);
-    border-color: var(--sails-primary);
-}
-
-.om-modal-body {
-    padding: 32px 36px;
-    overflow-y: auto;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 28px;
-    background: var(--sails-bg-card);
-}
-
-.om-modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 14px;
-    padding: 20px 36px;
-    border-top: 1px solid var(--sails-border-color);
-    background: var(--sails-bg-card);
-}
-
-/* Form Controls & Layout Grid inside Big Modal */
-.om-form-grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-}
-
-.om-field-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.om-field-group--full {
-    grid-column: 1 / -1;
-}
-
-.om-field-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--sails-text-main);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.om-field-hint {
-    font-size: 0.775rem;
-    color: var(--sails-text-muted);
-    font-weight: normal;
-}
-
-/* Logical Type Selector Grid */
-.om-type-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 12px;
-    margin-top: 6px;
-}
-
-@media (max-width: 900px) {
-    .om-type-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-.om-type-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    height: 94px;
-    padding: 14px 12px;
-    background: var(--sails-bg-body);
-    border: 1px solid var(--sails-border-color);
-    border-radius: var(--sails-radius-lg);
-    cursor: pointer;
-    transition: var(--sails-transition);
-    text-align: center;
-}
-
-.om-type-card:hover {
-    background: var(--sails-primary-light);
-    border-color: var(--sails-primary);
-    transform: translateY(-2px);
-    box-shadow: var(--sails-shadow-sm);
-}
-
-.om-type-card--active {
-    background: var(--sails-primary-light) !important;
-    border-color: var(--sails-primary) !important;
-    box-shadow: 0 0 0 2px var(--sails-primary);
-}
-
-.om-type-card-icon {
-    width: 24px;
-    height: 24px;
-    min-width: 24px;
-    min-height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    color: var(--sails-text-muted);
-    transition: color 0.2s ease;
-}
-
-.om-type-card-icon svg {
-    width: 24px !important;
-    height: 24px !important;
-    flex-shrink: 0;
-}
-
-.om-type-card--active .om-type-card-icon {
-    color: var(--sails-primary-dark);
-}
-
-
-.om-type-card-label {
-    font-size: 0.825rem;
-    font-weight: 600;
-    color: var(--sails-text-main);
-}
-
-.om-type-card--active .om-type-card-label {
-    color: var(--sails-primary-dark);
-    font-weight: 700;
-}
-
-/* Modular Configuration Section (Type-Specific Parameters) */
-.om-config-section {
-    background: var(--sails-bg-body);
-    border: 1px solid var(--sails-border-color);
-    border-radius: var(--sails-radius-lg);
-    padding: 24px 28px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.om-config-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--sails-border-color);
-    padding-bottom: 14px;
-}
-
-.om-config-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--sails-text-main);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.om-config-badge {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 4px 10px;
-    border-radius: 100px;
-    background: var(--sails-primary-light);
-    color: var(--sails-primary-dark);
-    border: 1px solid var(--sails-border-color);
-}
-
-/* Animation utilities */
-@keyframes sails-fade-in {
-    from { opacity: 0; transform: scale(0.98); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-.animate-fade-in {
-    animation: sails-fade-in 0.2s ease-out;
-}
-
-/* Context Menu */
+/* Action & Context Menu */
 .om-action-wrapper {
     position: relative;
     display: inline-block;
@@ -591,51 +170,400 @@
 
 .om-context-menu {
     position: absolute;
-    top: 100%;
     right: 0;
-    margin-top: 4px;
-    width: 170px;
-    background: var(--sails-bg-card, #1e1e2d);
-    border: 1px solid var(--sails-border-color, rgba(255, 255, 255, 0.1));
+    top: 100%;
+    z-index: 100;
+    min-width: 180px;
+    background: var(--sails-bg-card, #1e293b);
+    border: 1px solid var(--sails-border-color, rgba(255, 255, 255, 0.12));
     border-radius: var(--sails-radius-md, 8px);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-    padding: 6px;
-    z-index: 9999 !important;
-    animation: sails-fade-in 0.15s ease-out;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    padding: 4px;
 }
 
 .om-context-item {
-    width: 100%;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    width: 100%;
     padding: 8px 12px;
     border: none;
     background: transparent;
-    border-radius: 4px;
-    font-size: 0.85rem;
     color: var(--sails-text-main, #f3f4f6);
+    font-size: 0.85rem;
+    border-radius: 6px;
     cursor: pointer;
-    transition: all 0.15s ease;
-    text-align: left;
+    transition: background 0.15s ease;
 }
 
 .om-context-item:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .om-context-item--danger {
-    color: var(--sails-danger, #ef4444);
+    color: #f87171;
 }
 
 .om-context-item--danger:hover {
-    background: rgba(239, 68, 68, 0.15);
+    background: rgba(248, 113, 113, 0.1);
 }
 
 .om-context-divider {
     height: 1px;
     background: var(--sails-border-color, rgba(255, 255, 255, 0.1));
     margin: 4px 0;
+}
+
+/* Empty State */
+.om-empty-state-row td {
+    text-align: center;
+    padding: 48px 24px !important;
+}
+
+.om-empty-icon {
+    margin-bottom: 12px;
+    color: var(--sails-text-muted);
+    opacity: 0.3;
+}
+
+/* ── Detail View ── */
+.om-detail-view-full {
+    animation: omFadeIn 0.2s ease;
+}
+
+@keyframes omFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Stats Grid */
+.om-stats-grid-full {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.om-stat-card-full {
+    padding: 16px 20px;
+    border-radius: var(--sails-radius-md);
+    background: var(--sails-bg-card);
+    border: 1px solid var(--sails-border-color);
+}
+
+.om-stat-card-full label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--sails-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.om-stat-card-full .stat-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--sails-text-main);
+}
+
+/* Section */
+.om-section-full {
+    margin-top: 24px;
+}
+
+.om-section-header-full {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* ── Modals (Big Modal) ── */
+.om-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.om-big-modal {
+    background: var(--sails-bg-card, #1e293b);
+    border: 1px solid var(--sails-border-color, rgba(255, 255, 255, 0.12));
+    border-radius: var(--sails-radius-lg, 12px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.om-big-modal--md {
+    max-width: 600px;
+}
+
+/* Generic modal dialog (used by delete confirm, etc.) */
+.om-modal {
+    background: var(--sails-bg-card, #1e293b);
+    border: 1px solid var(--sails-border-color, rgba(255, 255, 255, 0.12));
+    border-radius: var(--sails-radius-lg, 12px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+.om-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--sails-border-color);
+}
+
+.om-modal-header-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.om-modal-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--sails-radius-md);
+    background: rgba(var(--sails-primary-r, 59), var(--sails-primary-g, 130), var(--sails-primary-b, 246), 0.12);
+    color: var(--sails-primary);
+}
+
+.om-modal-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--sails-text-main);
+    margin: 0;
+}
+
+.om-modal-subtitle {
+    font-size: 0.85rem;
+    color: var(--sails-text-muted);
+    margin: 4px 0 0;
+}
+
+.om-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border: none;
+    background: transparent;
+    color: var(--sails-text-muted);
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.15s;
+}
+
+.om-modal-close:hover {
+    color: var(--sails-text-main);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.om-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.om-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--sails-border-color);
+}
+
+/* Form Grids */
+.om-form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.om-field-group {
+    margin-bottom: 16px;
+}
+
+.om-field-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--sails-text-main, #f3f4f6);
+    margin-bottom: 6px;
+}
+
+.om-field-hint {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--sails-text-muted);
+    margin-top: 4px;
+}
+
+/* Type Selector Grid */
+.om-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.om-type-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    border: 2px solid var(--sails-border-color);
+    border-radius: var(--sails-radius-md);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--sails-text-muted);
+}
+
+.om-type-card:hover {
+    border-color: var(--sails-primary);
+    background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.06);
+    color: var(--sails-text-main);
+}
+
+.om-type-card--active {
+    border-color: var(--sails-primary);
+    background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.12);
+    color: var(--sails-primary);
+}
+
+.om-type-card-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.om-type-card-label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.3;
+}
+
+/* Configuration Step */
+.om-config-section {
+    margin-top: 16px;
+}
+
+.om-config-section-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--sails-text-main);
+    margin-bottom: 12px;
+}
+
+.om-config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* Pagination (shared with User Manager) */
+.sails-user-manager__pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+}
+
+.sails-user-manager__pagination-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.sails-user-manager__pagination-range {
+    font-size: 0.85rem;
+    color: var(--sails-text-muted);
+}
+
+.sails-user-manager__page-size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sails-user-manager__page-size-label {
+    font-size: 0.8rem;
+    color: var(--sails-text-muted);
+}
+
+.sails-user-manager__pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sails-pagination-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--sails-text-muted);
+    cursor: pointer;
+    border-radius: var(--sails-radius-sm);
+    transition: all 0.15s;
+}
+
+.sails-pagination-btn:not(:disabled):hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--sails-text-main);
+}
+
+.sails-pagination-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.sails-pagination-pages {
+    display: flex;
+    gap: 2px;
+}
+
+.sails-pagination-page {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--sails-text-muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-radius: var(--sails-radius-sm);
+    transition: all 0.15s;
+}
+
+.sails-pagination-page:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--sails-text-main);
+}
+
+.sails-pagination-page--active {
+    background: var(--sails-primary) !important;
+    background-image: var(--sails-primary-bg) !important;
+    color: #fff !important;
 }
 
 /* Segmented Tab Switcher */
@@ -701,4 +629,147 @@
     opacity: 0.8;
 }
 
+/* ===========================
+   Detail Tab Navigation
+   =========================== */
 
+.om-detail-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-bottom: 1px solid var(--sails-border-color);
+    margin-top: 16px;
+}
+
+.om-detail-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--sails-text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    border-radius: var(--sails-radius-md) var(--sails-radius-md) 0 0;
+}
+
+.om-detail-tab:hover {
+    color: var(--sails-text-main);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.om-detail-tab--active {
+    color: var(--sails-primary);
+    border-bottom-color: var(--sails-primary);
+    background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.08);
+}
+
+.om-detail-tab__dirty-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--sails-warning, #f59e0b);
+    display: inline-block;
+}
+
+/* ===========================
+   Detail Tab Body & Sections
+   =========================== */
+
+.om-detail-tab-body {
+    padding: 24px;
+    background: var(--sails-bg-card, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--sails-border-color, rgba(255, 255, 255, 0.06));
+    border-radius: 0 0 var(--sails-radius-md, 8px) var(--sails-radius-md, 8px);
+}
+
+.om-detail-tab-section {
+    animation: omFadeIn 0.15s ease;
+}
+
+.om-detail-tab__save-row {
+    display: flex;
+    align-items: center;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--sails-border-color);
+}
+
+/* Layout Badges */
+.om-layout-badge--list {
+    /* styles applied inline for color consistency with AdminViewManager */
+}
+
+.om-layout-badge--detail {
+}
+
+.om-layout-badge--form {
+}
+
+/* Confirm Dialog (reuse from AdminAppManager) */
+.sails-app-confirm-dialog {
+    background: var(--sails-bg-card, #1e293b);
+    border: 1px solid var(--sails-border-color, rgba(255, 255, 255, 0.12));
+    border-radius: var(--sails-radius-lg, 12px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    max-width: 420px;
+    width: 100%;
+}
+
+.sails-app-confirm-dialog__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--sails-border-color);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--sails-text-main);
+}
+
+.sails-app-confirm-dialog__body {
+    padding: 16px 20px;
+    font-size: 0.9rem;
+    color: var(--sails-text-muted);
+    line-height: 1.5;
+}
+
+.sails-app-confirm-dialog__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--sails-border-color);
+}
+
+.sails-app-confirm-dialog__btn-discard {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid #f87171;
+    background: transparent;
+    color: #f87171;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: var(--sails-radius-md);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.sails-app-confirm-dialog__btn-discard:hover {
+    background: rgba(248, 113, 113, 0.1);
+}
+
+/* Highlight (search result) */
+.sails-layout-studio__highlight {
+    background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.25);
+    color: var(--sails-primary);
+    padding: 0 2px;
+    border-radius: 2px;
+}

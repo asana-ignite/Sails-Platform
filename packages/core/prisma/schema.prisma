@@ -43,6 +43,7 @@ model TableDefinition {
   tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rules       ValidationRule[]
   layouts     TableLayout[]
+  menus       ConsoleMenu[]
 
   @@unique([tenantId, tableName])
   @@index([tenantId])
@@ -60,6 +61,8 @@ model TableLayout {
   description      String?
   isDefault        Boolean          @default(false) @map("is_default")
   config           Json
+  publishedConfig  Json?            @map("published_config")
+  status           String           @default("draft") @map("status")
   recordTitleField String?          @map("record_title_field")
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at")
@@ -135,20 +138,23 @@ model ConsoleApp {
 }
 
 model ConsoleMenu {
-  id                 String        @id @default(cuid())
-  appId              String?       @map("app_id")
+  id                 String          @id @default(cuid())
+  appId              String?         @map("app_id")
   label              String
   icon               String?
   path               String?
-  actionType         String        @default("table") @map("action_type")
-  parentId           String?       @map("parent_id")
-  order              Int           @default(0)
-  isSystem           Boolean       @default(false) @map("is_system")
-  requiredCapability String?       @map("required_capability")
-  componentKey       String?       @map("component_key")
-  app                ConsoleApp?   @relation(fields: [appId], references: [id], onDelete: Cascade)
-  parent             ConsoleMenu?  @relation("MenuHierarchy", fields: [parentId], references: [id])
-  children           ConsoleMenu[] @relation("MenuHierarchy")
+  actionType         String          @default("data_model") @map("action_type")
+  parentId           String?         @map("parent_id")
+  order              Int             @default(0)
+  isSystem           Boolean         @default(false) @map("is_system")
+  requiredCapability String?         @map("required_capability")
+  componentKey       String?          @map("component_key")
+  dataModelId        String?          @map("data_model_id")
+  listViewId         String?          @map("list_view")
+  app                ConsoleApp?      @relation(fields: [appId], references: [id], onDelete: Cascade)
+  parent             ConsoleMenu?     @relation("MenuHierarchy", fields: [parentId], references: [id])
+  children           ConsoleMenu[]    @relation("MenuHierarchy")
+  dataModel          TableDefinition? @relation(fields: [dataModelId], references: [id], onDelete: SetNull)
 
   @@index([appId])
   @@index([parentId])

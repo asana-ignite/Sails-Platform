@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { LayoutTemplate, Search, Plus, ChevronLeft, ChevronRight, MoreHorizontal, Trash2, Database, List, FileText, ClipboardList, X, ArrowUpDown, ChevronUp, ChevronDown, Calendar, AlertTriangle } from 'lucide-react';
+import { LayoutTemplate, Search, Plus, ChevronLeft, ChevronRight, MoreHorizontal, Trash2, Database, List, FileText, ClipboardList, X, ArrowUpDown, ChevronUp, ChevronDown, Calendar, AlertTriangle, CheckCircle2, Clock, Zap } from 'lucide-react';
 import Spinner from '../../components/common/Spinner';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { useConsole } from '../../contexts/ConsoleContext';
-import { TableLayout, LayoutType, ViewType } from '@sails/shared';
+import { TableLayout, LayoutType, ViewType, LayoutStatus } from '@sails/shared';
 import './AdminViewManager.css';
 
 interface LayoutRow extends TableLayout {
@@ -31,7 +31,10 @@ const AdminViewManager: React.FC = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletedSuccessMsg, setDeletedSuccessMsg] = useState<string | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'description' | 'tableName' | 'viewType' | 'createdAt' | 'updatedAt'; direction: 'asc' | 'desc' } | null>(null);
+  const [activating, setActivating] = useState<string | null>(null);
+  const [activateConfirmId, setActivateConfirmId] = useState<string | null>(null);
+  const [activateError, setActivateError] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'description' | 'tableName' | 'viewType' | 'status' | 'createdAt' | 'updatedAt'; direction: 'asc' | 'desc' } | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const { setHeaderActions } = useConsole();
 
@@ -65,7 +68,7 @@ const AdminViewManager: React.FC = () => {
     return () => window.removeEventListener('click', handler);
   }, []);
 
-  const handleSort = (key: 'name' | 'description' | 'tableName' | 'viewType' | 'createdAt' | 'updatedAt') => {
+  const handleSort = (key: 'name' | 'description' | 'tableName' | 'viewType' | 'status' | 'createdAt' | 'updatedAt') => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -73,7 +76,7 @@ const AdminViewManager: React.FC = () => {
     setSortConfig({ key, direction });
   };
 
-  const getSortIcon = (key: 'name' | 'description' | 'tableName' | 'viewType' | 'createdAt' | 'updatedAt') => {
+  const getSortIcon = (key: 'name' | 'description' | 'tableName' | 'viewType' | 'status' | 'createdAt' | 'updatedAt') => {
     if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown size={14} className="lav-sort-icon--idle" />;
     return sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
   };
@@ -146,6 +149,37 @@ const AdminViewManager: React.FC = () => {
   };
 
   const deleteTargetRow = deleteConfirmId ? rows.find(r => r.id === deleteConfirmId) : null;
+
+  const handleActivate = (id: string) => {
+    setActivateError(null);
+    setActivateConfirmId(id);
+  };
+
+  const doActivate = async () => {
+    const id = activateConfirmId;
+    if (!id) return;
+    setActivating(id);
+    setActivateConfirmId(null);
+    setActivateError(null);
+    try {
+      const res = await fetch('/api/console/layouts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'activate' }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error);
+      setRows(prev => prev.map(r => r.id === id ? { ...r, status: json.data.status, publishedConfig: json.data.publishedConfig } : r));
+      setDeletedSuccessMsg('Layout activated successfully.');
+      setTimeout(() => setDeletedSuccessMsg(null), 4000);
+    } catch (err: any) {
+      setActivateError(err.message || 'Failed to activate layout');
+    } finally {
+      setActivating(null);
+    }
+  };
+
+  const activateTargetRow = activateConfirmId ? rows.find(r => r.id === activateConfirmId) : null;
 
   const handleOpenLayoutStudio = (row: LayoutRow) => {
     const targetId = row.table?.id || row.tableId;
@@ -240,6 +274,12 @@ const AdminViewManager: React.FC = () => {
                       {getSortIcon('viewType')}
                     </div>
                   </th>
+                  <th className="lav-th-sortable" onClick={() => handleSort('status')}>
+                    <div className="lav-th-content">
+                      <span>Status</span>
+                      {getSortIcon('status')}
+                    </div>
+                  </th>
                   <th className="lav-th-sortable" onClick={() => handleSort('createdAt')}>
                     <div className="lav-th-content">
                       <span>Created At</span>
@@ -302,6 +342,19 @@ const AdminViewManager: React.FC = () => {
                         </span>
                       </td>
                       <td>
+                        {row.status === 'active' ? (
+                          <span className="sails-layout-card__badge sails-layout-card__badge--active">
+                            <CheckCircle2 size={11} />
+                            Active
+                          </span>
+                        ) : (
+                          <span className="sails-layout-card__badge sails-layout-card__badge--draft">
+                            <Clock size={11} />
+                            Draft
+                          </span>
+                        )}
+                      </td>
+                      <td>
                         <span className="lav-date-cell">
                           <Calendar size={13} style={{ marginRight: '4px' }} />
                           {new Date(row.createdAt).toLocaleDateString()}
@@ -339,6 +392,23 @@ const AdminViewManager: React.FC = () => {
                                 <LayoutTemplate size={14} />
                                 <span>Design in Layout Studio</span>
                               </button>
+
+                              {row.status === 'draft' && (
+                                <>
+                                  <div className="lav-context-divider"></div>
+                                  <button
+                                    className="lav-context-item"
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      handleActivate(row.id);
+                                    }}
+                                    disabled={activating === row.id}
+                                  >
+                                    <Zap size={14} />
+                                    <span>{activating === row.id ? 'Activating...' : 'Activate'}</span>
+                                  </button>
+                                </>
+                              )}
 
                               <div className="lav-context-divider"></div>
 
@@ -449,6 +519,32 @@ const AdminViewManager: React.FC = () => {
                 disabled={deleting === deleteConfirmId}
               >
                 {deleting === deleteConfirmId ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {activateConfirmId && activateTargetRow && createPortal(
+        <div className="sails-modal-overlay" onClick={() => setActivateConfirmId(null)}>
+          <div className="sails-confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="sails-confirm-modal__header">
+              <Zap size={20} style={{ color: 'var(--sails-primary, #3b82f6)' }} />
+              <span>Activate Layout</span>
+            </div>
+            <div className="sails-confirm-modal__body">
+              This will activate <strong>{activateTargetRow.name}</strong> as the current layout. The published version will be overwritten with the current draft configuration. Continue?
+              {activateError && <div className="sails-confirm-modal__error">{activateError}</div>}
+            </div>
+            <div className="sails-confirm-modal__footer">
+              <button className="sails-btn sails-btn--ghost" onClick={() => setActivateConfirmId(null)}>Cancel</button>
+              <button
+                className="sails-btn sails-btn--primary"
+                onClick={doActivate}
+                disabled={activating === activateConfirmId}
+              >
+                {activating === activateConfirmId ? 'Activating...' : 'Activate'}
               </button>
             </div>
           </div>

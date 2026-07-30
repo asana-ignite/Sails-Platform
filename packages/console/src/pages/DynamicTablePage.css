@@ -8,64 +8,203 @@
   margin-bottom: calc(var(--sails-spacing-unit) * 2);
 }
 
-.sails-dynamic-table__toolbar {
+/* ── Standard SAILS Theme Alignment for Runtime Table & Layout Card ── */
+.sails-dynamic-table .ls-table-card {
+  background-color: var(--sails-bg-card);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
+  box-shadow: var(--sails-shadow-sm);
+  overflow: visible;
+}
+
+.sails-dynamic-table .ls-table-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--sails-border-color);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--sails-text-main);
+}
+
+.sails-dynamic-table .ls-table-card__title {
+  font-weight: 700;
+  color: var(--sails-text-main);
+}
+
+.sails-dynamic-table .ls-table-card__badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--sails-primary-light, rgba(59, 130, 246, 0.15));
+  color: var(--sails-primary, #3b82f6);
+  font-weight: 600;
+}
+
+.sails-dynamic-table .ls-preview-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.sails-dynamic-table .ls-runtime-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  color: var(--sails-text-main);
+}
+
+.sails-dynamic-table .ls-runtime-table thead tr {
+  background-color: transparent;
+  border-bottom: 1px solid var(--sails-border-color);
+}
+
+.sails-dynamic-table .ls-rth {
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--sails-text-muted);
+  border-bottom: 1px solid var(--sails-border-color);
+  user-select: none;
+  background-color: transparent;
+  transition: var(--sails-transition);
+}
+
+.sails-dynamic-table .ls-rth:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--sails-text-main);
+}
+
+.sails-dynamic-table .ls-rth__inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sails-dynamic-table .ls-rth__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--sails-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.sails-dynamic-table .ls-rth__sort-btn:hover {
+  color: var(--sails-text-main);
+}
+
+.sails-dynamic-table .ls-rth--sorted .ls-rth__sort-btn {
+  color: var(--sails-primary);
+}
+
+.sails-dynamic-table .ls-rth__filter-btn {
+  padding: 3px 5px;
+  border-radius: 4px;
+  color: var(--sails-text-muted);
+  background: transparent;
+}
+
+.sails-dynamic-table .ls-rth__filter-btn:hover,
+.sails-dynamic-table .ls-rth__filter-btn--active {
+  color: var(--sails-primary);
+  background: var(--sails-primary-light);
+}
+
+.sails-dynamic-table .ls-rth__filter-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  padding: 8px;
+  background: var(--sails-bg-card);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
+  box-shadow: var(--sails-shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sails-dynamic-table .ls-rtd-row {
+  border-bottom: 1px solid var(--sails-border-color);
+  transition: var(--sails-transition);
+}
+
+.sails-dynamic-table .ls-rtd-row:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.sails-dynamic-table .ls-rtd-row--selected {
+  background-color: var(--sails-primary-light, rgba(59, 130, 246, 0.1));
+}
+
+.sails-dynamic-table .ls-rtd {
+  padding: 12px 14px;
+  color: var(--sails-text-main);
+  border-bottom: 1px solid var(--sails-border-color);
+}
+
+/* Pagination Theme Alignment */
+.sails-dynamic-table .ls-pagination {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px !important;
-}
-
-.sails-dynamic-table__search {
-  position: relative;
-  flex: 1;
-  max-width: 400px;
-}
-
-.sails-dynamic-table__search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+  padding: 12px 18px;
+  border-top: 1px solid var(--sails-border-color);
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 0.8rem;
   color: var(--sails-text-muted);
+  position: relative;
+  z-index: 20;
+  overflow: visible;
 }
 
-.sails-dynamic-table__search-input {
-  width: 100%;
-  padding: 8px 12px 8px 40px;
-  background-color: var(--sails-bg-body);
-  border: 1px solid transparent;
-  border-radius: var(--sails-radius-md);
-  color: var(--sails-text-main);
-  font-size: 0.9rem;
-}
-
-.sails-dynamic-table__actions {
+.sails-dynamic-table .ls-pagination__info {
   display: flex;
-  gap: 8px;
-}
-
-.sails-dynamic-table__placeholder {
-  min-height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.sails-dynamic-table__empty-state {
-  display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 16px;
+}
+
+.sails-dynamic-table .ls-pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sails-dynamic-table .ls-pagination-page,
+.sails-dynamic-table .ls-pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: var(--sails-radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--sails-text-muted);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
 }
 
-.sails-dynamic-table__empty-icon {
-  opacity: 0.3;
+.sails-dynamic-table .ls-pagination-page--active {
+  background: var(--sails-primary);
+  color: white;
 }
 
-.sails-dynamic-table__empty-state h3 {
+.sails-dynamic-table .ls-pagination-page--clickable:hover,
+.sails-dynamic-table .ls-pagination__btn:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.08);
   color: var(--sails-text-main);
-  font-size: 1.25rem;
-  font-weight: 700;
 }

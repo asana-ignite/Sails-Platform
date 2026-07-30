@@ -149,6 +149,8 @@ export interface ConsoleMenu {
   path: string | null;
   actionType: string;
   componentKey?: string;
+  dataModelId?: string | null;
+  listViewId?: string | null;
   order: number;
   isSystem?: boolean;
   requiredCapability?: string | null;
@@ -361,6 +363,7 @@ export type SailsFieldConfig =
 
 export type LayoutType = 'data' | 'custom';
 export type ViewType = 'LIST' | 'DETAIL' | 'FORM';
+export type LayoutStatus = 'draft' | 'active';
 
 export interface TableLayout {
   id: string;
@@ -373,6 +376,8 @@ export interface TableLayout {
   isDefault: boolean;
   recordTitleField?: string | null;
   config: LayoutConfig;
+  publishedConfig: LayoutConfig | null;
+  status: LayoutStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -387,6 +392,10 @@ export interface LayoutConfig {
   filters?: LayoutFilter[];
   sortBy?: LayoutSort[];
   summaryFields?: SummaryField[];
+  allowMultiSelect?: boolean;
+  allowPaging?: boolean;
+  recordsPerPage?: number;
+  pagingMode?: 'fixed' | 'dynamic';
 }
 
 export interface LayoutColumn {

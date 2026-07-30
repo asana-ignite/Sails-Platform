@@ -67,7 +67,7 @@ export const SYSTEM_PERMISSION_REGISTRY: Record<string, PermissionDefinition> = 
   'system.security.apps': {
     label: 'Connected Apps',
     description: 'Authorize and manage third-party application access.',
-    category: 'Integrations'
+    category: 'Extensions'
   },
 
   // --- Extensions & Integrations ---

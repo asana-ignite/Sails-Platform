@@ -17,6 +17,7 @@ interface CustomSelectProps {
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   searchable?: boolean;
+  direction?: 'down' | 'up' | 'auto';
   style?: React.CSSProperties;
 }
 
@@ -29,10 +30,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   size = 'md',
   disabled = false,
   searchable = false,
+  direction = 'auto',
   style
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [computedDropUp, setComputedDropUp] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,6 +49,20 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   const filteredOptions = searchable && searchQuery
     ? options.filter(opt => opt.label.toLowerCase().includes(searchQuery.toLowerCase()) || String(opt.value).toLowerCase().includes(searchQuery.toLowerCase()))
     : options;
+
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      if (direction === 'up') {
+        setComputedDropUp(true);
+      } else if (direction === 'down') {
+        setComputedDropUp(false);
+      } else {
+        const rect = containerRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        setComputedDropUp(spaceBelow < 220);
+      }
+    }
+  }, [isOpen, direction]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -64,9 +81,11 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     }
   }, [isOpen, searchable]);
 
+  const dropClass = computedDropUp ? 'sails-custom-select--dropup' : '';
+
   return (
     <div 
-      className={`sails-custom-select sails-custom-select--${size} ${isOpen ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''} ${className}`} 
+      className={`sails-custom-select sails-custom-select--${size} ${dropClass} ${isOpen ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''} ${className}`} 
       ref={containerRef}
       style={style}
     >

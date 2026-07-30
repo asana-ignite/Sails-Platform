@@ -300,6 +300,16 @@
   color: #6b7280;
 }
 
+.sails-layout-card__badge--active {
+  background: rgba(39, 174, 96, 0.1);
+  color: #27ae60;
+}
+
+.sails-layout-card__badge--draft {
+  background: rgba(156, 163, 175, 0.15);
+  color: #6b7280;
+}
+
 /* ─── Confirm Modal ────────────────────────────── */
 
 .sails-confirm-modal {

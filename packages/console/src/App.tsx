@@ -53,7 +53,7 @@ const ProtectedRoute: React.FC<{
  * Decides whether to render a Table or a Plugin based on database metadata.
  */
 const SmartPageRouter: React.FC = () => {
-  const { navigationItems } = useConsole();
+  const { apps, navigationItems } = useConsole();
   const location = useLocation();
 
   const normalizePath = (p: string | null) => p ? p.replace(/\/+$/, '').toLowerCase() : '';
@@ -70,7 +70,16 @@ const SmartPageRouter: React.FC = () => {
     return null;
   };
 
-  const activeMenu = findMenu(navigationItems);
+  let activeMenu = findMenu(navigationItems);
+  if (!activeMenu && apps) {
+    for (const app of apps) {
+      const found = findMenu(app.menus || []);
+      if (found) {
+        activeMenu = found;
+        break;
+      }
+    }
+  }
 
   const { user } = useAuth();
   
@@ -89,7 +98,14 @@ const SmartPageRouter: React.FC = () => {
     }
   }
 
-  if (activeMenu?.actionType === 'table') {
+  const isDataModelRoute =
+    activeMenu?.actionType === 'data_model' ||
+    activeMenu?.actionType === 'table' ||
+    activeMenu?.actionType === 'list_view' ||
+    Boolean(activeMenu?.dataModelId) ||
+    Boolean(activeMenu?.listViewId);
+
+  if (isDataModelRoute) {
     return <DynamicTablePage />;
   }
 

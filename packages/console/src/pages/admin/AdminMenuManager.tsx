@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { 
   Plus, Edit2, Trash2, GripVertical, X
 } from 'lucide-react';
-import { ConsoleApp, ConsoleMenu } from '@sails/shared';
+import { ConsoleApp, ConsoleMenu, SailsTableDefinition, TableLayout } from '@sails/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import IconPicker from '../../components/common/IconPicker';
 import { CustomSelect } from '../../components/common/CustomSelect';
@@ -17,6 +17,8 @@ const AdminMenuManager: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState<ConsoleMenu | null>(null);
+  const [dataModels, setDataModels] = useState<SailsTableDefinition[]>([]);
+  const [availableViews, setAvailableViews] = useState<TableLayout[]>([]);
 
   useEffect(() => {
     fetchApps();
@@ -25,6 +27,19 @@ const AdminMenuManager: React.FC = () => {
   useEffect(() => {
     if (selectedAppId) fetchMenus(selectedAppId);
   }, [selectedAppId]);
+
+  useEffect(() => {
+    if (isEditing) fetchDataModels();
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (isEditing?.dataModelId) {
+      setAvailableViews([]);
+      fetchAvailableViews(isEditing.dataModelId, isEditing.listViewId);
+    } else {
+      setAvailableViews([]);
+    }
+  }, [isEditing?.dataModelId]);
 
   const fetchApps = async () => {
     const res = await fetch('/api/console/apps');
@@ -60,6 +75,35 @@ const AdminMenuManager: React.FC = () => {
     setLoading(false);
   };
 
+  const fetchDataModels = async () => {
+    try {
+      const res = await fetch('/api/metadata/objects');
+      const data = await res.json();
+      if (Array.isArray(data)) setDataModels(data);
+    } catch (err) {
+      console.error('Failed to fetch data models:', err);
+    }
+  };
+
+  const fetchAvailableViews = async (tableId: string, currentListViewId?: string | null) => {
+    try {
+      const res = await fetch(`/api/console/layouts?tableId=${tableId}&status=active`);
+      const result = await res.json();
+      if (result.success) {
+        const views: TableLayout[] = (result.data?.rows || []).filter(
+          (r: any) => r.viewType === 'LIST' && r.status === 'active'
+        );
+        setAvailableViews(views);
+        if (views.length > 0 && !currentListViewId) {
+          const defaultView = views.find(v => v.isDefault) || views[0];
+          setIsEditing(prev => prev ? { ...prev, listViewId: defaultView.id } : null);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch list views:', err);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEditing) return;
@@ -67,12 +111,10 @@ const AdminMenuManager: React.FC = () => {
     setSaving(true);
     const method = isEditing.id.startsWith('new-') ? 'POST' : 'PATCH';
     const isNew = isEditing.id.startsWith('new-');
-    const { children, ...cleanData } = isEditing as any;
-    const payload = { 
-      ...cleanData, 
-      appId: selectedAppId,
-      id: isNew ? undefined : isEditing.id 
-    };
+    const { children, appId: _appId, parentId: _parentId, dataModelId: _dataModelId, ...menuData } = isEditing as any;
+    const payload = isNew
+      ? { ...menuData, appId: selectedAppId, parentId: _parentId, dataModelId: _dataModelId, id: undefined as string | undefined }
+      : { ...menuData, id: isEditing.id };
 
     try {
       const res = await fetch('/api/console/menus', {
@@ -137,8 +179,11 @@ const AdminMenuManager: React.FC = () => {
           )}
         </div>
         <div className="sails-menu-item__actions">
-          <button onClick={() => setIsEditing({...menu})} title="Edit Menu"><Edit2 size={14} /></button>
-          <button onClick={() => setIsEditing({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: menu.id, order: 0 } as any)} title="Add Submenu"><Plus size={14} /></button>
+          <button onClick={() => setIsEditing({
+              ...menu,
+              actionType: menu.actionType === 'table' ? 'data_model' : menu.actionType === 'plugin' ? 'custom' : menu.actionType
+            })} title="Edit Menu"><Edit2 size={14} /></button>
+          <button onClick={() => setIsEditing({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'data_model', parentId: menu.id, order: 0 } as any)} title="Add Submenu"><Plus size={14} /></button>
           {!menu.isSystem && <button className="delete" onClick={() => handleDelete(menu)} title="Delete Menu"><Trash2 size={14} /></button>}
         </div>
       </div>
@@ -160,7 +205,7 @@ const AdminMenuManager: React.FC = () => {
         </div>
         <button 
           className="sails-btn sails-btn--primary"
-          onClick={() => setIsEditing({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: null, order: menus.length } as any)}
+          onClick={() => setIsEditing({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'data_model', parentId: null, order: menus.length } as any)}
         >
           <Plus size={18} />
           <span>Add Root Menu</span>
@@ -203,17 +248,55 @@ const AdminMenuManager: React.FC = () => {
                   />
                 </div>
                 <div className="sails-form-group">
-                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Action Type</label>
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Type</label>
                   <CustomSelect
                     value={isEditing.actionType}
                     options={[
-                      { value: 'table', label: 'Data Table' },
-                      { value: 'plugin', label: 'Custom Plugin' }
+                      { value: 'data_model', label: 'Data Model' },
+                      { value: 'custom', label: 'Custom' }
                     ]}
-                    onChange={val => setIsEditing({ ...isEditing, actionType: String(val) })}
+                    onChange={val => setIsEditing({
+                      ...isEditing,
+                      actionType: String(val),
+                      dataModelId: String(val) === 'custom' ? null : isEditing.dataModelId
+                    })}
                   />
                 </div>
               </div>
+              {isEditing.actionType === 'data_model' && (
+                <div className="sails-form-group" style={{ marginBottom: '16px' }}>
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Data Model</label>
+                  <CustomSelect
+                    searchable
+                    value={isEditing.dataModelId || ''}
+                    options={dataModels.map(dm => ({ value: dm.id, label: dm.name }))}
+                    onChange={val => {
+                      const selected = dataModels.find(dm => dm.id === val);
+                      const app = apps.find(a => a.id === selectedAppId);
+                      const slug = app?.slug || '';
+                      setIsEditing({
+                        ...isEditing,
+                        dataModelId: String(val),
+                        listViewId: null,
+                        path: selected ? `/${slug}/${selected.tableName}` : isEditing.path
+                      });
+                    }}
+                  />
+                </div>
+              )}
+              {isEditing.actionType === 'data_model' && availableViews.length > 0 && (
+                <div className="sails-form-group" style={{ marginBottom: '16px' }}>
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>List View</label>
+                  <CustomSelect
+                    value={isEditing.listViewId || ''}
+                    options={availableViews.map(v => ({ value: v.id, label: v.name }))}
+                    onChange={val => setIsEditing({
+                      ...isEditing,
+                      listViewId: String(val)
+                    })}
+                  />
+                </div>
+              )}
               <div className="sails-form-group" style={{ marginBottom: '16px' }}>
                 <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Browser Path</label>
                 <input 
@@ -225,17 +308,10 @@ const AdminMenuManager: React.FC = () => {
                   placeholder="/crm/leads" 
                 />
               </div>
-              {isEditing.actionType === 'plugin' && (
-                <div className="sails-form-group" style={{ marginBottom: '20px' }}>
-                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Component Key (Registry)</label>
-                  <input 
-                    type="text" 
-                    className="sails-input"
-                    style={{ width: '100%' }}
-                    value={isEditing.componentKey || ''} 
-                    onChange={e => setIsEditing({...isEditing, componentKey: e.target.value})} 
-                    placeholder="AdminUserManager" 
-                  />
+              {isEditing.actionType === 'custom' && (
+                <div className="sails-form-group" style={{ marginBottom: '20px', textAlign: 'center', padding: '20px' }}>
+                  <h4 style={{ margin: 0 }}>Coming Soon</h4>
+                  <p style={{ margin: '8px 0 0', color: 'var(--sails-text-muted)' }}>Custom page support will be available in a future update.</p>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>

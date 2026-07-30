@@ -24,8 +24,8 @@ export class AccessGuard {
       throw new Error(`Unauthorized: No active session or user context provided.`);
     }
 
-    if (resolvedRole === 'SUPER_ADMIN') {
-      return; // Fast path for system admins based on JWT role
+    if (resolvedRole === 'SUPER_ADMIN' || resolvedRole === 'TENANT_ADMIN') {
+      return; // Fast path for system and tenant admins based on JWT role
     }
 
     const user = await db.user.findUnique({

@@ -201,7 +201,7 @@ function Section({
 
 /** Inline list of related child records (DETAIL view only) */
 function RelatedRecords({ layout }: { layout: TableLayout }) {
-  const related = layout.config.relatedRecords;
+  const related = (layout.publishedConfig ?? layout.config).relatedRecords;
   if (!related || related.length === 0) return null;
 
   return (
@@ -240,11 +240,12 @@ function RelatedRecords({ layout }: { layout: TableLayout }) {
 
 export const LayoutSample: React.FC<LayoutSampleProps> = ({ demoView }) => {
   const layout = layoutByView(demoView);
+  const cfg = layout.publishedConfig ?? layout.config;
 
   // Resolve sections + their fields from config
   const sections = useMemo(() => {
-    const cfgFields = (layout.config.fields || []) as LayoutField[];
-    const cfgSections = (layout.config.sections || []) as LayoutSection[];
+    const cfgFields = (cfg.fields || []) as LayoutField[];
+    const cfgSections = (cfg.sections || []) as LayoutSection[];
     return cfgSections
       .sort((a, b) => a.position - b.position)
       .map((sec) => ({
@@ -253,7 +254,7 @@ export const LayoutSample: React.FC<LayoutSampleProps> = ({ demoView }) => {
       }));
   }, [layout]);
 
-  const configFields = (layout.config.fields || []) as LayoutField[];
+  const configFields = (cfg.fields || []) as LayoutField[];
   const titleValue = MOCK_RECORD[layout.recordTitleField || 'lead_name'];
   const isDetail = demoView === 'DETAIL';
   const isForm = demoView === 'FORM';
@@ -329,7 +330,7 @@ export const LayoutSample: React.FC<LayoutSampleProps> = ({ demoView }) => {
             </tbody>
           </table>
           <p className="layout-sample__mock-legend">
-            ↳ <strong>LIST view:</strong> Columns are driven by <code>layout.config.fields || []</code> — only visible,
+            ↳ <strong>LIST view:</strong> Columns are driven by <code>layout.publishedConfig ?? layout.config</code> — only visible,
             sorted by position. No hardcoded &lt;th&gt; elements.
           </p>
         </div>
@@ -358,7 +359,7 @@ export const LayoutSample: React.FC<LayoutSampleProps> = ({ demoView }) => {
           View Layout Config JSON (what drives this page)
         </summary>
         <pre className="layout-sample__debug-json">
-          {JSON.stringify(layout.config, null, 2)}
+          {JSON.stringify(cfg, null, 2)}
         </pre>
       </details>
     </div>

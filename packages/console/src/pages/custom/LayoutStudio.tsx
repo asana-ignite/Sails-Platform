@@ -16,8 +16,9 @@ import {
   ArrowLeft, Loader2, Play, Pause, Minimize2, Maximize2, CheckCircle2,
   Layers, Search, ArrowUp, ArrowDown, ChevronLeft, ChevronRight,
   RotateCcw, AlignLeft, AlignCenter, AlignRight,
+  Edit3, Zap, Undo2, AlertTriangle,
 } from 'lucide-react';
-import type { SailsFieldDefinition, LayoutColumn, LayoutFilter, LayoutSort, ViewType, SummaryField } from '@sails/shared';
+import type { SailsFieldDefinition, LayoutColumn, LayoutFilter, LayoutSort, ViewType, SummaryField, LayoutStatus } from '@sails/shared';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { useAuth } from '../../contexts/AuthContext';
 import Unauthorized from '../Unauthorized';
@@ -340,6 +341,12 @@ const LayoutStudio: React.FC = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedSuccessMsg, setSavedSuccessMsg] = useState<string | null>(null);
   const [viewType, setViewType] = useState<ViewType>('DETAIL');
+  const [layoutStatus, setLayoutStatus] = useState<LayoutStatus>('draft');
+  const [isEditing, setIsEditing] = useState(false);
+  const [showActivateConfirm, setShowActivateConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [activatingLayout, setActivatingLayout] = useState(false);
+  const [hasPublishedVersion, setHasPublishedVersion] = useState(false);
 
   // ── LIST mode state ──
   const [listColumns, setListColumns] = useState<LayoutColumn[]>([]);
@@ -370,6 +377,8 @@ const LayoutStudio: React.FC = () => {
   const [layoutSystemName, setLayoutSystemName] = useState('');
   const [listSavingMeta, setListSavingMeta] = useState(false);
   const [showEditMetaOverlay, setShowEditMetaOverlay] = useState(false);
+  const [showSetDefaultConfirm, setShowSetDefaultConfirm] = useState(false);
+  const [setDefaultLoading, setSetDefaultLoading] = useState(false);
   const [showListDeleteConfirm, setShowListDeleteConfirm] = useState(false);
   const [listDeleteLoading, setListDeleteLoading] = useState(false);
 
@@ -415,8 +424,17 @@ const LayoutStudio: React.FC = () => {
         setLayoutDescription(layout.description || '');
         setLayoutIsDefault(layout.isDefault || false);
         setLayoutSystemName(layout.systemName || '');
-        if (layout.config) {
-          const config = typeof layout.config === 'string' ? JSON.parse(layout.config) : layout.config;
+        const status = layout.status || 'draft';
+        setLayoutStatus(status);
+        setHasPublishedVersion(!!layout.publishedConfig);
+        if (status === 'active') {
+          setIsEditing(false);
+        } else {
+          setIsEditing(true);
+        }
+        const configSource = status === 'active' ? (layout.publishedConfig || layout.config) : layout.config;
+        if (configSource) {
+          const config = typeof configSource === 'string' ? JSON.parse(configSource) : configSource;
           if (vType === 'LIST') {
             if (config.columns && config.columns.length > 0) setListColumns(config.columns);
             if (config.filters) setListFilters(config.filters);
@@ -436,7 +454,7 @@ const LayoutStudio: React.FC = () => {
 
   const allFields = tableMeta?.fields ?? [];
 
-  // Auto-initialize LIST columns when fields load for a new/empty LIST layout
+  const isReadOnly = layoutStatus === 'active' && !isEditing;  // Auto-initialize LIST columns when fields load for a new/empty LIST layout
   useEffect(() => {
     if (viewType === 'LIST' && allFields.length > 0 && listColumns.length === 0) {
       setListColumns(buildDefaultListColumns(allFields));
@@ -749,6 +767,92 @@ const LayoutStudio: React.FC = () => {
       setSaveError(err.message || 'Failed to save layout');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleStartEdit = async () => {
+    if (!layoutId) return;
+    try {
+      const res = await fetch('/api/console/layouts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: layoutId, action: 'start-edit' }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to start editing');
+      setLayoutStatus('draft');
+      setIsEditing(true);
+      setHasPublishedVersion(true);
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to start editing');
+    }
+  };
+
+  const handleActivateClick = () => {
+    setShowActivateConfirm(true);
+  };
+
+  const doActivate = async () => {
+    if (!layoutId) return;
+    setActivatingLayout(true);
+    setShowActivateConfirm(false);
+    try {
+      const config = serializeLayout();
+      const res = await fetch('/api/console/layouts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: layoutId, config, action: 'activate' }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to activate layout');
+      setLayoutStatus('active');
+      setIsEditing(false);
+      setHasPublishedVersion(true);
+      setSavedSuccessMsg('Layout activated successfully.');
+      setTimeout(() => setSavedSuccessMsg(null), 4000);
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to activate layout');
+    } finally {
+      setActivatingLayout(false);
+    }
+  };
+
+  const doDiscard = async () => {
+    if (!layoutId) return;
+    setShowDiscardConfirm(false);
+    try {
+      const res = await fetch('/api/console/layouts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: layoutId, action: 'discard-draft' }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to discard changes');
+      setLayoutStatus('active');
+      setIsEditing(false);
+      const configSource = json.data.config;
+      if (configSource) {
+        const config = typeof configSource === 'string' ? JSON.parse(configSource) : configSource;
+        if (viewType === 'LIST') {
+          if (config.columns && config.columns.length > 0) setListColumns(config.columns);
+          else setListColumns([]);
+          if (config.filters) setListFilters(config.filters);
+          else setListFilters([]);
+          if (config.sortBy) setListSortBy(config.sortBy);
+          else setListSortBy([]);
+          if (config.summaryFields) setListSummaryFields(config.summaryFields);
+          else setListSummaryFields([]);
+        } else {
+          if (config.sections) setSections(config.sections);
+          else setSections([]);
+          if (config.blocks) setBlocks(config.blocks);
+          else setBlocks([]);
+        }
+      }
+      setSavedSuccessMsg('Changes discarded. Layout reverted to active version.');
+      setTimeout(() => setSavedSuccessMsg(null), 4000);
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to discard changes');
     }
   };
 
@@ -1094,7 +1198,6 @@ const LayoutStudio: React.FC = () => {
           id: layoutId,
           name: layoutName.trim() || layoutSystemName,
           description: layoutDescription.trim() || null,
-          isDefault: layoutIsDefault,
         }),
       });
       const json = await res.json();
@@ -1105,6 +1208,30 @@ const LayoutStudio: React.FC = () => {
       alert(err.message);
     } finally {
       setListSavingMeta(false);
+    }
+  };
+
+  const handleSetAsDefault = async () => {
+    if (!layoutId) return;
+    setSetDefaultLoading(true);
+    try {
+      const res = await fetch('/api/console/layouts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: layoutId,
+          isDefault: true,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to set as default');
+      setLayoutIsDefault(true);
+      setShowSetDefaultConfirm(false);
+    } catch (err: any) {
+      console.error('Failed to set layout as default:', err);
+      alert(err.message);
+    } finally {
+      setSetDefaultLoading(false);
     }
   };
 
@@ -1333,7 +1460,7 @@ const LayoutStudio: React.FC = () => {
   // ── Render ─────────────────────────────────────────────────
 
   return (
-    <div className={`ls-root ${previewMode ? 'ls-root--preview' : ''}`}>
+    <div className={`ls-root ${previewMode ? 'ls-root--preview' : ''} ${isReadOnly ? 'ls-root--readonly' : ''}`}>
       <div className="ls-toolbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => navigate('/admin/views')} title="Back">
@@ -1347,20 +1474,57 @@ const LayoutStudio: React.FC = () => {
             <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => setPreviewMode(false)}>
               <Pause size={14} /> Exit Preview
             </button>
+          ) : isReadOnly ? (
+            <>
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setPreviewMode(true)}>
+                <Play size={14} /> Preview
+              </button>
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowEditMetaOverlay(true)}>
+                <Settings size={12} /> Edit Details
+              </button>
+              <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={handleStartEdit}>
+                <Edit3 size={14} /> Edit Layout
+              </button>
+            </>
+          ) : layoutStatus === 'draft' && !isEditing ? (
+            /* Shouldn't normally happen, but handle gracefully */
+            <>
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setPreviewMode(true)}>
+                <Play size={14} /> Preview
+              </button>
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowEditMetaOverlay(true)}>
+                <Settings size={12} /> Edit Details
+              </button>
+              <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={handleStartEdit}>
+                <Edit3 size={14} /> Edit Layout
+              </button>
+            </>
           ) : (
             <>
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setPreviewMode(true)}>
                 <Play size={14} /> Preview
               </button>
-              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowResetConfirm(true)}>
-                Reset
-              </button>
-              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowEditMetaOverlay(true)}>
-                <Settings size={12} /> Edit Details
-              </button>
-              <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={handleSaveClick} disabled={saving}>
-                {saving ? 'Saving...' : 'Save Layout'}
-              </button>
+              {layoutStatus === 'draft' && (
+                <>
+                  <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowResetConfirm(true)}>
+                    Reset
+                  </button>
+                  {isEditing && hasPublishedVersion && (
+                    <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowDiscardConfirm(true)}>
+                      <Undo2 size={13} /> Discard Changes
+                    </button>
+                  )}
+                  <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowEditMetaOverlay(true)}>
+                    <Settings size={12} /> Edit Details
+                  </button>
+                  <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={handleSaveClick} disabled={saving}>
+                    {saving ? 'Saving...' : 'Save Draft'}
+                  </button>
+                  <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => setShowActivateConfirm(true)}>
+                    <Zap size={14} /> Activate
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -1373,6 +1537,19 @@ const LayoutStudio: React.FC = () => {
         </div>
       )}
 
+      {isReadOnly && (
+        <div className="ls-status-banner ls-status-banner--active">
+          <CheckCircle2 size={14} />
+          <span>Active — layout is read-only. Click <strong>Edit Layout</strong> to make changes.</span>
+        </div>
+      )}
+      {layoutStatus === 'draft' && isEditing && (
+        <div className="ls-status-banner ls-status-banner--draft">
+          <Edit3 size={14} />
+          <span>Editing draft — changes won't affect users until <strong>activated</strong>.</span>
+        </div>
+      )}
+
       <div className="ls-body" style={{ gridTemplateColumns: (() => {
         if (previewMode) return '1fr';
         const pw = showProperties ? propsWidth : 36;
@@ -1382,7 +1559,7 @@ const LayoutStudio: React.FC = () => {
         return `${leftCol}1fr${rightCol}`;
       })() }}>
         {/* ── LEFT: Palette ── */}
-        {!previewMode && (
+        {!previewMode && !isReadOnly && (
         <div className={`ls-palette-outer ${paletteFloating ? 'ls-palette-outer--floating' : ''} ${paletteVisible ? 'ls-palette-outer--open' : ''}`}
           style={{ width: paletteFloating ? (paletteVisible ? paletteWidth : 36) : '100%' }}
           onMouseEnter={() => { if (paletteFloating) setPaletteVisible(true); }}
@@ -1505,6 +1682,7 @@ const LayoutStudio: React.FC = () => {
               </div>
 
               {/* ── Summary Panel ── */}
+              {!previewMode && !isReadOnly && (
               <div className="ls-table-card ls-summary-panel"
                 onDragOver={(e) => { e.preventDefault(); }}
                 onDrop={(e) => {
@@ -1541,13 +1719,14 @@ const LayoutStudio: React.FC = () => {
                   )}
                 </div>
               </div>
+              )}
 
               {/* ── Columns + Table ── */}
               <div className="ls-table-card">
                 <div className="ls-table-card__header">
                   <Columns size={13} />
                   <span className="ls-table-card__title">{previewMode ? tableMeta.name : 'Columns'}</span>
-                  {!previewMode && (
+                  {!previewMode && !isReadOnly && (
                     <>
                       <span className="ls-table-card__badge">{listColumns.length}</span>
                       <span style={{ fontSize: 11, color: 'var(--sails-text-muted)', marginLeft: 4 }}>({visibleListColumns.length} visible)</span>
@@ -1570,7 +1749,7 @@ const LayoutStudio: React.FC = () => {
                 <div className="ls-table-card__body" style={{ padding: 0 }}>
                   {listColumns.length === 0 ? (
                     <div style={{ padding: 16 }}><p className="ls-empty">No columns added. Click a field from the palette.</p></div>
-                  ) : previewMode ? (
+                  ) : (previewMode || isReadOnly) ? (
                     /* ── Runtime Preview Table ── */
                     <div className="ls-preview-wrap">
                       <table className="ls-runtime-table">
@@ -1781,7 +1960,7 @@ const LayoutStudio: React.FC = () => {
                     onDrop={(e) => handleDrop(e, section.id)}>
                     <div className="ls-section__header">
                       <div className="ls-section__col-btn" title="12-column grid"><Columns size={13} /><span>12-col grid</span></div>
-                      <input className="ls-section__title-input" value={section.title} onChange={(e) => updateSection(section.id, { title: e.target.value })} />
+                      <input className="ls-section__title-input" value={section.title} onChange={(e) => updateSection(section.id, { title: e.target.value })} readOnly={isReadOnly} />
                       <button className="ls-section__remove" onClick={() => removeSection(section.id)} title="Delete section"><X size={14} /></button>
                     </div>
                     <div className="ls-section__grid">
@@ -2711,19 +2890,51 @@ const LayoutStudio: React.FC = () => {
                   style={{ fontSize: 12, padding: '5px 7px', resize: 'vertical' }}
                   placeholder="Optional description of this layout" />
               </div>
-              <div className="ls-prop-group">
-                <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 0 }}>
-                  <input type="checkbox" checked={layoutIsDefault}
-                    onChange={() => setLayoutIsDefault((v) => !v)} /> Set as default view
-                </label>
-              </div>
-              <div className="ls-prop-group" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <div className="ls-prop-group" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                {layoutIsDefault ? (
+                  <span style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: 'var(--sails-success, #22c55e)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '4px 10px',
+                    borderRadius: 4,
+                    background: 'rgba(34, 197, 94, 0.1)',
+                  }}>
+                    ✓ Default View
+                  </span>
+                ) : (
+                  <button className="sails-btn sails-btn--secondary sails-btn--sm ls-overlay-card__set-default"
+                    onClick={() => setShowSetDefaultConfirm(true)}>
+                    Set as Default
+                  </button>
+                )}
                 <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowEditMetaOverlay(false)}>Cancel</button>
                 <button className="sails-btn sails-btn--primary sails-btn--sm"
                   onClick={saveListMetadata} disabled={!layoutName.trim() || listSavingMeta}>
                   {listSavingMeta ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Set as Default Confirmation Modal ── */}
+      {showSetDefaultConfirm && (
+        <div className="ls-modal-overlay" onClick={() => setShowSetDefaultConfirm(false)}>
+          <div className="ls-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="ls-modal__title">Set as Default View</h3>
+            <p className="ls-modal__text">
+              Make <strong>{layoutName}</strong> the default LIST view for this model. Any existing default will be replaced.
+            </p>
+            <div className="ls-modal__actions">
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowSetDefaultConfirm(false)} disabled={setDefaultLoading}>Cancel</button>
+              <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={handleSetAsDefault} disabled={setDefaultLoading}>
+                {setDefaultLoading ? 'Setting...' : 'Set as Default'}
+              </button>
             </div>
           </div>
         </div>
@@ -2760,14 +2971,40 @@ const LayoutStudio: React.FC = () => {
       {showSaveConfirm && (
         <div className="ls-modal-overlay" onClick={() => { if (!saving) setShowSaveConfirm(false); }}>
           <div className="ls-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 className="ls-modal__title">Save Layout</h3>
-            <p className="ls-modal__text">This will overwrite the existing layout configuration. Are you sure you want to continue?</p>
+            <h3 className="ls-modal__title">Save Draft</h3>
+            <p className="ls-modal__text">Save the current draft configuration. This will not affect the active layout.</p>
             {saveError && <p className="ls-modal__error">{saveError}</p>}
             <div className="ls-modal__actions">
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowSaveConfirm(false)} disabled={saving}>Cancel</button>
               <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={doSave} disabled={saving}>
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? 'Saving...' : 'Save Draft'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showActivateConfirm && (
+        <div className="ls-modal-overlay" onClick={() => { if (!activatingLayout) setShowActivateConfirm(false); }}>
+          <div className="ls-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="ls-modal__title">Activate Layout</h3>
+            <p className="ls-modal__text">This will overwrite the currently active layout with the draft configuration. Continue?</p>
+            <div className="ls-modal__actions">
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowActivateConfirm(false)} disabled={activatingLayout}>Cancel</button>
+              <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={doActivate} disabled={activatingLayout}>
+                {activatingLayout ? 'Activating...' : 'Activate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDiscardConfirm && (
+        <div className="ls-modal-overlay" onClick={() => setShowDiscardConfirm(false)}>
+          <div className="ls-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="ls-modal__title">Discard Changes</h3>
+            <p className="ls-modal__text">This will revert the layout to the currently active version. All unsaved draft changes will be lost. Continue?</p>
+            <div className="ls-modal__actions">
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowDiscardConfirm(false)}>Cancel</button>
+              <button className="sails-btn sails-btn--danger sails-btn--sm" onClick={doDiscard}>Discard</button>
             </div>
           </div>
         </div>

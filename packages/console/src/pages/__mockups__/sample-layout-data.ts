@@ -27,10 +27,14 @@ export const MOCK_LEADS_FIELDS: SailsFieldDefinition[] = [
 export const MOCK_LAYOUT_LIST: TableLayout = {
   id: 'l_list_001',
   tableId: 't_leads',
+  layoutType: 'data',
+  systemName: 'default_list_view',
   viewType: 'LIST',
   name: 'Default List View',
   isDefault: true,
   recordTitleField: 'lead_name',
+  publishedConfig: null,
+  status: 'active',
   config: {
     sections: [
       { id: 's_list_main', title: 'All Leads', position: 0, columns: 1, collapsed: false },
@@ -55,10 +59,14 @@ export const MOCK_LAYOUT_LIST: TableLayout = {
 export const MOCK_LAYOUT_DETAIL: TableLayout = {
   id: 'l_detail_001',
   tableId: 't_leads',
+  layoutType: 'data',
+  systemName: 'default_detail_view',
   viewType: 'DETAIL',
   name: 'Default Detail View',
   isDefault: true,
   recordTitleField: 'lead_name',
+  publishedConfig: null,
+  status: 'active',
   config: {
     sections: [
       { id: 's_primary',   title: 'Primary Info',       position: 0, columns: 2, collapsed: false },
@@ -106,10 +114,14 @@ export const MOCK_LAYOUT_DETAIL: TableLayout = {
 export const MOCK_LAYOUT_FORM: TableLayout = {
   id: 'l_form_001',
   tableId: 't_leads',
+  layoutType: 'data',
+  systemName: 'default_form',
   viewType: 'FORM',
   name: 'Default Form',
   isDefault: true,
   recordTitleField: 'lead_name',
+  publishedConfig: null,
+  status: 'active',
   config: {
     sections: [
       { id: 's_form_main', title: 'Lead Information', position: 0, columns: 2, collapsed: false },

@@ -86,8 +86,10 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
             }
           }
 
-          // Default to the matched app, or the first app if none matched
-          if (filteredApps.length > 0 && !activeAppId) {
+          // Sync activeAppId: Switch active app if matchedAppId is found, or default to first app if none set
+          if (matchedAppId && matchedAppId !== activeAppId) {
+            setActiveAppId(matchedAppId);
+          } else if (filteredApps.length > 0 && !activeAppId) {
             setActiveAppId(matchedAppId || filteredApps[0].id);
           }
         } else {

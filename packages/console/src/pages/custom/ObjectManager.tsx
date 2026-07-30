@@ -37,8 +37,14 @@ import {
   Table,
   Sparkles,
   RefreshCw,
-  MapPin
+  MapPin,
+  Save,
+  LayoutTemplate,
+  ShieldCheck,
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react';
+import { TableLayout, LayoutType, ViewType } from '@sails/shared';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import './ObjectManager.css';
 
@@ -340,6 +346,60 @@ const ObjectManager: React.FC = () => {
   const [fieldSortConfig, setFieldSortConfig] = useState<{ key: 'name' | 'description' | 'logicalType' | 'isSystem' | 'isRequired'; direction: 'asc' | 'desc' } | null>(null);
   const [activeMenuFieldId, setActiveMenuFieldId] = useState<string | null>(null);
 
+  type DetailTab = 'general' | 'fields' | 'layout' | 'permission';
+  const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>('general');
+  const [pendingDetailTabSwitch, setPendingDetailTabSwitch] = useState<DetailTab | null>(null);
+
+  const [detailName, setDetailName] = useState('');
+  const [detailDesc, setDetailDesc] = useState('');
+  const [savedDetail, setSavedDetail] = useState({ name: '', description: '' });
+  const [isSavingDetail, setIsSavingDetail] = useState(false);
+
+  const [layouts, setLayouts] = useState<(TableLayout & { table?: { id: string; name: string; tableName: string } | null })[]>([]);
+  const [layoutsLoading, setLayoutsLoading] = useState(false);
+
+  const isDetailDirty =
+    detailName !== savedDetail.name ||
+    detailDesc !== savedDetail.description;
+
+  const isCurrentDetailTabDirty = (tab?: DetailTab) => {
+    const t = tab || activeDetailTab;
+    if (t === 'general') return isDetailDirty;
+    return false;
+  };
+
+  const handleDetailTabClick = (targetTab: DetailTab) => {
+    if (targetTab === activeDetailTab) return;
+    if (isCurrentDetailTabDirty()) {
+      setPendingDetailTabSwitch(targetTab);
+    } else {
+      setActiveDetailTab(targetTab);
+    }
+  };
+
+  const handleDiscardDetailAndSwitch = () => {
+    setDetailName(savedDetail.name);
+    setDetailDesc(savedDetail.description);
+    if (pendingDetailTabSwitch) {
+      setActiveDetailTab(pendingDetailTabSwitch);
+      setPendingDetailTabSwitch(null);
+    }
+  };
+
+  const handleSaveDetailAndSwitch = async () => {
+    await saveGeneralInfo();
+    if (pendingDetailTabSwitch) {
+      setActiveDetailTab(pendingDetailTabSwitch);
+      setPendingDetailTabSwitch(null);
+    }
+  };
+
+  const VIEW_TYPE_LABELS: Record<ViewType, { label: string; className: string }> = {
+    LIST: { label: 'List', className: 'om-layout-badge--list' },
+    DETAIL: { label: 'Detail', className: 'om-layout-badge--detail' },
+    FORM: { label: 'Form', className: 'om-layout-badge--form' },
+  };
+
   const handleTableSort = (key: 'name' | 'description' | 'isSystem' | 'fields' | 'createdAt' | 'updatedAt') => {
     let direction: 'asc' | 'desc' = 'asc';
     if (tableSortConfig && tableSortConfig.key === key && tableSortConfig.direction === 'asc') {
@@ -369,11 +429,7 @@ const ObjectManager: React.FC = () => {
   const [isCreatingTable, setIsCreatingTable] = useState(false);
   const [isCreatingField, setIsCreatingField] = useState(false);
 
-  // Context menu & Edit Table state
   const [activeMenuTableId, setActiveMenuTableId] = useState<string | null>(null);
-  const [editingTable, setEditingTable] = useState<SailsTableDefinition | null>(null);
-  const [editTableName, setEditTableName] = useState('');
-  const [editTableDesc, setEditTableDesc] = useState('');
   
   // Table form state
   const [newTableName, setNewTableName] = useState('');
@@ -536,21 +592,20 @@ const ObjectManager: React.FC = () => {
     return () => window.removeEventListener('click', handleClickOutside);
   }, []);
 
-  const handleSaveEditTable = async () => {
-    if (!editingTable || !editTableName.trim()) return;
-
+  const saveGeneralInfo = async () => {
+    if (!selectedTable || !detailName.trim()) return;
+    setIsSavingDetail(true);
     try {
-      const res = await fetch(`/api/metadata/objects/${editingTable.id}`, {
+      const res = await fetch(`/api/metadata/objects/${selectedTable.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: editTableName,
-          description: editTableDesc
+          name: detailName,
+          description: detailDesc
         })
       });
-
       if (res.ok) {
-        setEditingTable(null);
+        setSavedDetail({ name: detailName, description: detailDesc });
         fetchTables();
       } else {
         const data = await res.json();
@@ -558,8 +613,26 @@ const ObjectManager: React.FC = () => {
       }
     } catch (error) {
       console.error('Error updating table:', error);
+    } finally {
+      setIsSavingDetail(false);
     }
   };
+
+  const fetchLayouts = useCallback(async (tableId: string) => {
+    setLayoutsLoading(true);
+    try {
+      const params = new URLSearchParams({ tableId, limit: '100' });
+      const res = await fetch(`/api/console/layouts?${params}`);
+      const json = await res.json();
+      if (json.success) {
+        setLayouts(json.data.rows);
+      }
+    } catch (error) {
+      console.error('Failed to fetch layouts:', error);
+    } finally {
+      setLayoutsLoading(false);
+    }
+  }, []);
 
   const triggerDeleteTable = (table: SailsTableDefinition) => {
     setDeleteConfirmTarget({
@@ -1001,13 +1074,6 @@ const ObjectManager: React.FC = () => {
             <ArrowLeft size={18} />
             <span>Back to Data Models</span>
           </button>
-          <button 
-            className="sails-btn sails-btn--primary" 
-            onClick={() => setIsCreatingField(true)}
-          >
-            <Plus size={18} />
-            <span>Add Field</span>
-          </button>
         </div>
       );
     }
@@ -1018,9 +1084,14 @@ const ObjectManager: React.FC = () => {
     return () => setHeaderActions(null);
   }, [setHeaderActions, memoizedHeaderActions]);
 
-  const selectRow = (table: SailsTableDefinition) => {
+  const selectRow = (table: SailsTableDefinition, initialTab?: DetailTab) => {
     setSelectedTable(table);
+    setActiveDetailTab(initialTab || 'general');
+    setDetailName(table.name);
+    setDetailDesc(table.description || '');
+    setSavedDetail({ name: table.name, description: table.description || '' });
     setViewMode('detail');
+    fetchLayouts(table.id);
   };
 
   return (
@@ -1158,9 +1229,7 @@ const ObjectManager: React.FC = () => {
                                 className="om-context-item" 
                                 onClick={() => {
                                   setActiveMenuTableId(null);
-                                  setEditingTable(table);
-                                  setEditTableName(table.name);
-                                  setEditTableDesc(table.description || '');
+                                  selectRow(table, 'general');
                                 }}
                               >
                                 <Edit2 size={14} />
@@ -1171,7 +1240,7 @@ const ObjectManager: React.FC = () => {
                                 className="om-context-item" 
                                 onClick={() => {
                                   setActiveMenuTableId(null);
-                                  selectRow(table);
+                                  selectRow(table, 'fields');
                                 }}
                               >
                                 <Layers size={14} />
@@ -1272,253 +1341,493 @@ const ObjectManager: React.FC = () => {
             {/* Stats grid */}
             <div className="om-stats-grid-full">
               <div className="sails-card om-stat-card-full">
-                <label>Storage Type</label>
-                <div className="stat-value">Relational (PostgreSQL)</div>
-              </div>
-              <div className="sails-card om-stat-card-full">
                 <label>Total Fields</label>
-                <div className="stat-value">{selectedTable.fields?.length || 0} Columns</div>
+                <div className="stat-value">{selectedTable.fields?.length || 0} Fields</div>
               </div>
               <div className="sails-card om-stat-card-full">
-                <label>Security Mode</label>
-                <div className="stat-value">Row-Level (RLS)</div>
+                <label>Total Layout</label>
+                <div className="stat-value">{layouts.length} Layouts</div>
+              </div>
+              <div className="sails-card om-stat-card-full">
+                <label>Total Permission</label>
+                <div className="stat-value">Coming Soon</div>
               </div>
             </div>
 
-            {/* Field list section */}
-            <div className="om-section-full">
-              <div className="om-section-header-full" style={{ marginBottom: '16px' }}>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--sails-text-main)', margin: 0 }}>
-                  Field Definitions
-                </h2>
-              </div>
+            {/* Tab navigation */}
+            <nav className="om-detail-tabs">
+              {(['general', 'fields', 'layout', 'permission'] as DetailTab[]).map(tab => (
+                <button
+                  key={tab}
+                  className={`om-detail-tab ${activeDetailTab === tab ? 'om-detail-tab--active' : ''}`}
+                  onClick={() => handleDetailTabClick(tab)}
+                >
+                  <span>
+                    {tab === 'general' && 'General Information'}
+                    {tab === 'fields' && 'Fields Definition'}
+                    {tab === 'layout' && 'Layout'}
+                    {tab === 'permission' && 'Permission'}
+                  </span>
+                  {tab === 'general' && isDetailDirty && <span className="om-detail-tab__dirty-dot" title="Unsaved changes" />}
+                </button>
+              ))}
+            </nav>
 
-              <div className="om-toolbar" style={{ marginBottom: '16px' }}>
-                <div className="om-search-wrapper">
-                  <Search size={18} className="om-search-icon" />
-                  <input
-                    type="text"
-                    placeholder="Search fields by name, column name, type, required status..."
-                    className="om-search-input"
-                    value={fieldSearchTerm}
-                    onChange={e => setFieldSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="sails-card om-table-card">
-                <table className="om-list-table">
-                  <thead>
-                    <tr>
-                      <th className="om-th-sortable" onClick={() => handleFieldSort('name')}>
-                        <div className="om-th-content">
-                          <span>Name</span>
-                          {getFieldSortIcon('name')}
-                        </div>
-                      </th>
-                      <th className="om-th-sortable" onClick={() => handleFieldSort('description')}>
-                        <div className="om-th-content">
-                          <span>Description</span>
-                          {getFieldSortIcon('description')}
-                        </div>
-                      </th>
-                      <th className="om-th-sortable" onClick={() => handleFieldSort('logicalType')}>
-                        <div className="om-th-content">
-                          <span>Type</span>
-                          {getFieldSortIcon('logicalType')}
-                        </div>
-                      </th>
-                      <th className="om-th-sortable" onClick={() => handleFieldSort('isSystem')}>
-                        <div className="om-th-content">
-                          <span>Category</span>
-                          {getFieldSortIcon('isSystem')}
-                        </div>
-                      </th>
-                      <th className="om-th-sortable" onClick={() => handleFieldSort('isRequired')}>
-                        <div className="om-th-content">
-                          <span>Required</span>
-                          {getFieldSortIcon('isRequired')}
-                        </div>
-                      </th>
-                      <th style={{ textAlign: 'right' }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedFields.map(field => {
-                      const fieldTypeMeta = fieldTypeMetadataList.find(t => t.type === field.logicalType);
-                      const displayLabel = fieldTypeMeta?.label || field.logicalType.replace('_', ' ').toUpperCase();
-
-                      return (
-                        <tr key={field.id} className="om-clickable-row">
-                          <td>
-                            <div className="om-table-cell-name">
-                              <div className="om-table-icon-wrapper">
-                                <Settings size={18} />
-                              </div>
-                              <div>
-                                <div className="om-name-primary">
-                                  {renderHighlightedText(field.name, fieldSearchTerm)}
-                                </div>
-                                <div className="om-name-secondary" style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)', marginTop: '2px' }}>
-                                  <code>{renderHighlightedText(field.fieldName, fieldSearchTerm)}</code>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ color: 'var(--sails-text-main)', fontSize: '0.85rem', maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={field.description || ''}>
-                              {field.description ? renderHighlightedText(field.description, fieldSearchTerm) : <span style={{ color: 'var(--sails-text-muted)', fontStyle: 'italic' }}>No description</span>}
-                            </div>
-                          </td>
-                          <td>
-                            <span className="om-badge" style={{ fontSize: '0.85rem' }}>
-                              {renderHighlightedText(displayLabel, fieldSearchTerm)}
-                            </span>
-                          </td>
-                          <td>
-                            {field.isSystem ? (
-                              <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.15)', color: 'var(--sails-primary)', border: '1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.3)' }}>
-                                System Field
-                              </span>
-                            ) : (
-                              <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--sails-text-main)', border: '1px solid var(--sails-border-color)' }}>
-                                Custom Field
-                              </span>
-                            )}
-                          </td>
-                        <td>
-                          {field.isRequired ? (
-                            <span className="om-status-tag om-status-tag--required">
-                              <CheckCircle2 size={12} />
-                              {renderHighlightedText('Required', fieldSearchTerm)}
-                            </span>
-                          ) : (
-                            <span className="om-status-tag om-status-tag--optional">
-                              {renderHighlightedText('Optional', fieldSearchTerm)}
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                          <div className="om-action-wrapper">
-                            <button 
-                              className={`sails-btn sails-btn--ghost ${activeMenuFieldId === field.id ? 'active' : ''}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveMenuFieldId(activeMenuFieldId === field.id ? null : field.id);
-                              }} 
-                              title="Options" 
-                              aria-label="Options"
-                            >
-                              <MoreHorizontal size={18} />
-                            </button>
-
-                            {activeMenuFieldId === field.id && (
-                              <div className="om-context-menu" onClick={e => e.stopPropagation()}>
-                                {field.isSystem ? (
-                                  <div className="om-context-item" style={{ opacity: 0.6, cursor: 'not-allowed' }}>
-                                    <ShieldAlert size={14} />
-                                    <span>System Field (Locked)</span>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <button 
-                                      className="om-context-item" 
-                                      onClick={() => {
-                                        setActiveMenuFieldId(null);
-                                        openEditFieldModal(field);
-                                      }}
-                                    >
-                                      <Edit2 size={14} />
-                                      <span>Edit</span>
-                                    </button>
-
-                                    <div className="om-context-divider"></div>
-
-                                    <button 
-                                      className="om-context-item om-context-item--danger" 
-                                      onClick={() => {
-                                        setActiveMenuFieldId(null);
-                                        triggerDeleteField(field.id, field.name);
-                                      }}
-                                    >
-                                      <Trash2 size={14} />
-                                      <span>Remove Field</span>
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                             )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                    {filteredFields.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="om-empty-state-row">
-                          <Info size={40} className="om-empty-icon" />
-                          <h3>No Fields Found</h3>
-                          <p>Click "Add Field" to define new column structure.</p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-
-                {/* Field Pagination Footer */}
-                <div className="sails-user-manager__pagination" style={{ borderTop: '1px solid var(--sails-border-color)' }}>
-                  <div className="sails-user-manager__pagination-info">
-                    <span className="sails-user-manager__pagination-range">
-                      Showing <strong>{fieldStartRange}</strong> to <strong>{fieldEndRange}</strong> of <strong>{totalFieldCount}</strong> fields
-                    </span>
-                    <div className="sails-user-manager__page-size">
-                      <span className="sails-user-manager__page-size-label">Records per page:</span>
-                      <CustomSelect
-                        size="sm"
-                        value={fieldPageSize === totalFieldCount ? 'all' : fieldPageSize}
-                        options={[
-                          { value: 10, label: '10' },
-                          { value: 25, label: '25' },
-                          { value: 50, label: '50' },
-                          { value: 'all', label: 'ALL' }
-                        ]}
-                        onChange={(val) => {
-                          setFieldPageSize(val === 'all' ? (totalFieldCount || 1000) : Number(val));
-                          setFieldCurrentPage(1);
-                        }}
+            {/* Tab body */}
+            <div className="om-detail-tab-body">
+              {activeDetailTab === 'general' && (
+                <div className="om-detail-tab-section">
+                  <div className="om-form-grid-2">
+                    <div className="om-field-group">
+                      <label className="om-field-label">Data Model Name *</label>
+                      <input
+                        type="text"
+                        className="sails-input"
+                        value={detailName}
+                        onChange={e => setDetailName(e.target.value)}
                       />
                     </div>
-                  </div>
-                  <div className="sails-user-manager__pagination-controls">
-                    <button
-                      className="sails-pagination-btn"
-                      onClick={() => setFieldCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={fieldCurrentPage === 1}
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <div className="sails-pagination-pages">
-                      {[...Array(totalFieldPages)].map((_, i) => (
-                        <button
-                          key={i + 1}
-                          className={`sails-pagination-page ${fieldCurrentPage === i + 1 ? 'sails-pagination-page--active' : ''}`}
-                          onClick={() => setFieldCurrentPage(i + 1)}
-                        >
-                          {i + 1}
-                        </button>
-                      ))}
+                    <div className="om-field-group">
+                      <label className="om-field-label">System Name</label>
+                      <input
+                        type="text"
+                        className="sails-input"
+                        value={selectedTable.tableName}
+                        disabled
+                        style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                      />
+                      <span className="om-field-hint">Physical DB name cannot be altered.</span>
                     </div>
+                  </div>
+                  <div className="om-field-group">
+                    <label className="om-field-label">Description</label>
+                    <textarea
+                      className="sails-input"
+                      rows={3}
+                      value={detailDesc}
+                      onChange={e => setDetailDesc(e.target.value)}
+                      placeholder="Describe the data model's purpose..."
+                      style={{ resize: 'vertical', minHeight: '80px' }}
+                    />
+                  </div>
+                  <div className="om-detail-tab__save-row">
                     <button
-                      className="sails-pagination-btn"
-                      onClick={() => setFieldCurrentPage(prev => Math.min(totalFieldPages, prev + 1))}
-                      disabled={fieldCurrentPage === totalFieldPages || totalFieldPages === 0}
+                      className="sails-btn sails-btn--primary"
+                      onClick={saveGeneralInfo}
+                      disabled={!isDetailDirty || isSavingDetail}
                     >
-                      <ChevronRight size={16} />
+                      <Save size={16} />
+                      <span>{isSavingDetail ? 'Saving...' : 'Save General Settings'}</span>
                     </button>
+                    {!selectedTable.isSystem && (
+                      <button
+                        className="sails-btn sails-btn--danger"
+                        onClick={() => triggerDeleteTable(selectedTable)}
+                        style={{ marginLeft: '12px' }}
+                      >
+                        <Trash2 size={16} />
+                        <span>Delete Model</span>
+                      </button>
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
+
+              {activeDetailTab === 'fields' && (
+                <div className="om-detail-tab-section">
+                  <div className="om-toolbar" style={{ marginBottom: '16px' }}>
+                    <div className="om-search-wrapper">
+                      <Search size={18} className="om-search-icon" />
+                      <input
+                        type="text"
+                        placeholder="Search fields by name, column name, type, required status..."
+                        className="om-search-input"
+                        value={fieldSearchTerm}
+                        onChange={e => setFieldSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      className="sails-btn sails-btn--primary"
+                      onClick={() => setIsCreatingField(true)}
+                      style={{ marginLeft: '12px' }}
+                    >
+                      <Plus size={18} />
+                      <span>Add Field</span>
+                    </button>
+                  </div>
+
+                  <div className="sails-card om-table-card">
+                    <table className="om-list-table">
+                      <thead>
+                        <tr>
+                          <th className="om-th-sortable" onClick={() => handleFieldSort('name')}>
+                            <div className="om-th-content">
+                              <span>Name</span>
+                              {getFieldSortIcon('name')}
+                            </div>
+                          </th>
+                          <th className="om-th-sortable" onClick={() => handleFieldSort('description')}>
+                            <div className="om-th-content">
+                              <span>Description</span>
+                              {getFieldSortIcon('description')}
+                            </div>
+                          </th>
+                          <th className="om-th-sortable" onClick={() => handleFieldSort('logicalType')}>
+                            <div className="om-th-content">
+                              <span>Type</span>
+                              {getFieldSortIcon('logicalType')}
+                            </div>
+                          </th>
+                          <th className="om-th-sortable" onClick={() => handleFieldSort('isSystem')}>
+                            <div className="om-th-content">
+                              <span>Category</span>
+                              {getFieldSortIcon('isSystem')}
+                            </div>
+                          </th>
+                          <th className="om-th-sortable" onClick={() => handleFieldSort('isRequired')}>
+                            <div className="om-th-content">
+                              <span>Required</span>
+                              {getFieldSortIcon('isRequired')}
+                            </div>
+                          </th>
+                          <th style={{ textAlign: 'right' }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedFields.map(field => {
+                          const fieldTypeMeta = fieldTypeMetadataList.find(t => t.type === field.logicalType);
+                          const displayLabel = fieldTypeMeta?.label || field.logicalType.replace('_', ' ').toUpperCase();
+
+                          return (
+                            <tr key={field.id} className="om-clickable-row">
+                              <td>
+                                <div className="om-table-cell-name">
+                                  <div className="om-table-icon-wrapper">
+                                    <Settings size={18} />
+                                  </div>
+                                  <div>
+                                    <div className="om-name-primary">
+                                      {renderHighlightedText(field.name, fieldSearchTerm)}
+                                    </div>
+                                    <div className="om-name-secondary" style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)', marginTop: '2px' }}>
+                                      <code>{renderHighlightedText(field.fieldName, fieldSearchTerm)}</code>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <div style={{ color: 'var(--sails-text-main)', fontSize: '0.85rem', maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={field.description || ''}>
+                                  {field.description ? renderHighlightedText(field.description, fieldSearchTerm) : <span style={{ color: 'var(--sails-text-muted)', fontStyle: 'italic' }}>No description</span>}
+                                </div>
+                              </td>
+                              <td>
+                                <span className="om-badge" style={{ fontSize: '0.85rem' }}>
+                                  {renderHighlightedText(displayLabel, fieldSearchTerm)}
+                                </span>
+                              </td>
+                              <td>
+                                {field.isSystem ? (
+                                  <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.15)', color: 'var(--sails-primary)', border: '1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.3)' }}>
+                                    System Field
+                                  </span>
+                                ) : (
+                                  <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--sails-text-main)', border: '1px solid var(--sails-border-color)' }}>
+                                    Custom Field
+                                  </span>
+                                )}
+                              </td>
+                            <td>
+                              {field.isRequired ? (
+                                <span className="om-status-tag om-status-tag--required">
+                                  <CheckCircle2 size={12} />
+                                  {renderHighlightedText('Required', fieldSearchTerm)}
+                                </span>
+                              ) : (
+                                <span className="om-status-tag om-status-tag--optional">
+                                  {renderHighlightedText('Optional', fieldSearchTerm)}
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                              <div className="om-action-wrapper">
+                                <button 
+                                  className={`sails-btn sails-btn--ghost ${activeMenuFieldId === field.id ? 'active' : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveMenuFieldId(activeMenuFieldId === field.id ? null : field.id);
+                                  }} 
+                                  title="Options" 
+                                  aria-label="Options"
+                                >
+                                  <MoreHorizontal size={18} />
+                                </button>
+
+                                {activeMenuFieldId === field.id && (
+                                  <div className="om-context-menu" onClick={e => e.stopPropagation()}>
+                                    {field.isSystem ? (
+                                      <div className="om-context-item" style={{ opacity: 0.6, cursor: 'not-allowed' }}>
+                                        <ShieldAlert size={14} />
+                                        <span>System Field (Locked)</span>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <button 
+                                          className="om-context-item" 
+                                          onClick={() => {
+                                            setActiveMenuFieldId(null);
+                                            openEditFieldModal(field);
+                                          }}
+                                        >
+                                          <Edit2 size={14} />
+                                          <span>Edit</span>
+                                        </button>
+
+                                        <div className="om-context-divider"></div>
+
+                                        <button 
+                                          className="om-context-item om-context-item--danger" 
+                                          onClick={() => {
+                                            setActiveMenuFieldId(null);
+                                            triggerDeleteField(field.id, field.name);
+                                          }}
+                                        >
+                                          <Trash2 size={14} />
+                                          <span>Remove Field</span>
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                 )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                        {filteredFields.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="om-empty-state-row">
+                              <Info size={40} className="om-empty-icon" />
+                              <h3>No Fields Found</h3>
+                              <p>Click "Add Field" to define new column structure.</p>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+
+                    {/* Field Pagination Footer */}
+                    <div className="sails-user-manager__pagination" style={{ borderTop: '1px solid var(--sails-border-color)' }}>
+                      <div className="sails-user-manager__pagination-info">
+                        <span className="sails-user-manager__pagination-range">
+                          Showing <strong>{fieldStartRange}</strong> to <strong>{fieldEndRange}</strong> of <strong>{totalFieldCount}</strong> fields
+                        </span>
+                        <div className="sails-user-manager__page-size">
+                          <span className="sails-user-manager__page-size-label">Records per page:</span>
+                          <CustomSelect
+                            size="sm"
+                            value={fieldPageSize === totalFieldCount ? 'all' : fieldPageSize}
+                            options={[
+                              { value: 10, label: '10' },
+                              { value: 25, label: '25' },
+                              { value: 50, label: '50' },
+                              { value: 'all', label: 'ALL' }
+                            ]}
+                            onChange={(val) => {
+                              setFieldPageSize(val === 'all' ? (totalFieldCount || 1000) : Number(val));
+                              setFieldCurrentPage(1);
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="sails-user-manager__pagination-controls">
+                        <button
+                          className="sails-pagination-btn"
+                          onClick={() => setFieldCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={fieldCurrentPage === 1}
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+                        <div className="sails-pagination-pages">
+                          {[...Array(totalFieldPages)].map((_, i) => (
+                            <button
+                              key={i + 1}
+                              className={`sails-pagination-page ${fieldCurrentPage === i + 1 ? 'sails-pagination-page--active' : ''}`}
+                              onClick={() => setFieldCurrentPage(i + 1)}
+                            >
+                              {i + 1}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          className="sails-pagination-btn"
+                          onClick={() => setFieldCurrentPage(prev => Math.min(totalFieldPages, prev + 1))}
+                          disabled={fieldCurrentPage === totalFieldPages || totalFieldPages === 0}
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeDetailTab === 'layout' && (
+                <div className="om-detail-tab-section">
+                  <div className="om-toolbar" style={{ marginBottom: '16px', justifyContent: 'flex-end' }}>
+                    <button
+                      className="sails-btn sails-btn--primary"
+                      onClick={() => selectedTable && window.open(`/layout-studio/${selectedTable.id}/_new`, '_blank')}
+                    >
+                      <Plus size={18} />
+                      <span>Create Layout</span>
+                    </button>
+                  </div>
+
+                  {layoutsLoading ? (
+                    <div style={{ textAlign: 'center', padding: '48px', color: 'var(--sails-text-muted)' }}>
+                      Loading layouts...
+                    </div>
+                  ) : layouts.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '48px', color: 'var(--sails-text-muted)' }}>
+                      <LayoutTemplate size={40} style={{ marginBottom: '16px', opacity: 0.3 }} />
+                      <h3 style={{ marginBottom: '8px', color: 'var(--sails-text-main)' }}>No Layouts Found</h3>
+                      <p>Create a layout to define how this data model is displayed.</p>
+                    </div>
+                  ) : (
+                    <div className="sails-card om-table-card">
+                      <table className="om-list-table">
+                        <thead>
+                          <tr>
+                            <th>
+                              <div className="om-th-content">
+                                <span>Name</span>
+                              </div>
+                            </th>
+                            <th>
+                              <div className="om-th-content">
+                                <span>View Type</span>
+                              </div>
+                            </th>
+                            <th>
+                              <div className="om-th-content">
+                                <span>Default</span>
+                              </div>
+                            </th>
+                            <th>
+                              <div className="om-th-content">
+                                <span>Created</span>
+                              </div>
+                            </th>
+                            <th style={{ textAlign: 'right' }}></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {layouts.map(layout => (
+                            <tr key={layout.id} className="om-clickable-row">
+                              <td>
+                                <div className="om-table-cell-name">
+                                  <div className="om-table-icon-wrapper">
+                                    <LayoutTemplate size={18} />
+                                  </div>
+                                  <div>
+                                    <div className="om-name-primary">{layout.name}</div>
+                                    {layout.description && (
+                                      <div className="om-name-secondary" style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)', marginTop: '2px' }}>
+                                        {layout.description}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`om-layout-badge ${VIEW_TYPE_LABELS[layout.viewType]?.className || ''}`}
+                                  style={{
+                                    fontSize: '0.75rem',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    background: layout.viewType === 'LIST' ? 'rgba(59, 130, 246, 0.1)' : layout.viewType === 'DETAIL' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                                    color: layout.viewType === 'LIST' ? '#93b4f5' : layout.viewType === 'DETAIL' ? '#6ee7b7' : '#fcd34d',
+                                    border: `1px solid ${layout.viewType === 'LIST' ? 'rgba(59,130,246,0.3)' : layout.viewType === 'DETAIL' ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                                  }}>
+                                  {VIEW_TYPE_LABELS[layout.viewType]?.label || layout.viewType}
+                                </span>
+                              </td>
+                              <td>
+                                {layout.isDefault ? (
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--sails-primary)' }}>Default</span>
+                                ) : (
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--sails-text-muted)' }}>—</span>
+                                )}
+                              </td>
+                              <td>
+                                <span className="om-date-cell">
+                                  <Calendar size={14} style={{ marginRight: '4px' }} />
+                                  {new Date(layout.createdAt).toLocaleDateString()}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                <button
+                                  className="sails-btn sails-btn--ghost"
+                                  onClick={() => selectedTable && window.open(`/layout-studio/${selectedTable.id}/${layout.id}`, '_blank')}
+                                  title="Open in Layout Studio"
+                                >
+                                  <ExternalLink size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeDetailTab === 'permission' && (
+                <div className="om-detail-tab-section" style={{ textAlign: 'center', padding: '64px 32px' }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <ShieldCheck size={48} style={{ color: 'var(--sails-text-muted)', opacity: 0.4 }} />
+                  </div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--sails-text-main)', marginBottom: '8px' }}>
+                    Permission Settings
+                  </h4>
+                  <p style={{ color: 'var(--sails-text-muted)', marginBottom: '16px' }}>
+                    Role-based access control and field-level permission management will be available here.
+                  </p>
+                  <span style={{
+                    fontSize: '0.8rem',
+                    padding: '4px 12px',
+                    borderRadius: '12px',
+                    background: 'rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1)',
+                    color: 'var(--sails-primary)',
+                    border: '1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.2)',
+                  }}>
+                    Coming Soon
+                  </span>
+                </div>
+              )}
             </div>
+
+            {/* Unsaved changes confirmation dialog */}
+            {pendingDetailTabSwitch && createPortal(
+              <div className="om-modal-overlay">
+                <div className="sails-app-confirm-dialog">
+                  <div className="sails-app-confirm-dialog__header">
+                    <AlertCircle size={22} style={{ color: 'var(--sails-warning)' }} />
+                    <span>Unsaved Changes</span>
+                  </div>
+                  <div className="sails-app-confirm-dialog__body">
+                    You have unsaved changes in the General Information tab. If you switch tabs without saving, your modifications will be discarded.
+                  </div>
+                  <div className="sails-app-confirm-dialog__footer">
+                    <button className="sails-btn sails-btn--ghost" onClick={() => setPendingDetailTabSwitch(null)}>Stay on Tab</button>
+                    <button className="sails-btn sails-app-confirm-dialog__btn-discard" onClick={handleDiscardDetailAndSwitch}>Discard Changes</button>
+                    <button className="sails-btn sails-btn--primary" onClick={handleSaveDetailAndSwitch}>Save &amp; Switch</button>
+                  </div>
+                </div>
+              </div>,
+              document.body
+            )}
           </div>
         )
       )}
@@ -1599,77 +1908,6 @@ const ObjectManager: React.FC = () => {
             <div className="om-modal-footer">
               <button className="sails-btn sails-btn--ghost" onClick={() => setIsCreatingTable(false)}>Cancel</button>
               <button className="sails-btn sails-btn--primary" onClick={handleCreateTable}>Create Model</button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Edit Data Model Big Modal */}
-      {editingTable && createPortal(
-        <div className="om-modal-overlay">
-          <div className="om-big-modal om-big-modal--md">
-            <div className="om-modal-header">
-              <div className="om-modal-header-info">
-                <div className="om-modal-icon-badge">
-                  <Edit2 size={24} />
-                </div>
-                <div>
-                  <h2 className="om-modal-title">Edit Data Model</h2>
-                  <p className="om-modal-subtitle">
-                    Update display name and metadata for {editingTable.name}.
-                  </p>
-                </div>
-              </div>
-              <button 
-                className="om-modal-close" 
-                onClick={() => setEditingTable(null)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="om-modal-body">
-              <div className="om-form-grid-2">
-                <div className="om-field-group">
-                  <label className="om-field-label">Data Model Name *</label>
-                  <input 
-                    type="text" 
-                    className="sails-input" 
-                    autoFocus 
-                    value={editTableName}
-                    onChange={e => setEditTableName(e.target.value)}
-                  />
-                </div>
-
-                <div className="om-field-group">
-                  <label className="om-field-label">System Name</label>
-                  <input 
-                    type="text" 
-                    className="sails-input" 
-                    value={editingTable.tableName}
-                    disabled
-                    style={{ opacity: 0.6, cursor: 'not-allowed' }}
-                  />
-                  <span className="om-field-hint">Physical DB names cannot be altered.</span>
-                </div>
-              </div>
-
-              <div className="om-field-group">
-                <label className="om-field-label">Description</label>
-                <textarea 
-                  className="sails-input" 
-                  rows={3}
-                  value={editTableDesc}
-                  onChange={e => setEditTableDesc(e.target.value)}
-                  style={{ resize: 'vertical', minHeight: '80px' }}
-                />
-              </div>
-            </div>
-
-            <div className="om-modal-footer">
-              <button className="sails-btn sails-btn--ghost" onClick={() => setEditingTable(null)}>Cancel</button>
-              <button className="sails-btn sails-btn--primary" onClick={handleSaveEditTable}>Save Changes</button>
             </div>
           </div>
         </div>,

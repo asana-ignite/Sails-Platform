@@ -5,7 +5,7 @@ import {
   ArrowLeft, GripVertical, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
   AlertCircle, Save, Lock
 } from 'lucide-react';
-import { ConsoleApp, ConsoleMenu } from '@sails/shared';
+import { ConsoleApp, ConsoleMenu, SailsTableDefinition, TableLayout } from '@sails/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import IconPicker from '../../components/common/IconPicker';
 import { CustomSelect } from '../../components/common/CustomSelect';
@@ -16,7 +16,7 @@ import './AdminMenuManager.css';
 
 type DetailTab = 'general' | 'navigation' | 'widget' | 'permission';
 
-const EMPTY_MENU: ConsoleMenu = { id: '', label: '', icon: 'Circle', path: '', actionType: 'table', order: 0 };
+const EMPTY_MENU: ConsoleMenu = { id: '', label: '', icon: 'Circle', path: '', actionType: 'data_model', order: 0 };
 
 const AdminAppManager: React.FC = () => {
   const { setHeaderActions } = useConsole();
@@ -549,7 +549,7 @@ const AppDetailView: React.FC<{
         )}
 
         {activeTab === 'navigation' && (
-          <NavigationTab appId={app.id} onRefresh={onRefresh} />
+          <NavigationTab appId={app.id} appSlug={slug} onRefresh={onRefresh} />
         )}
 
         {activeTab === 'widget' && (
@@ -591,18 +591,33 @@ const AppDetailView: React.FC<{
   );
 };
 
-const NavigationTab: React.FC<{ appId: string; onRefresh: () => void }> = ({ appId, onRefresh }) => {
+const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () => void }> = ({ appId, appSlug, onRefresh }) => {
   const [menus, setMenus] = useState<ConsoleMenu[]>([]);
   const [menusLoading, setMenusLoading] = useState(false);
   const [isEditingMenu, setIsEditingMenu] = useState<ConsoleMenu | null>(null);
   const [saving, setSaving] = useState(false);
   const [hasOrderChanges, setHasOrderChanges] = useState(false);
   const [deleteConfirmMenu, setDeleteConfirmMenu] = useState<ConsoleMenu | null>(null);
+  const [dataModels, setDataModels] = useState<SailsTableDefinition[]>([]);
+  const [availableViews, setAvailableViews] = useState<TableLayout[]>([]);
 
   const dragItemRef = useRef<string | null>(null);
   const dropTargetRef = useRef<string | null>(null);
 
   useEffect(() => { fetchMenus(); }, [appId]);
+
+  useEffect(() => {
+    if (isEditingMenu) fetchDataModels();
+  }, [isEditingMenu]);
+
+  useEffect(() => {
+    if (isEditingMenu?.dataModelId) {
+      setAvailableViews([]);
+      fetchAvailableViews(isEditingMenu.dataModelId, isEditingMenu.listViewId);
+    } else {
+      setAvailableViews([]);
+    }
+  }, [isEditingMenu?.dataModelId]);
 
   const fetchMenus = async () => {
     setMenusLoading(true);
@@ -624,14 +639,45 @@ const NavigationTab: React.FC<{ appId: string; onRefresh: () => void }> = ({ app
     setMenusLoading(false);
   };
 
+  const fetchDataModels = async () => {
+    try {
+      const res = await fetch('/api/metadata/objects');
+      const data = await res.json();
+      if (Array.isArray(data)) setDataModels(data);
+    } catch (err) {
+      console.error('Failed to fetch data models:', err);
+    }
+  };
+
+  const fetchAvailableViews = async (tableId: string, currentListViewId?: string | null) => {
+    try {
+      const res = await fetch(`/api/console/layouts?tableId=${tableId}&status=active`);
+      const result = await res.json();
+      if (result.success) {
+        const views: TableLayout[] = (result.data?.rows || []).filter(
+          (r: any) => r.viewType === 'LIST' && r.status === 'active'
+        );
+        setAvailableViews(views);
+        if (views.length > 0 && !currentListViewId) {
+          const defaultView = views.find(v => v.isDefault) || views[0];
+          setIsEditingMenu(prev => prev ? { ...prev, listViewId: defaultView.id } : null);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch list views:', err);
+    }
+  };
+
   const handleSaveMenu = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEditingMenu) return;
     setSaving(true);
     const method = isEditingMenu.id.startsWith('new-') ? 'POST' : 'PATCH';
     const isNew = isEditingMenu.id.startsWith('new-');
-    const { children, ...cleanData } = isEditingMenu as any;
-    const payload = { ...cleanData, appId, id: isNew ? undefined : isEditingMenu.id };
+    const { children, appId: _appId, parentId: _parentId, dataModelId: _dataModelId, ...menuData } = isEditingMenu as any;
+    const payload = isNew
+      ? { ...menuData, appId, parentId: _parentId, dataModelId: _dataModelId, id: undefined as string | undefined }
+      : { ...menuData, id: isEditingMenu.id };
     try {
       const res = await fetch('/api/console/menus', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const result = await res.json();
@@ -815,8 +861,11 @@ const NavigationTab: React.FC<{ appId: string; onRefresh: () => void }> = ({ app
             title="Move Down" style={idx >= siblingCount - 1 ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}>
             <ChevronDown size={14} />
           </button>
-          <button onClick={() => setIsEditingMenu({ ...menu })} title="Edit Menu"><Edit2 size={14} /></button>
-          <button onClick={() => setIsEditingMenu({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: menu.id, order: 0 } as any)}
+          <button onClick={() => setIsEditingMenu({
+              ...menu,
+              actionType: menu.actionType === 'table' ? 'data_model' : menu.actionType === 'plugin' ? 'custom' : menu.actionType
+            })} title="Edit Menu"><Edit2 size={14} /></button>
+          <button onClick={() => setIsEditingMenu({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'data_model', parentId: menu.id, order: 0 } as any)}
             title="Add Submenu"><Plus size={14} /></button>
           {!menu.isSystem && <button className="delete" onClick={() => handleDeleteMenu(menu)} title="Delete Menu"><Trash2 size={14} /></button>}
         </div>
@@ -839,7 +888,7 @@ const NavigationTab: React.FC<{ appId: string; onRefresh: () => void }> = ({ app
             </button>
           )}
           <button className="sails-btn sails-btn--primary"
-            onClick={() => setIsEditingMenu({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'table', parentId: null, order: menus.length } as any)}>
+            onClick={() => setIsEditingMenu({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'data_model', parentId: null, order: menus.length } as any)}>
             <Plus size={16} />
             <span>Add Root Menu</span>
           </button>
@@ -885,23 +934,61 @@ const NavigationTab: React.FC<{ appId: string; onRefresh: () => void }> = ({ app
                     onChange={val => setIsEditingMenu({ ...isEditingMenu, icon: val })} />
                 </div>
                 <div className="sails-app-field-group">
-                  <label className="sails-app-field-label">Action Type</label>
+                  <label className="sails-app-field-label">Type</label>
                   <CustomSelect
                     value={isEditingMenu.actionType}
-                    options={[{ value: 'table', label: 'Data Table' }, { value: 'plugin', label: 'Custom Plugin' }]}
-                    onChange={val => setIsEditingMenu({ ...isEditingMenu, actionType: String(val) })} />
+                    options={[
+                      { value: 'data_model', label: 'Data Model' },
+                      { value: 'custom', label: 'Custom' }
+                    ]}
+                    onChange={val => setIsEditingMenu({
+                      ...isEditingMenu,
+                      actionType: String(val),
+                      dataModelId: String(val) === 'custom' ? null : isEditingMenu.dataModelId
+                    })} />
                 </div>
               </div>
+              {isEditingMenu.actionType === 'data_model' && (
+                <div className="sails-app-field-group">
+                  <label className="sails-app-field-label">Data Model</label>
+                  <CustomSelect
+                    searchable
+                    value={isEditingMenu.dataModelId || ''}
+                    options={dataModels.map(dm => ({ value: dm.id, label: dm.name }))}
+                    onChange={val => {
+                      const selected = dataModels.find(dm => dm.id === val);
+                      setIsEditingMenu({
+                        ...isEditingMenu,
+                        dataModelId: String(val),
+                        listViewId: null,
+                        path: selected ? `/${appSlug}/${selected.tableName}` : isEditingMenu.path
+                      });
+                    }} />
+                </div>
+              )}
+              {isEditingMenu.actionType === 'data_model' && availableViews.length > 0 && (
+                <div className="sails-app-field-group">
+                  <label className="sails-app-field-label">List View</label>
+                  <CustomSelect
+                    value={isEditingMenu.listViewId || ''}
+                    options={availableViews.map(v => ({ value: v.id, label: v.name }))}
+                    onChange={val => setIsEditingMenu({
+                      ...isEditingMenu,
+                      listViewId: String(val)
+                    })} />
+                </div>
+              )}
               <div className="sails-app-field-group">
                 <label className="sails-app-field-label">Browser Path</label>
                 <input type="text" className="sails-input" value={isEditingMenu.path || ''}
                   onChange={e => setIsEditingMenu({ ...isEditingMenu, path: e.target.value })} placeholder="/crm/leads" />
               </div>
-              {isEditingMenu.actionType === 'plugin' && (
+              {isEditingMenu.actionType === 'custom' && (
                 <div className="sails-app-field-group">
-                  <label className="sails-app-field-label">Component Key (Registry)</label>
-                  <input type="text" className="sails-input" value={isEditingMenu.componentKey || ''}
-                    onChange={e => setIsEditingMenu({ ...isEditingMenu, componentKey: e.target.value })} placeholder="AdminUserManager" />
+                  <div className="sails-app-detail__placeholder" style={{ padding: '20px', textAlign: 'center' }}>
+                    <h4>Coming Soon</h4>
+                    <p>Custom page support will be available in a future update.</p>
+                  </div>
                 </div>
               )}
               <div className="sails-app-create-dialog__footer">
