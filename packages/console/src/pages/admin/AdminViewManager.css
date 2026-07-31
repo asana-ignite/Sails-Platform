@@ -62,12 +62,19 @@
   border-radius: var(--sails-radius-lg);
   background: var(--sails-bg-card);
   border: 1px solid var(--sails-border-color);
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: visible;
   box-shadow: var(--sails-shadow-sm);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .om-list-table {
   width: 100%;
+  min-width: max-content;
+  table-layout: auto;
   border-collapse: collapse;
   text-align: left;
 }
@@ -143,12 +150,18 @@
   gap: 5px;
   font-size: 0.8rem;
   color: var(--sails-text-main);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .lav-model-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  max-width: 140px;
 }
 
 .lav-desc-text {

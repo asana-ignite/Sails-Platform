@@ -28,19 +28,26 @@ const AppPluginShell: React.FC = () => {
   // Recursive menu search
   const findMenuByPath = (menus: ConsoleMenu[], path: string): ConsoleMenu | null => {
     const target = normalizePath(path);
-    for (const menu of menus) {
-      const menuPath = normalizePath(menu.path);
-      if (menuPath === target) return menu;
-      
-      // Handle nested/deep paths within a plugin
-      if (menuPath && target.startsWith(menuPath)) return menu;
-
-      if (menu.children) {
-        const found = findMenuByPath(menu.children, path);
-        if (found) return found;
+    const allMenus: ConsoleMenu[] = [];
+    const collect = (items: ConsoleMenu[]) => {
+      for (const item of items) {
+        allMenus.push(item);
+        if (item.children) collect(item.children);
       }
-    }
-    return null;
+    };
+    collect(menus);
+
+    // 1. Exact match
+    const exact = allMenus.find(m => normalizePath(m.path) === target);
+    if (exact) return exact;
+
+    // 2. Longest matching prefix
+    const prefixMatches = allMenus
+      .map(m => ({ menu: m, path: normalizePath(m.path) }))
+      .filter(x => x.path && target.startsWith(x.path + '/'))
+      .sort((a, b) => b.path.length - a.path.length);
+
+    return prefixMatches[0]?.menu || null;
   };
 
   const activeMenu = findMenuByPath(navigationItems, location.pathname);

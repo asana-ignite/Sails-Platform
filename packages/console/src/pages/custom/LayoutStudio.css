@@ -1225,8 +1225,8 @@
 
 /* ── WYSIWYG Table ── */
 
-.ls-preview-wrap { overflow-x: auto; }
-.ls-preview-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: auto; }
+.ls-preview-wrap { overflow-x: auto; width: 100%; max-width: 100%; }
+.ls-preview-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
 .ls-preview-table thead { background: var(--sails-bg-secondary, #f8fafc); }
 
 .ls-th {
@@ -1236,6 +1236,7 @@
   border-bottom: 2px solid var(--sails-border, #e2e8f0);
   transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
   position: relative; min-width: 30px;
+  max-width: 100%; overflow: hidden;
 }
 .ls-th:hover { background: rgba(157,206,224,0.06); }
 .ls-th--selected { background: rgba(157,206,224,0.1); border-bottom-color: var(--sails-primary, #9dcee0); }
@@ -1252,7 +1253,7 @@
 .ls-th__grip { color: var(--sails-text-muted, #94a3b8); cursor: grab; flex-shrink: 0; opacity: 0; transition: opacity 0.12s; }
 .ls-th:hover .ls-th__grip { opacity: 0.6; }
 .ls-th__grip:active { cursor: grabbing; }
-.ls-th__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
+.ls-th__label { flex: 1; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
 .ls-th__hidden-badge { font-size: 8px; padding: 1px 4px; border-radius: 3px; background: rgba(245,158,11,0.15); color: #d97706; font-weight: 600; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.3px; }
 .ls-th__type { font-size: 8px; padding: 1px 4px; border-radius: 3px; background: rgba(157,206,224,0.12); color: var(--sails-primary, #9dcee0); font-weight: 500; flex-shrink: 0; opacity: 0; transition: opacity 0.12s; }
 .ls-th:hover .ls-th__type { opacity: 1; }
@@ -1265,7 +1266,7 @@
 .ls-th__resize:hover { background: var(--sails-primary, #9dcee0); opacity: 0.35; }
 .ls-th--resizing .ls-th__resize { background: var(--sails-primary, #9dcee0); opacity: 0.5; }
 
-.ls-td { padding: 8px 12px; color: var(--sails-text-primary, #1e293b); border-bottom: 1px solid var(--sails-border, #e2e8f0); white-space: nowrap; }
+.ls-td { padding: 8px 12px; color: var(--sails-text-primary, #1e293b); border-bottom: 1px solid var(--sails-border, #e2e8f0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .ls-td--hidden { opacity: 0.2; }
 .ls-td--add { padding: 8px 0; width: 36px; min-width: 36px; }
 .ls-td--cb { width: 40px; min-width: 40px; text-align: center; padding: 8px 0; }
@@ -1384,3 +1385,34 @@
 /* ─── Edit Details Overlay Styles ──────────────────────────── */
 
 .ls-overlay-card__set-default { min-width: 140px; }
+
+/* ─── Layout Studio CustomSelect Theme Alignment ─── */
+.sails-layout-studio .sails-custom-select,
+.sails-properties .sails-custom-select {
+  font-size: 12px;
+}
+
+.sails-layout-studio .sails-custom-select__trigger,
+.sails-properties .sails-custom-select__trigger,
+.sails-layout-studio .sails-custom-select__option,
+.sails-properties .sails-custom-select__option,
+.sails-layout-studio .sails-custom-select__search-input,
+.sails-properties .sails-custom-select__search-input,
+.sails-layout-studio .sails-custom-select__no-results,
+.sails-properties .sails-custom-select__no-results {
+  font-size: 12px !important;
+}
+
+.sails-layout-studio .sails-custom-select--sm .sails-custom-select__trigger,
+.sails-properties .sails-custom-select--sm .sails-custom-select__trigger {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 11px !important;
+}
+
+.sails-layout-studio .sails-custom-select--md .sails-custom-select__trigger,
+.sails-properties .sails-custom-select--md .sails-custom-select__trigger {
+  min-height: 32px;
+  padding: 5px 9px;
+  font-size: 12px !important;
+}

@@ -410,6 +410,8 @@ export interface LayoutColumn {
   allowFiltering: boolean;
   alignment?: 'left' | 'center' | 'right';
   wrapText?: boolean;
+  isPrimaryLink?: boolean;
+  targetDetailLayoutId?: string;
 }
 
 export interface SummaryField {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Columns,
   Layers,
@@ -19,6 +19,7 @@ import { useConsole } from '../contexts/ConsoleContext';
 import type { ConsoleMenu, TableLayout, SailsFieldDefinition } from '@sails/shared';
 import DynamicIcon from '../components/common/DynamicIcon';
 import CustomSelect from '../components/common/CustomSelect';
+import LoadingScreen from '../components/common/LoadingScreen';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
 
@@ -101,6 +102,7 @@ const LIST_PER_PAGE_OPTIONS = [
 const DynamicTablePage: React.FC = () => {
   const { apps, navigationItems } = useConsole();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const normalizePath = (p: string | null) => p ? p.replace(/\/+$/, '').toLowerCase() : '';
 
@@ -157,17 +159,29 @@ const DynamicTablePage: React.FC = () => {
       try {
         let targetLayout: any = null;
 
-        if (activeMenu.listViewId) {
-          const layoutRes = await fetch(`/api/console/layouts?id=${activeMenu.listViewId}`);
+        const searchParams = new URLSearchParams(window.location.search);
+        const targetLayoutId = searchParams.get('layoutId') || activeMenu?.listViewId;
+
+        const [layoutRes, objRes] = await Promise.all([
+          targetLayoutId ? fetch(`/api/console/layouts?id=${targetLayoutId}`) : Promise.resolve(null),
+          fetch('/api/metadata/objects')
+        ]);
+
+        if (layoutRes && layoutRes.ok) {
           const layoutResult = await layoutRes.json();
           if (layoutResult.success) targetLayout = layoutResult.data;
         }
 
-        if (!targetLayout && activeMenu.dataModelId) {
-          const layoutRes = await fetch(`/api/console/layouts?tableId=${activeMenu.dataModelId}`);
-          const layoutResult = await layoutRes.json();
-          if (layoutResult.success) {
-            const rows: any[] = layoutResult.data?.rows || [];
+        const objectsData = objRes && objRes.ok ? await objRes.json() : [];
+        const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData.rows || objectsData.data || []);
+
+        const dataModelId = activeMenu?.dataModelId || targetLayout?.tableId;
+
+        if (!targetLayout && dataModelId) {
+          const lRes = await fetch(`/api/console/layouts?tableId=${dataModelId}`);
+          if (lRes.ok) {
+            const lResult = await lRes.json();
+            const rows: any[] = lResult.data?.rows || [];
             targetLayout =
               rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active' && r.isDefault) ||
               rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active') ||
@@ -177,19 +191,9 @@ const DynamicTablePage: React.FC = () => {
         }
 
         let tableName = targetLayout?.table?.tableName;
-        let dataModelId = activeMenu?.dataModelId || targetLayout?.tableId;
-
-        // Fallback: If tableName wasn't included directly, fetch metadata objects
         if (!tableName && dataModelId) {
-          const objRes = await fetch(`/api/metadata/objects`);
-          if (objRes.ok) {
-            const objData = await objRes.json();
-            const rows = Array.isArray(objData) ? objData : (objData.rows || objData.data || []);
-            const foundTable = rows.find((t: any) => t.id === dataModelId || t.tableName === dataModelId);
-            if (foundTable) {
-              tableName = foundTable.tableName;
-            }
-          }
+          const foundTable = objectRows.find((t: any) => t.id === dataModelId || t.tableName === dataModelId);
+          if (foundTable) tableName = foundTable.tableName;
         }
 
         if (!tableName) {
@@ -198,13 +202,26 @@ const DynamicTablePage: React.FC = () => {
           return;
         }
 
+        // Parallel fetch schema fields and records data concurrently
+        const [metaRes, recordsRes] = await Promise.all([
+          fetch(`/api/metadata/${tableName}`),
+          fetch(`/api/dynamic/${tableName}`)
+        ]);
+
         let tableFields: SailsFieldDefinition[] = [];
-        const metaRes = await fetch(`/api/metadata/${tableName}`);
         if (metaRes.ok) {
           const tableMeta = await metaRes.json();
           tableFields = tableMeta.fields || [];
           setFields(tableFields);
         }
+
+        if (!recordsRes.ok) {
+          const errData = await recordsRes.json().catch(() => ({}));
+          setError(errData.error || 'Failed to load records');
+          return;
+        }
+        const recordsData = await recordsRes.json();
+        setRecords(Array.isArray(recordsData) ? recordsData : []);
 
         // If layout doesn't exist, create default layout excluding internal system fields
         if (!targetLayout) {
@@ -241,15 +258,6 @@ const DynamicTablePage: React.FC = () => {
 
         const cfg = targetLayout.status === 'active' ? (targetLayout.publishedConfig || targetLayout.config) : targetLayout.config;
         if (cfg?.recordsPerPage) setRecordsPerPage(cfg.recordsPerPage);
-
-        const recordsRes = await fetch(`/api/dynamic/${tableName}`);
-        if (!recordsRes.ok) {
-          const errData = await recordsRes.json().catch(() => ({}));
-          setError(errData.error || 'Failed to load records');
-          return;
-        }
-        const recordsData = await recordsRes.json();
-        setRecords(Array.isArray(recordsData) ? recordsData : []);
       } catch (err: any) {
         setError(err.message || 'Failed to load data');
       } finally {
@@ -411,6 +419,8 @@ const DynamicTablePage: React.FC = () => {
     });
   };
 
+
+
   if (!activeMenu?.dataModelId && !activeMenu?.listViewId) {
     return (
       <div className="sails-dynamic-table sails-page-container">
@@ -430,11 +440,7 @@ const DynamicTablePage: React.FC = () => {
   }
 
   if (loading) {
-    return (
-      <div className="sails-dynamic-table sails-page-container">
-        <div className="sails-admin-loading">Loading...</div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (error) {
@@ -627,19 +633,46 @@ const DynamicTablePage: React.FC = () => {
                               />
                             </td>
                           )}
-                          {visibleListColumns.map((col: any) => {
-                            const f = fields.find((ff) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
-                            const val = f ? rec[f.fieldName] : rec[col.fieldId];
-                            return (
-                              <td
-                                key={col.id}
-                                className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''}`}
-                                style={{ textAlign: col.alignment || 'left' }}
-                              >
-                                {f ? renderListFieldValue(f, rec) : (val !== undefined && val !== null ? String(val) : '\u2014')}
-                              </td>
-                            );
-                          })}
+                          {(() => {
+                            const primaryColId = visibleListColumns.find((c: any) => c.isPrimaryLink)?.id || visibleListColumns[0]?.id;
+                            return visibleListColumns.map((col: any) => {
+                              const f = fields.find((ff) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
+                              const val = f ? rec[f.fieldName] : rec[col.fieldId];
+                              const isPrimary = col.id === primaryColId;
+                              const cellText = f ? renderListFieldValue(f, rec) : (val !== undefined && val !== null ? String(val) : '—');
+
+                              return (
+                                <td
+                                  key={col.id}
+                                  className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''} ${isPrimary ? 'ls-rtd--primary' : ''}`}
+                                  style={{ textAlign: col.alignment || 'left' }}
+                                >
+                                  {isPrimary ? (
+                                    <a
+                                      href={`#record-${rec.id}`}
+                                      className="ls-primary-link"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        const modelId = activeMenu?.dataModelId || layout?.tableId;
+                                        const parts = location.pathname.split('/').filter(Boolean);
+                                        const appSlug = parts[0] || 'admin';
+                                        const targetLayoutParam = col.targetDetailLayoutId ? `?layoutId=${col.targetDetailLayoutId}` : '';
+                                        const targetRoute = `/${appSlug}/models/${modelId}/${rec.id}${targetLayoutParam}`;
+                                        console.log('Navigating to Record Detail:', { route: targetRoute, recordId: rec.id, layoutId: col.targetDetailLayoutId });
+                                        navigate(targetRoute);
+                                      }}
+                                      title={`View detail for ${cellText}`}
+                                    >
+                                      {cellText}
+                                    </a>
+                                  ) : (
+                                    cellText
+                                  )}
+                                </td>
+                              );
+                            });
+                          })()}
                         </tr>
                       );
                     })}

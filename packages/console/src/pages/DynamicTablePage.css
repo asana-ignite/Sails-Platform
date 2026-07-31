@@ -45,11 +45,15 @@
 
 .sails-dynamic-table .ls-preview-wrap {
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sails-dynamic-table .ls-runtime-table {
   width: 100%;
+  min-width: max-content;
+  table-layout: auto;
   border-collapse: collapse;
   font-size: 0.85rem;
   color: var(--sails-text-main);
@@ -71,6 +75,8 @@
   user-select: none;
   background-color: transparent;
   transition: var(--sails-transition);
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .sails-dynamic-table .ls-rth:hover {
@@ -82,6 +88,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .sails-dynamic-table .ls-rth__sort-btn {
@@ -97,6 +106,18 @@
   background: transparent;
   padding: 0;
   cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.sails-dynamic-table .ls-rth__label {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sails-dynamic-table .ls-rth__sort-btn:hover {
@@ -152,6 +173,21 @@
   padding: 12px 14px;
   color: var(--sails-text-main);
   border-bottom: 1px solid var(--sails-border-color);
+}
+
+.sails-dynamic-table .ls-primary-link,
+.ls-primary-link {
+  color: var(--sails-primary, #6366f1);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.sails-dynamic-table .ls-primary-link:hover,
+.ls-primary-link:hover {
+  text-decoration: underline;
+  color: var(--sails-primary-hover, #4f46e5);
 }
 
 /* Pagination Theme Alignment */

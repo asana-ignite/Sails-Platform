@@ -22,23 +22,35 @@
   box-sizing: border-box;
 }
 
+.sails-custom-select--sm {
+  font-size: 11px;
+}
+
 .sails-custom-select--sm .sails-custom-select__trigger {
-  padding: 4px 10px;
-  font-size: 0.8rem;
+  padding: 4px 8px;
+  font-size: 11px;
   border-radius: var(--sails-radius-sm, 6px);
-  min-height: 30px;
+  min-height: 28px;
+}
+
+.sails-custom-select--md {
+  font-size: 12px;
 }
 
 .sails-custom-select--md .sails-custom-select__trigger {
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  min-height: 38px;
+  padding: 6px 10px;
+  font-size: 12px;
+  min-height: 32px;
+}
+
+.sails-custom-select--lg {
+  font-size: 14px;
 }
 
 .sails-custom-select--lg .sails-custom-select__trigger {
-  padding: 12px 16px;
-  font-size: 1rem;
-  min-height: 46px;
+  padding: 10px 14px;
+  font-size: 14px;
+  min-height: 42px;
 }
 
 .sails-custom-select__trigger:hover:not(:disabled),
@@ -136,8 +148,8 @@
 }
 
 .sails-custom-select__no-results {
-  padding: 12px 10px;
-  font-size: 0.8rem;
+  padding: 10px 8px;
+  font-size: inherit;
   color: var(--sails-text-muted, #6b8ba4);
   text-align: center;
 }
@@ -146,9 +158,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: var(--sails-radius-sm, 6px);
-  font-size: 0.85rem;
+  font-size: inherit;
   color: var(--sails-text-main, #344759);
   cursor: pointer;
   transition: all 0.15s ease;

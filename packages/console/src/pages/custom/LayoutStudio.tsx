@@ -16,7 +16,7 @@ import {
   ArrowLeft, Loader2, Play, Pause, Minimize2, Maximize2, CheckCircle2,
   Layers, Search, ArrowUp, ArrowDown, ChevronLeft, ChevronRight,
   RotateCcw, AlignLeft, AlignCenter, AlignRight,
-  Edit3, Zap, Undo2, AlertTriangle,
+  Edit3, Zap, Undo2, AlertTriangle, Database, ExternalLink,
 } from 'lucide-react';
 import type { SailsFieldDefinition, LayoutColumn, LayoutFilter, LayoutSort, ViewType, SummaryField, LayoutStatus } from '@sails/shared';
 import { CustomSelect } from '../../components/common/CustomSelect';
@@ -350,6 +350,7 @@ const LayoutStudio: React.FC = () => {
 
   // ── LIST mode state ──
   const [listColumns, setListColumns] = useState<LayoutColumn[]>([]);
+  const [availableDetailLayouts, setAvailableDetailLayouts] = useState<{ id: string; name: string; viewType: string }[]>([]);
   const [listFilters, setListFilters] = useState<LayoutFilter[]>([]);
   const [listSortBy, setListSortBy] = useState<LayoutSort[]>([]);
   const [listSelectedColId, setListSelectedColId] = useState<string | null>(null);
@@ -401,6 +402,18 @@ const LayoutStudio: React.FC = () => {
         setTableMeta({ id: found.id, name: found.name, tableName: found.tableName, fields: found.fields || [] });
         setMockRecord(buildMockRecord(found.fields || []));
         setListMockRows(buildMockRows(found.fields || []));
+
+        try {
+          const lRes = await fetch(`/api/console/layouts?tableId=${tableId}`);
+          if (lRes.ok) {
+            const lData = await lRes.json();
+            const rows = lData.data?.rows || lData.rows || [];
+            const details = rows.filter((r: any) => (r.viewType === 'DETAIL' || r.viewType === 'FORM') && r.status === 'active');
+            setAvailableDetailLayouts(details.map((r: any) => ({ id: r.id, name: r.name || r.id, viewType: r.viewType })));
+          }
+        } catch (e) {
+          console.error('Failed to load sibling detail layouts', e);
+        }
       } catch (err: any) {
         setFetchError(err.message || 'Failed to load table metadata');
       } finally {
@@ -675,14 +688,14 @@ const LayoutStudio: React.FC = () => {
     const onMove = (e: MouseEvent) => {
       const delta = e.clientX - listColResizing.startX;
       const newWidthPx = Math.max(30, listColResizing.startWidth + delta);
-      const unit = listColResizing.widthUnit || 'px';
+      const unit = listColResizing.widthUnit || '%';
       setListColumns((c) =>
         c.map((col) => {
           if (col.id !== listColResizing.columnId) return col;
-          if (unit === '%') {
-            const table = document.querySelector('.ls-preview-table') as HTMLElement;
-            if (!table) return { ...col, width: newWidthPx, widthUnit: 'px' } as LayoutColumn;
-            const pct = Math.round((newWidthPx / table.offsetWidth) * 100);
+          if (unit === '%' || !col.widthUnit) {
+            const table = (document.querySelector('.ls-preview-table') || document.querySelector('.ls-runtime-table')) as HTMLElement;
+            const tableWidth = table?.offsetWidth || 800;
+            const pct = Math.round((newWidthPx / tableWidth) * 100);
             return { ...col, width: Math.max(3, Math.min(90, pct)), widthUnit: '%' } as LayoutColumn;
           }
           return { ...col, width: newWidthPx, widthUnit: 'px' } as LayoutColumn;
@@ -1103,7 +1116,17 @@ const LayoutStudio: React.FC = () => {
   };
 
   const updateListColumn = (columnId: string, patch: Partial<LayoutColumn>) => {
-    setListColumns((c) => c.map((col) => col.id === columnId ? { ...col, ...patch } as LayoutColumn : col));
+    setListColumns((c) =>
+      c.map((col) => {
+        if (col.id === columnId) {
+          return { ...col, ...patch } as LayoutColumn;
+        }
+        if (patch.isPrimaryLink) {
+          return { ...col, isPrimaryLink: false } as LayoutColumn;
+        }
+        return col;
+      })
+    );
   };
 
   const handleListColumnDrop = (sourceId: string, targetId: string) => {
@@ -1826,15 +1849,27 @@ const LayoutStudio: React.FC = () => {
                                     <input type="checkbox" checked={listSelectedIndices.has(globalIndex)} onChange={() => toggleListSelectRecord(globalIndex)} />
                                   </td>
                                 )}
-                                {sortedListColumns.filter((c) => c.visible).map((col) => {
-                                  const f = allFields.find((ff) => ff.id === col.fieldId);
-                                  if (!f) return <td key={col.id} className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''}`} style={{ textAlign: col.alignment || 'left' }}>—</td>;
-                                  return (
-                                    <td key={col.id} className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''}`} style={{ textAlign: col.alignment || 'left' }}>
-                                      {renderListFieldValue(f, rec)}
-                                    </td>
-                                  );
-                                })}
+                                {(() => {
+                                  const visibleCols = sortedListColumns.filter((c) => c.visible);
+                                  const primaryColId = visibleCols.find((c) => c.isPrimaryLink)?.id || visibleCols[0]?.id;
+                                  return visibleCols.map((col) => {
+                                    const f = allFields.find((ff) => ff.id === col.fieldId);
+                                    const isPrimary = col.id === primaryColId;
+                                    if (!f) return <td key={col.id} className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''}`} style={{ textAlign: col.alignment || 'left' }}>—</td>;
+                                    const val = renderListFieldValue(f, rec);
+                                    return (
+                                      <td key={col.id} className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''}`} style={{ textAlign: col.alignment || 'left' }}>
+                                        {isPrimary ? (
+                                          <span className="ls-primary-link" style={{ color: 'var(--sails-primary, #6366f1)', fontWeight: 500, cursor: 'pointer', textDecoration: 'underline' }}>
+                                            {val}
+                                          </span>
+                                        ) : (
+                                          val
+                                        )}
+                                      </td>
+                                    );
+                                  });
+                                })()}
                               </tr>
                             );
                           })}
@@ -1902,7 +1937,6 @@ const LayoutStudio: React.FC = () => {
                                     <GripVertical size={12} className="ls-th__grip" />
                                     <span className="ls-th__label">{col.labelOverride || f.name}</span>
                                     {!col.visible && <span className="ls-th__hidden-badge">hidden</span>}
-                                    <span className="ls-th__type">{f.logicalType}</span>
                                     <div className="ls-th__actions">
                                       <button className="ls-th__action" onClick={(e) => { e.stopPropagation(); toggleListColumnVisible(col.id); }} title={col.visible ? 'Hide column' : 'Show column'}>
                                         {col.visible ? <Eye size={11} /> : <EyeOff size={11} />}
@@ -1910,7 +1944,7 @@ const LayoutStudio: React.FC = () => {
                                       <button className="ls-th__action ls-th__action--remove" onClick={(e) => { e.stopPropagation(); removeListColumn(col.id); }} title="Remove column"><X size={11} /></button>
                                     </div>
                                   </div>
-                                  <div className="ls-th__resize" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); const th = (e.currentTarget as HTMLElement).closest('th') as HTMLElement; setListColResizing({ columnId: col.id, startX: e.clientX, startWidth: th.offsetWidth, widthUnit: col.widthUnit || 'px' }); }} />
+                                  <div className="ls-th__resize" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); const th = (e.currentTarget as HTMLElement).closest('th') as HTMLElement; setListColResizing({ columnId: col.id, startX: e.clientX, startWidth: th.offsetWidth, widthUnit: col.widthUnit || '%' }); }} />
                                 </th>
                               );
                             })}
@@ -1928,9 +1962,22 @@ const LayoutStudio: React.FC = () => {
                               {sortedListColumns.map((col) => {
                                 const f = allFields.find((ff) => ff.id === col.fieldId);
                                 if (!f) return <td key={col.id} className={`ls-td ${!col.visible ? 'ls-td--hidden' : ''}`} style={{ textAlign: col.alignment || 'left' }}>—</td>;
+                                const isPrimary = col.isPrimaryLink;
+                                const val = renderListFieldValue(f, rec);
                                 return (
                                   <td key={col.id} className={`ls-td ${!col.visible ? 'ls-td--hidden' : ''} ${col.wrapText ? 'ls-td--wrap' : ''}`} style={{ textAlign: col.alignment || 'left' }}>
-                                    {renderListFieldValue(f, rec)}
+                                    {isPrimary ? (
+                                      <span
+                                        className="ls-primary-link"
+                                        style={{ color: 'var(--sails-primary, #6366f1)', fontWeight: 500, cursor: 'default', textDecoration: 'underline' }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        title="Primary Detail Link Preview"
+                                      >
+                                        {val}
+                                      </span>
+                                    ) : (
+                                      val
+                                    )}
                                   </td>
                                 );
                               })}
@@ -2218,7 +2265,13 @@ const LayoutStudio: React.FC = () => {
                       <>
                 <div className="ls-section-divider">Column Properties</div>
                 <div className="ls-prop__name">{allFields.find((f) => f.id === listSelectedCol.fieldId)?.name || listSelectedCol.fieldId}</div>
-                <div className="ls-prop__type">{allFields.find((f) => f.id === listSelectedCol.fieldId)?.logicalType || ''}</div>
+
+                <div className="ls-prop-group" style={{ marginBottom: 12 }}>
+                  <label className="ls-prop-label">Data Type</label>
+                  <span className="ls-prop-type-badge" style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'var(--sails-primary, #6366f1)', border: '1px solid var(--sails-border-color)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {allFields.find((f) => f.id === listSelectedCol.fieldId)?.logicalType || 'string'}
+                  </span>
+                </div>
 
                 <div className="ls-prop-group">
                   <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -2239,6 +2292,31 @@ const LayoutStudio: React.FC = () => {
                     Enables filtering on this column during runtime
                   </p>
                 </div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="checkbox" checked={listSelectedCol.isPrimaryLink || false}
+                      onChange={() => updateListColumn(listSelectedCol.id, { isPrimaryLink: !listSelectedCol.isPrimaryLink } as Partial<LayoutColumn>)} /> Primary Detail Link
+                  </label>
+                  <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '2px 0 0 22px' }}>
+                    Clicking cell value opens record Detail View
+                  </p>
+                </div>
+
+                {listSelectedCol.isPrimaryLink && (
+                  <div className="ls-prop-group" style={{ paddingLeft: 22 }}>
+                    <label className="ls-prop-label">Target Form / Detail Layout</label>
+                    <CustomSelect
+                      value={listSelectedCol.targetDetailLayoutId || ''}
+                      options={[
+                        { value: '', label: 'Default Active Detail Layout' },
+                        ...availableDetailLayouts.map((l) => ({ value: l.id, label: `${l.name} (${l.viewType})` }))
+                      ]}
+                      onChange={(v: string | number) => updateListColumn(listSelectedCol.id, { targetDetailLayoutId: String(v) || undefined } as Partial<LayoutColumn>)}
+                      size="sm"
+                    />
+                  </div>
+                )}
 
                 <div className="ls-prop-group">
                   <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -2315,6 +2393,36 @@ const LayoutStudio: React.FC = () => {
                     ) : (
                       <>
                 <div className="ls-section-divider">View Properties</div>
+
+                <div className="ls-prop-group" style={{ marginBottom: 14 }}>
+                  <label className="ls-prop-label">Data Model</label>
+                  <a
+                    href={`/admin/schema/${tableMeta.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ls-model-link-btn"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: 'var(--sails-primary, #6366f1)',
+                      textDecoration: 'none',
+                      background: 'rgba(99, 102, 241, 0.08)',
+                      border: '1px solid rgba(99, 102, 241, 0.2)',
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title="Open model details in Data Model Module"
+                  >
+                    <Database size={13} />
+                    <span>{tableMeta.name || tableMeta.tableName || 'Data Model'}</span>
+                    <ExternalLink size={11} style={{ marginLeft: 2 }} />
+                  </a>
+                </div>
 
                 <div className="ls-prop-group">
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>

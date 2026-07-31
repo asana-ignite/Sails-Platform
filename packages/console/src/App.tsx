@@ -10,6 +10,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 // Lazy load pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const DynamicTablePage = lazy(() => import('./pages/DynamicTablePage'));
+const DynamicDetailPage = lazy(() => import('./pages/DynamicDetailPage'));
 const AppPluginShell = lazy(() => import('./pages/admin/AppPluginShell'));
 const AdminAuditLog = lazy(() => import('./pages/admin/AdminAuditLog'));
 const Login = lazy(() => import('./pages/Login'));
@@ -53,21 +54,38 @@ const ProtectedRoute: React.FC<{
  * Decides whether to render a Table or a Plugin based on database metadata.
  */
 const SmartPageRouter: React.FC = () => {
-  const { apps, navigationItems } = useConsole();
+  const { apps, navigationItems, isLoading } = useConsole();
   const location = useLocation();
+  const { user } = useAuth();
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   const normalizePath = (p: string | null) => p ? p.replace(/\/+$/, '').toLowerCase() : '';
 
   const findMenu = (menus: ConsoleMenu[]): ConsoleMenu | null => {
     const target = normalizePath(location.pathname);
-    for (const menu of menus) {
-      if (normalizePath(menu.path) === target) return menu;
-      if (menu.children) {
-        const found = findMenu(menu.children);
-        if (found) return found;
+    const allMenus: ConsoleMenu[] = [];
+    const collect = (items: ConsoleMenu[]) => {
+      for (const item of items) {
+        allMenus.push(item);
+        if (item.children) collect(item.children);
       }
-    }
-    return null;
+    };
+    collect(menus);
+
+    // 1. Exact match
+    const exact = allMenus.find(m => normalizePath(m.path) === target);
+    if (exact) return exact;
+
+    // 2. Longest matching prefix
+    const prefixMatches = allMenus
+      .map(m => ({ menu: m, path: normalizePath(m.path) }))
+      .filter(x => x.path && target.startsWith(x.path + '/'))
+      .sort((a, b) => b.path.length - a.path.length);
+
+    return prefixMatches[0]?.menu || null;
   };
 
   let activeMenu = findMenu(navigationItems);
@@ -81,8 +99,6 @@ const SmartPageRouter: React.FC = () => {
     }
   }
 
-  const { user } = useAuth();
-  
   // 1. Explicit path check for sensitive areas (e.g., /admin)
   // This catches cases where the menu item was filtered out of navigationItems
   if (location.pathname.startsWith('/admin')) {
@@ -96,6 +112,11 @@ const SmartPageRouter: React.FC = () => {
     if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'TENANT_ADMIN' && user?.role !== 'ADMIN') {
       return <Unauthorized />;
     }
+  }
+
+  const isRecordDetailRoute = location.pathname.includes('/models/') || location.pathname.includes('/objects/');
+  if (isRecordDetailRoute) {
+    return <DynamicDetailPage />;
   }
 
   const isDataModelRoute =
