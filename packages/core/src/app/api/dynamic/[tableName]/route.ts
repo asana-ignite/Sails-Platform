@@ -3,7 +3,7 @@ import { pool } from '@/lib/knex';
 import { db } from '@/lib/db';
 import { QueryLayer } from '@/core/engine/QueryLayer';
 import format from 'pg-format';
-import { getAppSession } from '@/lib/auth/session';
+import { requireSession } from '@/lib/auth/session';
 
 type RouteContext = { params: { tableName: string } };
 
@@ -12,14 +12,12 @@ type RouteContext = { params: { tableName: string } };
  * Returns the schemaName for the active session's tenant.
  */
 async function resolveTable(tableName: string) {
-  const session = await getAppSession();
-  const tenantId = (session?.user as any)?.tenantId;
+  const { tenantId } = await requireSession();
 
   const table = await db.tableDefinition.findFirst({
     where: {
       tableName,
-      // Enforce tenant isolation at the metadata level too
-      ...(tenantId ? { tenantId } : {}),
+      tenantId,
     },
     include: { tenant: true },
   });

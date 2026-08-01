@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/session';
 import { SchemaLogger } from '@/core/engine/SchemaLogger';
 
 /**
@@ -9,28 +9,10 @@ import { SchemaLogger } from '@/core/engine/SchemaLogger';
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
-
-    if (!caller) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Verify Admin role or specific capability
-    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN') {
-      // Actually we should check capability system.teams.manage here, 
-      // but TENANT_ADMIN check aligns with other routes currently.
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const targetTenantId = caller.tenantId;
-
-    if (!targetTenantId) {
-       return NextResponse.json({ error: 'Could not determine tenant context.' }, { status: 400 });
-    }
+    const { tenantId } = await requireAdmin();
 
     const teams = await db.team.findMany({
-      where: { tenantId: targetTenantId },
+      where: { tenantId },
       include: {
         parent: true,
         members: {
@@ -71,17 +53,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
-
-    if (!caller || (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const targetTenantId = caller.tenantId;
-    if (!targetTenantId) {
-       return NextResponse.json({ error: 'Could not determine tenant context.' }, { status: 400 });
-    }
+    const { userId, tenantId } = await requireAdmin();
 
     const body = await req.json();
     const { name, parentId } = body;
@@ -93,7 +65,7 @@ export async function POST(req: NextRequest) {
     const newTeam = await db.team.create({
       data: {
         name,
-        tenantId: targetTenantId,
+        tenantId,
         parentId: parentId || null
       },
       include: {
@@ -105,8 +77,8 @@ export async function POST(req: NextRequest) {
     });
 
     SchemaLogger.logSystemEvent({
-      tenantId: targetTenantId,
-      userId: caller.id,
+      tenantId,
+      userId,
       category: 'USER_MANAGEMENT',
       action: 'CREATE',
       eventName: 'Create Team',

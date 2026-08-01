@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { getAppSession, requireSession } from '@/lib/auth/session';
 
 /**
  * GET /api/console/apps
  * Lists all console applications for the authenticated tenant.
+ * Falls back to DEFAULT_TENANT_ID for unauthenticated requests.
  */
 export async function GET() {
   try {
@@ -43,12 +44,8 @@ export async function GET() {
  */
 export async function POST(req: Request) {
   try {
-    const session = await getAppSession();
-    const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
-
-    if (!tenantId) {
-      return NextResponse.json({ success: false, error: 'Tenant context required' }, { status: 400 });
-    }
+    const session = await requireSession();
+    const tenantId = session.tenantId;
 
     const body = await req.json();
     const { name, slug, description, icon, order, requiredCapability } = body;
@@ -82,8 +79,8 @@ export async function POST(req: Request) {
  */
 export async function PATCH(req: Request) {
   try {
-    const session = await getAppSession();
-    const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
+    const session = await requireSession();
+    const tenantId = session.tenantId;
 
     const body = await req.json();
     const { id, ...updateData } = body;
@@ -101,8 +98,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: false, error: 'App not found or access denied' }, { status: 404 });
     }
 
-    const callerRole = (session?.user as any)?.role;
-    if (existing.isSystem && callerRole !== 'SUPER_ADMIN') {
+    if (existing.isSystem && session.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ success: false, error: 'System applications are protected and can only be modified by Super Admins' }, { status: 403 });
     }
 
@@ -124,8 +120,8 @@ export async function PATCH(req: Request) {
  */
 export async function DELETE(req: Request) {
   try {
-    const session = await getAppSession();
-    const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
+    const session = await requireSession();
+    const tenantId = session.tenantId;
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
@@ -143,8 +139,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: false, error: 'App not found or access denied' }, { status: 404 });
     }
 
-    const callerRole = (session?.user as any)?.role;
-    if (existing.isSystem && callerRole !== 'SUPER_ADMIN') {
+    if (existing.isSystem && session.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ success: false, error: 'System applications are protected and can only be deleted by Super Admins' }, { status: 403 });
     }
 

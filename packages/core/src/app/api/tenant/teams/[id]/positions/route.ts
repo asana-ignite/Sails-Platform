@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/session';
 import { SchemaLogger } from '@/core/engine/SchemaLogger';
 
 /**
@@ -9,12 +9,7 @@ import { SchemaLogger } from '@/core/engine/SchemaLogger';
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
-
-    if (!caller || (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const { userId, tenantId } = await requireAdmin();
 
     const teamId = params.id;
     const body = await req.json();
@@ -34,8 +29,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
 
     SchemaLogger.logSystemEvent({
-      tenantId: caller.tenantId,
-      userId: caller.id,
+      tenantId,
+      userId,
       category: 'USER_MANAGEMENT',
       action: 'UPDATE',
       eventName: 'Link Position to Team',
@@ -54,12 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
  */
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
-
-    if (!caller || (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const { userId, tenantId } = await requireAdmin();
 
     const teamId = params.id;
     const { searchParams } = new URL(req.url);
@@ -76,8 +66,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     });
 
     SchemaLogger.logSystemEvent({
-      tenantId: caller.tenantId,
-      userId: caller.id,
+      tenantId,
+      userId,
       category: 'USER_MANAGEMENT',
       action: 'UPDATE',
       eventName: 'Unlink Position from Team',

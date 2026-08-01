@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { requireSession, requireAdmin } from '@/lib/auth/session';
 import { SchemaLogger } from '@/core/engine/SchemaLogger';
 import { AccessGuard } from '@/core/engine/AccessGuard';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getAppSession();
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const tenantId = session.user.tenantId;
+    const { tenantId } = await requireSession();
 
     const positions = await db.position.findMany({
       where: { tenantId },
@@ -30,13 +27,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
-    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const { userId, tenantId } = await requireAdmin();
 
     const { name, prefix, description, headCount } = await req.json();
 
@@ -46,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     const position = await db.position.create({
       data: {
-        tenantId: caller.tenantId,
+        tenantId,
         name,
         prefix,
         description,
@@ -68,8 +59,8 @@ export async function POST(req: NextRequest) {
     }
 
     SchemaLogger.logSystemEvent({
-      tenantId: caller.tenantId,
-      userId: caller.id,
+      tenantId,
+      userId,
       category: 'USER_MANAGEMENT',
       action: 'CREATE',
       eventName: 'Create Position',

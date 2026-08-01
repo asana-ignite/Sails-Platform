@@ -3,7 +3,7 @@ import format from 'pg-format';
 import crypto from 'crypto';
 import { AccessGuard, CrudAction } from './AccessGuard';
 import { TransactionContext } from './TransactionContext';
-import { getAppSession } from '@/lib/auth/session';
+import { getSession, SessionContext } from '@/lib/auth/session';
 
 /**
  * Generates a time-ordered string ID (similar to CUID/UUIDv7)
@@ -13,35 +13,20 @@ function generateTimeOrderedId(): string {
   return Date.now().toString(36) + crypto.randomBytes(8).toString('hex');
 }
 
-/**
- * Resolved session context from the Auth.js JWT.
- * Extracted once per request and threaded through AccessGuard + TransactionContext.
- */
-export interface SessionContext {
-  userId: string;
-  tenantId: string;
-  role: string;
-  activeTeamId?: string;
-}
-
 async function resolveSessionContext(): Promise<SessionContext> {
-  const session = await getAppSession();
-  const user = session?.user as any;
+  const ctx = await getSession();
 
-  if (!user?.id) {
+  if (!ctx?.userId) {
     throw new Error('Unauthorized: No active session. Please sign in.');
   }
-  if (!user?.tenantId) {
+  if (!ctx?.tenantId) {
     throw new Error('Forbidden: User is not associated with any tenant.');
   }
 
-  return {
-    userId: user.id,
-    tenantId: user.tenantId,
-    role: user.role ?? 'MEMBER',
-    activeTeamId: user.activeTeamId,
-  };
+  return ctx;
 }
+
+export type { SessionContext };
 
 export class QueryLayer {
   /**

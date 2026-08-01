@@ -1,15 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { requireSession } from '@/lib/auth/session';
 
 export async function GET(req: Request) {
   try {
-    const session = await getAppSession();
-    const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
-
-    if (!tenantId) {
-      return NextResponse.json({ success: false, error: 'Tenant context required' }, { status: 400 });
-    }
+    const { tenantId } = await requireSession();
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
@@ -98,12 +93,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getAppSession();
-    const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
-
-    if (!tenantId) {
-      return NextResponse.json({ success: false, error: 'Tenant context required' }, { status: 400 });
-    }
+    const { tenantId } = await requireSession();
 
     const body = await req.json();
     const { tableId, layoutType, viewType, name, systemName, description, isDefault, recordTitleField, config } = body;
@@ -158,8 +148,7 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await getAppSession();
-    const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
+    const { tenantId } = await requireSession();
 
     const body = await req.json();
     const { id, action, tableId, layoutType, viewType, name, systemName, description, isDefault, recordTitleField, config } = body;
@@ -287,8 +276,7 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const session = await getAppSession();
-    const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
+    const { tenantId } = await requireSession();
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');

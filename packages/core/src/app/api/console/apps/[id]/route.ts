@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { requireSession } from '@/lib/auth/session';
 
 /**
  * GET /api/console/apps/[id]
  */
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
+    const { tenantId, role } = await requireSession();
 
     const app = await db.consoleApp.findUnique({
       where: { id: params.id },
@@ -19,8 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: 'App not found.' }, { status: 404 });
     }
 
-    // Security: Ensure caller belongs to the same tenant (unless SUPER_ADMIN)
-    if (caller && caller.role !== 'SUPER_ADMIN' && app.tenantId !== caller.tenantId) {
+    if (role !== 'SUPER_ADMIN' && app.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -35,21 +33,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
  */
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
+    const { tenantId, role } = await requireSession();
 
-    if (!caller || (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN')) {
+    if (role !== 'SUPER_ADMIN' && role !== 'TENANT_ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const app = await db.consoleApp.findUnique({ where: { id: params.id } });
     if (!app) return NextResponse.json({ error: 'App not found.' }, { status: 404 });
 
-    if (caller.role !== 'SUPER_ADMIN' && app.tenantId !== caller.tenantId) {
+    if (role !== 'SUPER_ADMIN' && app.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    if (app.isSystem && caller.role !== 'SUPER_ADMIN') {
+    if (app.isSystem && role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'System applications are protected and can only be modified by Super Admins' }, { status: 403 });
     }
 
@@ -74,21 +71,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
  */
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
+    const { tenantId, role } = await requireSession();
 
-    if (!caller || (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN')) {
+    if (role !== 'SUPER_ADMIN' && role !== 'TENANT_ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const app = await db.consoleApp.findUnique({ where: { id: params.id } });
     if (!app) return NextResponse.json({ error: 'App not found.' }, { status: 404 });
 
-    if (caller.role !== 'SUPER_ADMIN' && app.tenantId !== caller.tenantId) {
+    if (role !== 'SUPER_ADMIN' && app.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    if (app.isSystem && caller.role !== 'SUPER_ADMIN') {
+    if (app.isSystem && role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'System applications are protected and can only be deleted by Super Admins' }, { status: 403 });
     }
 

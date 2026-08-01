@@ -7,7 +7,7 @@ import { Pool } from 'pg';
 import { FieldRegistry } from '../registry/FieldRegistry';
 import { ConnectionManager } from './ConnectionManager';
 import { SchemaLogger } from './SchemaLogger';
-import { getAppSession } from '@/lib/auth/session';
+import { getSession } from '@/lib/auth/session';
 
 export interface FieldDefinition {
   name: string;
@@ -31,11 +31,10 @@ export class AlchemaCore {
 
   private async logDdlAction(schemaName: string, tableName: string | null, action: string, sql: string) {
     try {
-      const session = await getAppSession();
-      const caller = session?.user as any;
+      const ctx = await getSession();
       SchemaLogger.logDdl({
-        tenantId: caller?.tenantId || null,
-        userId: caller?.id || null,
+        tenantId: ctx?.tenantId || null,
+        userId: ctx?.userId || null,
         schemaName,
         tableName,
         action,

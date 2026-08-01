@@ -1,6 +1,6 @@
 import { Pool, PoolClient } from 'pg';
 import { ConnectionManager } from './ConnectionManager';
-import { getAppSession } from '@/lib/auth/session';
+import { getSession } from '@/lib/auth/session';
 
 export class TransactionContext {
   /**
@@ -23,12 +23,12 @@ export class TransactionContext {
       resolvedRole = options?.role;
 
       if (!resolvedUserId) {
-        const session = await getAppSession();
-        if (session?.user) {
-          resolvedUserId = session.user.id;
-          resolvedTenantId = session.user.tenantId || resolvedTenantId;
-          resolvedRole = session.user.role || resolvedRole;
-          resolvedActiveTeamId = session.user.activeTeamId || resolvedActiveTeamId;
+        const ctx = await getSession();
+        if (ctx) {
+          resolvedUserId = ctx.userId;
+          resolvedTenantId = ctx.tenantId || resolvedTenantId;
+          resolvedRole = ctx.role || resolvedRole;
+          resolvedActiveTeamId = ctx.activeTeamId || resolvedActiveTeamId;
         }
       }
 

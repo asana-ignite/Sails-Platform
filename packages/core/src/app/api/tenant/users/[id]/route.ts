@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { requireSession } from '@/lib/auth/session';
 import { SchemaLogger } from '@/core/engine/SchemaLogger';
 
 /**
@@ -12,15 +12,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
+    const { userId, tenantId, role } = await requireSession();
     const { id } = params;
 
-    if (!caller) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN' && caller.role !== 'ADMIN') {
+    if (role !== 'SUPER_ADMIN' && role !== 'TENANT_ADMIN' && role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
     }
 
@@ -53,13 +48,13 @@ export async function GET(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    if (caller.role !== 'SUPER_ADMIN' && user.tenantId !== caller.tenantId) {
+    if (role !== 'SUPER_ADMIN' && user.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Forbidden: User outside tenant scope.' }, { status: 403 });
     }
 
     // Fetch tenant table definitions
     const tables = await db.tableDefinition.findMany({
-      where: { tenantId: user.tenantId || caller.tenantId },
+      where: { tenantId: user.tenantId || tenantId },
       include: {
         fields: true
       }
@@ -94,7 +89,7 @@ export async function GET(
       // Fetch all object permissions linked to this user, their teams, or their positions
       const permissions = await db.objectPermission.findMany({
         where: {
-          tenantId: user.tenantId || caller.tenantId,
+          tenantId: user.tenantId || tenantId,
           OR: [
             { userId: user.id },
             { teamId: { in: allTeamIds } },
@@ -161,16 +156,11 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
+    const { userId, tenantId, role: callerRole } = await requireSession();
     const { id } = params;
 
-    if (!caller) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     // Verify Admin role
-    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN' && caller.role !== 'ADMIN') {
+    if (callerRole !== 'SUPER_ADMIN' && callerRole !== 'TENANT_ADMIN' && callerRole !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
     }
 
@@ -187,7 +177,7 @@ export async function PATCH(
     }
 
     // Security: Only allow updating users within the same tenant (unless SUPER_ADMIN)
-    if (caller.role !== 'SUPER_ADMIN' && existingUser.tenantId !== caller.tenantId) {
+    if (callerRole !== 'SUPER_ADMIN' && existingUser.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Forbidden: Cannot update users in other tenants.' }, { status: 403 });
     }
 
@@ -205,8 +195,8 @@ export async function PATCH(
     });
 
     SchemaLogger.logSystemEvent({
-      tenantId: existingUser.tenantId || caller.tenantId,
-      userId: caller.id,
+      tenantId: existingUser.tenantId || tenantId,
+      userId,
       category: 'USER_MANAGEMENT',
       action: 'UPDATE',
       eventName: 'Update User',
@@ -242,35 +232,30 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
+    const { userId, tenantId, role } = await requireSession();
     const { id } = params;
 
-    if (!caller) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN' && caller.role !== 'ADMIN') {
+    if (role !== 'SUPER_ADMIN' && role !== 'TENANT_ADMIN' && role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
     }
 
     const userToDelete = await db.user.findUnique({ where: { id } });
     if (!userToDelete) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    if (caller.role !== 'SUPER_ADMIN' && userToDelete.tenantId !== caller.tenantId) {
+    if (role !== 'SUPER_ADMIN' && userToDelete.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Prevent self-deletion of the current admin
-    if (userToDelete.id === caller.id) {
+    if (userToDelete.id === userId) {
       return NextResponse.json({ error: 'Cannot delete your own account.' }, { status: 400 });
     }
 
     await db.user.delete({ where: { id } });
 
     SchemaLogger.logSystemEvent({
-      tenantId: userToDelete.tenantId || caller.tenantId,
-      userId: caller.id,
+      tenantId: userToDelete.tenantId || tenantId,
+      userId,
       category: 'USER_MANAGEMENT',
       action: 'DELETE',
       eventName: 'Delete User',

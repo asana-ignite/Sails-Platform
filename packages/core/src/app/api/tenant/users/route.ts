@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { requireSession, requireAdmin } from '@/lib/auth/session';
 import { SchemaLogger } from '@/core/engine/SchemaLogger';
 
 /**
@@ -9,28 +9,17 @@ import { SchemaLogger } from '@/core/engine/SchemaLogger';
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
-
-    if (!caller) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Verify Admin role (SUPER_ADMIN or TENANT_ADMIN)
-    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
-    }
-
+    const { userId, tenantId, role, email } = await requireAdmin();
     const body = await req.json();
-    const { email, name, role, teamId, title, phone } = body;
+    const { email: newEmail, name, role: newRole, teamId, title, phone } = body;
 
-    if (!email) {
+    if (!newEmail) {
       return NextResponse.json({ error: 'Missing required field: email.' }, { status: 400 });
     }
 
-    // Forced Multi-tenancy: New users are locked to the caller's tenantId 
+    // Forced Multi-tenancy: New users are locked to the caller's tenantId
     // unless the caller is a SUPER_ADMIN (who might provision across tenants).
-    const targetTenantId = caller.role === 'SUPER_ADMIN' ? body.tenantId || caller.tenantId : caller.tenantId;
+    const targetTenantId = role === 'SUPER_ADMIN' ? body.tenantId || tenantId : tenantId;
 
     if (!targetTenantId) {
        return NextResponse.json({ error: 'Could not determine tenant context.' }, { status: 400 });
@@ -38,9 +27,9 @@ export async function POST(req: NextRequest) {
 
     const newUser = await db.user.create({
       data: {
-        email,
+        email: newEmail,
         name,
-        role: role || 'MEMBER',
+        role: newRole || 'MEMBER',
         title: title || '',
         phone: phone || '',
         tenantId: targetTenantId,
@@ -55,11 +44,11 @@ export async function POST(req: NextRequest) {
 
     SchemaLogger.logSystemEvent({
       tenantId: targetTenantId,
-      userId: caller.id,
+      userId,
       category: 'USER_MANAGEMENT',
       action: 'CREATE',
       eventName: 'Create User',
-      details: { id: newUser.id, email, name, role, title, phone }
+      details: { id: newUser.id, email: newEmail, name, role: newRole, title, phone }
     });
 
     return NextResponse.json(newUser, { status: 201 });
@@ -78,26 +67,19 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
+    const { tenantId, role } = await requireSession();
 
-    if (!caller) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Verify Admin role (SUPER_ADMIN or TENANT_ADMIN)
-    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN' && caller.role !== 'ADMIN') {
+    // Verify Admin role (SUPER_ADMIN or TENANT_ADMIN or ADMIN)
+    if (role !== 'SUPER_ADMIN' && role !== 'TENANT_ADMIN' && role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
     }
 
-    const targetTenantId = caller.tenantId;
-
-    if (!targetTenantId) {
+    if (!tenantId) {
        return NextResponse.json({ error: 'Could not determine tenant context.' }, { status: 400 });
     }
 
     const users = await db.user.findMany({
-      where: { tenantId: targetTenantId },
+      where: { tenantId },
       include: {
         positionSlots: {
           include: {

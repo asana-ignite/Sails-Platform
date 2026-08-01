@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { getSession } from '@/lib/auth/session';
 
 async function resolveTenantId() {
-  const session = await getAppSession();
-  const caller = session?.user as any;
-  if (caller?.tenantId) return caller.tenantId;
-  if (caller?.id) {
-    const dbUser = await db.user.findUnique({ where: { id: caller.id }, select: { tenantId: true } });
+  const ctx = await getSession();
+  if (ctx?.tenantId) return ctx.tenantId;
+  if (ctx?.userId) {
+    const dbUser = await db.user.findUnique({ where: { id: ctx.userId }, select: { tenantId: true } });
     if (dbUser?.tenantId) return dbUser.tenantId;
   }
   return process.env.DEFAULT_TENANT_ID || null;

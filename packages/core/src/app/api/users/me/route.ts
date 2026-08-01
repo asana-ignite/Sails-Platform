@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { requireSession } from '@/lib/auth/session';
 
 /**
  * GET /api/users/me
@@ -8,14 +8,8 @@ import { getAppSession } from '@/lib/auth/session';
  */
 export async function GET() {
   try {
-    const session = await getAppSession();
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { id, email, role, tenantId, teams } = session.user as any;
-    const teamIds = (teams || []).map((t: any) => t.teamId);
+    const { userId, email, role, tenantId, teams } = await requireSession();
+    const teamIds = teams.map((t) => t.teamId);
 
     // Fetch granular RBAC permissions across all teams the user belongs to
     const permissions = teamIds.length > 0
@@ -25,7 +19,7 @@ export async function GET() {
       : [];
 
     return NextResponse.json({
-      user: { id, email, role, tenantId, teams },
+      user: { id: userId, email, role, tenantId, teams },
       permissions
     });
   } catch (error: any) {

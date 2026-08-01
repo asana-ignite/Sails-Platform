@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { SYSTEM_PERMISSION_REGISTRY } from '@/lib/security/registry';
-import { getAppSession } from '@/lib/auth/session';
+import { requireSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
 
 /**
@@ -10,10 +10,9 @@ import { db } from '@/lib/db';
  */
 export async function GET() {
   try {
-    const session = await getAppSession();
-    const user = session?.user as any;
+    const { role } = await requireSession();
 
-    if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'TENANT_ADMIN')) {
+    if (role !== 'SUPER_ADMIN' && role !== 'TENANT_ADMIN') {
       return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 403 });
     }
 
@@ -32,10 +31,9 @@ export async function GET() {
  */
 export async function POST(req: Request) {
   try {
-    const session = await getAppSession();
-    const user = session?.user as any;
+    const { role } = await requireSession();
 
-    if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'TENANT_ADMIN')) {
+    if (role !== 'SUPER_ADMIN' && role !== 'TENANT_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -70,10 +68,9 @@ export async function POST(req: Request) {
  */
 export async function DELETE(req: Request) {
   try {
-    const session = await getAppSession();
-    const user = session?.user as any;
+    const { role } = await requireSession();
 
-    if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'TENANT_ADMIN')) {
+    if (role !== 'SUPER_ADMIN' && role !== 'TENANT_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

@@ -1,45 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/session';
 import { SchemaLogger } from '@/core/engine/SchemaLogger';
 
 export async function PATCH(req: NextRequest, { params }: { params: { slotId: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
-    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { userId, tenantId } = await requireAdmin();
 
-    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const { userId } = await req.json();
+    const { userId: slotUserId } = await req.json();
 
     const slot = await db.positionSlot.findUnique({
       where: { id: params.slotId },
       include: { position: true }
     });
 
-    if (!slot || slot.position.tenantId !== caller.tenantId) {
+    if (!slot || slot.position.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Position Slot not found' }, { status: 404 });
     }
 
     // Update the slot assignment
     const updatedSlot = await db.positionSlot.update({
       where: { id: params.slotId },
-      data: { userId: userId || null },
+      data: { userId: slotUserId || null },
       include: {
         user: { select: { id: true, name: true, email: true } }
       }
     });
 
     SchemaLogger.logSystemEvent({
-      tenantId: caller.tenantId,
-      userId: caller.id,
+      tenantId,
+      userId,
       category: 'USER_MANAGEMENT',
       action: 'UPDATE',
       eventName: 'Assign Slot User',
-      details: { slotId: params.slotId, userId: userId || null }
+      details: { slotId: params.slotId, userId: slotUserId || null }
     });
 
     return NextResponse.json(updatedSlot, { status: 200 });

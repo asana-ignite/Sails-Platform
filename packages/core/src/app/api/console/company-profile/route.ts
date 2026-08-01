@@ -1,22 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
-
-async function resolveTenantId() {
-  const session = await getAppSession();
-  const caller = session?.user as any;
-  if (caller?.tenantId) return caller.tenantId;
-
-  if (caller?.id) {
-    const dbUser = await db.user.findUnique({ where: { id: caller.id }, select: { tenantId: true } });
-    if (dbUser?.tenantId) return dbUser.tenantId;
-  }
-
-  const firstTenant = await db.tenant.findFirst({ select: { id: true } });
-  if (firstTenant?.id) return firstTenant.id;
-
-  return process.env.DEFAULT_TENANT_ID || null;
-}
+import { requireSession } from '@/lib/auth/session';
 
 const PROFILE_FIELDS = [
   'legalName', 'tradingName', 'taxId', 'industry', 'companySize', 'websiteUrl',
@@ -40,10 +24,7 @@ function pickProfileFields(body: Record<string, unknown>): Record<string, unknow
 
 export async function GET() {
   try {
-    const tenantId = await resolveTenantId();
-    if (!tenantId) {
-      return NextResponse.json({ success: false, error: 'Tenant context required' }, { status: 400 });
-    }
+    const { tenantId } = await requireSession();
 
     const profile = await db.companyProfile.findUnique({
       where: { tenantId }
@@ -98,10 +79,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
-    const tenantId = await resolveTenantId();
-    if (!tenantId) {
-      return NextResponse.json({ success: false, error: 'Tenant context required' }, { status: 400 });
-    }
+    const { tenantId } = await requireSession();
 
     const body = await req.json();
 

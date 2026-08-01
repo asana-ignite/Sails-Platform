@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { requireSession, requireAdmin } from '@/lib/auth/session';
 import { SchemaLogger } from '@/core/engine/SchemaLogger';
 
 /**
@@ -9,9 +9,7 @@ import { SchemaLogger } from '@/core/engine/SchemaLogger';
  */
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
-    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    await requireSession();
 
     const positionId = params.id;
     const permissions = await db.objectPermission.findMany({
@@ -30,15 +28,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
+    const { userId, tenantId } = await requireAdmin();
     const positionId = params.id;
 
-    if (!caller || (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const targetTenantId = caller.tenantId;
+    const targetTenantId = tenantId;
     const { objectName, canCreate, canDelete, readScope, modifyScope } = await req.json();
 
     if (!objectName) {
@@ -76,7 +69,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     SchemaLogger.logSystemEvent({
       tenantId: targetTenantId,
-      userId: caller.id,
+      userId,
       category: 'SETTINGS',
       action: 'UPDATE',
       eventName: 'Update Position Object Permission',

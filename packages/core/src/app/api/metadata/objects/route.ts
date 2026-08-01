@@ -1,27 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getTranslator } from '@/lib/services';
-import { getAppSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/session';
 import { SchemaLogger } from '@/core/engine/SchemaLogger';
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
-    
-    if (!caller) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
-    }
+    const { userId, tenantId } = await requireAdmin();
 
     const { name, tableName, description } = await req.json();
 
     // Create the table via the translator (handles DDL and Metadata)
     const table = await getTranslator().createTable(
-      caller.tenantId,
+      tenantId,
       name,
       tableName,
       description
@@ -29,8 +20,8 @@ export async function POST(req: NextRequest) {
 
     // Log Logical Metadata Event
     SchemaLogger.logSystemEvent({
-      tenantId: caller.tenantId,
-      userId: caller.id,
+      tenantId: tenantId,
+      userId: userId,
       category: 'METADATA',
       action: 'CREATE',
       eventName: 'Create Table Definition',
@@ -49,20 +40,11 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
-    
-    if (!caller) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Admin role required.' }, { status: 403 });
-    }
+    const { tenantId } = await requireAdmin();
 
     const tables = await db.tableDefinition.findMany({
       where: {
-        tenantId: caller.tenantId
+        tenantId
       },
       include: {
         tenant: true,

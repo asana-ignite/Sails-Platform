@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { requireSession } from '@/lib/auth/session';
 
 /**
  * GET /api/console/menus/[id]
  */
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
+    const { tenantId, role } = await requireSession();
 
     const menu = await db.consoleMenu.findUnique({
       where: { id: params.id },
@@ -19,8 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Menu not found.' }, { status: 404 });
     }
 
-    // Security check
-    if (caller && caller.role !== 'SUPER_ADMIN' && menu.app.tenantId !== caller.tenantId) {
+    if (role !== 'SUPER_ADMIN' && menu.app.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -35,10 +33,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
  */
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
+    const { tenantId, role } = await requireSession();
 
-    if (!caller || (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN')) {
+    if (role !== 'SUPER_ADMIN' && role !== 'TENANT_ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -49,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     if (!menu) return NextResponse.json({ error: 'Menu not found.' }, { status: 404 });
 
-    if (caller.role !== 'SUPER_ADMIN' && menu.app.tenantId !== caller.tenantId) {
+    if (role !== 'SUPER_ADMIN' && menu.app.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -78,10 +75,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
  */
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
+    const { tenantId, role } = await requireSession();
 
-    if (!caller || (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN')) {
+    if (role !== 'SUPER_ADMIN' && role !== 'TENANT_ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -92,7 +88,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     if (!menu) return NextResponse.json({ error: 'Menu not found.' }, { status: 404 });
 
-    if (caller.role !== 'SUPER_ADMIN' && menu.app.tenantId !== caller.tenantId) {
+    if (role !== 'SUPER_ADMIN' && menu.app.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

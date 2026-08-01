@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/session';
 import { SchemaLogger } from '@/core/engine/SchemaLogger';
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
-    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const { userId, tenantId } = await requireAdmin();
 
     const { name, prefix, description, headCount } = await req.json();
 
@@ -20,7 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       include: { slots: true }
     });
 
-    if (!existing || existing.tenantId !== caller.tenantId) {
+    if (!existing || existing.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Position not found' }, { status: 404 });
     }
 
@@ -50,8 +44,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     SchemaLogger.logSystemEvent({
-      tenantId: caller.tenantId,
-      userId: caller.id,
+      tenantId,
+      userId,
       category: 'USER_MANAGEMENT',
       action: 'UPDATE',
       eventName: 'Update Position',
@@ -71,19 +65,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getAppSession();
-    const caller = session?.user as any;
-    if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    if (caller.role !== 'SUPER_ADMIN' && caller.role !== 'TENANT_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const { userId, tenantId } = await requireAdmin();
 
     const position = await db.position.findUnique({
       where: { id: params.id }
     });
 
-    if (!position || position.tenantId !== caller.tenantId) {
+    if (!position || position.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Position not found' }, { status: 404 });
     }
 
@@ -92,8 +80,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     });
 
     SchemaLogger.logSystemEvent({
-      tenantId: caller.tenantId,
-      userId: caller.id,
+      tenantId,
+      userId,
       category: 'USER_MANAGEMENT',
       action: 'DELETE',
       eventName: 'Delete Position',

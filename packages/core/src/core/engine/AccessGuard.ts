@@ -1,5 +1,5 @@
 import { db } from '../../lib/db';
-import { getAppSession } from '@/lib/auth/session';
+import { getSession } from '@/lib/auth/session';
 
 export type CrudAction = 'create' | 'read' | 'update' | 'delete';
 
@@ -13,10 +13,10 @@ export class AccessGuard {
     let resolvedRole = options?.jwtRole;
 
     if (!resolvedUserId) {
-      const session = await getAppSession();
-      if (session?.user) {
-        resolvedUserId = (session.user as any).id;
-        resolvedRole = (session.user as any).role || resolvedRole;
+      const ctx = await getSession();
+      if (ctx) {
+        resolvedUserId = ctx.userId;
+        resolvedRole = ctx.role || resolvedRole;
       }
     }
 
@@ -95,18 +95,17 @@ export class AccessGuard {
    * Used for filtering UI components and protecting admin API routes.
    */
   static async hasCapability(capability: string): Promise<boolean> {
-    const session = await getAppSession();
-    const caller = session?.user as any;
+    const ctx = await getSession();
 
-    if (!caller) return false;
+    if (!ctx) return false;
 
     // Platform & Tenant Admins always have all capabilities
-    if (caller.role === 'SUPER_ADMIN' || caller.role === 'TENANT_ADMIN') {
+    if (ctx.role === 'SUPER_ADMIN' || ctx.role === 'TENANT_ADMIN') {
       return true;
     }
 
     // Regular users must have the capability assigned to one of their teams
-    const teamIds = (caller.teams || []).map((t: any) => t.teamId);
+    const teamIds = ctx.teams.map((t) => t.teamId);
     if (teamIds.length === 0) return false;
 
     const permission = await db.systemPermission.findFirst({
