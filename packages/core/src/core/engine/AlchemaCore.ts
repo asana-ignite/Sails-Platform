@@ -159,6 +159,20 @@ export class AlchemaCore {
     );
     const policyResult = await this.pool.query(policySql);
     await this.logDdlAction(schemaName, tableName, 'CREATE_POLICY', policySql);
+
+    // Create performance indexes for RLS-filtered columns and default sort order
+    const indexDefs = [
+      { name: `${tableName}_tenant_id_idx`, col: 'tenant_id' },
+      { name: `${tableName}_created_at_idx`, col: 'created_at DESC' },
+      { name: `${tableName}_owner_id_idx`, col: 'owner_id' },
+      { name: `${tableName}_owner_team_id_idx`, col: 'owner_team_id' },
+    ];
+    for (const idx of indexDefs) {
+      const idxSql = format('CREATE INDEX IF NOT EXISTS %I ON %I.%I (%s)', idx.name, schemaName, tableName, idx.col);
+      await this.pool.query(idxSql);
+      await this.logDdlAction(schemaName, tableName, 'CREATE_INDEX', idxSql);
+    }
+
     return policyResult;
   }
 

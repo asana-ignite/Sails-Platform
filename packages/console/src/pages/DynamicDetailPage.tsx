@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import {
   ChevronLeft,
   Database,
@@ -10,10 +10,13 @@ import type { TableLayout, SailsFieldDefinition } from '@sails/shared';
 import LoadingScreen from '../components/common/LoadingScreen';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
+import './custom/layouts-responsive.css';
 
 const DynamicDetailPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const navigationType = useNavigationType();
+  const animClass = navigationType === 'POP' ? 'sails-dynamic-table--back' : '';
 
   const [layout, setLayout] = useState<TableLayout | null>(null);
   const [fields, setFields] = useState<SailsFieldDefinition[]>([]);
@@ -40,19 +43,21 @@ const DynamicDetailPage: React.FC = () => {
         const searchParams = new URLSearchParams(window.location.search);
         const targetLayoutId = searchParams.get('layoutId');
 
-        const [layoutRes, objRes] = await Promise.all([
-          targetLayoutId ? fetch(`/api/console/layouts?id=${targetLayoutId}`) : Promise.resolve(null),
-          fetch('/api/metadata/objects')
-        ]);
-
         let targetLayout: any = null;
-        if (layoutRes && layoutRes.ok) {
-          const layoutResult = await layoutRes.json();
-          if (layoutResult.success) targetLayout = layoutResult.data;
+        let objectsData: any = null;
+
+        if (targetLayoutId) {
+          const layoutRes = await fetch(`/api/console/layouts?id=${targetLayoutId}`);
+          if (layoutRes.ok) {
+            const layoutResult = await layoutRes.json();
+            if (layoutResult.success) targetLayout = layoutResult.data;
+          }
+        } else {
+          const objRes = await fetch('/api/metadata/objects');
+          objectsData = objRes?.ok ? await objRes.json() : [];
         }
 
-        const objectsData = objRes && objRes.ok ? await objRes.json() : [];
-        const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData.rows || objectsData.data || []);
+        const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData?.rows || objectsData?.data || []);
 
         if (!targetLayout && dataModelId) {
           const lRes = await fetch(`/api/console/layouts?tableId=${dataModelId}`);
@@ -78,21 +83,13 @@ const DynamicDetailPage: React.FC = () => {
           return;
         }
 
-        const [metaRes, recordsRes] = await Promise.all([
-          fetch(`/api/metadata/${tableName}`),
-          fetch(`/api/dynamic/${tableName}`)
-        ]);
-
-        if (metaRes.ok) {
-          const tableMeta = await metaRes.json();
-          setFields(tableMeta.fields || []);
-        }
+        const recordsRes = await fetch(`/api/dynamic/${tableName}?id=${recordId}`);
 
         if (recordsRes.ok) {
           const recordsData = await recordsRes.json();
-          const rows = Array.isArray(recordsData) ? recordsData : [];
-          const foundRec = rows.find((r: any) => String(r.id) === String(recordId));
-          setRecord(foundRec || rows[0] || null);
+          const rows = recordsData.rows || (Array.isArray(recordsData) ? recordsData : []);
+          setRecord(rows[0] || null);
+          setFields(recordsData.fields || []);
         } else {
           setError('Failed to load record details');
         }
@@ -123,7 +120,7 @@ const DynamicDetailPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="sails-dynamic-table sails-page-container">
+      <div className={`sails-dynamic-table sails-page-container ${animClass}`}>
         <header className="sails-page-header sails-dynamic-table__header">
           <div className="sails-page-header__left">
             <button className="sails-btn sails-btn--secondary" onClick={() => navigate(-1)} style={{ marginRight: 12 }}>
@@ -191,6 +188,7 @@ const DynamicDetailPage: React.FC = () => {
           className="ls-block ls-block--tabs"
           style={{ gridColumn: `span ${colSpan}` }}
         >
+          {/* Desktop tab bar */}
           <div className="ls-tabs__bar">
             {tabs.map((tab: any, ti: number) => (
               <div
@@ -206,6 +204,7 @@ const DynamicDetailPage: React.FC = () => {
             ))}
           </div>
 
+          {/* Desktop active tab body */}
           <div className="ls-tabs__body">
             <div className="ls-section__grid">
               {activeBlocks.length > 0 ? (
@@ -214,6 +213,54 @@ const DynamicDetailPage: React.FC = () => {
                 <p className="ls-tabs__hint" style={{ gridColumn: '1 / -1' }}>No fields in this tab.</p>
               )}
             </div>
+          </div>
+
+          {/* Mobile accordion */}
+          <div className="ls-tabs__accordion-wrapper">
+            {tabs.map((tab: any, ti: number) => {
+              const isOpen = ti === activeTabIdx;
+              const hasBlocks = tab.blocks && tab.blocks.length > 0;
+              return (
+                <div
+                  key={tab.id || ti}
+                  className={`ls-tabs__accordion ${isOpen ? 'ls-tabs__accordion--open' : ''}`}
+                >
+                  <div
+                    className="ls-tabs__accordion-header"
+                    onClick={() => {
+                      const current = activeTabMap[b.id] ?? 0;
+                      setActiveTabMap((prev) => ({ ...prev, [b.id]: ti === current ? -1 : ti }));
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        const current = activeTabMap[b.id] ?? 0;
+                        setActiveTabMap((prev) => ({ ...prev, [b.id]: ti === current ? -1 : ti }));
+                      }
+                    }}
+                  >
+                    <span className="ls-tabs__accordion-title">{tab.label}</span>
+                    {hasBlocks && (
+                      <span className="ls-tabs__count">{tab.blocks.length}</span>
+                    )}
+                    <span className="ls-tabs__accordion-chevron" />
+                  </div>
+                  <div className="ls-tabs__accordion-body">
+                    <div className="ls-section__grid">
+                      <div className="ls-accordion-inner">
+                        {hasBlocks ? (
+                          tab.blocks.map((tb: any) => renderBlock(tb))
+                        ) : (
+                          <p className="ls-tabs__hint" style={{ gridColumn: '1 / -1' }}>No fields in this tab.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       );
@@ -255,64 +302,83 @@ const DynamicDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="sails-dynamic-table sails-page-container">
-      <header className="sails-page-header sails-dynamic-table__header">
-        <div className="sails-page-header__left" style={{ pointerEvents: 'auto' }}>
-          <button
-            className="sails-btn sails-btn--secondary"
-            onClick={() => navigate(-1)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginRight: 12 }}
-          >
-            <ChevronLeft size={16} />
-            <span>Back</span>
-          </button>
-          <div className="sails-page-header__icon-wrapper">
-            <Database size={24} />
+    <div className={`sails-dynamic-table sails-page-container ${animClass}`}>
+      {loading ? (
+        <LoadingScreen />
+      ) : error ? (
+        <header className="sails-page-header sails-dynamic-table__header">
+          <div className="sails-page-header__left">
+            <button className="sails-btn sails-btn--secondary" onClick={() => navigate(-1)} style={{ marginRight: 12 }}>
+              <ChevronLeft size={16} /> Back
+            </button>
+            <AlertCircle size={24} />
+            <div>
+              <h1 className="sails-page-header__title">Record Detail Error</h1>
+              <p className="sails-page-header__subtitle">{error}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="sails-page-header__title">{primaryTitle}</h1>
-            <p className="sails-page-header__subtitle">
-              {layout?.name ? `Detail Layout: ${layout.name}` : 'Record Details'}
-            </p>
-          </div>
-        </div>
-      </header>
-
-      <section className="sails-page-body" style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', gap: 24 }}>
-        {record ? (
-          sections.map((section: any) => {
-            const sectionBlocks = blocks.length > 0
-              ? blocks.filter((b: any) => b.sectionId === section.id && b.visible !== false)
-                  .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
-              : fields.map((f: any, idx: number) => ({
-                  id: f.id,
-                  sectionId: section.id,
-                  fieldId: f.id,
-                  blockType: 'field',
-                  visible: true,
-                  width: 4,
-                  position: idx
-                }));
-
-            if (blocks.length > 0 && sectionBlocks.length === 0) return null;
-
-            return (
-              <div key={section.id} className="ls-table-card" style={{ padding: 24, borderRadius: 12, background: 'var(--sails-bg-card, #ffffff)' }}>
-                <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--sails-text-main, #0f172a)', marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--sails-border, #e2e8f0)' }}>
-                  {section.title || 'Section'}
-                </h3>
-                <div className="ls-section__grid">
-                  {sectionBlocks.map((b: any) => renderBlock(b))}
-                </div>
+        </header>
+      ) : (
+        <>
+          <header className="sails-page-header sails-dynamic-table__header">
+            <div className="sails-page-header__left" style={{ pointerEvents: 'auto' }}>
+              <button
+                className="sails-btn sails-btn--secondary"
+                onClick={() => navigate(-1)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginRight: 12 }}
+              >
+                <ChevronLeft size={16} />
+                <span>Back</span>
+              </button>
+              <div className="sails-page-header__icon-wrapper">
+                <Database size={24} />
               </div>
-            );
-          })
-        ) : (
-          <div className="ls-table-card" style={{ padding: 24, borderRadius: 12, background: 'var(--sails-bg-card, #ffffff)', textAlign: 'center' }}>
-            <p className="ls-empty">Record not found.</p>
-          </div>
-        )}
-      </section>
+              <div>
+                <h1 className="sails-page-header__title">{primaryTitle}</h1>
+                <p className="sails-page-header__subtitle">
+                  {layout?.name ? `Detail Layout: ${layout.name}` : 'Record Details'}
+                </p>
+              </div>
+            </div>
+          </header>
+
+          <section className="sails-page-body" style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {record ? (
+              sections.map((section: any) => {
+                const sectionBlocks = blocks.length > 0
+                  ? blocks.filter((b: any) => b.sectionId === section.id && b.visible !== false)
+                      .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
+                  : fields.map((f: any, idx: number) => ({
+                      id: f.id,
+                      sectionId: section.id,
+                      fieldId: f.id,
+                      blockType: 'field',
+                      visible: true,
+                      width: 4,
+                      position: idx
+                    }));
+
+                if (blocks.length > 0 && sectionBlocks.length === 0) return null;
+
+                return (
+                  <div key={section.id} className="ls-table-card" style={{ padding: 24, borderRadius: 12, background: 'var(--sails-bg-card, #ffffff)' }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--sails-text-main, #0f172a)', marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--sails-border, #e2e8f0)' }}>
+                      {section.title || 'Section'}
+                    </h3>
+                    <div className="ls-section__grid">
+                      {sectionBlocks.map((b: any) => renderBlock(b))}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="ls-table-card" style={{ padding: 24, borderRadius: 12, background: 'var(--sails-bg-card, #ffffff)', textAlign: 'center' }}>
+                <p className="ls-empty">Record not found.</p>
+              </div>
+            )}
+          </section>
+        </>
+      )}
     </div>
   );
 };

@@ -261,9 +261,10 @@ const PALETTE_TECHNIQUE_OPTIONS = [
 
 const AdminGeneralSettings: React.FC = () => {
   const { user } = useAuth();
-  const { primaryAccentColor, setPrimaryAccentColor, secondaryAccentColor, setSecondaryAccentColor, backgroundAccentColor, setBackgroundAccentColor, fontAccentColor, setFontAccentColor, enableGradient, setEnableGradient, setLogoLightUrl, setLogoDarkUrl, saveBrandingToServer, commitTheme } = useTheme();
+  const { primaryAccentColor, setPrimaryAccentColor, secondaryAccentColor, setSecondaryAccentColor, backgroundAccentColor, setBackgroundAccentColor, fontAccentColor, setFontAccentColor, enableGradient, setEnableGradient, displayDensity, setDisplayDensity, setLogoLightUrl, setLogoDarkUrl, saveBrandingToServer, commitTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<'branding' | 'localization' | 'security' | 'maintenance' | 'tenant'>('branding');
   const [paletteTechnique, setPaletteTechnique] = useState<ColorMatchingTechnique>('monochromatic');
+  const [density, setDensity] = useState<'default' | 'compact' | 'comfortable'>(displayDensity || 'default');
   const [customSecondary, setCustomSecondary] = useState<string | null>(null);
   const [customBackground, setCustomBackground] = useState<string | null>(null);
   const [customFont, setCustomFont] = useState<string | null>(null);
@@ -274,7 +275,8 @@ const AdminGeneralSettings: React.FC = () => {
     setCustomSecondary(secondaryAccentColor);
     setCustomBackground(backgroundAccentColor);
     setCustomFont(fontAccentColor);
-  }, [secondaryAccentColor, backgroundAccentColor, fontAccentColor]);
+    if (displayDensity) setDensity(displayDensity);
+  }, [secondaryAccentColor, backgroundAccentColor, fontAccentColor, displayDensity]);
 
   const [formData, setFormData] = useState<GeneralSettingsData>({
     ...DEFAULT_SETTINGS_DATA,
@@ -390,6 +392,7 @@ const AdminGeneralSettings: React.FC = () => {
       fontAccentColor: customFont || computedPalette.font,
       paletteTechnique,
       enableGradient: gradientOn,
+      displayDensity: density,
       logoLightUrl: formData.logoLightUrl,
       logoDarkUrl: formData.logoDarkUrl,
     };
@@ -689,6 +692,30 @@ const AdminGeneralSettings: React.FC = () => {
                     onChange={e => handleInputChange('loginTagline', e.target.value)}
                     placeholder="Enter custom slogan displayed on user sign-in page"
                   />
+                </div>
+
+                {/* Display Density */}
+                <div className="sails-gs-group" style={{ gridColumn: 'span 2' }}>
+                  <label className="sails-gs-label">Display Density</label>
+                  <div style={{ display: 'flex', gap: '16px', paddingTop: '4px' }}>
+                    {([
+                      { value: 'comfortable' as const, label: 'Larger Text' },
+                      { value: 'default' as const, label: 'Default' },
+                      { value: 'compact' as const, label: 'More Space' },
+                    ]).map(({ value, label }) => (
+                      <label key={value} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--sails-text-main)' }}>
+                        <input
+                          type="radio"
+                          name="displayDensity"
+                          value={value}
+                          checked={density === value}
+                          onChange={() => setDensity(value)}
+                          style={{ accentColor: 'var(--sails-primary)' }}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

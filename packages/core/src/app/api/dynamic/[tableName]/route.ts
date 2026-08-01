@@ -64,34 +64,115 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/dynamic/[tableName] — List all records (scoped by RLS)
+// GET /api/dynamic/[tableName] — List records with server-side filter/sort/page
+//
+// Query parameters:
+//   ?search=text        — ILIKE across text/varchar fields
+//   ?filters=<json>     — {"status":"active","name:contains":"john","age:gt":"18"}
+//   ?sort=<json>        — [{"fieldId":"name","dir":"asc"}]
+//   ?page=1&limit=25    — pagination (default 1, 25; max 100)
+//   ?id=<recordId>      — single-record lookup (detail page)
+//
+// Every field name is validated against tableDefinition.fields before use.
+// Both SELECT and COUNT run inside executeSecureQuery for RLS enforcement.
 // ---------------------------------------------------------------------------
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
     const { tableName } = params;
+    const { searchParams } = req.nextUrl;
 
     const resolved = await resolveTable(tableName);
     if (!resolved) {
       return NextResponse.json({ error: 'Table not found or access denied.' }, { status: 404 });
     }
 
-    // Use QueryLayer.executeSecureQuery for consistent AccessGuard + RLS enforcement
-    const rows = await QueryLayer.executeSecureQuery(
-      pool,
-      tableName,
-      'read',
-      async (client) => {
-        const sql = format(
-          'SELECT * FROM %I.%I ORDER BY created_at DESC',
-          resolved.schemaName,
-          tableName
-        );
-        const result = await client.query(sql);
-        return result.rows;
-      }
+    const recordId = searchParams.get('id');
+
+    if (recordId) {
+      const tableMeta = await db.tableDefinition.findFirst({
+        where: { tableName, tenantId: resolved.table.tenantId },
+        include: {
+          fields: {
+            include: { rules: true },
+          },
+          rules: true,
+        },
+      });
+
+      const rows = await QueryLayer.executeSecureQuery(
+        pool,
+        tableName,
+        'read',
+        async (client) => {
+          const sql = format(
+            'SELECT * FROM %I.%I WHERE id = %L',
+            resolved.schemaName,
+            tableName,
+            recordId
+          );
+          const result = await client.query(sql);
+          return result.rows;
+        }
+      );
+
+      return NextResponse.json(
+        { rows, total: rows.length, page: 1, limit: 1, totalPages: 1, fields: tableMeta?.fields || [] },
+        { status: 200 }
+      );
+    }
+
+    const tableMeta = await db.tableDefinition.findFirst({
+      where: { tableName, tenantId: resolved.table.tenantId },
+      include: {
+        fields: {
+          include: { rules: true },
+        },
+        rules: true,
+      },
+    });
+
+    const validFields = new Set<string>(
+      (tableMeta?.fields || []).map((f: any) => f.fieldName)
     );
 
-    return NextResponse.json(rows, { status: 200 });
+    const textTypes = new Set(['text', 'varchar', 'string', 'char', 'email', 'phone', 'url', 'description']);
+    const textFields = (tableMeta?.fields || [])
+      .filter((f: any) => textTypes.has(f.type?.toLowerCase() || ''))
+      .map((f: any) => f.fieldName);
+
+    const filtersRaw = searchParams.get('filters');
+    const sortRaw = searchParams.get('sort');
+
+    let filters: Record<string, string> | undefined;
+    let sort: { fieldId: string; dir: 'asc' | 'desc' }[] | undefined;
+
+    if (filtersRaw) {
+      try { filters = JSON.parse(filtersRaw); } catch { /* ignore malformed JSON */ }
+    }
+    if (sortRaw) {
+      try {
+        const parsed = JSON.parse(sortRaw);
+        if (Array.isArray(parsed)) sort = parsed;
+      } catch { /* ignore malformed JSON */ }
+    }
+
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '25');
+
+    const result = await QueryLayer.listRecords(pool, resolved.schemaName, tableName, {
+      filters,
+      search: searchParams.get('search') || undefined,
+      sort,
+      page: isNaN(page) ? 1 : page,
+      limit: isNaN(limit) ? 25 : limit,
+      validFields,
+      textFields,
+    });
+
+    return NextResponse.json(
+      { ...result, fields: tableMeta?.fields || [] },
+      { status: 200 }
+    );
   } catch (error: any) {
     const status = error.message?.startsWith('Unauthorized') || error.message?.startsWith('Forbidden') ? 403 : 500;
     return NextResponse.json({ error: error.message || 'Failed to fetch records.' }, { status });

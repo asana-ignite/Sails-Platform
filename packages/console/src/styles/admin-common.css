@@ -35,7 +35,7 @@
 .sails-user-manager {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--sails-spacing-2xl);
   animation: sails-fade-in 0.4s ease-out;
 }
 

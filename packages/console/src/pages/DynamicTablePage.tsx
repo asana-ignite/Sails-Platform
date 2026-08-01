@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import {
   Columns,
   Layers,
@@ -22,61 +22,11 @@ import CustomSelect from '../components/common/CustomSelect';
 import LoadingScreen from '../components/common/LoadingScreen';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
+import './custom/layouts-responsive.css';
 
 function resolveLabel(col: any, fields: SailsFieldDefinition[]): string {
   const fd = fields.find((f) => f.id === col.fieldId || f.fieldName === col.fieldId);
   return col.labelOverride || fd?.name || col.fieldId;
-}
-
-function applyLayoutFilters(
-  records: any[],
-  config: any,
-  fields: SailsFieldDefinition[],
-): any[] {
-  const filters: any[] = config?.filters || [];
-  if (filters.length === 0) return records;
-
-  return records.filter((rec) => {
-    return filters.every((filter: any) => {
-      const fd = fields.find((f) => f.id === filter.fieldId || f.fieldName === filter.fieldId);
-      const val = fd ? rec[fd.fieldName] : rec[filter.fieldId];
-      const cmp = filter.value;
-      switch (filter.operator) {
-        case 'eq': return String(val ?? '') === String(cmp ?? '');
-        case 'neq': return String(val ?? '') !== String(cmp ?? '');
-        case 'contains': return String(val ?? '').toLowerCase().includes(String(cmp ?? '').toLowerCase());
-        case 'is_empty': return val === undefined || val === null || String(val).trim() === '';
-        case 'is_not_empty': return val !== undefined && val !== null && String(val).trim() !== '';
-        case 'gt': return Number(val) > Number(cmp);
-        case 'gte': return Number(val) >= Number(cmp);
-        case 'lt': return Number(val) < Number(cmp);
-        case 'lte': return Number(val) <= Number(cmp);
-        default: return true;
-      }
-    });
-  });
-}
-
-function applyLayoutSort(
-  records: any[],
-  config: any,
-  fields: SailsFieldDefinition[],
-): any[] {
-  const sortRules: any[] = config?.sortBy || [];
-  if (sortRules.length === 0) return records;
-
-  return [...records].sort((a, b) => {
-    for (const rule of sortRules) {
-      const fd = fields.find((f) => f.id === rule.fieldId || f.fieldName === rule.fieldId);
-      const av = fd ? a[fd.fieldName] : a[rule.fieldId];
-      const bv = fd ? b[fd.fieldName] : b[rule.fieldId];
-      if (av == null && bv == null) continue;
-      if (av == null) return 1; if (bv == null) return -1;
-      const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
-      if (cmp !== 0) return rule.direction === 'asc' ? cmp : -cmp;
-    }
-    return 0;
-  });
 }
 
 function renderListFieldValue(field: SailsFieldDefinition, record: Record<string, any>): string {
@@ -103,6 +53,8 @@ const DynamicTablePage: React.FC = () => {
   const { apps, navigationItems } = useConsole();
   const location = useLocation();
   const navigate = useNavigate();
+  const navigationType = useNavigationType();
+  const animClass = navigationType === 'POP' ? 'sails-dynamic-table--back' : '';
 
   const normalizePath = (p: string | null) => p ? p.replace(/\/+$/, '').toLowerCase() : '';
 
@@ -136,6 +88,7 @@ const DynamicTablePage: React.FC = () => {
   const [layout, setLayout] = useState<TableLayout | null>(null);
   const [records, setRecords] = useState<any[]>([]);
   const [fields, setFields] = useState<SailsFieldDefinition[]>([]);
+  const [totalRecords, setTotalRecords] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
   // Runtime interactive preview state
@@ -147,53 +100,139 @@ const DynamicTablePage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [recordsPerPage, setRecordsPerPage] = useState<number>(25);
 
+  const initialLoadDone = useRef(false);
+  const tableNameRef = useRef<string | null>(null);
+  const layoutConfigRef = useRef<any>(null);
+  const fieldsRef = useRef<SailsFieldDefinition[]>([]);
+  const searchQueryRef = useRef(searchQuery);
+  searchQueryRef.current = searchQuery;
+  const runtimeFiltersRef = useRef(runtimeFilters);
+  runtimeFiltersRef.current = runtimeFilters;
+  const runtimeSortRulesRef = useRef(runtimeSortRules);
+  runtimeSortRulesRef.current = runtimeSortRules;
+  const currentPageRef = useRef(currentPage);
+  currentPageRef.current = currentPage;
+  const recordsPerPageRef = useRef(recordsPerPage);
+  recordsPerPageRef.current = recordsPerPage;
+
+  const doFetch = useCallback(async (pageOverride?: number) => {
+    const tn = tableNameRef.current;
+    if (!tn) return;
+
+    const lc = layoutConfigRef.current;
+    const flds = fieldsRef.current;
+
+    const findField = (idOrName: string) =>
+      flds.find((fd: any) => fd.id === idOrName || fd.fieldName === idOrName);
+
+    const mergedFilters: Record<string, string> = {};
+    const layoutFilters = lc?.filters || [];
+    for (const f of layoutFilters) {
+      const field = findField(f.fieldId || f.id);
+      if (!field) continue;
+      const op = f.operator && f.operator !== 'eq' ? `:${f.operator}` : '';
+      mergedFilters[`${field.fieldName}${op}`] = f.value;
+    }
+    const rf = runtimeFiltersRef.current;
+    for (const [fieldId, value] of Object.entries(rf)) {
+      if (!value?.trim()) continue;
+      const field = findField(fieldId);
+      if (!field) continue;
+      mergedFilters[`${field.fieldName}:contains`] = value;
+    }
+
+    const mergedSort: { fieldId: string; dir: 'asc' | 'desc' }[] = [];
+    const layoutSort = lc?.sortBy || [];
+    for (const s of layoutSort) {
+      const field = findField(s.fieldId || s.id);
+      if (!field) continue;
+      mergedSort.push({ fieldId: field.fieldName, dir: s.direction || 'asc' });
+    }
+    for (const s of runtimeSortRulesRef.current) {
+      const field = findField(s.fieldId);
+      if (!field) continue;
+      mergedSort.push({ fieldId: field.fieldName, dir: s.direction || 'asc' });
+    }
+
+    const params = new URLSearchParams();
+    if (Object.keys(mergedFilters).length) params.set('filters', JSON.stringify(mergedFilters));
+    if (mergedSort.length) params.set('sort', JSON.stringify(mergedSort));
+    const sq = searchQueryRef.current;
+    if (sq?.trim()) params.set('search', sq.trim());
+    const page = pageOverride ?? currentPageRef.current;
+    const limit = recordsPerPageRef.current;
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+
+    const res = await fetch(`/api/dynamic/${tn}?${params}`);
+    const data = await res.json();
+
+    setRecords(data.rows || []);
+    setTotalRecords(data.total || 0);
+    if (pageOverride !== undefined) setCurrentPage(pageOverride);
+  }, []);
+
   useEffect(() => {
     if (!activeMenu?.dataModelId && !activeMenu?.listViewId) {
       setLoading(false);
       return;
     }
 
-    const loadData = async () => {
+    const init = async () => {
       setLoading(true);
       setError(null);
+      initialLoadDone.current = false;
       try {
         let targetLayout: any = null;
 
         const searchParams = new URLSearchParams(window.location.search);
         const targetLayoutId = searchParams.get('layoutId') || activeMenu?.listViewId;
 
-        const [layoutRes, objRes] = await Promise.all([
-          targetLayoutId ? fetch(`/api/console/layouts?id=${targetLayoutId}`) : Promise.resolve(null),
-          fetch('/api/metadata/objects')
-        ]);
-
-        if (layoutRes && layoutRes.ok) {
-          const layoutResult = await layoutRes.json();
-          if (layoutResult.success) targetLayout = layoutResult.data;
-        }
-
-        const objectsData = objRes && objRes.ok ? await objRes.json() : [];
-        const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData.rows || objectsData.data || []);
-
-        const dataModelId = activeMenu?.dataModelId || targetLayout?.tableId;
-
-        if (!targetLayout && dataModelId) {
-          const lRes = await fetch(`/api/console/layouts?tableId=${dataModelId}`);
-          if (lRes.ok) {
-            const lResult = await lRes.json();
-            const rows: any[] = lResult.data?.rows || [];
-            targetLayout =
-              rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active' && r.isDefault) ||
-              rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active') ||
-              rows.find((r: any) => r.viewType === 'LIST' && r.isDefault) ||
-              rows.find((r: any) => r.viewType === 'LIST');
+        if (targetLayoutId) {
+          const layoutRes = await fetch(`/api/console/layouts?id=${targetLayoutId}`);
+          if (layoutRes.ok) {
+            const layoutResult = await layoutRes.json();
+            if (layoutResult.success) targetLayout = layoutResult.data;
           }
         }
 
-        let tableName = targetLayout?.table?.tableName;
-        if (!tableName && dataModelId) {
-          const foundTable = objectRows.find((t: any) => t.id === dataModelId || t.tableName === dataModelId);
-          if (foundTable) tableName = foundTable.tableName;
+        let objectsData: any = null;
+        const dataModelId = activeMenu?.dataModelId || targetLayout?.tableId;
+        let tableName: string | null = targetLayout?.table?.tableName || null;
+
+        if (!tableName) {
+          if (targetLayoutId) {
+            const objRes = await fetch('/api/metadata/objects');
+            objectsData = objRes?.ok ? await objRes.json() : [];
+            const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData?.rows || objectsData?.data || []);
+            if (dataModelId) {
+              const foundTable = objectRows.find((t: any) => t.id === dataModelId || t.tableName === dataModelId);
+              if (foundTable) tableName = foundTable.tableName;
+            }
+          } else {
+            const [lRes, objRes] = await Promise.all([
+              dataModelId ? fetch(`/api/console/layouts?tableId=${dataModelId}`) : Promise.resolve(null),
+              fetch('/api/metadata/objects'),
+            ]);
+
+            if (lRes?.ok) {
+              const lResult = await lRes.json();
+              const rows: any[] = lResult.data?.rows || [];
+              targetLayout =
+                rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active' && r.isDefault) ||
+                rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active') ||
+                rows.find((r: any) => r.viewType === 'LIST' && r.isDefault) ||
+                rows.find((r: any) => r.viewType === 'LIST');
+            }
+
+            objectsData = objRes?.ok ? await objRes.json() : [];
+            tableName = targetLayout?.table?.tableName || null;
+            if (!tableName && dataModelId) {
+              const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData?.rows || objectsData?.data || []);
+              const foundTable = objectRows.find((t: any) => t.id === dataModelId || t.tableName === dataModelId);
+              if (foundTable) tableName = foundTable.tableName;
+            }
+          }
         }
 
         if (!tableName) {
@@ -202,28 +241,20 @@ const DynamicTablePage: React.FC = () => {
           return;
         }
 
-        // Parallel fetch schema fields and records data concurrently
-        const [metaRes, recordsRes] = await Promise.all([
-          fetch(`/api/metadata/${tableName}`),
-          fetch(`/api/dynamic/${tableName}`)
-        ]);
+        const params = new URLSearchParams();
+        params.set('page', '1');
+        params.set('limit', '25');
 
-        let tableFields: SailsFieldDefinition[] = [];
-        if (metaRes.ok) {
-          const tableMeta = await metaRes.json();
-          tableFields = tableMeta.fields || [];
-          setFields(tableFields);
-        }
-
+        const recordsRes = await fetch(`/api/dynamic/${tableName}?${params}`);
         if (!recordsRes.ok) {
           const errData = await recordsRes.json().catch(() => ({}));
           setError(errData.error || 'Failed to load records');
           return;
         }
         const recordsData = await recordsRes.json();
-        setRecords(Array.isArray(recordsData) ? recordsData : []);
 
-        // If layout doesn't exist, create default layout excluding internal system fields
+        const tableFields: SailsFieldDefinition[] = recordsData.fields || [];
+
         if (!targetLayout) {
           const displayableFields = tableFields.filter(
             (f) => !['is_active', 'is_system', 'tenant_id', 'owner_id'].includes(f.fieldName.toLowerCase())
@@ -254,19 +285,59 @@ const DynamicTablePage: React.FC = () => {
           };
         }
 
-        setLayout(targetLayout);
-
         const cfg = targetLayout.status === 'active' ? (targetLayout.publishedConfig || targetLayout.config) : targetLayout.config;
-        if (cfg?.recordsPerPage) setRecordsPerPage(cfg.recordsPerPage);
+        if (cfg?.recordsPerPage) {
+          recordsPerPageRef.current = cfg.recordsPerPage;
+        }
+
+        tableNameRef.current = tableName;
+        fieldsRef.current = tableFields;
+        layoutConfigRef.current = cfg;
+        currentPageRef.current = 1;
+
+        setRecordsPerPage(cfg?.recordsPerPage || 25);
+        setFields(tableFields);
+        setLayout(targetLayout);
+        setRecords(recordsData.rows || []);
+        setTotalRecords(recordsData.total || 0);
+        setCurrentPage(1);
       } catch (err: any) {
         setError(err.message || 'Failed to load data');
       } finally {
         setLoading(false);
+        initialLoadDone.current = true;
       }
     };
 
-    loadData();
-  }, [activeMenu?.dataModelId, activeMenu?.listViewId, location.pathname]);
+    init();
+  }, [activeMenu?.dataModelId, activeMenu?.listViewId, location.pathname, doFetch]);
+
+  useEffect(() => {
+    if (!initialLoadDone.current) return;
+    const t = setTimeout(() => doFetch(1), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery, doFetch]);
+
+  useEffect(() => {
+    if (!initialLoadDone.current) return;
+    const t = setTimeout(() => doFetch(1), 300);
+    return () => clearTimeout(t);
+  }, [runtimeFilters, doFetch]);
+
+  useEffect(() => {
+    if (!initialLoadDone.current) return;
+    doFetch(1);
+  }, [runtimeSortRules, doFetch]);
+
+  useEffect(() => {
+    if (!initialLoadDone.current) return;
+    doFetch();
+  }, [currentPage, doFetch]);
+
+  useEffect(() => {
+    if (!initialLoadDone.current) return;
+    doFetch(1);
+  }, [recordsPerPage, doFetch]);
 
   const config = useMemo(() => {
     if (!layout) return null;
@@ -307,61 +378,18 @@ const DynamicTablePage: React.FC = () => {
     return sortedListColumns.filter((c: any) => c.visible !== false);
   }, [sortedListColumns]);
 
-  const listRuntimeRecords = useMemo(() => {
-    let result = applyLayoutFilters(records, config, fields);
-    result = applyLayoutSort(result, config, fields);
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter((rec) => {
-        return visibleListColumns.some((col: any) => {
-          const fd = fields.find((f) => f.id === col.fieldId || f.fieldName === col.fieldId);
-          const val = fd ? rec[fd.fieldName] : rec[col.fieldId];
-          return String(val ?? '').toLowerCase().includes(query);
-        });
-      });
-    }
-
-    Object.entries(runtimeFilters).forEach(([fieldId, filterText]) => {
-      if (!filterText.trim()) return;
-      const field = fields.find((f) => f.id === fieldId || f.fieldName === fieldId);
-      if (!field) return;
-      const lower = filterText.toLowerCase();
-      result = result.filter((rec) => String(rec[field.fieldName] ?? '').toLowerCase().includes(lower));
-    });
-
-    if (runtimeSortRules.length > 0) {
-      result = [...result].sort((a, b) => {
-        for (const rule of runtimeSortRules) {
-          const sf = fields.find((f) => f.id === rule.fieldId || f.fieldName === rule.fieldId);
-          if (!sf) continue;
-          const av = a[sf.fieldName]; const bv = b[sf.fieldName];
-          if (av == null && bv == null) continue;
-          if (av == null) return 1; if (bv == null) return -1;
-          const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
-          if (cmp !== 0) return rule.direction === 'asc' ? cmp : -cmp;
-        }
-        return 0;
-      });
-    }
-
-    return result;
-  }, [records, config, fields, searchQuery, runtimeFilters, runtimeSortRules, visibleListColumns]);
+  const listRuntimeRecords = useMemo(() => records, [records]);
 
   const totalPages = useMemo(() => {
     if (!allowPaging) return 1;
-    return Math.max(1, Math.ceil(listRuntimeRecords.length / recordsPerPage));
-  }, [allowPaging, listRuntimeRecords.length, recordsPerPage]);
+    return Math.max(1, Math.ceil(totalRecords / recordsPerPage));
+  }, [allowPaging, totalRecords, recordsPerPage]);
 
   const safeCurrentPage = useMemo(() => {
     return Math.max(1, Math.min(currentPage, totalPages));
   }, [currentPage, totalPages]);
 
-  const currentPageRecords = useMemo(() => {
-    if (!allowPaging) return listRuntimeRecords;
-    const start = (safeCurrentPage - 1) * recordsPerPage;
-    return listRuntimeRecords.slice(start, start + recordsPerPage);
-  }, [allowPaging, listRuntimeRecords, safeCurrentPage, recordsPerPage]);
+  const currentPageRecords = useMemo(() => records, [records]);
 
   const allSelectedOnPage = useMemo(() => {
     if (currentPageRecords.length === 0) return false;
@@ -397,7 +425,6 @@ const DynamicTablePage: React.FC = () => {
 
   const handleRuntimeFilter = (fieldId: string, value: string) => {
     setRuntimeFilters((prev) => ({ ...prev, [fieldId]: value }));
-    setCurrentPage(1);
   };
 
   const toggleSelectAll = () => {
@@ -423,7 +450,7 @@ const DynamicTablePage: React.FC = () => {
 
   if (!activeMenu?.dataModelId && !activeMenu?.listViewId) {
     return (
-      <div className="sails-dynamic-table sails-page-container">
+      <div className={`sails-dynamic-table sails-page-container ${animClass}`}>
         <header className="sails-page-header sails-dynamic-table__header">
           <div className="sails-page-header__left">
             <div className="sails-page-header__icon-wrapper">
@@ -445,7 +472,7 @@ const DynamicTablePage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="sails-dynamic-table sails-page-container">
+      <div className={`sails-dynamic-table sails-page-container ${animClass}`}>
         <header className="sails-page-header sails-dynamic-table__header">
           <div className="sails-page-header__left">
             <div className="sails-page-header__icon-wrapper">
@@ -463,7 +490,7 @@ const DynamicTablePage: React.FC = () => {
 
   if (!layout) {
     return (
-      <div className="sails-dynamic-table sails-page-container">
+      <div className={`sails-dynamic-table sails-page-container ${animClass}`}>
         <header className="sails-page-header sails-dynamic-table__header">
           <div className="sails-page-header__left">
             <div className="sails-page-header__icon-wrapper">
@@ -487,7 +514,7 @@ const DynamicTablePage: React.FC = () => {
   }
 
   return (
-    <div className="sails-dynamic-table sails-page-container">
+    <div className={`sails-dynamic-table sails-page-container ${animClass}`}>
       <header className="sails-page-header sails-dynamic-table__header">
         <div className="sails-page-header__left">
           <div className="sails-page-header__icon-wrapper">
@@ -513,7 +540,7 @@ const DynamicTablePage: React.FC = () => {
             <Columns size={13} />
             <span className="ls-table-card__title">{displayTitle}</span>
             <span className="ls-table-card__badge" style={{ marginLeft: 'auto' }}>
-              {listRuntimeRecords.length} rows
+              {totalRecords} rows
             </span>
             {allowMultiSelect && selectedIndices.size > 0 && (
               <span className="ls-table-card__badge" style={{ background: 'rgba(157,206,224,0.25)', color: 'var(--sails-primary)' }}>
@@ -621,7 +648,7 @@ const DynamicTablePage: React.FC = () => {
                   </thead>
                   <tbody>
                     {currentPageRecords.map((rec, ri) => {
-                      const globalIndex = allowPaging ? (safeCurrentPage - 1) * recordsPerPage + ri : ri;
+                      const globalIndex = ri;
                       return (
                         <tr key={rec.id || ri} className={`ls-rtd-row ${selectedIndices.has(globalIndex) ? 'ls-rtd-row--selected' : ''}`}>
                           {allowMultiSelect && (
@@ -679,17 +706,17 @@ const DynamicTablePage: React.FC = () => {
                   </tbody>
                 </table>
 
-                {listRuntimeRecords.length === 0 && (
+                {totalRecords === 0 && (
                   <div style={{ padding: 32, textAlign: 'center' }}>
-                    <p className="ls-empty">No records match the current filters.</p>
+                    <p className="ls-empty">No records found.</p>
                   </div>
                 )}
 
-                {allowPaging && listRuntimeRecords.length > 0 && (
+                {allowPaging && totalRecords > 0 && (
                   <div className="ls-pagination">
                     <div className="ls-pagination__info">
                       <span className="ls-pagination__range">
-                        Showing <strong>{(safeCurrentPage - 1) * recordsPerPage + 1}</strong> to <strong>{Math.min(safeCurrentPage * recordsPerPage, listRuntimeRecords.length)}</strong> of <strong>{listRuntimeRecords.length}</strong>
+                        Showing <strong>{(safeCurrentPage - 1) * recordsPerPage + 1}</strong> to <strong>{Math.min(safeCurrentPage * recordsPerPage, totalRecords)}</strong> of <strong>{totalRecords}</strong>
                       </span>
                       {pagingMode === 'dynamic' && (
                         <div className="ls-pagination__page-size">
@@ -697,7 +724,7 @@ const DynamicTablePage: React.FC = () => {
                           <CustomSelect
                             value={recordsPerPage}
                             options={LIST_PER_PAGE_OPTIONS}
-                            onChange={(v: number) => { setRecordsPerPage(v); setCurrentPage(1); }}
+                            onChange={(v: number) => { setRecordsPerPage(v); }}
                             size="sm"
                             direction="up"
                           />

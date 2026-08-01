@@ -61,3 +61,13 @@
   --sails-text-muted: #aeb7c2;
   --sails-border-color: #2d3436;
 }
+
+/* ─── Display Density ─────────────────────────────────────── */
+
+[data-density='compact'] .sails-main-content {
+  zoom: 0.85;
+}
+
+[data-density='comfortable'] .sails-main-content {
+  zoom: 1.10;
+}

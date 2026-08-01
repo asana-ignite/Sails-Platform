@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 calc(var(--sails-spacing-unit) * 2);
+  padding: 0 16px;
   position: sticky;
   top: 0;
   z-index: 9999 !important;
@@ -57,7 +57,7 @@
 .sails-topbar__center {
   flex: 1;
   max-width: 500px;
-  margin: 0 calc(var(--sails-spacing-unit) * 3);
+  margin: 0 24px;
 }
 
 .sails-topbar__search {
@@ -92,7 +92,7 @@
 .sails-topbar__right {
   display: flex;
   align-items: center;
-  gap: calc(var(--sails-spacing-unit) * 2);
+  gap: 16px;
 }
 
 .sails-topbar__action {
@@ -121,7 +121,7 @@
 .sails-topbar__profile {
   display: flex;
   align-items: center;
-  gap: var(--sails-spacing-unit);
+  gap: 8px;
   padding: 4px 8px;
   border-radius: var(--sails-radius-lg);
   cursor: pointer;

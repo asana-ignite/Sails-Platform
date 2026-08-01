@@ -9,6 +9,7 @@ interface ThemeState {
   fontAccentColor: string | null;
   paletteTechnique?: ColorMatchingTechnique;
   enableGradient?: boolean;
+  displayDensity: 'default' | 'compact' | 'comfortable';
   logoLightUrl: string;
   logoDarkUrl: string;
 }
@@ -21,6 +22,7 @@ interface ThemeContextType {
   fontAccentColor: string | null;
   paletteTechnique?: ColorMatchingTechnique;
   enableGradient?: boolean;
+  displayDensity: 'default' | 'compact' | 'comfortable';
   logoLightUrl: string;
   logoDarkUrl: string;
   setThemeMode: (mode: 'light' | 'dark') => void;
@@ -29,6 +31,7 @@ interface ThemeContextType {
   setBackgroundAccentColor: (color: string | null) => void;
   setFontAccentColor: (color: string | null) => void;
   setEnableGradient: (enabled: boolean) => void;
+  setDisplayDensity: (density: 'default' | 'compact' | 'comfortable') => void;
   setLogoLightUrl: (url: string) => void;
   setLogoDarkUrl: (url: string) => void;
   commitTheme: (overrides?: Partial<ThemeState>) => void;
@@ -131,9 +134,10 @@ function generatePalette(state: ThemeState): Record<string, string> {
   };
 }
 
-function applyPaletteToDOM(palette: Record<string, string>, mode: 'light' | 'dark') {
+function applyPaletteToDOM(palette: Record<string, string>, mode: 'light' | 'dark', density: 'default' | 'compact' | 'comfortable' = 'default') {
   const root = document.documentElement;
   root.setAttribute('data-theme', mode);
+  root.setAttribute('data-density', density);
   Object.entries(palette).forEach(([key, value]) => {
     root.style.setProperty(key, value);
   });
@@ -146,6 +150,7 @@ const DEFAULT_THEME: ThemeState = {
   backgroundAccentColor: null,
   fontAccentColor: null,
   enableGradient: true,
+  displayDensity: 'default',
   logoLightUrl: '/assets/logo-standard.jpg',
   logoDarkUrl: '/assets/logo-standard.jpg',
 };
@@ -174,6 +179,10 @@ function loadFromStorage(): ThemeState {
             ? parsed.fontAccentColor
             : null,
         enableGradient: typeof parsed.enableGradient === 'boolean' ? parsed.enableGradient : true,
+        displayDensity:
+          typeof parsed.displayDensity === 'string' && ['compact', 'comfortable'].includes(parsed.displayDensity)
+            ? parsed.displayDensity
+            : 'default',
         logoLightUrl:
           typeof parsed.logoLightUrl === 'string' ? parsed.logoLightUrl : DEFAULT_THEME.logoLightUrl,
         logoDarkUrl:
@@ -201,7 +210,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setState((prev) => {
       const merged = { ...prev, ...overrides };
       const palette = generatePalette(merged);
-      applyPaletteToDOM(palette, merged.themeMode);
+      applyPaletteToDOM(palette, merged.themeMode, merged.displayDensity);
       saveToStorage(merged);
       return merged;
     });
@@ -210,7 +219,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Apply on initial mount only
   useEffect(() => {
     const palette = generatePalette(state);
-    applyPaletteToDOM(palette, state.themeMode);
+    applyPaletteToDOM(palette, state.themeMode, state.displayDensity);
   }, []);
 
   // Server fetch merges branding/themeConfig then re-applies
@@ -238,12 +247,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             next.paletteTechnique = serverBranding.paletteTechnique as ColorMatchingTechnique;
           if (typeof serverBranding.enableGradient === 'boolean')
             next.enableGradient = serverBranding.enableGradient;
+          if (typeof serverBranding.displayDensity === 'string' && ['compact', 'comfortable', 'default'].includes(serverBranding.displayDensity))
+            next.displayDensity = serverBranding.displayDensity;
           if (serverBranding.logoLightUrl) next.logoLightUrl = serverBranding.logoLightUrl;
           if (serverBranding.logoDarkUrl) next.logoDarkUrl = serverBranding.logoDarkUrl;
           // Apply merged branding immediately
           const palette = generatePalette(next);
           // Defer DOM update out of render phase
-          setTimeout(() => applyPaletteToDOM(palette, next.themeMode), 0);
+          setTimeout(() => applyPaletteToDOM(palette, next.themeMode, next.displayDensity), 0);
           saveToStorage(next);
           return next;
         });
@@ -298,6 +309,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setState((prev) => { const next = { ...prev, enableGradient: enabled }; saveToStorage(next); return next; });
   }, []);
 
+  const setDisplayDensity = useCallback((density: 'default' | 'compact' | 'comfortable') => {
+    setState((prev) => {
+      const next = { ...prev, displayDensity: density };
+      document.documentElement.setAttribute('data-density', density);
+      saveToStorage(next);
+      return next;
+    });
+  }, []);
+
   const setLogoLightUrl = useCallback((url: string) => {
     setState((prev) => { const next = { ...prev, logoLightUrl: url }; saveToStorage(next); return next; });
   }, []);
@@ -315,6 +335,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         backgroundAccentColor: state.backgroundAccentColor,
         fontAccentColor: state.fontAccentColor,
         enableGradient: state.enableGradient,
+        displayDensity: state.displayDensity,
         paletteTechnique: state.paletteTechnique,
         logoLightUrl: state.logoLightUrl,
         logoDarkUrl: state.logoDarkUrl,
@@ -324,6 +345,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setBackgroundAccentColor,
         setFontAccentColor,
         setEnableGradient,
+        setDisplayDensity,
         setLogoLightUrl,
         setLogoDarkUrl,
         commitTheme,

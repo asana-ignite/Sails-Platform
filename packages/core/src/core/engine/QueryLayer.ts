@@ -287,4 +287,132 @@ export class QueryLayer {
     // 4. Dispatch Audit Log Asynchronously (Fire and forget)
     pool.query(result.auditSql).catch(err => console.error('[AuditLog] Failed to write audit log:', err));
   }
+
+  /**
+   * List records with server-side filtering, sorting, searching, and pagination.
+   *
+   * All field names in filters/sort are validated against `validFields` before use.
+   * Both SELECT and COUNT run inside a single RLS-secured transaction context.
+   *
+   * @param pool        PG connection pool
+   * @param schemaName  Tenant schema (e.g. `tenant_acme`)
+   * @param tableName   Physical table name (e.g. `leads`)
+   * @param options     Query parameters
+   */
+  static async listRecords(
+    pool: Pool,
+    schemaName: string,
+    tableName: string,
+    options: {
+      filters?: Record<string, string>;
+      search?: string;
+      sort?: { fieldId: string; dir: 'asc' | 'desc' }[];
+      page?: number;
+      limit?: number;
+      validFields: Set<string>;
+      textFields: string[];
+    }
+  ): Promise<{ rows: any[]; total: number; page: number; limit: number; totalPages: number }> {
+    const page = Math.max(1, options.page || 1);
+    const limit = Math.min(100, Math.max(1, options.limit || 25));
+    const offset = (page - 1) * limit;
+
+    const whereClauses: string[] = [];
+
+    if (options.filters) {
+      for (const [rawKey, rawValue] of Object.entries(options.filters)) {
+        if (rawValue === undefined || rawValue === null || (typeof rawValue === 'string' && rawValue.trim() === '' && !rawKey.endsWith(':is_empty') && !rawKey.endsWith(':is_not_empty'))) {
+          continue;
+        }
+
+        const colonIdx = rawKey.lastIndexOf(':');
+        const fieldName = colonIdx > -1 ? rawKey.substring(0, colonIdx) : rawKey;
+        const operator = colonIdx > -1 ? rawKey.substring(colonIdx + 1) : 'eq';
+
+        if (!options.validFields.has(fieldName)) continue;
+
+        switch (operator) {
+          case 'eq':
+            whereClauses.push(format('%I = %L', fieldName, rawValue));
+            break;
+          case 'neq':
+            whereClauses.push(format('%I != %L', fieldName, rawValue));
+            break;
+          case 'contains':
+            whereClauses.push(format('%I::text ILIKE %L', fieldName, `%${rawValue}%`));
+            break;
+          case 'gt':
+            whereClauses.push(format('%I > %L', fieldName, rawValue));
+            break;
+          case 'gte':
+            whereClauses.push(format('%I >= %L', fieldName, rawValue));
+            break;
+          case 'lt':
+            whereClauses.push(format('%I < %L', fieldName, rawValue));
+            break;
+          case 'lte':
+            whereClauses.push(format('%I <= %L', fieldName, rawValue));
+            break;
+          case 'is_empty':
+            whereClauses.push(format('(%I IS NULL OR %I::text = %L)', fieldName, fieldName, ''));
+            break;
+          case 'is_not_empty':
+            whereClauses.push(format('(%I IS NOT NULL AND %I::text != %L)', fieldName, fieldName, ''));
+            break;
+        }
+      }
+    }
+
+    if (options.search && options.search.trim()) {
+      const q = options.search.trim();
+      const searchClauses = options.textFields
+        .filter(f => options.validFields.has(f))
+        .map(f => format('%I::text ILIKE %L', f, `%${q}%`));
+
+      if (searchClauses.length > 0) {
+        whereClauses.push(`(${searchClauses.join(' OR ')})`);
+      }
+    }
+
+    const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const orderByClauses: string[] = [];
+    if (options.sort && options.sort.length > 0) {
+      for (const rule of options.sort) {
+        if (!options.validFields.has(rule.fieldId)) continue;
+        const dir = rule.dir === 'desc' ? 'DESC' : 'ASC';
+        orderByClauses.push(format('%I %s', rule.fieldId, dir));
+      }
+    }
+    if (orderByClauses.length === 0) {
+      orderByClauses.push('created_at DESC');
+    }
+    const orderBySQL = `ORDER BY ${orderByClauses.join(', ')}`;
+
+    return QueryLayer.executeSecureQuery(pool, tableName, 'read', async (client) => {
+      const dataSQL = format(
+        'SELECT * FROM %I.%I %s %s LIMIT %s OFFSET %s',
+        schemaName, tableName, whereSQL, orderBySQL, limit, offset
+      );
+      const countSQL = format(
+        'SELECT COUNT(*)::int AS total FROM %I.%I %s',
+        schemaName, tableName, whereSQL
+      );
+
+      const [dataResult, countResult] = await Promise.all([
+        client.query(dataSQL),
+        client.query(countSQL),
+      ]);
+
+      const total = parseInt(countResult.rows[0]?.total || '0', 10);
+
+      return {
+        rows: dataResult.rows,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    });
+  }
 }
