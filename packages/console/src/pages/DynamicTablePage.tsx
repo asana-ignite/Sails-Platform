@@ -298,9 +298,8 @@ const DynamicTablePage: React.FC = () => {
         setRecordsPerPage(cfg?.recordsPerPage || 25);
         setFields(tableFields);
         setLayout(targetLayout);
-        setRecords(recordsData.rows || []);
-        setTotalRecords(recordsData.total || 0);
-        setCurrentPage(1);
+
+        await doFetch(1);
       } catch (err: any) {
         setError(err.message || 'Failed to load data');
       } finally {
