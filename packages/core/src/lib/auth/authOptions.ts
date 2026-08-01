@@ -5,6 +5,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import GoogleProvider from "next-auth/providers/google";
 
+const jwtCache = new Map<string, { data: any; expiresAt: number }>();
+const JWT_CACHE_TTL = 60000;
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as any,
   session: {
@@ -133,19 +136,28 @@ export const authOptions: NextAuthOptions = {
           teamId: ut.teamId,
           isLeader: ut.isLeader
         }));
+        jwtCache.delete(token.id as string);
       } else if (token.id) {
-        // Refresh session data from DB to ensure roles are current
-        const dbUser = await db.user.findUnique({
-          where: { id: token.id as string },
-          include: { teams: true }
-        });
-        if (dbUser) {
-          token.tenantId = dbUser.tenantId;
-          token.role = dbUser.role;
-          token.teams = dbUser.teams?.map((ut: any) => ({
-            teamId: ut.teamId,
-            isLeader: ut.isLeader
-          }));
+        const cached = jwtCache.get(token.id as string);
+        if (cached && cached.expiresAt > Date.now()) {
+          Object.assign(token, cached.data);
+        } else {
+          const dbUser = await db.user.findUnique({
+            where: { id: token.id as string },
+            include: { teams: true }
+          });
+          if (dbUser) {
+            token.tenantId = dbUser.tenantId;
+            token.role = dbUser.role;
+            token.teams = dbUser.teams?.map((ut: any) => ({
+              teamId: ut.teamId,
+              isLeader: ut.isLeader
+            }));
+            jwtCache.set(token.id as string, {
+              data: { tenantId: token.tenantId, role: token.role, teams: token.teams },
+              expiresAt: Date.now() + JWT_CACHE_TTL
+            });
+          }
         }
       }
       return token;

@@ -6,7 +6,7 @@ export const RelationType: FieldTypePlugin = {
   type: 'relation',
   label: 'Relation',
   description: 'Foreign key link to records in another data model',
-  iconName: 'Link',
+  iconName: 'GitFork',
   physicalType: 'relation',
   parametersSchema: [
     { name: 'targetTable', label: 'Target Data Model', type: 'model_select', required: true },

@@ -44,9 +44,9 @@ import {
   ExternalLink,
   AlertCircle
 } from 'lucide-react';
-import { TableLayout, LayoutType, ViewType } from '@sails/shared';
+import { TableLayout, LayoutType, ViewType, FIELD_TYPE_REGISTRY } from '@sails/shared';
 import { CustomSelect } from '../../components/common/CustomSelect';
-import { DEFAULT_FIELD_TYPES } from './ObjectManagerConstants';
+import { DynamicIcon } from '../../components/common/DynamicIcon';
 import './ObjectManager.css';
 
 const SortIcon: React.FC<{ active: boolean; direction?: 'asc' | 'desc' }> = ({ active, direction }) => {
@@ -169,7 +169,7 @@ const ObjectManager: React.FC = () => {
   const [newFieldRequired, setNewFieldRequired] = useState(false);
   
   // Metadata-Driven Registry Schema state
-  const [fieldTypeMetadataList, setFieldTypeMetadataList] = useState<FieldTypeMetadata[]>(DEFAULT_FIELD_TYPES);
+  const [fieldTypeMetadataList] = useState<FieldTypeMetadata[]>(FIELD_TYPE_REGISTRY);
   const [dynamicConfigValues, setDynamicConfigValues] = useState<Record<string, any>>({});
 
   // Edit Field state
@@ -210,24 +210,7 @@ const ObjectManager: React.FC = () => {
     }
   };
 
-  // Fetch registered field types from Core API Registry
-  const fetchFieldTypes = useCallback(async () => {
-    try {
-      const res = await fetch('/api/metadata/field-types');
-      if (res.ok) {
-        const data: FieldTypeMetadata[] = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setFieldTypeMetadataList(data);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch field types from registry:', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchFieldTypes();
-  }, [fetchFieldTypes]);
+  // Use FIELD_TYPE_REGISTRY from shared package — always up to date
 
   // Sync default dynamic parameter values when selected field logical type changes
   useEffect(() => {
@@ -1096,7 +1079,7 @@ const ObjectManager: React.FC = () => {
                 >
                   <span>
                     {tab === 'general' && 'General Information'}
-                    {tab === 'fields' && 'Fields Definition'}
+                    {tab === 'fields' && 'Fields'}
                     {tab === 'layout' && 'Layout'}
                     {tab === 'permission' && 'Permission'}
                   </span>
@@ -1712,7 +1695,7 @@ const ObjectManager: React.FC = () => {
                   </div>
 
                   {/* Required Field Checkbox right under Display Name / System Name */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', marginBottom: '16px' }}>
                     <input 
                       type="checkbox" 
                       checked={newFieldRequired}
@@ -1738,18 +1721,6 @@ const ObjectManager: React.FC = () => {
                     <label className="om-field-label">Field Data Type *</label>
                     <div className="om-type-grid">
                       {fieldTypeMetadataList.map(t => {
-                        let IconComp = Type;
-                        if (t.iconName === 'AlignLeft') IconComp = AlignLeft;
-                        if (t.iconName === 'Hash') IconComp = Hash;
-                        if (t.iconName === 'DollarSign') IconComp = DollarSign;
-                        if (t.iconName === 'ToggleLeft') IconComp = ToggleLeft;
-                        if (t.iconName === 'Calendar') IconComp = Calendar;
-                        if (t.iconName === 'Mail') IconComp = Mail;
-                        if (t.iconName === 'Phone') IconComp = Phone;
-                        if (t.iconName === 'List') IconComp = List;
-                        if (t.iconName === 'Link') IconComp = Link;
-                        if (t.iconName === 'MapPin') IconComp = MapPin;
-
                         const isActive = newFieldLogicalType === t.type;
                         return (
                           <div
@@ -1758,7 +1729,7 @@ const ObjectManager: React.FC = () => {
                             onClick={() => setNewFieldLogicalType(t.type)}
                           >
                             <div className="om-type-card-icon">
-                              <IconComp size={24} />
+                              <DynamicIcon name={t.iconName} size={24} />
                             </div>
                             <span className="om-type-card-label">{t.label}</span>
                           </div>
@@ -1776,15 +1747,6 @@ const ObjectManager: React.FC = () => {
 
                     return (
                       <div className="om-config-section">
-                        <div className="om-config-header">
-                          <div className="om-config-title">
-                            <Sliders size={16} />
-                            <span>Modular Type Parameters</span>
-                          </div>
-                          <span className="om-config-badge">
-                            {activeFieldTypeMeta?.label || newFieldLogicalType.toUpperCase().replace('_', ' ')}
-                          </span>
-                        </div>
 
                         {newFieldLogicalType === 'select' ? (
                           <div className="om-form-grid-2">
@@ -2142,7 +2104,7 @@ const ObjectManager: React.FC = () => {
                   </div>
 
                   {/* Required Field Checkbox right under Display Name / System Name */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', marginBottom: '16px' }}>
                     <input 
                       type="checkbox" 
                       checked={editFieldRequired}
@@ -2173,18 +2135,6 @@ const ObjectManager: React.FC = () => {
                     </div>
                     <div className="om-type-grid">
                       {fieldTypeMetadataList.map(t => {
-                        let IconComp = Type;
-                        if (t.iconName === 'AlignLeft') IconComp = AlignLeft;
-                        if (t.iconName === 'Hash') IconComp = Hash;
-                        if (t.iconName === 'DollarSign') IconComp = DollarSign;
-                        if (t.iconName === 'ToggleLeft') IconComp = ToggleLeft;
-                        if (t.iconName === 'Calendar') IconComp = Calendar;
-                        if (t.iconName === 'Mail') IconComp = Mail;
-                        if (t.iconName === 'Phone') IconComp = Phone;
-                        if (t.iconName === 'List') IconComp = List;
-                        if (t.iconName === 'Link') IconComp = Link;
-                        if (t.iconName === 'MapPin') IconComp = MapPin;
-
                         const isActive = editFieldLogicalType === t.type;
                         return (
                           <div
@@ -2193,7 +2143,7 @@ const ObjectManager: React.FC = () => {
                             onClick={() => setEditFieldLogicalType(t.type)}
                           >
                             <div className="om-type-card-icon">
-                              <IconComp size={24} />
+                              <DynamicIcon name={t.iconName} size={24} />
                             </div>
                             <span className="om-type-card-label">{t.label}</span>
                           </div>
@@ -2210,15 +2160,6 @@ const ObjectManager: React.FC = () => {
 
                     return (
                       <div className="om-config-section">
-                        <div className="om-config-header">
-                          <div className="om-config-title">
-                            <Sliders size={16} />
-                            <span>Modular Type Parameters</span>
-                          </div>
-                          <span className="om-config-badge">
-                            {activeFieldTypeMeta?.label || editFieldLogicalType.toUpperCase().replace('_', ' ')}
-                          </span>
-                        </div>
 
                         {editFieldLogicalType === 'select' ? (
                           <div className="om-form-grid-2">

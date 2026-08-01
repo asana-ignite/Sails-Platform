@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAppSession, requireSession } from '@/lib/auth/session';
+import { invalidateConfigCache } from '@/lib/configCache';
 
 /**
  * GET /api/console/apps
@@ -66,6 +67,7 @@ export async function POST(req: Request) {
       }
     });
 
+    invalidateConfigCache(tenantId);
     return NextResponse.json({ success: true, data: newApp });
   } catch (error: any) {
     console.error('[API CONSOLE APPS POST]:', error);
@@ -107,6 +109,7 @@ export async function PATCH(req: Request) {
       data: updateData
     });
 
+    invalidateConfigCache(tenantId);
     return NextResponse.json({ success: true, data: updatedApp });
   } catch (error: any) {
     console.error('[API CONSOLE APPS PATCH]:', error);
@@ -147,6 +150,7 @@ export async function DELETE(req: Request) {
       where: { id }
     });
 
+    invalidateConfigCache(tenantId);
     return NextResponse.json({ success: true, message: 'Application deleted successfully' });
   } catch (error: any) {
     console.error('[API CONSOLE APPS DELETE]:', error);

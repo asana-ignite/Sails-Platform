@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import type { TableLayout, SailsFieldDefinition } from '@sails/shared';
 import LoadingScreen from '../components/common/LoadingScreen';
+import { fetchCached } from '../api/client';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
 import './custom/layouts-responsive.css';
@@ -47,22 +48,17 @@ const DynamicDetailPage: React.FC = () => {
         let objectsData: any = null;
 
         if (targetLayoutId) {
-          const layoutRes = await fetch(`/api/console/layouts?id=${targetLayoutId}`);
-          if (layoutRes.ok) {
-            const layoutResult = await layoutRes.json();
-            if (layoutResult.success) targetLayout = layoutResult.data;
-          }
+          const layoutResult = await fetchCached(`/api/console/layouts?id=${targetLayoutId}`);
+          if (layoutResult.success) targetLayout = layoutResult.data;
         } else {
-          const objRes = await fetch('/api/metadata/objects');
-          objectsData = objRes?.ok ? await objRes.json() : [];
+          objectsData = await fetchCached('/api/metadata/objects', undefined, 60000);
         }
 
         const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData?.rows || objectsData?.data || []);
 
         if (!targetLayout && dataModelId) {
-          const lRes = await fetch(`/api/console/layouts?tableId=${dataModelId}`);
-          if (lRes.ok) {
-            const lResult = await lRes.json();
+          const lResult = await fetchCached(`/api/console/layouts?tableId=${dataModelId}`);
+          if (lResult) {
             const rows: any[] = lResult.data?.rows || [];
             targetLayout =
               rows.find((r: any) => (r.viewType === 'DETAIL' || r.viewType === 'FORM') && r.status === 'active' && r.isDefault) ||

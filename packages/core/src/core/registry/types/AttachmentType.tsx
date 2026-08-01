@@ -6,7 +6,7 @@ export const AttachmentType: FieldTypePlugin = {
   type: 'attachment',
   label: 'Attachment / File',
   description: 'Document or file upload with file type extension limits',
-  iconName: 'Link',
+  iconName: 'Paperclip',
   physicalType: 'text',
   parametersSchema: [
     {

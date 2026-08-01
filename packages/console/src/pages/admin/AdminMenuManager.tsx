@@ -7,6 +7,7 @@ import { ConsoleApp, ConsoleMenu, SailsTableDefinition, TableLayout } from '@sai
 import DynamicIcon from '../../components/common/DynamicIcon';
 import IconPicker from '../../components/common/IconPicker';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { fetchCached } from '../../api/client';
 import './AdminMenuManager.css';
 
 
@@ -77,8 +78,7 @@ const AdminMenuManager: React.FC = () => {
 
   const fetchDataModels = async () => {
     try {
-      const res = await fetch('/api/metadata/objects');
-      const data = await res.json();
+      const data = await fetchCached('/api/metadata/objects', undefined, 60000);
       if (Array.isArray(data)) setDataModels(data);
     } catch (err) {
       console.error('Failed to fetch data models:', err);
@@ -87,8 +87,7 @@ const AdminMenuManager: React.FC = () => {
 
   const fetchAvailableViews = async (tableId: string, currentListViewId?: string | null) => {
     try {
-      const res = await fetch(`/api/console/layouts?tableId=${tableId}&status=active`);
-      const result = await res.json();
+      const result = await fetchCached(`/api/console/layouts?tableId=${tableId}&status=active`);
       if (result.success) {
         const views: TableLayout[] = (result.data?.rows || []).filter(
           (r: any) => r.viewType === 'LIST' && r.status === 'active'

@@ -6,7 +6,7 @@ export const PercentageType: FieldTypePlugin = {
   type: 'percentage',
   label: 'Percentage',
   description: 'Numeric percentage value (e.g. 15.5%)',
-  iconName: 'Hash',
+  iconName: 'Percent',
   physicalType: 'number',
   parametersSchema: [
     { name: 'decimalPlaces', label: 'No. Decimal Places', type: 'number', defaultValue: 2, min: 0, max: 6 },

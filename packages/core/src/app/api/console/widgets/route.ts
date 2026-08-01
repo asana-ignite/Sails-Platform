@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';
+import { invalidateConfigCache } from '@/lib/configCache';
 
 export async function GET(req: Request) {
   try {
@@ -58,6 +59,7 @@ export async function POST(req: Request) {
       }
     });
 
+    invalidateConfigCache(tenantId);
     return NextResponse.json({ success: true, data: newWidget });
   } catch (error: any) {
     console.error('[API CONSOLE WIDGETS POST]:', error);
@@ -93,6 +95,7 @@ export async function PATCH(req: Request) {
       data: updateData
     });
 
+    invalidateConfigCache(tenantId);
     return NextResponse.json({ success: true, data: updatedWidget });
   } catch (error: any) {
     console.error('[API CONSOLE WIDGETS PATCH]:', error);
@@ -125,6 +128,7 @@ export async function DELETE(req: Request) {
 
     await db.consoleWidget.delete({ where: { id } });
 
+    invalidateConfigCache(tenantId);
     return NextResponse.json({ success: true, message: 'Widget deleted successfully' });
   } catch (error: any) {
     console.error('[API CONSOLE WIDGETS DELETE]:', error);

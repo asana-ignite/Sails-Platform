@@ -4,8 +4,8 @@ import { FieldTypePlugin } from '../FieldTypePlugin';
 
 export const DateType: FieldTypePlugin = {
   type: 'date',
-  label: 'Date / Time',
-  description: 'Calendar date and timestamp precision',
+  label: 'Date',
+  description: 'Calendar date without time component',
   iconName: 'Calendar',
   physicalType: 'date',
   parametersSchema: [
@@ -20,13 +20,13 @@ export const DateType: FieldTypePlugin = {
         { label: 'MM/DD/YYYY', value: 'MM/DD/YYYY' }
       ]
     },
-    { name: 'defaultCurrent', label: 'Default to Current Date/Time', type: 'boolean', defaultValue: false }
+    { name: 'defaultCurrent', label: 'Default to Today', type: 'boolean', defaultValue: false }
   ],
   getPostgresColumnDefinition: (isRequired?: boolean) => {
-    return `TIMESTAMPTZ${isRequired ? ' NOT NULL' : ''}`;
+    return `DATE${isRequired ? ' NOT NULL' : ''}`;
   },
   getZodSchema: (isRequired?: boolean) => {
-    const schema = z.date();
+    const schema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
     return isRequired ? schema : schema.optional();
   },
   RenderFormInput: (props: any) => {
@@ -34,8 +34,6 @@ export const DateType: FieldTypePlugin = {
   },
   RenderTableCell: (props: { value: any }) => {
     if (!props.value) return <span></span>;
-    const d = new Date(props.value);
-    return <span>{d.toLocaleDateString()}</span>;
+    return <span>{String(props.value)}</span>;
   }
 };
-

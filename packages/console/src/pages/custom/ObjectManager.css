@@ -295,14 +295,16 @@
     border-radius: var(--sails-radius-lg, 12px);
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
     width: 100%;
-    max-width: 800px;
-    max-height: 90vh;
+    max-width: 840px;
+    height: 80vh;
+    min-height: 600px;
+    max-height: 850px;
     display: flex;
     flex-direction: column;
 }
 
 .om-big-modal--md {
-    max-width: 600px;
+    max-width: 680px;
 }
 
 /* Generic modal dialog (used by delete confirm, etc.) */

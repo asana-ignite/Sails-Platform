@@ -20,7 +20,9 @@ import {
 } from 'lucide-react';
 import type { SailsFieldDefinition, LayoutColumn, LayoutFilter, LayoutSort, ViewType, SummaryField, LayoutStatus } from '@sails/shared';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { FieldControlRegistry } from '../../features/controls/FieldControlRegistry';
 import { useAuth } from '../../contexts/AuthContext';
+import { fetchCached } from '../../api/client';
 import Unauthorized from '../Unauthorized';
 import './LayoutStudio.css';
 
@@ -183,16 +185,11 @@ function buildMockRecord(fields: SailsFieldDefinition[]): Record<string, any> {
   return record;
 }
 
-function renderFieldValue(field: SailsFieldDefinition, record: Record<string, any>): string {
+function renderFieldValue(field: SailsFieldDefinition, record: Record<string, any>): React.ReactNode {
+  const controlReg = FieldControlRegistry.getInstance();
+  const controlPlugin = controlReg.getFallbackControl(field.logicalType);
   const val = record[field.fieldName];
-  if (val === undefined || val === null) return '—';
-  if (field.logicalType === 'currency') return `฿${val.toLocaleString()}`;
-  if (field.logicalType === 'boolean') return val ? 'Yes' : 'No';
-  if (field.logicalType === 'select') {
-    const options = (field.config as any)?.options || [];
-    return options.find((o: any) => o.value === val)?.label || String(val);
-  }
-  return String(val);
+  return <controlPlugin.RenderEdit field={field} value={val} readOnly={false} />;
 }
 
 function buildPalette(fields: SailsFieldDefinition[], placedFieldIds: string[]): PaletteItem[] {
@@ -393,9 +390,7 @@ const LayoutStudio: React.FC = () => {
     }
     const fetchTable = async () => {
       try {
-        const res = await fetch('/api/metadata/objects');
-        if (!res.ok) throw new Error('Failed to load objects');
-        const data = await res.json();
+        const data = await fetchCached('/api/metadata/objects', undefined, 60000);
         const tables: any[] = Array.isArray(data) ? data : (data.data || []);
         const found = tables.find((t: any) => t.id === tableId);
         if (!found) throw new Error('Table not found');
@@ -404,13 +399,10 @@ const LayoutStudio: React.FC = () => {
         setListMockRows(buildMockRows(found.fields || []));
 
         try {
-          const lRes = await fetch(`/api/console/layouts?tableId=${tableId}`);
-          if (lRes.ok) {
-            const lData = await lRes.json();
-            const rows = lData.data?.rows || lData.rows || [];
-            const details = rows.filter((r: any) => (r.viewType === 'DETAIL' || r.viewType === 'FORM') && r.status === 'active');
-            setAvailableDetailLayouts(details.map((r: any) => ({ id: r.id, name: r.name || r.id, viewType: r.viewType })));
-          }
+          const lData = await fetchCached(`/api/console/layouts?tableId=${tableId}`);
+          const rows = lData.data?.rows || lData.rows || [];
+          const details = rows.filter((r: any) => (r.viewType === 'DETAIL' || r.viewType === 'FORM') && r.status === 'active');
+          setAvailableDetailLayouts(details.map((r: any) => ({ id: r.id, name: r.name || r.id, viewType: r.viewType })));
         } catch (e) {
           console.error('Failed to load sibling detail layouts', e);
         }
@@ -427,8 +419,7 @@ const LayoutStudio: React.FC = () => {
     if (!layoutId) return;
     const loadLayout = async () => {
       try {
-        const res = await fetch(`/api/console/layouts?id=${layoutId}`);
-        const json = await res.json();
+        const json = await fetchCached(`/api/console/layouts?id=${layoutId}`);
         if (!json.success) throw new Error(json.error || 'Failed to load layout');
         const layout = json.data;
         const vType = (layout.viewType as ViewType) || 'DETAIL';

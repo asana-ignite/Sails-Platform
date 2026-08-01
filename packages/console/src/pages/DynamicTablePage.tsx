@@ -14,12 +14,15 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Download,
 } from 'lucide-react';
 import { useConsole } from '../contexts/ConsoleContext';
 import type { ConsoleMenu, TableLayout, SailsFieldDefinition } from '@sails/shared';
 import DynamicIcon from '../components/common/DynamicIcon';
 import CustomSelect from '../components/common/CustomSelect';
 import LoadingScreen from '../components/common/LoadingScreen';
+import { fetchCached } from '../api/client';
+import ExportCsvButton from '../components/common/ExportCsvButton';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
 import './custom/layouts-responsive.css';
@@ -189,11 +192,8 @@ const DynamicTablePage: React.FC = () => {
         const targetLayoutId = searchParams.get('layoutId') || activeMenu?.listViewId;
 
         if (targetLayoutId) {
-          const layoutRes = await fetch(`/api/console/layouts?id=${targetLayoutId}`);
-          if (layoutRes.ok) {
-            const layoutResult = await layoutRes.json();
-            if (layoutResult.success) targetLayout = layoutResult.data;
-          }
+          const layoutResult = await fetchCached(`/api/console/layouts?id=${targetLayoutId}`);
+          if (layoutResult.success) targetLayout = layoutResult.data;
         }
 
         let objectsData: any = null;
@@ -202,21 +202,17 @@ const DynamicTablePage: React.FC = () => {
 
         if (!tableName) {
           if (targetLayoutId) {
-            const objRes = await fetch('/api/metadata/objects');
-            objectsData = objRes?.ok ? await objRes.json() : [];
+            objectsData = await fetchCached('/api/metadata/objects', undefined, 60000);
             const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData?.rows || objectsData?.data || []);
             if (dataModelId) {
               const foundTable = objectRows.find((t: any) => t.id === dataModelId || t.tableName === dataModelId);
               if (foundTable) tableName = foundTable.tableName;
             }
           } else {
-            const [lRes, objRes] = await Promise.all([
-              dataModelId ? fetch(`/api/console/layouts?tableId=${dataModelId}`) : Promise.resolve(null),
-              fetch('/api/metadata/objects'),
-            ]);
+            const lResult = dataModelId ? await fetchCached(`/api/console/layouts?tableId=${dataModelId}`) : null;
+            objectsData = await fetchCached('/api/metadata/objects', undefined, 60000);
 
-            if (lRes?.ok) {
-              const lResult = await lRes.json();
+            if (lResult) {
               const rows: any[] = lResult.data?.rows || [];
               targetLayout =
                 rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active' && r.isDefault) ||
@@ -225,7 +221,6 @@ const DynamicTablePage: React.FC = () => {
                 rows.find((r: any) => r.viewType === 'LIST');
             }
 
-            objectsData = objRes?.ok ? await objRes.json() : [];
             tableName = targetLayout?.table?.tableName || null;
             if (!tableName && dataModelId) {
               const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData?.rows || objectsData?.data || []);
@@ -388,6 +383,17 @@ const DynamicTablePage: React.FC = () => {
     return Math.max(1, Math.min(currentPage, totalPages));
   }, [currentPage, totalPages]);
 
+  const csvExportData = useMemo(() => {
+    const headers = visibleListColumns.map((col: any) => resolveLabel(col, fields));
+    const rows = records.map((rec) =>
+      visibleListColumns.map((col: any) => {
+        const f = fields.find((ff: any) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
+        return f ? renderListFieldValue(f, rec) : (rec[col.fieldId] !== undefined ? String(rec[col.fieldId]) : '');
+      })
+    );
+    return { headers, rows };
+  }, [visibleListColumns, fields, records]);
+
   const currentPageRecords = useMemo(() => records, [records]);
 
   const allSelectedOnPage = useMemo(() => {
@@ -525,6 +531,11 @@ const DynamicTablePage: React.FC = () => {
           </div>
         </div>
         <div className="sails-page-header__right">
+          <ExportCsvButton
+            headers={csvExportData.headers}
+            rows={csvExportData.rows}
+            filename={displayTitle}
+          />
           <button className="sails-btn sails-btn--primary">
             <Plus size={18} />
             <span>Add New</span>

@@ -200,7 +200,7 @@ async function seedSystemFields() {
     const SYSTEM_FIELDS = [
       { name: 'Created Date', fieldName: 'created_at', physicalType: 'timestamp', logicalType: 'date' },
       { name: 'Last Modified Date', fieldName: 'updated_at', physicalType: 'timestamp', logicalType: 'date' },
-      { name: 'Owner', fieldName: 'owner_id', physicalType: 'lookup', logicalType: 'lookup' },
+      { name: 'Owner', fieldName: 'owner_id', physicalType: 'relation', logicalType: 'user' },
     ];
 
     let totalCreated = 0;

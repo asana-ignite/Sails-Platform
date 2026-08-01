@@ -1,38 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { SYSTEM_PERMISSION_REGISTRY } from '@sails/shared';
 import './AdminPermissions.css';
 
-interface PermissionDefinition {
-  label: string;
-  description: string;
-  category: string;
-}
-
 const AdminPermissions: React.FC = () => {
-  const [registry, setRegistry] = useState<Record<string, PermissionDefinition>>({});
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // In a real app, this would fetch from /api/console/permissions
-    // For now, we simulate the fetch
-    const fetchRegistry = async () => {
-      try {
-        const response = await fetch('/api/console/permissions');
-        const result = await response.json();
-        if (result.success) {
-          setRegistry(result.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch permissions registry:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRegistry();
-  }, []);
-
-  if (loading) return <div className="sails-admin-loading">Loading Registry...</div>;
-
+  const registry = SYSTEM_PERMISSION_REGISTRY;
   const categories = Array.from(new Set(Object.values(registry).map(p => p.category)));
 
   return (

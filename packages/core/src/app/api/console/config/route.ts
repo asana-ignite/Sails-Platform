@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAppSession } from '@/lib/auth/session';
 import { SYSTEM_PERMISSION_REGISTRY } from '@/lib/security/registry';
+import { getConfigCache, setConfigCache } from '@/lib/configCache';
 
 /**
  * GET /api/console/config
@@ -11,8 +12,16 @@ import { SYSTEM_PERMISSION_REGISTRY } from '@/lib/security/registry';
 export async function GET() {
   try {
     const session = await getAppSession();
-    // Use session tenantId, or fallback to DEFAULT_TENANT_ID env var for testing/dev
     const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
+    const userId = (session?.user as any)?.id || 'anon';
+    const cacheKey = `${tenantId}:${userId}`;
+
+    const cached = getConfigCache(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return NextResponse.json(cached.data, {
+        headers: { 'Cache-Control': 'private, max-age=30', 'X-Cache': 'HIT' }
+      });
+    }
 
     let apps: any[] = [];
 
@@ -128,13 +137,18 @@ export async function GET() {
       console.warn('[CONFIG] Widget fetch failed (table may not exist yet):', err.message);
     }
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       _debug: { version: '6.5.0', timestamp: new Date().toISOString(), tenantId },
       data: { apps: filteredApps, widgets }
-    }, {
+    };
+
+    setConfigCache(cacheKey, responseData);
+
+    return NextResponse.json(responseData, {
       headers: {
-        'Cache-Control': 'no-store, max-age=0'
+        'Cache-Control': 'private, max-age=30',
+        'X-Cache': 'MISS'
       }
     });
 

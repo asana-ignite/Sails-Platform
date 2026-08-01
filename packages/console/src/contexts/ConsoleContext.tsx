@@ -4,6 +4,7 @@ import { ConsoleApp, ConsoleMenu, ConsoleWidget } from '@sails/shared';
 export type { ConsoleApp, ConsoleMenu, ConsoleWidget };
 import { useAuth } from './AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { fetchCached, invalidateCache } from '../api/client';
 
 interface ConsoleContextType {
   apps: ConsoleApp[];
@@ -21,6 +22,7 @@ interface ConsoleContextType {
   setPageSubtitle: (subtitle: string | null) => void;
   showAddUserDrawer: boolean;
   setShowAddUserDrawer: (show: boolean) => void;
+  invalidateConfig: () => void;
 }
 
 const ConsoleContext = createContext<ConsoleContextType | undefined>(undefined);
@@ -36,15 +38,15 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const navigate = useNavigate();
   const location = useLocation();
 
+  const invalidateConfig = () => {
+    invalidateCache('GET:/api/console/config');
+  };
+
   useEffect(() => {
     const fetchConfig = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/console/config');
-        if (!response.ok) {
-          throw new Error('Failed to fetch console configuration');
-        }
-        const result = await response.json();
+        const result = await fetchCached('/api/console/config', undefined, 30000);
         if (result.success) {
           const fetchedApps = result.data.apps;
           const fetchedWidgets = result.data.widgets || [];
@@ -105,7 +107,7 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (user) {
       fetchConfig();
     }
-  }, [location.pathname, user]); 
+  }, [user]); 
 
   const activeApp = apps.find(app => app.id === activeAppId) || null;
   const navigationItems = activeApp?.menus || [];
@@ -164,7 +166,8 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       pageSubtitle,
       setPageSubtitle,
       showAddUserDrawer,
-      setShowAddUserDrawer
+      setShowAddUserDrawer,
+      invalidateConfig
     }}>
       {children}
     </ConsoleContext.Provider>

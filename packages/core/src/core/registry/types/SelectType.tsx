@@ -4,7 +4,7 @@ import { FieldTypePlugin } from '../FieldTypePlugin';
 
 export const SelectType: FieldTypePlugin = {
   type: 'select',
-  label: 'Single Selection Dropdown',
+  label: 'Selection',
   description: 'Select a single option from a custom list or lookup values from another data model',
   iconName: 'List',
   physicalType: 'text',

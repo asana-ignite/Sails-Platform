@@ -1,11 +1,11 @@
-import { FieldTypeMetadata } from '@sails/shared';
+import { FieldTypeMetadata } from './index';
 
-export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
+export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
   {
     type: 'auto_number',
     label: 'Auto Number',
     description: 'Auto-incrementing formatted identifier (supports date tokens: {YYYY}, {YY}, {MM}, {DD})',
-    iconName: 'Hash',
+    iconName: 'Binary',
     physicalType: 'text',
     parametersSchema: [
       {
@@ -27,22 +27,24 @@ export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
   },
   {
     type: 'number',
-    label: 'Number / Decimal',
-    description: 'Numeric value supporting integer or floating point decimal precision',
+    label: 'Number (Integer)',
+    description: 'Whole number integer value',
     iconName: 'Hash',
     physicalType: 'number',
     parametersSchema: [
-      {
-        name: 'numberType',
-        label: 'Number Subtype',
-        type: 'select',
-        defaultValue: 'decimal',
-        options: [
-          { label: 'Decimal / Floating Point', value: 'decimal' },
-          { label: 'Integer (Whole Numbers)', value: 'integer' }
-        ]
-      },
-      { name: 'decimalPlaces', label: 'No. Decimal Places', type: 'number', defaultValue: 2, min: 0, max: 10 },
+      { name: 'min', label: 'Minimum Value', type: 'number', placeholder: 'e.g. 0' },
+      { name: 'max', label: 'Maximum Value', type: 'number', placeholder: 'e.g. 1000000' },
+      { name: 'defaultValue', label: 'Default Value', type: 'number', placeholder: 'e.g. 0' }
+    ]
+  },
+  {
+    type: 'decimal',
+    label: 'Decimal',
+    description: 'High-precision decimal number',
+    iconName: 'Binary',
+    physicalType: 'number',
+    parametersSchema: [
+      { name: 'decimalPlaces', label: 'No. Decimal Places', type: 'number', defaultValue: 4, min: 0, max: 10 },
       { name: 'min', label: 'Minimum Value', type: 'number', placeholder: 'e.g. 0' },
       { name: 'max', label: 'Maximum Value', type: 'number', placeholder: 'e.g. 1000000' },
       { name: 'defaultValue', label: 'Default Value', type: 'number', placeholder: 'e.g. 0' }
@@ -56,10 +58,10 @@ export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
     physicalType: 'text',
     parametersSchema: [
       { name: 'maxLength', label: 'Max Length (Characters)', type: 'number', defaultValue: 255, min: 1, max: 4000 },
-      { 
-        name: 'transform', 
-        label: 'Text Transform', 
-        type: 'select', 
+      {
+        name: 'transform',
+        label: 'Text Transform',
+        type: 'select',
         defaultValue: 'none',
         options: [
           { label: 'None', value: 'none' },
@@ -74,7 +76,7 @@ export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
   {
     type: 'long_text',
     label: 'Long Text',
-    description: 'Multi-line text block or documentation body',
+    description: 'Multi-line plain text block or documentation body',
     iconName: 'AlignLeft',
     physicalType: 'text',
     parametersSchema: [
@@ -83,10 +85,20 @@ export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
     ]
   },
   {
+    type: 'rich_text',
+    label: 'Rich Text',
+    description: 'Formatted HTML text content with WYSIWYG editor',
+    iconName: 'FileText',
+    physicalType: 'text',
+    parametersSchema: [
+      { name: 'placeholder', label: 'Placeholder Text', type: 'text', placeholder: 'e.g. Enter formatted content...' }
+    ]
+  },
+  {
     type: 'select',
-    label: 'Single Selection Dropdown',
+    label: 'Selection',
     description: 'Select a single option from a custom list or lookup values from another data model',
-    iconName: 'List',
+    iconName: 'ListFilter',
     physicalType: 'text',
     parametersSchema: [
       {
@@ -128,7 +140,7 @@ export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
     type: 'relation',
     label: 'Relation',
     description: 'Foreign key link to records in another data model',
-    iconName: 'Link',
+    iconName: 'GitFork',
     physicalType: 'relation',
     parametersSchema: [
       { name: 'targetTable', label: 'Target Data Model', type: 'model_select', required: true },
@@ -149,7 +161,7 @@ export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
     type: 'boolean',
     label: 'Boolean',
     description: 'True or False toggle state',
-    iconName: 'ToggleLeft',
+    iconName: 'ToggleRight',
     physicalType: 'boolean',
     parametersSchema: [
       {
@@ -168,9 +180,50 @@ export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
   },
   {
     type: 'date',
+    label: 'Date',
+    description: 'Calendar date without time component',
+    iconName: 'Calendar',
+    physicalType: 'date',
+    parametersSchema: [
+      {
+        name: 'dateFormat',
+        label: 'Display Date Format',
+        type: 'select',
+        defaultValue: 'YYYY-MM-DD',
+        options: [
+          { label: 'YYYY-MM-DD (ISO)', value: 'YYYY-MM-DD' },
+          { label: 'DD/MM/YYYY', value: 'DD/MM/YYYY' },
+          { label: 'MM/DD/YYYY', value: 'MM/DD/YYYY' }
+        ]
+      },
+      { name: 'defaultCurrent', label: 'Default to Today', type: 'boolean', defaultValue: false }
+    ]
+  },
+  {
+    type: 'time',
+    label: 'Time',
+    description: 'Clock time without date component',
+    iconName: 'Clock',
+    physicalType: 'time',
+    parametersSchema: [
+      {
+        name: 'timeFormat',
+        label: 'Display Time Format',
+        type: 'select',
+        defaultValue: '24h',
+        options: [
+          { label: '24 Hour (14:30)', value: '24h' },
+          { label: '12 Hour AM/PM (2:30 PM)', value: '12h' }
+        ]
+      },
+      { name: 'defaultCurrent', label: 'Default to Current Time', type: 'boolean', defaultValue: false }
+    ]
+  },
+  {
+    type: 'datetime',
     label: 'Date / Time',
     description: 'Calendar date and timestamp precision',
-    iconName: 'Calendar',
+    iconName: 'CalendarDays',
     physicalType: 'date',
     parametersSchema: [
       {
@@ -191,7 +244,7 @@ export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
     type: 'currency',
     label: 'Currency',
     description: 'Financial monetary value with currency symbol',
-    iconName: 'DollarSign',
+    iconName: 'Coins',
     physicalType: 'number',
     parametersSchema: [
       {
@@ -216,7 +269,7 @@ export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
     type: 'percentage',
     label: 'Percentage',
     description: 'Numeric percentage value (e.g. 15.5%)',
-    iconName: 'Hash',
+    iconName: 'Percent',
     physicalType: 'number',
     parametersSchema: [
       { name: 'decimalPlaces', label: 'No. Decimal Places', type: 'number', defaultValue: 2, min: 0, max: 6 },
@@ -229,7 +282,7 @@ export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
     type: 'phone',
     label: 'Phone Number',
     description: 'Telephone or mobile phone number',
-    iconName: 'Phone',
+    iconName: 'PhoneCall',
     physicalType: 'text',
     parametersSchema: [
       { name: 'placeholder', label: 'Input Placeholder', type: 'text', placeholder: 'e.g. +1 555-0199' }
@@ -252,7 +305,7 @@ export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
     type: 'attachment',
     label: 'Attachment / File',
     description: 'Document or file upload with file type extension limits',
-    iconName: 'Link',
+    iconName: 'Paperclip',
     physicalType: 'text',
     parametersSchema: [
       {
@@ -275,6 +328,41 @@ export const DEFAULT_FIELD_TYPES: FieldTypeMetadata[] = [
         label: 'Allow Multiple File Uploads',
         type: 'boolean',
         defaultValue: false
+      }
+    ]
+  },
+  {
+    type: 'user',
+    label: 'User',
+    description: 'Reference to internal platform user (User Manager)',
+    iconName: 'UserCheck',
+    physicalType: 'relation',
+    parametersSchema: [
+      {
+        name: 'defaultToCurrentUser',
+        label: 'Default to Currently Logged-in User',
+        type: 'boolean',
+        defaultValue: true,
+        description: 'Automatically populate with active user when creating new record'
+      },
+      {
+        name: 'roleFilter',
+        label: 'Limit Selection by Role',
+        type: 'select',
+        defaultValue: 'all',
+        options: [
+          { label: 'All Active Users', value: 'all' },
+          { label: 'Admins Only', value: 'ADMIN' },
+          { label: 'Tenant Admins Only', value: 'TENANT_ADMIN' },
+          { label: 'Standard Users Only', value: 'USER' }
+        ]
+      },
+      {
+        name: 'allowMultiple',
+        label: 'Allow Multiple User Assignment',
+        type: 'boolean',
+        defaultValue: false,
+        description: 'Allow assigning multiple team members or co-owners'
       }
     ]
   }

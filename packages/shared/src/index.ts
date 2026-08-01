@@ -10,6 +10,10 @@
  * Source of truth: sails-core/shared/types.ts
  */
 
+export { FIELD_TYPE_REGISTRY } from './fieldTypes';
+export { SYSTEM_PERMISSION_REGISTRY, getAllCapabilities } from './permissions';
+export type { PermissionDefinition, SystemCapability } from './permissions';
+
 // ─── Core Models ──────────────────────────────────────────────
 
 export interface Tenant {
@@ -197,6 +201,7 @@ export const PHYSICAL_TYPES = [
   'number',
   'boolean',
   'date',
+  'time',
   'relation',
   'jsonb',
 ] as const;
@@ -208,6 +213,7 @@ export type PhysicalType = typeof PHYSICAL_TYPES[number];
 export const LOGICAL_TYPES = [
   'short_text',
   'long_text',
+  'rich_text',
   'email',
   'phone',
   'number',
@@ -215,15 +221,20 @@ export const LOGICAL_TYPES = [
   'percentage',
   'boolean',
   'date',
+  'decimal',
+  'time',
   'datetime',
   'select',
   'lookup',
+  'user',
   'address',
   'attachment',
   'citizen_id',
   'lat_lng',
   'auto_number',
 ] as const;
+
+export const LOGICAL_FIELD_TYPES = LOGICAL_TYPES;
 
 export type LogicalType = typeof LOGICAL_TYPES[number];
 
@@ -272,8 +283,6 @@ export interface LongTextFieldConfig {
 }
 
 export interface NumberFieldConfig {
-  numberType?: 'integer' | 'decimal';
-  decimalPlaces?: number;
   min?: number;
   max?: number;
   defaultValue?: number;

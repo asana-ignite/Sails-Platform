@@ -19,7 +19,7 @@ export const MOCK_LEADS_FIELDS: SailsFieldDefinition[] = [
   { id: 'f_007', tableId: 't_leads', name: 'Budget',          fieldName: 'budget',          physicalType: 'number',  logicalType: 'currency',   config: { currencySymbol:'฿', decimalPlaces:0 }, isRequired: false, isSystem: false, createdAt: '' },
   { id: 'f_008', tableId: 't_leads', name: 'Contact Date',    fieldName: 'contact_date',    physicalType: 'date',    logicalType: 'date',       config: {}, isRequired: false, isSystem: false, createdAt: '' },
   { id: 'f_009', tableId: 't_leads', name: 'Notes',           fieldName: 'notes',           physicalType: 'text',    logicalType: 'long_text',  config: { rows:4 }, isRequired: false, isSystem: false, createdAt: '' },
-  { id: 'f_010', tableId: 't_leads', name: 'Assigned To',     fieldName: 'assigned_to',     physicalType: 'relation',logicalType: 'lookup',     config: { targetTable:'users' }, isRequired: false, isSystem: false, createdAt: '' },
+  { id: 'f_010', tableId: 't_leads', name: 'Assigned To',     fieldName: 'assigned_to',     physicalType: 'relation',logicalType: 'user',       config: { targetTable:'users' }, isRequired: false, isSystem: false, createdAt: '' },
 ];
 
 // ─── Layout: LIST view — compact table with key columns ───────

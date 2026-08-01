@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { hexToRgbChannels, hexToHSL, hslToHex, computeBackgroundTint, computeMatchingPalette, ColorMatchingTechnique } from '../utils/colorUtils';
+import { fetchCached } from '../api/client';
 
 interface ThemeState {
   themeMode: 'light' | 'dark';
@@ -227,9 +228,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     let cancelled = false;
     const fetchBranding = async () => {
       try {
-        const res = await fetch('/api/console/company-profile');
-        if (!res.ok || cancelled) return;
-        const json = await res.json();
+        const json = await fetchCached('/api/console/company-profile', undefined, 30000);
+        if (cancelled) return;
         const serverConfig = json.data?.themeConfig;
         if (!json.success || !serverConfig || cancelled) return;
         const serverBranding = typeof serverConfig === 'string' ? JSON.parse(serverConfig) : serverConfig;

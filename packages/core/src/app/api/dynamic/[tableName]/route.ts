@@ -19,7 +19,13 @@ async function resolveTable(tableName: string) {
       tableName,
       tenantId,
     },
-    include: { tenant: true },
+    include: {
+      tenant: true,
+      fields: {
+        include: { rules: true },
+      },
+      rules: true,
+    },
   });
 
   if (!table) {
@@ -87,15 +93,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const recordId = searchParams.get('id');
 
     if (recordId) {
-      const tableMeta = await db.tableDefinition.findFirst({
-        where: { tableName, tenantId: resolved.table.tenantId },
-        include: {
-          fields: {
-            include: { rules: true },
-          },
-          rules: true,
-        },
-      });
+      const tableMeta = resolved.table;
 
       const rows = await QueryLayer.executeSecureQuery(
         pool,
@@ -119,15 +117,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const tableMeta = await db.tableDefinition.findFirst({
-      where: { tableName, tenantId: resolved.table.tenantId },
-      include: {
-        fields: {
-          include: { rules: true },
-        },
-        rules: true,
-      },
-    });
+    const tableMeta = resolved.table;
 
     const validFields = new Set<string>(
       (tableMeta?.fields || []).map((f: any) => f.fieldName)

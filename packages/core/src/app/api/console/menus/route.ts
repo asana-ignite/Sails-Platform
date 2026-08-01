@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';
+import { invalidateConfigCache } from '@/lib/configCache';
 
 /**
  * GET /api/console/menus
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
       }
     });
 
+    invalidateConfigCache(tenantId);
     return NextResponse.json({ success: true, data: newMenu });
   } catch (error: any) {
     console.error('[API CONSOLE MENUS POST]:', error);
@@ -118,6 +120,7 @@ export async function PATCH(req: Request) {
       data: updateData
     });
 
+    invalidateConfigCache(tenantId);
     return NextResponse.json({ success: true, data: updatedMenu });
   } catch (error: any) {
     console.error('[API CONSOLE MENUS PATCH]:', error);
@@ -165,6 +168,7 @@ export async function DELETE(req: Request) {
       where: { id }
     });
 
+    invalidateConfigCache(tenantId);
     return NextResponse.json({ success: true, message: 'Menu item deleted successfully' });
   } catch (error: any) {
     console.error('[API CONSOLE MENUS DELETE]:', error);

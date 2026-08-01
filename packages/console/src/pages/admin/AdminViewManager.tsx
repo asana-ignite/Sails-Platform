@@ -4,6 +4,7 @@ import { LayoutTemplate, Search, Plus, ChevronLeft, ChevronRight, MoreHorizontal
 import Spinner from '../../components/common/Spinner';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { useConsole } from '../../contexts/ConsoleContext';
+import { fetchCached } from '../../api/client';
 import { TableLayout, LayoutType, ViewType, LayoutStatus } from '@sails/shared';
 import './AdminViewManager.css';
 
@@ -45,8 +46,7 @@ const AdminViewManager: React.FC = () => {
       const params = new URLSearchParams({ page: String(p), limit: String(ps ?? pageSize) });
       if (q) params.set('search', q);
 
-      const res = await fetch(`/api/console/layouts?${params}`);
-      const json = await res.json();
+      const json = await fetchCached(`/api/console/layouts?${params}`);
       if (!json.success) throw new Error(json.error || 'Failed to load layouts');
       setRows(json.data.rows);
       setTotal(json.data.total);
@@ -581,8 +581,7 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
   useEffect(() => {
     const fetchTables = async () => {
       try {
-        const res = await fetch('/api/metadata/objects');
-        const data = await res.json();
+        const data = await fetchCached('/api/metadata/objects', undefined, 60000);
         if (Array.isArray(data)) {
           setTables(data.map((t: any) => ({ id: t.id, name: t.name || t.tableName })));
         }

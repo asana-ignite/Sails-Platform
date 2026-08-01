@@ -6,7 +6,7 @@ export const AutoNumberType: FieldTypePlugin = {
   type: 'auto_number',
   label: 'Auto Number',
   description: 'Auto-incrementing formatted string sequence (supports date tokens: {YYYY}, {YY}, {MM}, {DD})',
-  iconName: 'Hash',
+  iconName: 'Binary',
   physicalType: 'text',
   parametersSchema: [
     {

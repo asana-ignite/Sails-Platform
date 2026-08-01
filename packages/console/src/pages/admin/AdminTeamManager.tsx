@@ -7,6 +7,8 @@ import {
 import Spinner from '../../components/common/Spinner';
 import { useConsole } from '../../contexts/ConsoleContext';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { SYSTEM_PERMISSION_REGISTRY } from '@sails/shared';
+import { fetchCached } from '../../api/client';
 
 interface User {
   id: string;
@@ -455,18 +457,17 @@ export default function AdminTeamManager() {
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      const [teamsRes, usersRes, capsRes, objsRes, positionsRes] = await Promise.all([
+      setAllCapabilities(SYSTEM_PERMISSION_REGISTRY);
+      const [teamsRes, usersRes, objsData, positionsRes] = await Promise.all([
         fetch('/api/tenant/teams'),
         fetch('/api/tenant/users'),
-        fetch('/api/console/permissions'),
-        fetch('/api/metadata/objects'),
+        fetchCached('/api/metadata/objects', undefined, 60000),
         fetch('/api/tenant/positions')
       ]);
 
       if (teamsRes.ok) setTeams(await teamsRes.json());
       if (usersRes.ok) setTenantUsers(await usersRes.json());
-      if (capsRes.ok) setAllCapabilities((await capsRes.json()).data || {});
-      if (objsRes.ok) setAllObjects(await objsRes.json());
+      setAllObjects(Array.isArray(objsData) ? objsData : (objsData?.rows || objsData?.data || []));
       if (positionsRes.ok) setTenantPositions(await positionsRes.json());
     } catch (e) {
       console.error(e);

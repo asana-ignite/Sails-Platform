@@ -10,6 +10,7 @@ import DynamicIcon from '../../components/common/DynamicIcon';
 import IconPicker from '../../components/common/IconPicker';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { useConsole } from '../../contexts/ConsoleContext';
+import { fetchCached } from '../../api/client';
 import WidgetsTab from './WidgetsTab';
 import './AdminAppManager.css';
 import './AdminMenuManager.css';
@@ -641,8 +642,7 @@ const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () =>
 
   const fetchDataModels = async () => {
     try {
-      const res = await fetch('/api/metadata/objects');
-      const data = await res.json();
+      const data = await fetchCached('/api/metadata/objects', undefined, 60000);
       if (Array.isArray(data)) setDataModels(data);
     } catch (err) {
       console.error('Failed to fetch data models:', err);
@@ -651,8 +651,7 @@ const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () =>
 
   const fetchAvailableViews = async (tableId: string, currentListViewId?: string | null) => {
     try {
-      const res = await fetch(`/api/console/layouts?tableId=${tableId}&status=active`);
-      const result = await res.json();
+      const result = await fetchCached(`/api/console/layouts?tableId=${tableId}&status=active`);
       if (result.success) {
         const views: TableLayout[] = (result.data?.rows || []).filter(
           (r: any) => r.viewType === 'LIST' && r.status === 'active'

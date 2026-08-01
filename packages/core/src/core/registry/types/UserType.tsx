@@ -1,0 +1,62 @@
+import React from 'react';
+import { z } from 'zod';
+import { FieldTypePlugin } from '../FieldTypePlugin';
+
+export const UserType: FieldTypePlugin = {
+  type: 'user',
+  label: 'User',
+  description: 'Reference to an internal platform user',
+  iconName: 'UserCheck',
+  physicalType: 'relation',
+  parametersSchema: [
+    {
+      name: 'defaultToCurrentUser',
+      label: 'Default to Currently Logged-in User',
+      type: 'boolean',
+      defaultValue: true,
+      description: 'Automatically populate with the active user when creating a new record'
+    },
+    {
+      name: 'roleFilter',
+      label: 'Limit Selection by Role',
+      type: 'select',
+      defaultValue: 'all',
+      options: [
+        { label: 'All Active Users', value: 'all' },
+        { label: 'Admins Only', value: 'ADMIN' },
+        { label: 'Tenant Admins Only', value: 'TENANT_ADMIN' },
+        { label: 'Standard Users Only', value: 'USER' }
+      ]
+    },
+    {
+      name: 'allowMultiple',
+      label: 'Allow Multiple User Assignment',
+      type: 'boolean',
+      defaultValue: false,
+      description: 'Allow assigning multiple team members or co-owners'
+    }
+  ],
+  getPostgresColumnDefinition: (isRequired?: boolean) => {
+    return `UUID${isRequired ? ' NOT NULL' : ''}`;
+  },
+  getZodSchema: (isRequired?: boolean) => {
+    const schema = z.string().uuid();
+    return isRequired ? schema.min(1, 'Required field') : schema.optional();
+  },
+  RenderFormInput: (props: any) => {
+    return (
+      <select className="form-select" {...props}>
+        <option value="">Select a user...</option>
+      </select>
+    );
+  },
+  RenderTableCell: (props: { value: any }) => {
+    if (!props.value) return <span></span>;
+    const name = typeof props.value === 'object' ? props.value?.name || props.value?.email || props.value?.id : String(props.value);
+    return (
+      <span className="flex items-center gap-1.5 text-slate-200">
+        👤 {name}
+      </span>
+    );
+  }
+};

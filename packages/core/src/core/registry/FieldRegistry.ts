@@ -2,16 +2,21 @@ import { FieldTypePlugin } from './FieldTypePlugin';
 import { ShortTextType } from './types/ShortTextType';
 import { TextType } from './types/TextType';
 import { NumberType } from './types/NumberType';
+import { DecimalType } from './types/DecimalType';
 import { BooleanType } from './types/BooleanType';
 import { DateType } from './types/DateType';
+import { TimeType } from './types/TimeType';
+import { DateTimeType } from './types/DateTimeType';
 import { RelationType } from './types/RelationType';
 import { SelectType } from './types/SelectType';
+import { RichTextType } from './types/RichTextType';
 import { CurrencyType } from './types/CurrencyType';
 import { PercentageType } from './types/PercentageType';
 import { PhoneType } from './types/PhoneType';
 import { AddressType } from './types/AddressType';
 import { AttachmentType } from './types/AttachmentType';
 import { AutoNumberType } from './types/AutoNumberType';
+import { UserType } from './types/UserType';
 
 export class FieldRegistry {
   private static instance: FieldRegistry;
@@ -22,12 +27,17 @@ export class FieldRegistry {
     // Register default plugins in specified display sequence
     this.register(AutoNumberType);
     this.register(NumberType);
+    this.register(DecimalType);
     this.register(ShortTextType);
     this.register(TextType);
+    this.register(RichTextType);
     this.register(SelectType);
     this.register(RelationType);
+    this.register(UserType);
     this.register(BooleanType);
     this.register(DateType);
+    this.register(TimeType);
+    this.register(DateTimeType);
     this.register(CurrencyType);
     this.register(PercentageType);
     this.register(PhoneType);
