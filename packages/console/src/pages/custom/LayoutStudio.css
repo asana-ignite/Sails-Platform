@@ -1143,6 +1143,9 @@
 .ls-props-outer .sails-input,
 .ls-props-outer select {
   width: 100%;
+  height: 28px;
+  padding: 4px 8px;
+  font-size: 12px;
   box-sizing: border-box;
   max-width: 100%;
 }
@@ -1414,3 +1417,11 @@
   padding: 5px 9px;
   font-size: 12px !important;
 }
+
+/* ─── Action Buttons Card ────────────────────────────────────── */
+
+.ls-actions-card {
+  margin-bottom: 16px;
+}
+
+

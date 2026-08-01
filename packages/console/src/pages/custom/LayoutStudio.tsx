@@ -17,14 +17,21 @@ import {
   Layers, Search, ArrowUp, ArrowDown, ChevronLeft, ChevronRight,
   RotateCcw, AlignLeft, AlignCenter, AlignRight,
   Edit3, Zap, Undo2, AlertTriangle, Database, ExternalLink,
+  MousePointerClick,
 } from 'lucide-react';
-import type { SailsFieldDefinition, LayoutColumn, LayoutFilter, LayoutSort, ViewType, SummaryField, LayoutStatus } from '@sails/shared';
+import type { SailsFieldDefinition, LayoutColumn, LayoutFilter, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction } from '@sails/shared';
+import DynamicIcon from '../../components/common/DynamicIcon';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { FieldControlRegistry } from '../../features/controls/FieldControlRegistry';
+import { ActionRegistry } from '../../features/actions';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchCached } from '../../api/client';
 import Unauthorized from '../Unauthorized';
 import './LayoutStudio.css';
+
+// Initialise the ActionRegistry singleton once at module load
+const actionRegistry = ActionRegistry.getInstance();
+
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -379,6 +386,9 @@ const LayoutStudio: React.FC = () => {
   const [setDefaultLoading, setSetDefaultLoading] = useState(false);
   const [showListDeleteConfirm, setShowListDeleteConfirm] = useState(false);
   const [listDeleteLoading, setListDeleteLoading] = useState(false);
+  // ── Action Buttons state ──
+  const [listActions, setListActions] = useState<ListAction[]>([]);
+  const [listSelectedActionId, setListSelectedActionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!tableId) { setFetchError('No table ID provided'); setFetchLoading(false); return; }
@@ -444,6 +454,7 @@ const LayoutStudio: React.FC = () => {
             if (config.filters) setListFilters(config.filters);
             if (config.sortBy) setListSortBy(config.sortBy);
             if (config.summaryFields) setListSummaryFields(config.summaryFields);
+            if (config.actions && Array.isArray(config.actions)) setListActions(config.actions);
           } else {
             if (config.sections) setSections(config.sections);
             if (config.blocks) setBlocks(config.blocks);
@@ -709,6 +720,8 @@ const LayoutStudio: React.FC = () => {
       setListFilters([]);
       setListSortBy([]);
       setListSummaryFields([]);
+      setListActions([]);
+      setListSelectedActionId(null);
       setListSelectedColId(null);
       setListSelectedFiltId(null);
       setListDragOverColId(null);
@@ -741,10 +754,70 @@ const LayoutStudio: React.FC = () => {
 
   const serializeLayout = () => {
     if (viewType === 'LIST') {
-      return { columns: listColumns, filters: listFilters, sortBy: listSortBy, summaryFields: listSummaryFields };
+      return { columns: listColumns, filters: listFilters, sortBy: listSortBy, summaryFields: listSummaryFields, actions: listActions };
     }
     return { sections, blocks };
   };
+
+  // ── Action Registry Helpers ──
+  const availableListActionPlugins = useMemo(() => actionRegistry.getActionsByCategory('list'), []);
+
+  const isActionEnabled = (actionKey: string) => {
+    return listActions.some((a) => a.actionKey === actionKey && a.visible);
+  };
+
+  const toggleListAction = (actionKey: string) => {
+    const plugin = actionRegistry.getAction(actionKey);
+    if (!plugin) return;
+    setListActions((prev) => {
+      const existing = prev.find((a) => a.actionKey === actionKey);
+      if (existing) {
+        if (listSelectedActionId === existing.id) setListSelectedActionId(null);
+        return prev.filter((a) => a.actionKey !== actionKey);
+      }
+      const newAction: ListAction = {
+        id: `act_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        actionKey: actionKey as ListAction['actionKey'],
+        label: plugin.defaultLabel,
+        variant: plugin.defaultVariant,
+        visible: true,
+      };
+      return [...prev, newAction];
+    });
+  };
+
+  const updateListAction = (id: string, patch: Partial<ListAction>) => {
+    setListActions((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+  };
+
+  // ── Global Canvas Keyboard Shortcuts (Escape / Delete) ──
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
+
+      if (e.key === 'Escape') {
+        setListSelectedColId(null);
+        setListSelectedActionId(null);
+        return;
+      }
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
+        if (listSelectedActionId) {
+          const act = listActions.find((a) => a.id === listSelectedActionId);
+          if (act) {
+            toggleListAction(act.actionKey);
+            setListSelectedActionId(null);
+          }
+        } else if (listSelectedColId) {
+          removeListColumn(listSelectedColId);
+          setListSelectedColId(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [listSelectedActionId, listSelectedColId, listActions]);
 
   const handleSaveClick = () => {
     setSaveError(null);
@@ -1076,6 +1149,7 @@ const LayoutStudio: React.FC = () => {
     const col: LayoutColumn = { id: listColId(), fieldId, position: listColumns.length, visible: true, allowSorting: false, allowFiltering: false, alignment: 'left', wrapText: false };
     setListColumns((c) => [...c, col]);
     setListSelectedColId(col.id);
+    setListSelectedActionId(null);
     setListSelectedFiltId(null);
   };
 
@@ -1686,7 +1760,12 @@ const LayoutStudio: React.FC = () => {
         {/* ── CENTER: Canvas ── */}
         <div className="ls-canvas">
           <div className="ls-canvas__scroll">
-            <div className="ls-page" onClick={(e) => { if (e.target === e.currentTarget) setListSelectedColId(null); }}>
+            <div className="ls-page" onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setListSelectedColId(null);
+                setListSelectedActionId(null);
+              }
+            }}>
               {viewType === 'LIST' ? (
                 <>
               {/* ── View Name ── */}
@@ -1726,6 +1805,73 @@ const LayoutStudio: React.FC = () => {
                             <span className="ls-summary-field__name">{f.name}</span>
                             <span className="ls-summary-field__tag">Group By</span>
                             <button className="ls-block__btn ls-block__btn--danger" onClick={() => removeListSummaryField(sf.fieldId)}><X size={11} /></button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              )}
+
+              {/* ── Actions Card ── */}
+              {!previewMode && !isReadOnly && (
+              <div className="ls-table-card ls-summary-panel ls-actions-card">
+                <div className="ls-table-card__header">
+                  <MousePointerClick size={13} />
+                  <span className="ls-table-card__title">Actions</span>
+                  {listActions.length > 0 && <span className="ls-table-card__badge">{listActions.length}</span>}
+                  {availableListActionPlugins.filter((p) => !isActionEnabled(p.id)).map((plugin) => (
+                    <button key={plugin.id} className="ls-block__btn" title={`Add ${plugin.name}`}
+                      onClick={() => toggleListAction(plugin.id)}
+                      style={{ marginLeft: 'auto' }}>
+                      <Plus size={13} />
+                    </button>
+                  ))}
+                </div>
+                <div className="ls-summary-panel__body">
+                  {listActions.length === 0 ? (
+                    <div className="ls-summary-panel__placeholder" style={{ flexDirection: 'row', gap: 8, padding: '4px 0', justifyContent: 'center' }}>
+                      <MousePointerClick size={14} className="ls-summary-panel__placeholder-icon" />
+                      <span>No actions configured. Click + to add one.</span>
+                    </div>
+                  ) : (
+                    <div className="ls-summary-fields">
+                      {listActions.map((action) => {
+                        const isSelected = listSelectedActionId === action.id;
+                        const plugin = actionRegistry.getAction(action.actionKey);
+                        const icon = plugin?.iconName || 'Plus';
+                        return (
+                          <div key={action.id}
+                            tabIndex={0}
+                            role="button"
+                            aria-selected={isSelected}
+                            className={`ls-summary-field ${isSelected ? 'ls-summary-field--selected' : ''}`}
+                            style={{ cursor: 'pointer', outline: isSelected ? '2px solid var(--sails-primary, #6366f1)' : undefined }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setListSelectedActionId(action.id);
+                                setListSelectedColId(null);
+                              }
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setListSelectedActionId(action.id);
+                              setListSelectedColId(null);
+                            }}>
+                            <DynamicIcon name={icon} size={12} style={{ opacity: 0.7, flexShrink: 0 }} />
+                            <span className="ls-summary-field__name">{action.label}</span>
+                            <span className="ls-summary-field__tag">{action.variant.charAt(0).toUpperCase() + action.variant.slice(1)}</span>
+                            <button className="ls-block__btn ls-block__btn--danger"
+                              title={`Remove ${action.label}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (listSelectedActionId === action.id) setListSelectedActionId(null);
+                                toggleListAction(action.actionKey);
+                              }}>
+                              <X size={11} />
+                            </button>
                           </div>
                         );
                       })}
@@ -1922,7 +2068,10 @@ const LayoutStudio: React.FC = () => {
                                   onDragOver={(e) => { if (listColResizing) return; e.preventDefault(); e.stopPropagation(); setListDragOverColId(col.id); }}
                                   onDragLeave={() => setListDragOverColId(null)}
                                   onDrop={(e) => { e.preventDefault(); try { const p = JSON.parse(e.dataTransfer.getData('application/json')); if (p.columnId) handleListColumnDrop(p.columnId, col.id); } catch {} setListDragOverColId(null); }}
-                                  onClick={() => setListSelectedColId(col.id)}
+                                  onClick={() => {
+                                    setListSelectedColId(col.id);
+                                    setListSelectedActionId(null);
+                                  }}
                                   style={col.width ? { width: `${col.width}${col.widthUnit || 'px'}` } : undefined}>
                                   <div className="ls-th__inner">
                                     <GripVertical size={12} className="ls-th__grip" />
@@ -2252,290 +2401,336 @@ const LayoutStudio: React.FC = () => {
                   </div>
                   {viewType === 'LIST' ? (
                     <>
-                      {listSelectedCol ? (
-                      <>
-                <div className="ls-section-divider">Column Properties</div>
-                <div className="ls-prop__name">{allFields.find((f) => f.id === listSelectedCol.fieldId)?.name || listSelectedCol.fieldId}</div>
+                      {(() => {
+                        const selectedAction = listActions.find((a) => a.id === listSelectedActionId);
+                        if (selectedAction) {
+                          return (
+                            <>
+                              <div className="ls-section-divider">Action Properties</div>
+                              <div className="ls-prop__name">{selectedAction.label}</div>
 
-                <div className="ls-prop-group" style={{ marginBottom: 12 }}>
-                  <label className="ls-prop-label">Data Type</label>
-                  <span className="ls-prop-type-badge" style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'var(--sails-primary, #6366f1)', border: '1px solid var(--sails-border-color)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {allFields.find((f) => f.id === listSelectedCol.fieldId)?.logicalType || 'string'}
-                  </span>
-                </div>
+                              <div className="ls-prop-group" style={{ marginBottom: 12 }}>
+                                <label className="ls-prop-label">Action Key</label>
+                                <span className="ls-prop-type-badge" style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'var(--sails-primary, #6366f1)', border: '1px solid var(--sails-border-color)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  {selectedAction.actionKey}
+                                </span>
+                              </div>
 
-                <div className="ls-prop-group">
-                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input type="checkbox" checked={listSelectedCol.allowSorting}
-                      onChange={() => updateListColumn(listSelectedCol.id, { allowSorting: !listSelectedCol.allowSorting } as Partial<LayoutColumn>)} /> Allow Sorting
-                  </label>
-                  <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '2px 0 0 22px' }}>
-                    Enables sorting on this column during runtime
-                  </p>
-                </div>
+                              <div className="ls-prop-group">
+                                <label className="ls-prop-label">Label Override</label>
+                                <input className="sails-input" value={selectedAction.label || ''}
+                                  onChange={(e) => updateListAction(selectedAction.id, { label: e.target.value })}
+                                  placeholder={actionRegistry.getAction(selectedAction.actionKey)?.defaultLabel || 'Action Label'} />
+                              </div>
 
-                <div className="ls-prop-group">
-                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input type="checkbox" checked={listSelectedCol.allowFiltering}
-                      onChange={() => updateListColumn(listSelectedCol.id, { allowFiltering: !listSelectedCol.allowFiltering } as Partial<LayoutColumn>)} /> Allow Filtering
-                  </label>
-                  <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '2px 0 0 22px' }}>
-                    Enables filtering on this column during runtime
-                  </p>
-                </div>
+                              <div className="ls-prop-group">
+                                <label className="ls-prop-label">Button Variant</label>
+                                <CustomSelect
+                                  value={selectedAction.variant}
+                                  options={[
+                                    { value: 'primary', label: 'Primary' },
+                                    { value: 'secondary', label: 'Secondary' },
+                                    { value: 'ghost', label: 'Ghost' },
+                                    { value: 'danger', label: 'Danger' },
+                                  ]}
+                                  onChange={(v) => updateListAction(selectedAction.id, { variant: v as ListAction['variant'] })}
+                                  size="sm"
+                                />
+                              </div>
 
-                <div className="ls-prop-group">
-                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input type="checkbox" checked={listSelectedCol.isPrimaryLink || false}
-                      onChange={() => updateListColumn(listSelectedCol.id, { isPrimaryLink: !listSelectedCol.isPrimaryLink } as Partial<LayoutColumn>)} /> Primary Detail Link
-                  </label>
-                  <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '2px 0 0 22px' }}>
-                    Clicking cell value opens record Detail View
-                  </p>
-                </div>
+                              <div className="ls-prop-group">
+                                <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <input type="checkbox" checked={selectedAction.visible}
+                                    onChange={() => updateListAction(selectedAction.id, { visible: !selectedAction.visible })} /> Visible
+                                </label>
+                              </div>
+                            </>
+                          );
+                        }
 
-                {listSelectedCol.isPrimaryLink && (
-                  <div className="ls-prop-group" style={{ paddingLeft: 22 }}>
-                    <label className="ls-prop-label">Target Form / Detail Layout</label>
-                    <CustomSelect
-                      value={listSelectedCol.targetDetailLayoutId || ''}
-                      options={[
-                        { value: '', label: 'Default Active Detail Layout' },
-                        ...availableDetailLayouts.map((l) => ({ value: l.id, label: `${l.name} (${l.viewType})` }))
-                      ]}
-                      onChange={(v: string | number) => updateListColumn(listSelectedCol.id, { targetDetailLayoutId: String(v) || undefined } as Partial<LayoutColumn>)}
-                      size="sm"
-                    />
-                  </div>
-                )}
+                        if (listSelectedCol) {
+                          return (
+                            <>
+                              <div className="ls-section-divider">Column Properties</div>
+                              <div className="ls-prop__name">{allFields.find((f) => f.id === listSelectedCol.fieldId)?.name || listSelectedCol.fieldId}</div>
 
-                <div className="ls-prop-group">
-                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input type="checkbox" checked={listSelectedCol.visible} onChange={() => toggleListColumnVisible(listSelectedCol.id)} /> Visible
-                  </label>
-                </div>
+                              <div className="ls-prop-group" style={{ marginBottom: 12 }}>
+                                <label className="ls-prop-label">Data Type</label>
+                                <span className="ls-prop-type-badge" style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'var(--sails-primary, #6366f1)', border: '1px solid var(--sails-border-color)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  {allFields.find((f) => f.id === listSelectedCol.fieldId)?.logicalType || 'string'}
+                                </span>
+                              </div>
 
-                <div className="ls-prop-group">
-                  <label className="ls-prop-label">Alignment</label>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button className={`sails-btn sails-btn--ghost sails-btn--sm ${listSelectedCol.alignment === 'left' ? 'ls-btn--active' : ''}`}
-                      onClick={() => updateListColumn(listSelectedCol.id, { alignment: 'left' } as Partial<LayoutColumn>)}
-                      title="Align Left" style={{ flex: 1, justifyContent: 'center' }}><AlignLeft size={14} /></button>
-                    <button className={`sails-btn sails-btn--ghost sails-btn--sm ${listSelectedCol.alignment === 'center' ? 'ls-btn--active' : ''}`}
-                      onClick={() => updateListColumn(listSelectedCol.id, { alignment: 'center' } as Partial<LayoutColumn>)}
-                      title="Align Center" style={{ flex: 1, justifyContent: 'center' }}><AlignCenter size={14} /></button>
-                    <button className={`sails-btn sails-btn--ghost sails-btn--sm ${listSelectedCol.alignment === 'right' ? 'ls-btn--active' : ''}`}
-                      onClick={() => updateListColumn(listSelectedCol.id, { alignment: 'right' } as Partial<LayoutColumn>)}
-                      title="Align Right" style={{ flex: 1, justifyContent: 'center' }}><AlignRight size={14} /></button>
-                  </div>
-                </div>
+                              <div className="ls-prop-group">
+                                <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <input type="checkbox" checked={listSelectedCol.allowSorting}
+                                    onChange={() => updateListColumn(listSelectedCol.id, { allowSorting: !listSelectedCol.allowSorting } as Partial<LayoutColumn>)} /> Allow Sorting
+                                </label>
+                              </div>
 
-                <div className="ls-prop-group">
-                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input type="checkbox" checked={listSelectedCol.wrapText || false}
-                      onChange={() => updateListColumn(listSelectedCol.id, { wrapText: !listSelectedCol.wrapText } as Partial<LayoutColumn>)} /> Wrap Text
-                  </label>
-                  <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '2px 0 0 22px' }}>
-                    {listSelectedCol.wrapText ? 'Text wraps to multiple lines' : 'Truncates with ...'}
-                  </p>
-                </div>
+                              <div className="ls-prop-group">
+                                <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <input type="checkbox" checked={listSelectedCol.allowFiltering}
+                                    onChange={() => updateListColumn(listSelectedCol.id, { allowFiltering: !listSelectedCol.allowFiltering } as Partial<LayoutColumn>)} /> Allow Filtering
+                                </label>
+                              </div>
 
-                <div className="ls-prop-group">
-                  <label className="ls-prop-label">Label Override</label>
-                  <input className="sails-input" value={listSelectedCol.labelOverride || ''}
-                    onChange={(e) => updateListColumn(listSelectedCol.id, { labelOverride: e.target.value || undefined } as Partial<LayoutColumn>)}
-                    placeholder={allFields.find((f) => f.id === listSelectedCol.fieldId)?.name}
-                    style={{ fontSize: 12, padding: '5px 7px' }} />
-                </div>
+                              <div className="ls-prop-group">
+                                <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <input type="checkbox" checked={listSelectedCol.isPrimaryLink || false}
+                                    onChange={() => updateListColumn(listSelectedCol.id, { isPrimaryLink: !listSelectedCol.isPrimaryLink } as Partial<LayoutColumn>)} /> Primary Detail Link
+                                </label>
+                              </div>
 
-                    <div className="ls-prop-group">
-                      <label className="ls-prop-label">Column Width</label>
-                      <div style={{ display: 'flex', gap: 4, minWidth: 0 }}>
-                        <input className="sails-input" type="number" value={listSelectedCol.width || ''}
-                          onChange={(e) => { const v = e.target.value ? Number(e.target.value) : undefined; updateListColumn(listSelectedCol.id, { width: v } as Partial<LayoutColumn>); }}
-                          placeholder="auto" style={{ fontSize: 12, padding: '5px 7px', flex: 1, minWidth: 0 }} />
-                        <CustomSelect
-                          value={listSelectedCol.widthUnit || 'px'}
-                          options={[{ value: 'px', label: 'px' }, { value: '%', label: '%' }]}
-                          onChange={(v) => updateListColumn(listSelectedCol.id, { widthUnit: v as 'px' | '%' } as Partial<LayoutColumn>)}
-                          size="sm"
-                          style={{ flexShrink: 0 }}
-                        />
-                      </div>
-                    </div>
+                              {listSelectedCol.isPrimaryLink && (
+                                <div className="ls-prop-group" style={{ paddingLeft: 22 }}>
+                                  <label className="ls-prop-label">Target Form / Detail Layout</label>
+                                  <CustomSelect
+                                    value={listSelectedCol.targetDetailLayoutId || ''}
+                                    options={[
+                                      { value: '', label: 'Default Active Detail Layout' },
+                                      ...availableDetailLayouts.map((l) => ({ value: l.id, label: `${l.name} (${l.viewType})` }))
+                                    ]}
+                                    onChange={(v: string | number) => updateListColumn(listSelectedCol.id, { targetDetailLayoutId: String(v) || undefined } as Partial<LayoutColumn>)}
+                                    size="sm"
+                                  />
+                                </div>
+                              )}
 
-                <div className="ls-prop-group">
-                  <label className="ls-prop-label">Position</label>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button className="sails-btn sails-btn--ghost sails-btn--sm"
-                      onClick={() => moveListColumn(listSelectedCol.id, 'up')}
-                      disabled={listSelectedCol.position === 0}><ArrowLeft size={12} /> Left</button>
-                    <button className="sails-btn sails-btn--ghost sails-btn--sm"
-                      onClick={() => moveListColumn(listSelectedCol.id, 'down')}
-                      disabled={listSelectedCol.position >= listColumns.length - 1}><ArrowRight size={12} /> Right</button>
-                  </div>
-                </div>
+                              <div className="ls-prop-group">
+                                <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <input type="checkbox" checked={listSelectedCol.visible} onChange={() => toggleListColumnVisible(listSelectedCol.id)} /> Visible
+                                </label>
+                              </div>
 
-                <div className="ls-prop-group">
-                  <button className="sails-btn sails-btn--danger sails-btn--sm" onClick={() => removeListColumn(listSelectedCol.id)}
-                    style={{ width: '100%', justifyContent: 'center' }}><Trash2 size={12} /> Remove Column</button>
-                </div>
-                      </>
-                    ) : (
-                      <>
-                <div className="ls-section-divider">View Properties</div>
+                              <div className="ls-prop-group">
+                                <label className="ls-prop-label">Alignment</label>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  <button className={`sails-btn sails-btn--ghost sails-btn--sm ${listSelectedCol.alignment === 'left' ? 'ls-btn--active' : ''}`}
+                                    onClick={() => updateListColumn(listSelectedCol.id, { alignment: 'left' } as Partial<LayoutColumn>)}
+                                    title="Align Left" style={{ flex: 1, justifyContent: 'center' }}><AlignLeft size={14} /></button>
+                                  <button className={`sails-btn sails-btn--ghost sails-btn--sm ${listSelectedCol.alignment === 'center' ? 'ls-btn--active' : ''}`}
+                                    onClick={() => updateListColumn(listSelectedCol.id, { alignment: 'center' } as Partial<LayoutColumn>)}
+                                    title="Align Center" style={{ flex: 1, justifyContent: 'center' }}><AlignCenter size={14} /></button>
+                                  <button className={`sails-btn sails-btn--ghost sails-btn--sm ${listSelectedCol.alignment === 'right' ? 'ls-btn--active' : ''}`}
+                                    onClick={() => updateListColumn(listSelectedCol.id, { alignment: 'right' } as Partial<LayoutColumn>)}
+                                    title="Align Right" style={{ flex: 1, justifyContent: 'center' }}><AlignRight size={14} /></button>
+                                </div>
+                              </div>
 
-                <div className="ls-prop-group" style={{ marginBottom: 14 }}>
-                  <label className="ls-prop-label">Data Model</label>
-                  <a
-                    href={`/admin/schema/${tableMeta.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ls-model-link-btn"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: 'var(--sails-primary, #6366f1)',
-                      textDecoration: 'none',
-                      background: 'rgba(99, 102, 241, 0.08)',
-                      border: '1px solid rgba(99, 102, 241, 0.2)',
-                      padding: '4px 10px',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                    title="Open model details in Data Model Module"
-                  >
-                    <Database size={13} />
-                    <span>{tableMeta.name || tableMeta.tableName || 'Data Model'}</span>
-                    <ExternalLink size={11} style={{ marginLeft: 2 }} />
-                  </a>
-                </div>
+                              <div className="ls-prop-group">
+                                <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <input type="checkbox" checked={listSelectedCol.wrapText || false}
+                                    onChange={() => updateListColumn(listSelectedCol.id, { wrapText: !listSelectedCol.wrapText } as Partial<LayoutColumn>)} /> Wrap Text
+                                </label>
+                              </div>
 
-                <div className="ls-prop-group">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <label className="ls-prop-label" style={{ marginBottom: 0 }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <ArrowUpDown size={12} /> Sort By
-                      </span>
-                    </label>
-                    <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={openListSortEditor}
-                      disabled={listSortBy.length >= MAX_SORT_RULES}
-                      style={{ fontSize: 10, padding: '2px 8px' }}><Plus size={11} /> Add</button>
-                  </div>
-                  {listSortBy.length === 0 ? (
-                    <p className="ls-vp-empty">No sort rules configured</p>
-                  ) : (
-                    <div className="ls-vp-sort-list">
-                      {listSortBy.map((rule, idx) => {
-                        const sf = allFields.find((f) => f.id === rule.fieldId);
+                              <div className="ls-prop-group">
+                                <label className="ls-prop-label">Label Override</label>
+                                <input className="sails-input" value={listSelectedCol.labelOverride || ''}
+                                  onChange={(e) => updateListColumn(listSelectedCol.id, { labelOverride: e.target.value || undefined } as Partial<LayoutColumn>)}
+                                  placeholder={allFields.find((f) => f.id === listSelectedCol.fieldId)?.name}
+                                  style={{ fontSize: 12, padding: '5px 7px' }} />
+                              </div>
+
+                              <div className="ls-prop-group">
+                                <label className="ls-prop-label">Column Width</label>
+                                <div style={{ display: 'flex', gap: 4, minWidth: 0 }}>
+                                  <input className="sails-input" type="number" value={listSelectedCol.width || ''}
+                                    onChange={(e) => { const v = e.target.value ? Number(e.target.value) : undefined; updateListColumn(listSelectedCol.id, { width: v } as Partial<LayoutColumn>); }}
+                                    placeholder="auto" style={{ fontSize: 12, padding: '5px 7px', flex: 1, minWidth: 0 }} />
+                                  <CustomSelect
+                                    value={listSelectedCol.widthUnit || 'px'}
+                                    options={[{ value: 'px', label: 'px' }, { value: '%', label: '%' }]}
+                                    onChange={(v) => updateListColumn(listSelectedCol.id, { widthUnit: v as 'px' | '%' } as Partial<LayoutColumn>)}
+                                    size="sm"
+                                    style={{ flexShrink: 0 }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="ls-prop-group">
+                                <label className="ls-prop-label">Position</label>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  <button className="sails-btn sails-btn--ghost sails-btn--sm"
+                                    onClick={() => moveListColumn(listSelectedCol.id, 'up')}
+                                    disabled={listSelectedCol.position === 0}><ArrowLeft size={12} /> Left</button>
+                                  <button className="sails-btn sails-btn--ghost sails-btn--sm"
+                                    onClick={() => moveListColumn(listSelectedCol.id, 'down')}
+                                    disabled={listSelectedCol.position >= listColumns.length - 1}><ArrowRight size={12} /> Right</button>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        }
+
                         return (
-                          <div key={idx} className="ls-vp-sort-rule" onClick={() => openListSortEditor()}>
-                            <span className="ls-vp-sort-rule__seq">{idx + 1}</span>
-                            <span className="ls-vp-sort-rule__field">{sf?.name || rule.fieldId}</span>
-                            <span className="ls-vp-sort-rule__dir">{rule.direction === 'asc' ? '\u25B2' : '\u25BC'}</span>
-                            <button className="ls-vp-sort-rule__remove" onClick={(e) => { e.stopPropagation(); removeListSortRule(idx); }}><X size={10} /></button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                          <>
+                            <div className="ls-section-divider">View Properties</div>
 
-                <div className="ls-prop-group">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <label className="ls-prop-label" style={{ marginBottom: 0 }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Filter size={12} /> Filters
-                      </span>
-                    </label>
-                    <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={addListFilter}
-                      style={{ fontSize: 10, padding: '2px 8px' }}><Plus size={11} /> Add</button>
-                  </div>
-                  {listFilters.length === 0 ? (
-                    <p className="ls-vp-empty">No filters applied</p>
+                            <div className="ls-prop-group" style={{ marginBottom: 14 }}>
+                              <label className="ls-prop-label">Data Model</label>
+                              <a
+                                href={`/admin/schema/${tableMeta.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="ls-model-link-btn"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: 'var(--sails-primary, #6366f1)',
+                                  textDecoration: 'none',
+                                  background: 'rgba(99, 102, 241, 0.08)',
+                                  border: '1px solid rgba(99, 102, 241, 0.2)',
+                                  padding: '4px 10px',
+                                  borderRadius: 6,
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease'
+                                }}
+                                title="Open model details in Data Model Module"
+                              >
+                                <Database size={13} />
+                                <span>{tableMeta.name || tableMeta.tableName || 'Data Model'}</span>
+                                <ExternalLink size={11} style={{ marginLeft: 2 }} />
+                              </a>
+                            </div>
+
+                            <div className="ls-prop-group">
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                                <label className="ls-prop-label" style={{ marginBottom: 0 }}>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <ArrowUpDown size={12} /> Sort By
+                                  </span>
+                                </label>
+                                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={openListSortEditor}
+                                  disabled={listSortBy.length >= MAX_SORT_RULES}
+                                  style={{ fontSize: 10, padding: '2px 8px' }}><Plus size={11} /> Add</button>
+                              </div>
+                              {listSortBy.length === 0 ? (
+                                <p className="ls-vp-empty">No sort rules configured</p>
+                              ) : (
+                                <div className="ls-vp-sort-list">
+                                  {listSortBy.map((rule, idx) => {
+                                    const sf = allFields.find((f) => f.id === rule.fieldId);
+                                    return (
+                                      <div key={idx} className="ls-vp-sort-rule" onClick={() => openListSortEditor()}>
+                                        <span className="ls-vp-sort-rule__seq">{idx + 1}</span>
+                                        <span className="ls-vp-sort-rule__field">{sf?.name || rule.fieldId}</span>
+                                        <span className="ls-vp-sort-rule__dir">{rule.direction === 'asc' ? '\u25B2' : '\u25BC'}</span>
+                                        <button className="ls-vp-sort-rule__remove" onClick={(e) => { e.stopPropagation(); removeListSortRule(idx); }}><X size={10} /></button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="ls-prop-group">
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                                <label className="ls-prop-label" style={{ marginBottom: 0 }}>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <Filter size={12} /> Filters
+                                  </span>
+                                </label>
+                                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={addListFilter}
+                                  style={{ fontSize: 10, padding: '2px 8px' }}><Plus size={11} /> Add</button>
+                              </div>
+                              {listFilters.length === 0 ? (
+                                <p className="ls-vp-empty">No filters applied</p>
+                              ) : (
+                                <div className="ls-vp-filter-list">
+                                  {listFilters.map((f, i) => {
+                                    const ff = allFields.find((fd) => fd.id === f.fieldId);
+                                    return (
+                                      <div key={f.id} className="ls-vp-filter-row" onClick={() => openListFilterEditor(f.id)}>
+                                        {i > 0 && <span className="ls-vp-filter-logic">{f.logic.toUpperCase()}</span>}
+                                        <span className="ls-vp-filter-field">{ff?.name || f.fieldId}</span>
+                                        <span className="ls-vp-filter-op">{listOperatorLabel(f.operator)}</span>
+                                        {!['is_empty', 'is_not_empty'].includes(f.operator) && (
+                                          <span className="ls-vp-filter-value">{f.value || '(empty)'}</span>
+                                        )}
+                                        <button className="ls-vp-filter-remove" onClick={(e) => { e.stopPropagation(); removeListFilter(f.id); }}><X size={10} /></button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="ls-prop-group">
+                              <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <input type="checkbox" checked={listAllowMultiSelect}
+                                  onChange={() => setListAllowMultiSelect((v) => !v)} /> Allow Multiple Selection
+                              </label>
+                            </div>
+
+                            <div className="ls-prop-group">
+                              <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <input type="checkbox" checked={listAllowPaging}
+                                  onChange={() => { setListAllowPaging((v) => !v); setListCurrentPage(1); }} /> Allow Paging
+                              </label>
+                              {listAllowPaging && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 22, marginTop: 6 }}>
+                                  <div style={{ display: 'flex', gap: 16 }}>
+                                    <label className="ls-radio-label">
+                                      <input type="radio" name="listPagingMode" checked={listPagingMode === 'fixed'}
+                                        onChange={() => setListPagingMode('fixed')} /> Fixed
+                                    </label>
+                                    <label className="ls-radio-label">
+                                      <input type="radio" name="listPagingMode" checked={listPagingMode === 'dynamic'}
+                                        onChange={() => setListPagingMode('dynamic')} /> Dynamic
+                                    </label>
+                                  </div>
+                                  {listPagingMode === 'fixed' && (
+                                    <CustomSelect value={listRecordsPerPage} options={LIST_PER_PAGE_OPTIONS}
+                                      onChange={(v: number) => { setListRecordsPerPage(v); setListCurrentPage(1); }}
+                                      size="sm" style={{ width: '100%' }} />
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
+
+                      <div className="ls-prop-group" style={{ marginTop: 'auto', paddingTop: 12 }}>
+                        {(() => {
+                          const selectedAction = listActions.find((a) => a.id === listSelectedActionId);
+                          if (selectedAction) {
+                            return (
+                              <button className="sails-btn sails-btn--danger sails-btn--sm"
+                                onClick={() => {
+                                  setListSelectedActionId(null);
+                                  toggleListAction(selectedAction.actionKey);
+                                }}
+                                style={{ width: '100%', justifyContent: 'center' }}>
+                                <Trash2 size={12} /> Remove Action
+                              </button>
+                            );
+                          }
+                          if (listSelectedCol) {
+                            return (
+                              <button className="sails-btn sails-btn--danger sails-btn--sm"
+                                onClick={() => removeListColumn(listSelectedCol.id)}
+                                style={{ width: '100%', justifyContent: 'center' }}>
+                                <Trash2 size={12} /> Remove Column
+                              </button>
+                            );
+                          }
+                          return (
+                            <button className="sails-btn sails-btn--danger sails-btn--sm"
+                              onClick={() => setShowListDeleteConfirm(true)}
+                              style={{ width: '100%', justifyContent: 'center' }}>
+                              <Trash2 size={12} /> Delete Layout
+                            </button>
+                          );
+                        })()}
+                      </div>
+                    </>
                   ) : (
-                    <div className="ls-vp-filter-list">
-                      {listFilters.map((f, i) => {
-                        const ff = allFields.find((fd) => fd.id === f.fieldId);
-                        return (
-                          <div key={f.id} className="ls-vp-filter-row" onClick={() => openListFilterEditor(f.id)}>
-                            {i > 0 && <span className="ls-vp-filter-logic">{f.logic.toUpperCase()}</span>}
-                            <span className="ls-vp-filter-field">{ff?.name || f.fieldId}</span>
-                            <span className="ls-vp-filter-op">{listOperatorLabel(f.operator)}</span>
-                            {!['is_empty', 'is_not_empty'].includes(f.operator) && (
-                              <span className="ls-vp-filter-value">{f.value || '(empty)'}</span>
-                            )}
-                            <button className="ls-vp-filter-remove" onClick={(e) => { e.stopPropagation(); removeListFilter(f.id); }}><X size={10} /></button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="ls-prop-group">
-                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input type="checkbox" checked={listAllowMultiSelect}
-                      onChange={() => setListAllowMultiSelect((v) => !v)} /> Allow Multiple Selection
-                  </label>
-                  <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '2px 0 0 22px' }}>
-                    Adds checkboxes to select records during runtime
-                  </p>
-                </div>
-
-                <div className="ls-prop-group">
-                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input type="checkbox" checked={listAllowPaging}
-                      onChange={() => { setListAllowPaging((v) => !v); setListCurrentPage(1); }} /> Allow Paging
-                  </label>
-                  <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '2px 0 0 22px' }}>
-                    Paginates records during runtime
-                  </p>
-                </div>
-
-                {listAllowPaging && (
-                  <>
-                    <div className="ls-prop-group" style={{ paddingLeft: 24 }}>
-                      <label className="ls-prop-label" style={{ marginBottom: 6 }}>Paging Mode</label>
-                      <div style={{ display: 'flex', gap: 16 }}>
-                        <label className="ls-radio-label">
-                          <input type="radio" name="listPagingMode" checked={listPagingMode === 'fixed'}
-                            onChange={() => setListPagingMode('fixed')} /> Fixed
-                        </label>
-                        <label className="ls-radio-label">
-                          <input type="radio" name="listPagingMode" checked={listPagingMode === 'dynamic'}
-                            onChange={() => setListPagingMode('dynamic')} /> Dynamic
-                        </label>
-                      </div>
-                      <p style={{ fontSize: 10, color: 'var(--sails-text-muted)', margin: '4px 0 0' }}>
-                        {listPagingMode === 'fixed' ? 'Records per page is set by the builder' : 'User can select their own records per page at runtime'}
-                      </p>
-                    </div>
-                    {listPagingMode === 'fixed' && (
-                      <div className="ls-prop-group" style={{ paddingLeft: 24 }}>
-                        <label className="ls-prop-label">Records Per Page</label>
-                        <CustomSelect value={listRecordsPerPage} options={LIST_PER_PAGE_OPTIONS}
-                          onChange={(v: number) => { setListRecordsPerPage(v); setListCurrentPage(1); }}
-                          size="sm" style={{ width: '100%' }} />
-                      </div>
-                    )}
-                  </>
-                )}
-                      </>
-                    )}
-                    <div className="ls-prop-group" style={{ marginTop: 'auto', paddingTop: 12 }}>
-                      <button className="sails-btn sails-btn--danger sails-btn--sm"
-                        onClick={() => setShowListDeleteConfirm(true)}
-                        style={{ width: '100%', justifyContent: 'center' }}>
-                        <Trash2 size={12} /> Delete Layout
-                      </button>
-                    </div>
-                  </>
-                ) : (
                     <>{selectedBlock ? (
                     <>
                 <div className="ls-prop__name">

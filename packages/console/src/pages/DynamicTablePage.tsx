@@ -17,12 +17,12 @@ import {
   Download,
 } from 'lucide-react';
 import { useConsole } from '../contexts/ConsoleContext';
-import type { ConsoleMenu, TableLayout, SailsFieldDefinition } from '@sails/shared';
+import type { ConsoleMenu, TableLayout, SailsFieldDefinition, ListAction } from '@sails/shared';
 import DynamicIcon from '../components/common/DynamicIcon';
 import CustomSelect from '../components/common/CustomSelect';
 import LoadingScreen from '../components/common/LoadingScreen';
 import { fetchCached } from '../api/client';
-import ExportCsvButton from '../components/common/ExportCsvButton';
+import { ActionRegistry } from '../features/actions';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
 import './custom/layouts-responsive.css';
@@ -102,6 +102,13 @@ const DynamicTablePage: React.FC = () => {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [recordsPerPage, setRecordsPerPage] = useState<number>(25);
+
+  const configuredActions: ListAction[] = useMemo(() => {
+    if (!layout) return [];
+    const cfg = layout.status === 'active' ? (layout.publishedConfig || layout.config) : layout.config;
+    const parsed = typeof cfg === 'string' ? (typeof cfg === 'object' ? cfg : JSON.parse(cfg)) : cfg;
+    return (parsed?.actions || []).filter((a: ListAction) => a.visible);
+  }, [layout]);
 
   const initialLoadDone = useRef(false);
   const tableNameRef = useRef<string | null>(null);
@@ -518,6 +525,25 @@ const DynamicTablePage: React.FC = () => {
     );
   }
 
+
+
+  const handleExecuteAction = (action: ListAction) => {
+    const registry = ActionRegistry.getInstance();
+    const plugin = registry.getAction(action.actionKey);
+    const dataModelId = activeMenu?.dataModelId || layout?.tableId || '';
+    if (plugin) {
+      plugin.execute({
+        tableId: dataModelId,
+        tableName: tableNameRef.current || '',
+        layoutId: layout?.id,
+        navigate,
+        refetch: () => doFetch(),
+      });
+    } else if (action.actionKey === 'create') {
+      navigate(`/objects/${dataModelId}/new`);
+    }
+  };
+
   return (
     <div className={`sails-dynamic-table sails-page-container ${animClass}`}>
       <header className="sails-page-header sails-dynamic-table__header">
@@ -531,15 +557,22 @@ const DynamicTablePage: React.FC = () => {
           </div>
         </div>
         <div className="sails-page-header__right">
-          <ExportCsvButton
-            headers={csvExportData.headers}
-            rows={csvExportData.rows}
-            filename={displayTitle}
-          />
-          <button className="sails-btn sails-btn--primary">
-            <Plus size={18} />
-            <span>Add New</span>
-          </button>
+          {configuredActions.map((act) => {
+            const plugin = ActionRegistry.getInstance().getAction(act.actionKey);
+            const iconName = plugin?.iconName || (act.actionKey === 'create' ? 'Plus' : 'Zap');
+            const variant = act.variant || 'primary';
+            const variantClass = variant === 'primary' ? 'sails-btn--primary' :
+                                 variant === 'danger' ? 'sails-btn--danger' :
+                                 variant === 'secondary' ? 'sails-btn--secondary' :
+                                 'sails-btn--ghost';
+            return (
+              <button key={act.id} className={`sails-btn ${variantClass}`}
+                onClick={() => handleExecuteAction(act)}>
+                <DynamicIcon name={iconName} size={18} />
+                <span>{act.label}</span>
+              </button>
+            );
+          })}
         </div>
       </header>
 

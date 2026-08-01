@@ -405,6 +405,34 @@ export interface LayoutConfig {
   allowPaging?: boolean;
   recordsPerPage?: number;
   pagingMode?: 'fixed' | 'dynamic';
+
+  // Action buttons (toolbar / context)
+  actions?: ListAction[];              // List-level toolbar actions (e.g. Create)
+  detailActions?: DetailAction[];      // Detail/Form-level header actions (future)
+}
+
+/**
+ * A toolbar-level action on a List View.
+ * requiresSelection is always false — these appear regardless of selection state.
+ */
+export interface ListAction {
+  id: string;
+  actionKey: string;                 // System or plugin action key (e.g. 'create', 'export_csv')
+  label: string;                     // Display label (default from ActionPlugin.defaultLabel)
+  variant: 'primary' | 'secondary' | 'ghost' | 'danger';
+  visible: boolean;
+  requiresSelection?: boolean;
+}
+
+/**
+ * A header-level action on a Detail / Form view. (Reserved for future sprint)
+ */
+export interface DetailAction {
+  id: string;
+  actionKey: 'edit' | 'clone' | 'delete' | 'archive';
+  label: string;
+  variant: 'primary' | 'secondary' | 'danger' | 'ghost';
+  visible: boolean;
 }
 
 export interface LayoutColumn {
