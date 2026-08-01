@@ -27,7 +27,7 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
   },
   {
     type: 'number',
-    label: 'Number (Integer)',
+    label: 'Number',
     description: 'Whole number integer value',
     iconName: 'Hash',
     physicalType: 'number',
@@ -41,7 +41,7 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
     type: 'decimal',
     label: 'Decimal',
     description: 'High-precision decimal number',
-    iconName: 'Binary',
+    iconName: 'Hash',
     physicalType: 'number',
     parametersSchema: [
       { name: 'decimalPlaces', label: 'No. Decimal Places', type: 'number', defaultValue: 4, min: 0, max: 10 },
@@ -91,14 +91,19 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
     iconName: 'FileText',
     physicalType: 'text',
     parametersSchema: [
-      { name: 'placeholder', label: 'Placeholder Text', type: 'text', placeholder: 'e.g. Enter formatted content...' }
+      { name: 'placeholder', label: 'Placeholder Text', type: 'text', placeholder: 'e.g. Enter formatted content...' },
+      { name: 'toolbarPreset', label: 'Toolbar Features', type: 'select', defaultValue: 'standard', options: [
+        { label: 'Minimal (Bold, Italic, Underline)', value: 'minimal' },
+        { label: 'Standard (Formatting, Lists, Link)', value: 'standard' },
+        { label: 'Full (Headers, Font, Table, Code)', value: 'full' }
+      ]}
     ]
   },
   {
     type: 'select',
     label: 'Selection',
     description: 'Select a single option from a custom list or lookup values from another data model',
-    iconName: 'ListFilter',
+    iconName: 'List',
     physicalType: 'text',
     parametersSchema: [
       {
@@ -153,6 +158,16 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
           { label: 'Many-to-One (Lookup Foreign Key)', value: 'many_to_one' },
           { label: 'One-to-Many', value: 'one_to_many' },
           { label: 'One-to-One', value: 'one_to_one' }
+        ]
+      },
+      {
+        name: 'controlStyle',
+        label: 'Display Control',
+        type: 'select',
+        defaultValue: 'searchable_dropdown',
+        options: [
+          { label: 'Searchable Dropdown (Combobox)', value: 'searchable_dropdown' },
+          { label: 'Simple Select Dropdown', value: 'select' }
         ]
       }
     ]

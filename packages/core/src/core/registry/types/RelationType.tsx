@@ -20,6 +20,16 @@ export const RelationType: FieldTypePlugin = {
         { label: 'One-to-Many', value: 'one_to_many' },
         { label: 'One-to-One', value: 'one_to_one' }
       ]
+    },
+    {
+      name: 'controlStyle',
+      label: 'Display Control',
+      type: 'select',
+      defaultValue: 'searchable_dropdown',
+      options: [
+        { label: 'Searchable Dropdown (Combobox)', value: 'searchable_dropdown' },
+        { label: 'Simple Select Dropdown', value: 'select' }
+      ]
     }
   ],
   getPostgresColumnDefinition: (isRequired?: boolean) => {

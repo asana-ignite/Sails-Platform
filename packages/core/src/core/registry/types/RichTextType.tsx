@@ -11,9 +11,9 @@ export const RichTextType: FieldTypePlugin = {
   parametersSchema: [
     { name: 'placeholder', label: 'Input Placeholder', type: 'text', placeholder: 'Enter formatted content...' },
     { name: 'toolbarPreset', label: 'Toolbar Features', type: 'select', defaultValue: 'standard', options: [
-      { label: 'Standard (Bold, Italic, Lists, Link)', value: 'standard' },
-      { label: 'Minimal (Bold, Italic, Link)', value: 'minimal' },
-      { label: 'Full (Headers, Formatting, Tables)', value: 'full' }
+      { label: 'Minimal (Bold, Italic, Underline)', value: 'minimal' },
+      { label: 'Standard (Formatting, Lists, Link)', value: 'standard' },
+      { label: 'Full (Headers, Font, Table, Code)', value: 'full' }
     ]}
   ],
   getPostgresColumnDefinition: (isRequired?: boolean) => {

@@ -1,0 +1,280 @@
+/* FieldPathPicker.css — SAILS Platform Dynamic Theme System Component */
+
+.field-path-picker {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--sails-font-family, inherit);
+  user-select: none;
+}
+
+.field-path-picker--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Rested State Control — Dynamically Linked to Theme CSS Variables */
+.field-path-picker__control {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #cbd5e1);
+  border-radius: var(--sails-radius-sm, 6px);
+  color: var(--sails-text-main, #344759);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.field-path-picker__control.size-sm {
+  padding: 3px 8px;
+  font-size: 11px;
+  height: 32px !important;
+  min-height: 32px !important;
+}
+
+.field-path-picker__control.size-md {
+  padding: 5px 10px;
+  font-size: 12px;
+  min-height: 32px;
+}
+
+.field-path-picker__control:hover:not(.field-path-picker--disabled) {
+  border-color: var(--sails-primary);
+  background: rgba(var(--sails-primary-r, 2), var(--sails-primary-g, 132), var(--sails-primary-b, 199), 0.04);
+}
+
+.field-path-picker__control.is-open {
+  border-color: var(--sails-primary);
+  box-shadow: 0 0 0 2px rgba(var(--sails-primary-r, 2), var(--sails-primary-g, 132), var(--sails-primary-b, 199), 0.15);
+}
+
+.sails-select-content {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.field-path-picker__nested-icon {
+  color: var(--sails-primary);
+  flex-shrink: 0;
+}
+
+.sails-select-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--sails-text-main, #344759);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select__arrow {
+  color: var(--sails-text-muted, #64748b);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.custom-select__arrow--open {
+  transform: rotate(180deg);
+  color: var(--sails-primary);
+}
+
+/* ── Navigation Flyout Dropdown Menu (100% Dynamically Linked to Theme) ── */
+.field-path-picker__flyout {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  min-width: 100%;
+  max-width: calc(100vw - 32px);
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e1e9ef);
+  border-radius: var(--sails-radius-md, 8px);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  padding: 3px;
+  z-index: 9999 !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fieldPathFadeIn 0.15s ease-out;
+}
+
+.field-path-picker__flyout--align-right {
+  left: auto !important;
+  right: 0 !important;
+}
+
+@keyframes fieldPathFadeIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.field-path-picker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px;
+  border-bottom: 1px solid var(--sails-border-color, #f1f2f6);
+  margin-bottom: 3px;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.field-path-picker__search {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--sails-bg-body, #f4f7f9);
+  border: 1px solid var(--sails-border-color, #e1e9ef);
+  border-radius: var(--sails-radius-sm, 4px);
+  padding: 3px 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.field-path-picker__search-icon {
+  color: var(--sails-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.field-path-picker__search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 11px;
+  color: var(--sails-text-main, #344759);
+  width: 100%;
+}
+
+.field-path-picker__close {
+  background: transparent;
+  border: none;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: var(--sails-radius-sm, 4px);
+  display: flex;
+  align-items: center;
+}
+
+.field-path-picker__close:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.field-path-picker__columns {
+  display: flex;
+  background: var(--sails-bg-card, #ffffff);
+  width: 100%;
+}
+
+.field-path-picker__column {
+  flex: 1 0 145px;
+  min-width: 130px;
+  border-right: 1px solid var(--sails-border-color, #f1f2f6);
+  display: flex;
+  flex-direction: column;
+  background: var(--sails-bg-card, #ffffff);
+  box-sizing: border-box;
+}
+
+.field-path-picker__column:last-child {
+  border-right: none;
+}
+
+.field-path-picker__column-title {
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sails-primary, #0284c7);
+  background: rgba(var(--sails-primary-r, 2), var(--sails-primary-g, 132), var(--sails-primary-b, 199), 0.08);
+  border-bottom: 1px solid var(--sails-border-color, #f1f2f6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.field-path-picker__column-items {
+  display: flex;
+  flex-direction: column;
+  padding: 3px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.field-path-picker__no-match {
+  padding: 8px 6px;
+  font-size: 11px;
+  color: var(--sails-text-muted, #6b8ba4);
+  text-align: center;
+  font-style: italic;
+}
+
+/* Default Menu Item */
+.field-path-picker__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: var(--sails-radius-sm, 6px);
+  font-size: 11px;
+  color: var(--sails-text-main, #344759);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: 1px;
+  background: transparent;
+}
+
+/* Relationship Fields — Standard Color, BOLD Only */
+.field-path-picker__item--relation {
+  font-weight: 600;
+  color: var(--sails-text-main, #344759);
+}
+
+.field-path-picker__item--relation .field-path-picker__item-arrow {
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+/* Parent Step & Hover — Dynamic Soft Primary Tint from Theme Variables */
+.field-path-picker__item:hover:not(.is-target-selected),
+.field-path-picker__item.is-parent-selected {
+  background-color: rgba(var(--sails-primary-r, 2), var(--sails-primary-g, 132), var(--sails-primary-b, 199), 0.12) !important;
+  color: var(--sails-text-main, #0f172a) !important;
+  font-weight: 600;
+}
+
+.field-path-picker__item:hover .field-path-picker__item-arrow,
+.field-path-picker__item.is-parent-selected .field-path-picker__item-arrow {
+  color: var(--sails-primary, #0284c7) !important;
+}
+
+/* Active Selected Target Item — Dynamic Primary Theme Color & Background Gradient */
+.field-path-picker__item.is-target-selected {
+  background-color: var(--sails-primary, #0284c7) !important;
+  background-image: var(--sails-primary-bg) !important;
+  color: var(--sails-text-light, #ffffff) !important;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(var(--sails-primary-r, 2), var(--sails-primary-g, 132), var(--sails-primary-b, 199), 0.3);
+}
+
+.field-path-picker__item.is-target-selected .field-path-picker__item-arrow {
+  color: var(--sails-text-light, #ffffff) !important;
+}
+
+.field-path-picker__item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-path-picker__item-arrow {
+  color: var(--sails-text-muted, #94a3b8);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}

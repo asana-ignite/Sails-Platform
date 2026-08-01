@@ -73,7 +73,7 @@ const ObjectManager: React.FC = () => {
   const [activeMenuFieldId, setActiveMenuFieldId] = useState<string | null>(null);
 
   type DetailTab = 'general' | 'fields' | 'layout' | 'permission';
-  const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>('general');
+  const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>('fields');
   const [pendingDetailTabSwitch, setPendingDetailTabSwitch] = useState<DetailTab | null>(null);
 
   const [detailName, setDetailName] = useState('');
@@ -321,6 +321,15 @@ const ObjectManager: React.FC = () => {
   useEffect(() => {
     fetchTables();
   }, [fetchTables]);
+
+  useEffect(() => {
+    if (selectedTable) {
+      const updated = tables.find(t => t.id === selectedTable.id);
+      if (updated) {
+        setSelectedTable(updated);
+      }
+    }
+  }, [tables]);
 
   const saveGeneralInfo = async () => {
     if (!selectedTable || !detailName.trim()) return;
@@ -775,7 +784,7 @@ const ObjectManager: React.FC = () => {
           onClick={() => setIsCreatingTable(true)}
         >
           <Plus size={18} />
-          <span>Create Table</span>
+           <span>Create Model</span>
         </button>
       );
     } else {
@@ -800,7 +809,7 @@ const ObjectManager: React.FC = () => {
 
   const selectRow = (table: SailsTableDefinition, initialTab?: DetailTab) => {
     setSelectedTable(table);
-    setActiveDetailTab(initialTab || 'general');
+    setActiveDetailTab(initialTab || 'fields');
     setDetailName(table.name);
     setDetailDesc(table.description || '');
     setSavedDetail({ name: table.name, description: table.description || '' });
@@ -1071,14 +1080,14 @@ const ObjectManager: React.FC = () => {
 
             {/* Tab navigation */}
             <nav className="om-detail-tabs">
-              {(['general', 'fields', 'layout', 'permission'] as DetailTab[]).map(tab => (
+              {(['fields', 'layout', 'permission', 'general'] as DetailTab[]).map(tab => (
                 <button
                   key={tab}
                   className={`om-detail-tab ${activeDetailTab === tab ? 'om-detail-tab--active' : ''}`}
                   onClick={() => handleDetailTabClick(tab)}
                 >
                   <span>
-                    {tab === 'general' && 'General Information'}
+                    {tab === 'general' && 'Settings'}
                     {tab === 'fields' && 'Fields'}
                     {tab === 'layout' && 'Layout'}
                     {tab === 'permission' && 'Permission'}
@@ -1218,7 +1227,7 @@ const ObjectManager: React.FC = () => {
                               <td>
                                 <div className="om-table-cell-name">
                                   <div className="om-table-icon-wrapper">
-                                    <Settings size={18} />
+                                    <DynamicIcon name={fieldTypeMeta?.iconName || 'Settings'} size={18} />
                                   </div>
                                   <div>
                                     <div className="om-name-primary">
@@ -1931,10 +1940,11 @@ const ObjectManager: React.FC = () => {
                                       <label className="om-field-label">{param.label} *</label>
                                       <CustomSelect
                                         size="md"
+                                        searchable={true}
                                         value={dynamicConfigValues[param.name] || ''}
                                         options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
                                         onChange={val => setDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
-                                        placeholder="Select Target Model"
+                                        placeholder="Search Target Model..."
                                       />
                                       {param.description && (
                                         <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
@@ -2344,10 +2354,11 @@ const ObjectManager: React.FC = () => {
                                       <label className="om-field-label">{param.label} *</label>
                                       <CustomSelect
                                         size="md"
+                                        searchable={true}
                                         value={editDynamicConfigValues[param.name] || ''}
                                         options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
                                         onChange={val => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
-                                        placeholder="Select Target Model"
+                                        placeholder="Search Target Model..."
                                       />
                                       {param.description && (
                                         <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>

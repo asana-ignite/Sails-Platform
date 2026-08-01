@@ -562,9 +562,7 @@
   font-size: 13px;
   color: var(--sails-text-primary, #1e293b);
   line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  width: 100%;
 }
 
 /* ─── Related List Block ────────────────────────────────────── */

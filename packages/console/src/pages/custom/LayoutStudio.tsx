@@ -185,9 +185,9 @@ function buildMockRecord(fields: SailsFieldDefinition[]): Record<string, any> {
   return record;
 }
 
-function renderFieldValue(field: SailsFieldDefinition, record: Record<string, any>): React.ReactNode {
+function renderFieldValue(field: SailsFieldDefinition, record: Record<string, any>, controlPluginId?: string): React.ReactNode {
   const controlReg = FieldControlRegistry.getInstance();
-  const controlPlugin = controlReg.getFallbackControl(field.logicalType);
+  const controlPlugin = (controlPluginId ? controlReg.getControl(controlPluginId) : null) || controlReg.getFallbackControl(field.logicalType);
   const val = record[field.fieldName];
   return <controlPlugin.RenderEdit field={field} value={val} readOnly={false} />;
 }
@@ -416,7 +416,7 @@ const LayoutStudio: React.FC = () => {
   }, [tableId]);
 
   useEffect(() => {
-    if (!layoutId) return;
+    if (!layoutId || layoutId === '_new' || layoutId === 'new') return;
     const loadLayout = async () => {
       try {
         const json = await fetchCached(`/api/console/layouts?id=${layoutId}`);
@@ -2041,7 +2041,7 @@ const LayoutStudio: React.FC = () => {
                                 </div>
                                 {controlsEl}
                                 <label className="ls-block__label">{blk.labelOverride || field.name}{field.isRequired && <span className="ls-block__required">*</span>}</label>
-                                <div className="ls-block__value">{blk.visible ? renderFieldValue(field, mockRecord) : <em>hidden</em>}</div>
+                                <div className="ls-block__value">{blk.visible ? renderFieldValue(field, mockRecord, blk.controlPluginId) : <em>hidden</em>}</div>
                                 <span className="ls-block__width-badge">{blk.width} cols</span>
                                 <span className="ls-block__type-badge">{field.logicalType}</span>
                                 <div className="ls-block__resize-handle" onMouseDown={(e) => handleResizeStart(e, blk.id, blk.width)} />
