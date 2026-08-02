@@ -25,6 +25,7 @@ import DynamicIcon from '../../components/common/DynamicIcon';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { FieldControlRegistry } from '../../features/controls/FieldControlRegistry';
 import { DetailFieldInput, DetailFieldDisplay, mockFieldValue } from '../../features/controls/DetailFieldControl';
+import type { FieldValidation, ConditionOp, ValidationType } from '../../features/controls/types';
 import { ActionRegistry } from '../../features/actions';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchCached } from '../../api/client';
@@ -39,8 +40,6 @@ const actionRegistry = ActionRegistry.getInstance();
 
 type Width = number;
 type BlockType = 'field' | 'related_list' | 'tab_group';
-type ConditionOp = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'empty' | 'not_empty';
-type ValidationType = 'required' | 'cross_field' | 'regex' | 'range';
 
 interface BlockCondition {
   id: string;
@@ -48,18 +47,6 @@ interface BlockCondition {
   operator: ConditionOp;
   value: string;
   logic: 'and' | 'or';
-}
-
-interface FieldValidation {
-  id: string;
-  type: ValidationType;
-  message: string;
-  pattern?: string;
-  min?: number;
-  max?: number;
-  dependentFieldId?: string;
-  dependentOperator?: ConditionOp;
-  dependentValue?: string;
 }
 
 interface PlacedBlock {
@@ -186,7 +173,12 @@ function renderFieldValue(
   record: Record<string, any>,
   controlPluginId: string | undefined,
   mode: 'edit' | 'display',
-  opts?: { inert?: boolean; onValueChange?: (val: any) => void }
+  opts?: {
+    inert?: boolean;
+    onValueChange?: (val: any) => void;
+    rules?: FieldValidation[];
+    showErrors?: boolean;
+  }
 ): React.ReactNode {
   const val = record[field.fieldName];
 
@@ -208,6 +200,9 @@ function renderFieldValue(
       val={val}
       controlPluginId={controlPluginId}
       inert={opts?.inert}
+      rules={opts?.rules}
+      showErrors={opts?.showErrors}
+      record={record}
       onChange={(_key, v) => opts?.onValueChange && opts.onValueChange(v)}
     />
   );
@@ -2220,6 +2215,8 @@ const LayoutStudio: React.FC = () => {
                                   ) : (
                                     renderFieldValue(field, mockRecord, blk.controlPluginId, 'edit', {
                                       inert: !previewMode,
+                                      rules: blk.validations,
+                                      showErrors: previewMode,
                                       onValueChange: (v) => handleMockValueChange(field.fieldName, v),
                                     })
                                   )
@@ -2351,6 +2348,8 @@ const LayoutStudio: React.FC = () => {
                                                 ) : (
                                                   renderFieldValue(tbField, mockRecord, tb.controlPluginId, 'edit', {
                                                     inert: !previewMode,
+                                                    rules: tb.validations,
+                                                    showErrors: previewMode,
                                                     onValueChange: (v) => handleMockValueChange(tbField.fieldName, v),
                                                   })
                                                 )

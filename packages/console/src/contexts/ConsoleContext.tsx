@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { ConsoleApp, ConsoleMenu, ConsoleWidget } from '@sails/shared';
 
 export type { ConsoleApp, ConsoleMenu, ConsoleWidget };
@@ -22,7 +22,7 @@ interface ConsoleContextType {
   setPageSubtitle: (subtitle: string | null) => void;
   showAddUserDrawer: boolean;
   setShowAddUserDrawer: (show: boolean) => void;
-  invalidateConfig: () => void;
+  refreshConfig: () => Promise<void>;
 }
 
 const ConsoleContext = createContext<ConsoleContextType | undefined>(undefined);
@@ -38,14 +38,14 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const navigate = useNavigate();
   const location = useLocation();
 
-  const invalidateConfig = () => {
-    invalidateCache('GET:/api/console/config');
-  };
+  const pathnameRef = useRef(location.pathname);
+  pathnameRef.current = location.pathname;
+  const activeAppIdRef = useRef(activeAppId);
+  activeAppIdRef.current = activeAppId;
 
-  useEffect(() => {
-    const fetchConfig = async () => {
+  const loadConfig = useCallback(async (opts?: { silent?: boolean }) => {
       try {
-        setIsLoading(true);
+        if (!opts?.silent) setIsLoading(true);
         const result = await fetchCached('/api/console/config', undefined, 30000);
         if (result.success) {
           const fetchedApps = result.data.apps;
@@ -68,7 +68,8 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           setWidgets(fetchedWidgets);
           
           // Try to find which app contains the current URL path
-          const currentPath = location.pathname;
+          const currentPath = pathnameRef.current;
+          const currentActiveAppId = activeAppIdRef.current;
           let matchedAppId = null;
 
           if (currentPath !== '/') {
@@ -103,9 +104,9 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
 
           // Sync activeAppId: Switch active app if matchedAppId is found, or default to first app if none set
-          if (matchedAppId && matchedAppId !== activeAppId) {
+          if (matchedAppId && matchedAppId !== currentActiveAppId) {
             setActiveAppId(matchedAppId);
-          } else if (filteredApps.length > 0 && !activeAppId) {
+          } else if (filteredApps.length > 0 && !currentActiveAppId) {
             setActiveAppId(matchedAppId || filteredApps[0].id);
           }
         } else {
@@ -114,14 +115,25 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } catch (err: any) {
         setError(err.message);
       } finally {
-        setIsLoading(false);
+        if (!opts?.silent) setIsLoading(false);
       }
-    };
+  }, [user]);
 
+  useEffect(() => {
     if (user) {
-      fetchConfig();
+      loadConfig();
     }
-  }, [user]); 
+  }, [user, loadConfig]);
+
+  /**
+   * Refetches the console config after a mutation (menu/widget/app save, delete, toggle).
+   * Bypasses the in-memory cache and refreshes in the background (no loading flash).
+   * Call after any API call that invalidates the server-side config cache.
+   */
+  const refreshConfig = useCallback(() => {
+    invalidateCache('GET:/api/console/config');
+    return loadConfig({ silent: true });
+  }, [loadConfig]);
 
   const activeApp = apps.find(app => app.id === activeAppId) || null;
   const navigationItems = activeApp?.menus || [];
@@ -181,7 +193,7 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setPageSubtitle,
       showAddUserDrawer,
       setShowAddUserDrawer,
-      invalidateConfig
+      refreshConfig
     }}>
       {children}
     </ConsoleContext.Provider>

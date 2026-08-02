@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { QueryLayer } from '@/core/engine/QueryLayer';
 import format from 'pg-format';
 import { requireSession } from '@/lib/auth/session';
+import { validateRecord } from '@sails/shared';
 
 type RouteContext = { params: { tableName: string } };
 
@@ -50,6 +51,12 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
     if (!data || Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'No data provided.' }, { status: 400 });
+    }
+
+    // Server-side validation (metadata config: isRequired, min/max, maxLength).
+    const issues = validateRecord(resolved.table.fields, data);
+    if (issues.length > 0) {
+      return NextResponse.json({ error: 'Validation failed', issues }, { status: 422 });
     }
 
     // QueryLayer handles: AccessGuard (RBAC) → TransactionContext (RLS) → Audit Log
@@ -183,6 +190,15 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     const resolved = await resolveTable(tableName);
     if (!resolved) {
       return NextResponse.json({ error: 'Table not found or access denied.' }, { status: 404 });
+    }
+
+    // Server-side validation for partial updates — only fields present in the body.
+    const patchFields = (resolved.table.fields || []).filter((f: any) =>
+      Object.prototype.hasOwnProperty.call(data, f.fieldName)
+    );
+    const issues = validateRecord(patchFields, data);
+    if (issues.length > 0) {
+      return NextResponse.json({ error: 'Validation failed', issues }, { status: 422 });
     }
 
     const updatedRecord = await QueryLayer.updateRecord(

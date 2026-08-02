@@ -8,10 +8,12 @@ import DynamicIcon from '../../components/common/DynamicIcon';
 import IconPicker from '../../components/common/IconPicker';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { fetchCached } from '../../api/client';
+import { useConsole } from '../../contexts/ConsoleContext';
 import './AdminMenuManager.css';
 
 
 const AdminMenuManager: React.FC = () => {
+  const { refreshConfig } = useConsole();
   const [apps, setApps] = useState<ConsoleApp[]>([]);
   const [selectedAppId, setSelectedAppId] = useState<string>('');
   const [menus, setMenus] = useState<ConsoleMenu[]>([]);
@@ -143,6 +145,7 @@ const AdminMenuManager: React.FC = () => {
       if (result.success) {
         setIsEditing(null);
         fetchMenus(selectedAppId);
+        refreshConfig();
       } else {
         alert(result.error || 'Failed to save menu item');
       }
@@ -167,6 +170,7 @@ const AdminMenuManager: React.FC = () => {
       const result = await res.json();
       if (result.success) {
         fetchMenus(selectedAppId);
+        refreshConfig();
       } else {
         alert(result.error || 'Failed to delete menu item');
       }

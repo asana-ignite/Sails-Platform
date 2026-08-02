@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, SwitchCamera } from 'lucide-react';
 import { ConsoleWidget } from '@sails/shared';
+import { useConsole } from '../../contexts/ConsoleContext';
 
 interface WidgetsTabProps {
   appId: string;
@@ -10,6 +11,7 @@ interface WidgetsTabProps {
 const WIDGET_KEYS = ['OmniChannelQuickAccept', 'AgentChatWindows'];
 
 const WidgetsTab: React.FC<WidgetsTabProps> = ({ appId, widgetBarEnabled }) => {
+  const { refreshConfig } = useConsole();
   const [widgets, setWidgets] = useState<ConsoleWidget[]>([]);
   const [loading, setLoading] = useState(true);
   const [addKey, setAddKey] = useState(WIDGET_KEYS[0]);
@@ -45,6 +47,7 @@ const WidgetsTab: React.FC<WidgetsTabProps> = ({ appId, widgetBarEnabled }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: appId, widgetBarEnabled: next }),
       });
+      refreshConfig();
     } catch (e) {
       setBarEnabled(!next);
     } finally {
@@ -65,7 +68,10 @@ const WidgetsTab: React.FC<WidgetsTabProps> = ({ appId, widgetBarEnabled }) => {
         }),
       });
       const data = await res.json();
-      if (data.success) fetchWidgets();
+      if (data.success) {
+        fetchWidgets();
+        refreshConfig();
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -76,6 +82,7 @@ const WidgetsTab: React.FC<WidgetsTabProps> = ({ appId, widgetBarEnabled }) => {
   const handleDelete = async (id: string) => {
     await fetch(`/api/console/widgets?id=${id}`, { method: 'DELETE' });
     fetchWidgets();
+    refreshConfig();
   };
 
   const handleToggle = async (widget: ConsoleWidget) => {
@@ -85,6 +92,7 @@ const WidgetsTab: React.FC<WidgetsTabProps> = ({ appId, widgetBarEnabled }) => {
       body: JSON.stringify({ id: widget.id, enabled: !widget.enabled }),
     });
     fetchWidgets();
+    refreshConfig();
   };
 
   const handleMove = async (id: string, delta: number) => {
@@ -103,6 +111,7 @@ const WidgetsTab: React.FC<WidgetsTabProps> = ({ appId, widgetBarEnabled }) => {
       body: JSON.stringify({ id: other.id, order: widgets[idx].order }),
     });
     fetchWidgets();
+    refreshConfig();
   };
 
   if (loading) return <div className="sails-app-detail__section">Loading widgets...</div>;

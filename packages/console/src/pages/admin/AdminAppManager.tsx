@@ -593,6 +593,7 @@ const AppDetailView: React.FC<{
 };
 
 const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () => void }> = ({ appId, appSlug, onRefresh }) => {
+  const { refreshConfig } = useConsole();
   const [menus, setMenus] = useState<ConsoleMenu[]>([]);
   const [menusLoading, setMenusLoading] = useState(false);
   const [isEditingMenu, setIsEditingMenu] = useState<ConsoleMenu | null>(null);
@@ -701,6 +702,7 @@ const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () =>
       if (result.success) {
         setIsEditingMenu(null);
         fetchMenus();
+        refreshConfig();
       } else {
         alert(result.error || 'Failed to save menu item');
       }
@@ -724,6 +726,7 @@ const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () =>
       if (result.success) {
         setDeleteConfirmMenu(null);
         fetchMenus();
+        refreshConfig();
       } else {
         alert(result.error || 'Failed to delete menu item');
       }

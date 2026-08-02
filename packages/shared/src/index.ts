@@ -13,6 +13,12 @@
 export { FIELD_TYPE_REGISTRY } from './fieldTypes';
 export { SYSTEM_PERMISSION_REGISTRY, getAllCapabilities } from './permissions';
 export type { PermissionDefinition, SystemCapability } from './permissions';
+export {
+  validateFieldValue,
+  validateRecord,
+  isEmptyValue,
+} from './validation';
+export type { ValidationIssue, ValidatableField } from './validation';
 
 // ─── Core Models ──────────────────────────────────────────────
 

@@ -1,7 +1,9 @@
 import React from 'react';
 import type { SailsFieldDefinition } from '@sails/shared';
+import { validateFieldValue, isEmptyValue } from '@sails/shared';
 import { FieldControlRegistry } from './FieldControlRegistry';
 import { ControlLazyBoundary } from './LazyRenderErrorBoundary';
+import type { FieldValidation, ConditionOp } from './types';
 
 // ── Shared control resolution ──────────────────────────────────
 // Single source of truth for resolving a field to its control plugin.
@@ -37,6 +39,98 @@ export function DetailFieldLabel({ field, label }: { field: SailsFieldDefinition
 
 // ── On-Edit control (exact front-end wrapper markup) ───────────
 
+// ── Block-level rule evaluation ─────────────────────────────────
+// Layout Studio lets authors attach validation rules per field block
+// (required / regex / range / cross_field). These run client-side in
+// the real detail form and the Studio preview (WYSIWYG). The server
+// enforces field-config rules (isRequired, min/max, maxLength) via the
+// shared validator in @sails/shared — block rules live only in layout
+// config, which the core API does not load.
+
+function compareCondition(op: ConditionOp | undefined, a: any, b: any): boolean {
+  switch (op) {
+    case 'eq': return String(a ?? '') === String(b ?? '');
+    case 'neq': return String(a ?? '') !== String(b ?? '');
+    case 'gt': return Number(a) > Number(b);
+    case 'gte': return Number(a) >= Number(b);
+    case 'lt': return Number(a) < Number(b);
+    case 'lte': return Number(a) <= Number(b);
+    case 'contains': return String(a ?? '').toLowerCase().includes(String(b ?? '').toLowerCase());
+    case 'empty': return a === undefined || a === null || String(a).trim() === '';
+    case 'not_empty': return a !== undefined && a !== null && String(a).trim() !== '';
+    default: return true;
+  }
+}
+
+function evaluateBlockRules(
+  rules: FieldValidation[] | undefined,
+  val: any,
+  record: Record<string, any> | undefined
+): string[] {
+  if (!rules || rules.length === 0) return [];
+  const issues: string[] = [];
+
+  for (const rule of rules) {
+    switch (rule.type) {
+      case 'required':
+        if (isEmptyValue(val)) issues.push(rule.message || 'This field is required');
+        break;
+
+      case 'regex': {
+        if (!isEmptyValue(val) && rule.pattern) {
+          try {
+            if (!new RegExp(rule.pattern).test(String(val))) {
+              issues.push(rule.message || 'Value does not match the required format');
+            }
+          } catch {
+            // invalid pattern — ignore
+          }
+        }
+        break;
+      }
+
+      case 'range': {
+        if (!isEmptyValue(val)) {
+          const n = Number(val);
+          if (!Number.isNaN(n)) {
+            if (rule.min !== undefined && rule.min !== null && n < rule.min) {
+              issues.push(rule.message || `Must be at least ${rule.min}`);
+            }
+            if (rule.max !== undefined && rule.max !== null && n > rule.max) {
+              issues.push(rule.message || `Must be at most ${rule.max}`);
+            }
+          }
+        }
+        break;
+      }
+
+      case 'cross_field': {
+        if (!isEmptyValue(val) && rule.dependentFieldId && record && rule.dependentFieldId in record) {
+          const depVal = record[rule.dependentFieldId];
+          if (!compareCondition(rule.dependentOperator || 'eq', depVal, rule.dependentValue)) {
+            issues.push(rule.message || 'Value does not match the related field');
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  return issues;
+}
+
+/** Full validation for a field: metadata config rules + layout block rules. */
+export function validateFieldIssues(
+  field: SailsFieldDefinition,
+  val: any,
+  rules?: FieldValidation[],
+  record?: Record<string, any>
+): string[] {
+  const issues = validateFieldValue(field, val);
+  issues.push(...evaluateBlockRules(rules, val, record));
+  return issues;
+}
+
 interface DetailFieldInputProps {
   field: SailsFieldDefinition;
   fieldKey: string;
@@ -44,13 +138,18 @@ interface DetailFieldInputProps {
   val: any;
   controlPluginId?: string;
   inert?: boolean; // designer mode: no onChange + pointer-events blocked
+  rules?: FieldValidation[]; // block-level rules from the layout config
+  showErrors?: boolean; // touched / save-attempted / preview
+  record?: Record<string, any>; // sibling values (cross_field rules)
   onChange: (key: string, value: any) => void;
 }
 
 export const DetailFieldInput: React.FC<DetailFieldInputProps> = ({
-  field, fieldKey, label, val, controlPluginId, inert, onChange,
+  field, fieldKey, label, val, controlPluginId, inert, rules, showErrors, record, onChange,
 }) => {
   const { controlPlugin } = resolveControlPlugin(field, controlPluginId);
+  const issues = validateFieldIssues(field, val, rules, record);
+  const showError = !!showErrors && !inert && issues.length > 0;
 
   const inner = controlPlugin && controlPlugin.RenderEdit ? (
     <ControlLazyBoundary>
@@ -69,13 +168,22 @@ export const DetailFieldInput: React.FC<DetailFieldInputProps> = ({
       readOnly={inert}
       onChange={(e) => onChange(fieldKey, e.target.value)}
       placeholder={`Enter ${label.toLowerCase()}...`}
-      required={field.isRequired}
     />
   );
 
   return (
-    <div className="ls-block__input-wrapper" style={{ marginTop: 6, ...(inert ? { pointerEvents: 'none' as const } : null) }}>
+    <div
+      className={`ls-block__input-wrapper${showError ? ' is-error' : ''}`}
+      style={{ marginTop: 6, ...(inert ? { pointerEvents: 'none' as const } : null) }}
+    >
       {inner}
+      {showError && (
+        <div className="sails-field-error">
+          {issues.map((m, i) => (
+            <div key={i}>{m}</div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

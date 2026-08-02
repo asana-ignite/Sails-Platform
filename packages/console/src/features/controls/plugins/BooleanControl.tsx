@@ -1,5 +1,6 @@
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
+import { CustomSelect } from '../../../components/common/CustomSelect';
 
 const parseBooleanValue = (val: any, defaultVal?: any): boolean => {
   if (val === true || val === 'true' || val === 1 || val === '1') return true;
@@ -219,22 +220,24 @@ export const BooleanDropdownControl: FieldControlPlugin = {
     const stringVal = isTrue ? 'true' : isFalse ? 'false' : '';
     const trueLabel = (field?.config as any)?.trueLabel || 'Yes';
     const falseLabel = (field?.config as any)?.falseLabel || 'No';
+    const options = [
+      { value: '', label: 'Select option...' },
+      { value: 'true', label: trueLabel },
+      { value: 'false', label: falseLabel },
+    ];
 
     return (
-      <select
-        disabled={disabled || readOnly}
+      <CustomSelect
         value={stringVal}
-        onChange={(e) => {
+        options={options}
+        placeholder="Select option..."
+        disabled={disabled || readOnly}
+        onChange={(val) => {
           if (!onChange) return;
-          const val = e.target.value;
           onChange(val === 'true' ? true : val === 'false' ? false : null);
         }}
-        className={`sails-input w-full ${className}`}
-      >
-        <option value="">Select option...</option>
-        <option value="true">{trueLabel}</option>
-        <option value="false">{falseLabel}</option>
-      </select>
+        className={`sails-custom-select--full sails-custom-select--field ${className}`}
+      />
     );
   },
 

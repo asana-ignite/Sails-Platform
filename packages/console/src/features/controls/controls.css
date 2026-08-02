@@ -897,6 +897,33 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   padding-left: 4px;
 }
 
+/* ── Field-level validation errors (DetailFieldInput pipeline) ── */
+/* Covers every control surface with no per-plugin changes. */
+.ls-block__input-wrapper.is-error .sails-input,
+.ls-block__input-wrapper.is-error .sails-detail-field-input,
+.ls-block__input-wrapper.is-error .sails-custom-select__trigger,
+.ls-block__input-wrapper.is-error .sails-picker__wrapper,
+.ls-block__input-wrapper.is-error .sails-richtext,
+.ls-block__input-wrapper.is-error .sails-date-input,
+.ls-block__input-wrapper.is-error .sails-time-input--bar,
+.ls-block__input-wrapper.is-error .sails-control-wrapper__field {
+  border-color: var(--sails-danger);
+}
+.ls-block__input-wrapper.is-error .sails-input:focus,
+.ls-block__input-wrapper.is-error .sails-custom-select__trigger:focus,
+.ls-block__input-wrapper.is-error .sails-picker__wrapper:focus-within,
+.ls-block__input-wrapper.is-error .sails-control-wrapper__field:focus-within {
+  border-color: var(--sails-danger);
+  box-shadow: 0 0 0 1px rgba(253, 97, 97, 0.25);
+}
+.sails-field-error {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--sails-danger);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
 /* ── Attachment control ─────────────────────────────────────── */
 .sails-control-attachment__list {
   display: flex;

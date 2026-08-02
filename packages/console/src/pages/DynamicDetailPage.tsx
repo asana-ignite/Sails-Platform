@@ -12,7 +12,8 @@ import type { TableLayout, SailsFieldDefinition, ConsoleMenu } from '@sails/shar
 import { isSystemField } from '@sails/shared';
 import LoadingScreen from '../components/common/LoadingScreen';
 import { fetchCached } from '../api/client';
-import { DetailFieldInput, DetailFieldDisplay, DetailFieldLabel } from '../features/controls/DetailFieldControl';
+import { DetailFieldInput, DetailFieldDisplay, DetailFieldLabel, validateFieldIssues } from '../features/controls/DetailFieldControl';
+import type { FieldValidation } from '../features/controls/types';
 import { useConsole } from '../contexts/ConsoleContext';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
@@ -142,6 +143,8 @@ const DynamicDetailPage: React.FC = () => {
   const [tableName, setTableName] = useState<string | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [activeTabMap, setActiveTabMap] = useState<Record<string, number>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [saveAttempted, setSaveAttempted] = useState<boolean>(false);
 
   const { dataModelId, layoutKey, recordId, isNewMode } = useMemo(() => {
     const menus = navigationItems.length > 0 ? navigationItems : (apps || []).flatMap(a => a.menus || []);
@@ -256,13 +259,46 @@ const DynamicDetailPage: React.FC = () => {
     return raw;
   }, [layout]);
 
+  // Field → block validation rules (sections + tabs), keyed by fieldId.
+  const blockRulesByField = useMemo(() => {
+    const map: Record<string, FieldValidation[]> = {};
+    const collect = (list: any[]) => {
+      for (const b of list || []) {
+        if (b?.validations?.length && b.fieldId) {
+          map[b.fieldId] = b.validations;
+        }
+        if (b?.blockType === 'tab_group') {
+          for (const t of b.tabs || []) collect(t.blocks);
+        }
+      }
+    };
+    collect((config as any)?.blocks || []);
+    return map;
+  }, [config]);
+
   const handleFieldInputChange = (key: string, value: any) => {
+    setTouched((prev) => ({ ...prev, [key]: true }));
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSaveRecord = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!tableName) return;
+
+    // Client-side validation gate: metadata config rules + layout block rules.
+    const issues: string[] = [];
+    for (const field of fields) {
+      const key = field.fieldName || field.id;
+      if (!key || isSystemField(key)) continue;
+      issues.push(...validateFieldIssues(field, formData[key], blockRulesByField[field.id], formData));
+    }
+    if (issues.length > 0) {
+      setSaveAttempted(true);
+      const first = issues[0];
+      const more = issues.length > 1 ? ` (+${issues.length - 1} more)` : '';
+      setSaveError(`Please fix the highlighted fields: ${first}${more}`);
+      return;
+    }
 
     setSaving(true);
     setSaveError(null);
@@ -346,7 +382,17 @@ const DynamicDetailPage: React.FC = () => {
         <div key={b.id || field.id} className="ls-block ls-block--field" style={{ gridColumn: `span ${colSpan}` }}>
           <DetailFieldLabel field={field} label={label} />
           {isNewMode ? (
-            <DetailFieldInput field={field} fieldKey={key} label={label} val={val} controlPluginId={b.controlPluginId} onChange={handleFieldInputChange} />
+            <DetailFieldInput
+              field={field}
+              fieldKey={key}
+              label={label}
+              val={val}
+              controlPluginId={b.controlPluginId}
+              rules={b.validations as FieldValidation[] | undefined}
+              showErrors={!!touched[key] || saveAttempted}
+              record={formData}
+              onChange={handleFieldInputChange}
+            />
           ) : (
             <div className="ls-block__value">
               <DetailFieldDisplay field={field} val={val} controlPluginId={b.controlPluginId} />
