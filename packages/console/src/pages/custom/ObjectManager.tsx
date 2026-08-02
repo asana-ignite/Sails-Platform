@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { SailsTableDefinition, FieldTypeMetadata, FieldParameterDefinition } from '@sails/shared';
+import { SailsTableDefinition, FieldTypeMetadata, FieldParameterDefinition, toSnakeCase, isSystemField } from '@sails/shared';
 import { useConsole } from '../../contexts/ConsoleContext';
 import { 
   Database, 
@@ -415,11 +415,11 @@ const ObjectManager: React.FC = () => {
   const handleCreateTable = async () => {
     if (!newTableName || !newTableDbName) return;
 
-    // Validation: System Name must be alphanumeric only
-    const dbNameRegex = /^[a-zA-Z0-9]+$/;
+    // Validation: System Name must be in valid snake_case
+    const dbNameRegex = /^[a-z0-9]+(_[a-z0-9]+)*$/;
 
     if (!dbNameRegex.test(newTableDbName)) {
-      setErrorMsg('System Name must contain only English letters and numbers (no spaces or special characters).');
+      setErrorMsg('System Name must be in snake_case (e.g. customer_table, sales_leads).');
       return;
     }
     
@@ -451,11 +451,11 @@ const ObjectManager: React.FC = () => {
   const handleCreateField = async () => {
     if (!selectedTable || !newFieldName || !newFieldDbName) return;
 
-    // Validation: System Name must be alphanumeric only
-    const dbNameRegex = /^[a-zA-Z0-9]+$/;
+    // Validation: System Name must be in valid snake_case
+    const dbNameRegex = /^[a-z0-9]+(_[a-z0-9]+)*$/;
 
     if (!dbNameRegex.test(newFieldDbName)) {
-      setErrorMsg('System Name must contain only English letters and numbers (no spaces or special characters).');
+      setErrorMsg('System Name must be in snake_case (e.g. email_address, total_amount).');
       return;
     }
 
@@ -1598,7 +1598,7 @@ const ObjectManager: React.FC = () => {
                     onChange={e => {
                       const val = e.target.value;
                       setNewTableName(val);
-                      setNewTableDbName(val.replace(/[^a-zA-Z0-9]/g, '').toLowerCase());
+                      setNewTableDbName(toSnakeCase(val));
                     }}
                   />
                 </div>
@@ -1608,11 +1608,11 @@ const ObjectManager: React.FC = () => {
                   <input 
                     type="text" 
                     className="sails-input" 
-                    placeholder="e.g. opportunities" 
+                    placeholder="e.g. sales_opportunities" 
                     value={newTableDbName}
                     onChange={e => setNewTableDbName(e.target.value)}
                   />
-                  <span className="om-field-hint">Alphanumeric only (e.g. opportunities).</span>
+                  <span className="om-field-hint">snake_case only (e.g. sales_opportunities).</span>
                 </div>
               </div>
 
@@ -1685,7 +1685,7 @@ const ObjectManager: React.FC = () => {
                         onChange={e => {
                           const val = e.target.value;
                           setNewFieldName(val);
-                          setNewFieldDbName(val.replace(/[^a-zA-Z0-9]/g, '').toLowerCase());
+                          setNewFieldDbName(toSnakeCase(val));
                         }}
                       />
                     </div>
@@ -1695,11 +1695,11 @@ const ObjectManager: React.FC = () => {
                       <input 
                         type="text" 
                         className="sails-input" 
-                        placeholder="e.g. totalamount" 
+                        placeholder="e.g. total_amount" 
                         value={newFieldDbName}
                         onChange={e => setNewFieldDbName(e.target.value)}
                       />
-                      <span className="om-field-hint">Alphanumeric only.</span>
+                      <span className="om-field-hint">snake_case only (e.g. total_amount).</span>
                     </div>
                   </div>
 
@@ -1738,7 +1738,7 @@ const ObjectManager: React.FC = () => {
                             onClick={() => setNewFieldLogicalType(t.type)}
                           >
                             <div className="om-type-card-icon">
-                              <DynamicIcon name={t.iconName} size={24} />
+                              <DynamicIcon name={t.iconName || 'Type'} size={24} />
                             </div>
                             <span className="om-type-card-label">{t.label}</span>
                           </div>
@@ -1894,6 +1894,10 @@ const ObjectManager: React.FC = () => {
 
                             <div className="om-form-grid-2">
                               {activeFieldTypeMeta.parametersSchema.map((param: FieldParameterDefinition) => {
+                                if ((param.name === 'trueLabel' || param.name === 'falseLabel') && dynamicConfigValues['defaultControl'] !== 'control:boolean_dropdown') {
+                                  return null;
+                                }
+
                                 if (param.type === 'select') {
                                   return (
                                     <div key={param.name} className="om-field-group">
@@ -1902,7 +1906,14 @@ const ObjectManager: React.FC = () => {
                                         size="md"
                                         value={dynamicConfigValues[param.name] ?? param.defaultValue ?? ''}
                                         options={param.options || []}
-                                        onChange={val => setDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
+                                        onChange={val => setDynamicConfigValues(prev => {
+                                          const next = { ...prev, [param.name]: val };
+                                          if (param.name === 'defaultControl' && val !== 'control:boolean_dropdown') {
+                                            delete next.trueLabel;
+                                            delete next.falseLabel;
+                                          }
+                                          return next;
+                                        })}
                                       />
                                       {param.description && (
                                         <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
@@ -2095,7 +2106,7 @@ const ObjectManager: React.FC = () => {
                         onChange={e => {
                           const val = e.target.value;
                           setEditFieldName(val);
-                          setEditFieldDbName(val.replace(/[^a-zA-Z0-9]/g, '').toLowerCase());
+                          setEditFieldDbName(toSnakeCase(val));
                         }}
                       />
                     </div>
@@ -2105,11 +2116,11 @@ const ObjectManager: React.FC = () => {
                       <input 
                         type="text" 
                         className="sails-input" 
-                        placeholder="e.g. totalamount" 
+                        placeholder="e.g. total_amount" 
                         value={editFieldDbName}
                         onChange={e => setEditFieldDbName(e.target.value)}
                       />
-                      <span className="om-field-hint">Alphanumeric only.</span>
+                      <span className="om-field-hint">snake_case only (e.g. total_amount).</span>
                     </div>
                   </div>
 
@@ -2153,7 +2164,7 @@ const ObjectManager: React.FC = () => {
                             onClick={() => setEditFieldLogicalType(t.type)}
                           >
                             <div className="om-type-card-icon">
-                              <DynamicIcon name={t.iconName} size={24} />
+                              <DynamicIcon name={t.iconName || 'Type'} size={24} />
                             </div>
                             <span className="om-type-card-label">{t.label}</span>
                           </div>
@@ -2308,6 +2319,10 @@ const ObjectManager: React.FC = () => {
 
                             <div className="om-form-grid-2">
                               {activeFieldTypeMeta.parametersSchema.map((param: FieldParameterDefinition) => {
+                                if ((param.name === 'trueLabel' || param.name === 'falseLabel') && editDynamicConfigValues['defaultControl'] !== 'control:boolean_dropdown') {
+                                  return null;
+                                }
+
                                 if (param.type === 'select') {
                                   return (
                                     <div key={param.name} className="om-field-group">
@@ -2316,7 +2331,14 @@ const ObjectManager: React.FC = () => {
                                         size="md"
                                         value={editDynamicConfigValues[param.name] ?? param.defaultValue ?? ''}
                                         options={param.options || []}
-                                        onChange={val => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
+                                        onChange={val => setEditDynamicConfigValues(prev => {
+                                          const next = { ...prev, [param.name]: val };
+                                          if (param.name === 'defaultControl' && val !== 'control:boolean_dropdown') {
+                                            delete next.trueLabel;
+                                            delete next.falseLabel;
+                                          }
+                                          return next;
+                                        })}
                                       />
                                       {param.description && (
                                         <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>

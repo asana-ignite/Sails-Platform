@@ -75,6 +75,7 @@ interface PlacedBlock {
   tabs?: { id: string; label: string; sectionIds: string[]; blocks: PlacedBlock[] }[];
   conditions?: BlockCondition[];
   validations?: FieldValidation[];
+  controlPluginId?: string;
 }
 
 interface BuilderSection {
@@ -184,7 +185,11 @@ function buildMockRecord(fields: SailsFieldDefinition[]): Record<string, any> {
         record[f.fieldName] = opts[0]?.value ?? 'option_1';
         break;
       }
-      case 'boolean': record[f.fieldName] = true; break;
+      case 'boolean': {
+        const def = (f.config as any)?.defaultValue ?? f.defaultValue;
+        record[f.fieldName] = def === 'true' || def === true;
+        break;
+      }
       case 'url': record[f.fieldName] = 'https://example.com'; break;
       default: record[f.fieldName] = `Sample ${f.name}`; break;
     }
@@ -194,7 +199,8 @@ function buildMockRecord(fields: SailsFieldDefinition[]): Record<string, any> {
 
 function renderFieldValue(field: SailsFieldDefinition, record: Record<string, any>, controlPluginId?: string): React.ReactNode {
   const controlReg = FieldControlRegistry.getInstance();
-  const controlPlugin = (controlPluginId ? controlReg.getControl(controlPluginId) : null) || controlReg.getFallbackControl(field.logicalType);
+  const effectiveControlId = controlPluginId || (field?.config as any)?.defaultControl || (field?.config as any)?.controlStyle;
+  const controlPlugin = (effectiveControlId ? controlReg.getControl(effectiveControlId) : null) || controlReg.getFallbackControl(field.logicalType);
   const val = record[field.fieldName];
   return <controlPlugin.RenderEdit field={field} value={val} readOnly={false} />;
 }
@@ -2753,12 +2759,37 @@ const LayoutStudio: React.FC = () => {
                 </div>
 
                 {selectedBlock.blockType === 'field' && (
-                  <div className="ls-prop-group">
-                    <label className="ls-prop-label">Label</label>
-                    <input className="sails-input" value={selectedBlock.labelOverride || ''}
-                      onChange={(e) => updateBlock(selectedBlock.id, { labelOverride: e.target.value })}
-                      placeholder={selectedField?.name} style={{ fontSize: 12, padding: '6px 8px' }} />
-                  </div>
+                  <>
+                    <div className="ls-prop-group">
+                      <label className="ls-prop-label">Label</label>
+                      <input className="sails-input" value={selectedBlock.labelOverride || ''}
+                        onChange={(e) => updateBlock(selectedBlock.id, { labelOverride: e.target.value })}
+                        placeholder={selectedField?.name} style={{ fontSize: 12, padding: '6px 8px' }} />
+                    </div>
+
+                    <div className="ls-prop-group">
+                      <label className="ls-prop-label">Display Control</label>
+                      <select
+                        className="sails-input"
+                        value={selectedBlock.controlPluginId || (selectedField?.config as any)?.defaultControl || (selectedField?.logicalType === 'boolean' ? 'control:boolean_toggle' : '')}
+                        onChange={(e) => updateBlock(selectedBlock.id, { controlPluginId: e.target.value || undefined })}
+                        style={{ fontSize: 12, padding: '6px 8px' }}
+                      >
+                        <option value="">Default (Automatic)</option>
+                        {selectedField?.logicalType === 'boolean' ? (
+                          <>
+                            <option value="control:boolean_toggle">Toggle Switch (Default)</option>
+                            <option value="control:boolean_checkbox">Pure Checkbox (No Label)</option>
+                            <option value="control:boolean_dropdown">Dropdown (Yes / No)</option>
+                          </>
+                        ) : (
+                          FieldControlRegistry.getInstance().getControlsForType(selectedField?.logicalType || 'short_text').map((ctrl: any) => (
+                            <option key={ctrl.id} value={ctrl.id}>{ctrl.name}</option>
+                          ))
+                        )}
+                      </select>
+                    </div>
+                  </>
                 )}
 
                 {selectedBlock.blockType === 'related_list' && (

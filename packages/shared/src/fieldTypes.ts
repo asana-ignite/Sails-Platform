@@ -80,6 +80,7 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
     iconName: 'AlignLeft',
     physicalType: 'text',
     parametersSchema: [
+      { name: 'rows', label: 'No. of Lines (Height)', type: 'number', defaultValue: 3, min: 1, max: 50 },
       { name: 'maxLength', label: 'Max Character Length', type: 'number', defaultValue: 2000, min: 1 },
       { name: 'placeholder', label: 'Placeholder Text', type: 'text', placeholder: 'e.g. Provide details...' }
     ]
@@ -91,6 +92,7 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
     iconName: 'FileText',
     physicalType: 'text',
     parametersSchema: [
+      { name: 'rows', label: 'No. of Lines (Height)', type: 'number', defaultValue: 5, min: 1, max: 50 },
       { name: 'placeholder', label: 'Placeholder Text', type: 'text', placeholder: 'e.g. Enter formatted content...' },
       { name: 'toolbarPreset', label: 'Toolbar Features', type: 'select', defaultValue: 'standard', options: [
         { label: 'Minimal (Bold, Italic, Underline)', value: 'minimal' },
@@ -189,8 +191,19 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
           { label: 'True (Checked)', value: 'true' }
         ]
       },
-      { name: 'trueLabel', label: 'True Display Label', type: 'text', placeholder: 'Yes / Active', defaultValue: 'True' },
-      { name: 'falseLabel', label: 'False Display Label', type: 'text', placeholder: 'No / Inactive', defaultValue: 'False' }
+      {
+        name: 'defaultControl',
+        label: 'Default Display Control',
+        type: 'select',
+        defaultValue: 'control:boolean_toggle',
+        options: [
+          { label: 'Toggle Switch (Default)', value: 'control:boolean_toggle' },
+          { label: 'Pure Checkbox (No Label)', value: 'control:boolean_checkbox' },
+          { label: 'Dropdown (Custom Labels)', value: 'control:boolean_dropdown' }
+        ]
+      },
+      { name: 'trueLabel', label: 'True Option Label', type: 'text', placeholder: 'e.g. Yes / Active / Pass', defaultValue: 'Yes' },
+      { name: 'falseLabel', label: 'False Option Label', type: 'text', placeholder: 'e.g. No / Inactive / Fail', defaultValue: 'No' }
     ]
   },
   {
@@ -306,14 +319,11 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
   {
     type: 'address',
     label: 'Address',
-    description: 'Physical location and postal address',
+    description: 'Unified single address text field',
     iconName: 'MapPin',
     physicalType: 'text',
     parametersSchema: [
-      { name: 'includeCountry', label: 'Include Country Field', type: 'boolean', defaultValue: true },
-      { name: 'includePostalCode', label: 'Include Postal / Zip Code Field', type: 'boolean', defaultValue: true },
-      { name: 'includeStateProvince', label: 'Include State / Province Field', type: 'boolean', defaultValue: true },
-      { name: 'placeholder', label: 'Input Placeholder', type: 'text', placeholder: 'e.g. 123 Main St, City, Country' }
+      { name: 'placeholder', label: 'Input Placeholder', type: 'text', placeholder: 'e.g. 123 Main St, Suite 400, New York, NY 10001' }
     ]
   },
   {

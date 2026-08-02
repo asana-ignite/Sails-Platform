@@ -5,7 +5,7 @@ import Spinner from '../../components/common/Spinner';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { useConsole } from '../../contexts/ConsoleContext';
 import { fetchCached } from '../../api/client';
-import { TableLayout, LayoutType, ViewType, LayoutStatus } from '@sails/shared';
+import { TableLayout, LayoutType, ViewType, LayoutStatus, toSnakeCase } from '@sails/shared';
 import './AdminViewManager.css';
 
 interface LayoutRow extends TableLayout {
@@ -592,13 +592,12 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
 
   const isCustom = layoutType === 'custom';
 
-  const derivedSystemName = (val: string) =>
-    val.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  const derivedSystemName = (val: string) => toSnakeCase(val);
 
   const validateSystemName = (val: string): string | null => {
     if (!val) return null;
-    if (!/^[a-zA-Z0-9]+$/.test(val)) {
-      return 'System Name must contain only English letters and numbers (no spaces or special characters).';
+    if (!/^[a-z0-9]+(_[a-z0-9]+)*$/.test(val)) {
+      return 'System Name must be in valid snake_case (e.g. customer_list_view).';
     }
     return null;
   };

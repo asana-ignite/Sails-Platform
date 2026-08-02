@@ -5,7 +5,7 @@ import {
   ArrowLeft, GripVertical, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
   AlertCircle, Save, Lock
 } from 'lucide-react';
-import { ConsoleApp, ConsoleMenu, SailsTableDefinition, TableLayout } from '@sails/shared';
+import { ConsoleApp, ConsoleMenu, SailsTableDefinition, TableLayout, toSnakeCase } from '@sails/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import IconPicker from '../../components/common/IconPicker';
 import { CustomSelect } from '../../components/common/CustomSelect';
@@ -306,7 +306,7 @@ const CreateAppModal: React.FC<{ onClose: () => void; onCreated: () => void }> =
       const res = await fetch('/api/console/apps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, slug: slug || undefined, description: description || undefined, icon }),
+        body: JSON.stringify({ name, slug: toSnakeCase(slug || name), description: description || undefined, icon }),
       });
       const result = await res.json();
       if (result.success) {
@@ -343,7 +343,7 @@ const CreateAppModal: React.FC<{ onClose: () => void; onCreated: () => void }> =
               <input type="text" className="sails-input" value={name} onChange={e => {
                 const val = e.target.value;
                 setName(val);
-                setSlug(val.replace(/[^a-zA-Z0-9]/g, '').toLowerCase());
+                setSlug(toSnakeCase(val));
               }}
                 placeholder="e.g. Customer Portal" required />
               <span className="sails-app-field-hint">Display name shown in the app switcher.</span>
@@ -450,7 +450,7 @@ const AppDetailView: React.FC<{
         body: JSON.stringify({
           id: app.id,
           name,
-          slug: slug || undefined,
+          slug: toSnakeCase(slug || name),
           description: description || undefined,
           icon,
         }),

@@ -14,3 +14,4 @@ export * from './plugins/DateControl';
 export * from './plugins/TimeControl';
 export * from './plugins/DateTimeControl';
 export * from './plugins/UserControl';
+export * from './plugins/PercentControl';

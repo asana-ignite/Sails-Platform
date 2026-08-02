@@ -18,7 +18,8 @@ export const NumberControl: FieldControlPlugin = {
       value={value ?? ''}
       placeholder="0"
       onChange={(e) => onChange && onChange(e.target.value)}
-      className={`sails-input w-full ${className}`}
+      className={`sails-input w-full text-right ${className}`}
+      style={{ textAlign: 'right' }}
     />
   ),
 

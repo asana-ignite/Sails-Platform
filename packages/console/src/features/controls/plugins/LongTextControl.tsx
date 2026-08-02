@@ -11,9 +11,10 @@ export const LongTextControl: FieldControlPlugin = {
 
   RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => {
     const placeholder = (field?.config as any)?.placeholder || `Provide ${field?.name || 'details'}...`;
+    const numRows = (field?.config as any)?.rows || 3;
     return (
       <textarea
-        rows={3}
+        rows={numRows}
         readOnly={readOnly}
         disabled={disabled}
         value={value ?? ''}

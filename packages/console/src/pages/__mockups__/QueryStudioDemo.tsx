@@ -3,17 +3,17 @@ import {
   Filter, Layers, X, LayoutGrid, Check, Play, RefreshCw,
   Search, ArrowRight, Table, Settings, ArrowLeft
 } from 'lucide-react';
-import { QueryStudioWidget, MOCK_LEAD_FIELDS, SimpleFilterRule } from './QueryStudioWidget';
+import { QueryStudioWidget, MOCK_LEAD_FIELDS, TabFilterGroup } from './QueryStudioWidget';
 import './QueryStudioWidget.css';
 
 export const QueryStudioDemo: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'PANEL' | 'DRAWER' | 'MODAL'>('PANEL');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [appliedRules, setAppliedRules] = useState<SimpleFilterRule[] | null>(null);
+  const [appliedGroups, setAppliedGroups] = useState<TabFilterGroup[] | null>(null);
 
-  const handleApply = (rules: SimpleFilterRule[]) => {
-    setAppliedRules(rules);
+  const handleApply = (groups: TabFilterGroup[]) => {
+    setAppliedGroups(groups);
     setIsDrawerOpen(false);
     setIsModalOpen(false);
   };
@@ -200,7 +200,7 @@ export const QueryStudioDemo: React.FC = () => {
             </div>
           </div>
 
-          {appliedRules && appliedRules.length > 0 ? (
+          {appliedGroups && appliedGroups.some(g => g.rules && g.rules.length > 0) ? (
             <div style={{
               background: '#e0f2fe',
               border: '1px solid #bae6fd',
@@ -213,14 +213,15 @@ export const QueryStudioDemo: React.FC = () => {
               alignItems: 'center'
             }}>
               <span>
-                <strong>{appliedRules.length} Active Filters Applied:</strong>{' '}
-                {appliedRules.map((r, i) => {
-                  const f = MOCK_LEAD_FIELDS.find((x) => x.id === r.fieldId);
+                <strong>{appliedGroups.flatMap(g => g.rules).length} Active Filters Applied:</strong>{' '}
+                {appliedGroups.flatMap(g => g.rules).map((r, i) => {
+                  const fieldId = r.lhsChain?.[0];
+                  const f = MOCK_LEAD_FIELDS.find((x) => x.id === fieldId || x.fieldName === fieldId);
                   return (
                     <span key={r.id}>
                       {i > 0 ? ` ${r.logic.toUpperCase()} ` : ''}
                       <code style={{ background: '#ffffff', padding: '1px 5px', borderRadius: '4px' }}>
-                        {f?.name || r.fieldId} {r.operator} {r.value || '—'}
+                        {f?.name || fieldId || 'Field'} {r.operator} {String(r.rhsValue ?? '—')}
                       </code>
                     </span>
                   );
@@ -237,9 +238,9 @@ export const QueryStudioDemo: React.FC = () => {
                   borderRadius: '4px',
                   cursor: 'pointer'
                 }}
-                onClick={() => setAppliedRules(null)}
+                onClick={() => setAppliedGroups(null)}
               >
-                Clear Filters
+                Clear All
               </button>
             </div>
           ) : (

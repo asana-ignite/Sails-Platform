@@ -271,3 +271,134 @@
   background: rgba(255, 255, 255, 0.08);
   color: var(--sails-text-main);
 }
+
+/* ── Detail Page Specific Utility Classes ── */
+.sails-detail-field-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--sails-border-color, #cbd5e1);
+  background: var(--sails-bg-card, #ffffff);
+  color: var(--sails-text-main, #0f172a);
+  font-size: 13px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sails-detail-field-input:focus {
+  outline: none;
+  border-color: var(--sails-primary, #0284c7);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.sails-detail-section-card {
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  box-shadow: var(--sails-shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+}
+
+.sails-detail-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--sails-text-main, #0f172a);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+}
+
+.sails-detail-error-banner {
+  padding: 16px 20px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Theme-Aligned Calendar & Date Picker Indicator ── */
+.sails-date-input,
+input[type="date"].sails-detail-field-input,
+input[type="datetime-local"].sails-detail-field-input,
+input[type="time"].sails-detail-field-input,
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  color-scheme: light !important;
+  font-family: var(--sails-font-sans, inherit) !important;
+  background-color: var(--sails-bg-card, #ffffff) !important;
+  color: var(--sails-text-main, #0f172a) !important;
+  border: 1px solid var(--sails-border-color, #cbd5e1) !important;
+  border-radius: var(--sails-radius-md, 8px) !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  accent-color: var(--sails-primary, #0284c7) !important;
+  box-shadow: var(--sails-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05)) !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.sails-date-input:focus,
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+input[type="time"]:focus {
+  outline: none !important;
+  border-color: var(--sails-primary, #0284c7) !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+.sails-date-input::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer !important;
+  opacity: 0.7 !important;
+  padding: 4px !important;
+  border-radius: 6px !important;
+  filter: invert(0.2) !important;
+  transition: opacity 0.15s ease, background-color 0.15s ease !important;
+}
+
+.sails-date-input::-webkit-calendar-picker-indicator:hover,
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1 !important;
+  background-color: var(--sails-primary-light, rgba(2, 132, 199, 0.12)) !important;
+}
+
+/* ── Thin Hover Scrollbars for Time Picker Columns ── */
+.sails-time-col {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.2s ease;
+}
+
+.sails-time-col:hover {
+  scrollbar-color: var(--sails-border-color, #cbd5e1) transparent;
+}
+
+.sails-time-col::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sails-time-col::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sails-time-col::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.sails-time-col:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+.sails-time-col::-webkit-scrollbar-thumb:hover {
+  background: var(--sails-primary, #0284c7);
+}

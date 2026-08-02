@@ -398,6 +398,26 @@
     margin-bottom: 16px;
 }
 
+.om-field-group input.sails-input,
+.om-field-group select.sails-input,
+.om-field-group textarea.sails-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    font-size: 13px;
+    height: 38px;
+    border-radius: var(--sails-radius-md, 8px);
+    border: 1px solid var(--sails-border-color, #cbd5e1);
+    background: var(--sails-bg-card, #ffffff);
+    color: var(--sails-text-main, #0f172a);
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.om-field-group textarea.sails-input {
+    height: auto;
+}
+
 .om-field-label {
     display: block;
     font-size: 0.85rem;

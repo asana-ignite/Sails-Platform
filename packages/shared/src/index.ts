@@ -534,5 +534,46 @@ export interface ZoneTelemetryPayload {
   timestamp: string;
 }
 
+// ─── Naming & Field Standardization Helpers ───────────────────
+
+/**
+ * Utility: Standardize string identifiers to snake_case
+ * E.g. "Email Address" ➔ "email_address", "Is Active Customer" ➔ "is_active_customer"
+ */
+export const toSnakeCase = (str: string): string => {
+  if (!str) return '';
+  return str
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
+};
+
+/**
+ * Standard audit/system field identifiers across SAILS Platform
+ */
+export const SYSTEM_FIELDS = new Set([
+  'id',
+  'tenant_id',
+  'is_system',
+  'is_active',
+  'created_at',
+  'updated_at',
+  'owner_id'
+]);
+
+/**
+ * Helper: Check if a field name matches a platform system/audit field,
+ * normalizing both camelCase ('isSystem') and snake_case ('is_system') inputs.
+ */
+export const isSystemField = (fieldName?: string | null): boolean => {
+  if (!fieldName) return false;
+  const normalized = toSnakeCase(fieldName);
+  const cleanTarget = normalized.replace(/_/g, '');
+  return SYSTEM_FIELDS.has(normalized) || Array.from(SYSTEM_FIELDS).some(sys => sys.replace(/_/g, '') === cleanTarget);
+};
+
+
 
 

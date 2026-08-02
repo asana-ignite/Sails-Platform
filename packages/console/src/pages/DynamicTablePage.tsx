@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useConsole } from '../contexts/ConsoleContext';
 import type { ConsoleMenu, TableLayout, SailsFieldDefinition, ListAction } from '@sails/shared';
+import { isSystemField } from '@sails/shared';
 import DynamicIcon from '../components/common/DynamicIcon';
 import CustomSelect from '../components/common/CustomSelect';
 import LoadingScreen from '../components/common/LoadingScreen';
@@ -258,9 +259,7 @@ const DynamicTablePage: React.FC = () => {
         const tableFields: SailsFieldDefinition[] = recordsData.fields || [];
 
         if (!targetLayout) {
-          const displayableFields = tableFields.filter(
-            (f) => !['is_active', 'is_system', 'tenant_id', 'owner_id'].includes(f.fieldName.toLowerCase())
-          );
+          const displayableFields = tableFields.filter((f) => !isSystemField(f.fieldName));
           targetLayout = {
             id: 'default-synthetic-list',
             viewType: 'LIST',
@@ -358,7 +357,7 @@ const DynamicTablePage: React.FC = () => {
   const rawCols = useMemo(() => {
     if (config?.columns && config.columns.length > 0) return config.columns;
     return fields
-      .filter((f) => !['is_active', 'is_system', 'tenant_id', 'owner_id'].includes(f.fieldName.toLowerCase()))
+      .filter((f) => !isSystemField(f.fieldName))
       .map((f, idx) => ({
         id: `col-${f.id}`,
         fieldId: f.id,
@@ -540,7 +539,9 @@ const DynamicTablePage: React.FC = () => {
         refetch: () => doFetch(),
       });
     } else if (action.actionKey === 'create') {
-      navigate(`/objects/${dataModelId}/new`);
+      const parts = location.pathname.split('/').filter(Boolean);
+      const appSlug = parts[0] || 'admin';
+      navigate(`/${appSlug}/models/${dataModelId}/new`);
     }
   };
 

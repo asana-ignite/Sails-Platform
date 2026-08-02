@@ -7,11 +7,12 @@ import { NumberControl } from './plugins/NumberControl';
 import { DecimalControl } from './plugins/DecimalControl';
 import { CurrencyControl } from './plugins/CurrencyControl';
 import { SelectControl } from './plugins/SelectControl';
-import { BooleanControl } from './plugins/BooleanControl';
+import { BooleanToggleControl, BooleanCheckboxControl, BooleanDropdownControl } from './plugins/BooleanControl';
 import { DateControl } from './plugins/DateControl';
 import { TimeControl } from './plugins/TimeControl';
 import { DateTimeControl } from './plugins/DateTimeControl';
 import { UserControl } from './plugins/UserControl';
+import { PercentControl } from './plugins/PercentControl';
 
 export class FieldControlRegistry {
   private static instance: FieldControlRegistry;
@@ -27,8 +28,11 @@ export class FieldControlRegistry {
     this.register(NumberControl);
     this.register(DecimalControl);
     this.register(CurrencyControl);
+    this.register(PercentControl);
     this.register(SelectControl);
-    this.register(BooleanControl);
+    this.register(BooleanToggleControl);
+    this.register(BooleanCheckboxControl);
+    this.register(BooleanDropdownControl);
     this.register(DateControl);
     this.register(TimeControl);
     this.register(DateTimeControl);

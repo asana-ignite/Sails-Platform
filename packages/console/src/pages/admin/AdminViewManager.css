@@ -68,16 +68,27 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
 }
 
 .om-list-table {
   width: 100%;
-  min-width: max-content;
-  table-layout: auto;
+  max-width: 100%;
+  min-width: 0;
+  table-layout: fixed;
   border-collapse: collapse;
   text-align: left;
 }
+
+.om-list-table th:nth-child(1) { width: 26%; }
+.om-list-table th:nth-child(2) { width: 20%; }
+.om-list-table th:nth-child(3) { width: 14%; }
+.om-list-table th:nth-child(4) { width: 11%; }
+.om-list-table th:nth-child(5) { width: 9%; }
+.om-list-table th:nth-child(6) { width: 10%; }
+.om-list-table th:nth-child(7) { width: 10%; }
+.om-list-table th:nth-child(8) { width: 48px; }
 
 .om-list-table th {
   padding: 16px 20px;
@@ -112,6 +123,8 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .lav-cell-name__text {
@@ -119,6 +132,8 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .lav-icon-wrapper {
@@ -136,12 +151,20 @@
 .lav-name-primary {
   font-weight: 600;
   color: var(--sails-text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .lav-system-name {
   font-size: 0.8rem;
   color: var(--sails-text-muted);
   font-family: 'SF Mono', 'Fira Code', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .lav-model-link {

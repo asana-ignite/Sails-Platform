@@ -106,7 +106,7 @@ export const RichTextControl: FieldControlPlugin = {
           class: 'sails-richtext__content',
         },
       },
-      onUpdate: ({ editor }) => {
+      onUpdate: ({ editor }: { editor: any }) => {
         const html = editor.getHTML();
         if (onChange) onChange(html === '<p></p>' ? '' : html);
       },
@@ -285,7 +285,7 @@ export const RichTextControl: FieldControlPlugin = {
           </ToolbarBtn>
         </div>
 
-        <EditorContent editor={editor} className="sails-richtext__body" />
+        <EditorContent editor={editor} className="sails-richtext__body" style={{ minHeight: `${((field?.config as any)?.rows || 5) * 24}px` }} />
       </div>
     );
   },
