@@ -1,6 +1,7 @@
 export * from './types';
 export * from './FieldControlRegistry';
 export * from './FieldControlWrapper';
+export * from './LazyRenderErrorBoundary';
 export * from './plugins/LookupControl';
 export * from './plugins/ShortTextControl';
 export * from './plugins/LongTextControl';
@@ -15,3 +16,8 @@ export * from './plugins/TimeControl';
 export * from './plugins/DateTimeControl';
 export * from './plugins/UserControl';
 export * from './plugins/PercentControl';
+export * from './plugins/AddressControl';
+export * from './plugins/AttachmentControl';
+export * from './plugins/CitizenIdControl';
+export * from './plugins/LatLngControl';
+export * from './plugins/AutoNumberControl';

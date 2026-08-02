@@ -2,6 +2,50 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';
 import { invalidateConfigCache } from '@/lib/configCache';
+import { normalizeMenuPath } from '@/lib/menuPaths';
+
+async function findPathConflict(tenantId: string, path?: string | null, excludeId?: string) {
+  if (!path || !path.trim()) return null;
+  const normalized = normalizeMenuPath(path);
+  if (!normalized) return null;
+
+  const others = await db.consoleMenu.findMany({
+    where: {
+      app: { tenantId },
+      path: { not: '' },
+      id: excludeId ? { not: excludeId } : undefined
+    },
+    select: { id: true, label: true, path: true }
+  });
+  return others.find(m => normalizeMenuPath(m.path) === normalized) || null;
+}
+
+function validatePathFormat(path?: string | null): string | null {
+  if (!path || !path.trim()) return null;
+  if (!path.trim().startsWith('/')) return 'Browser Path must start with "/"';
+  return null;
+}
+
+async function validateListViewMapping(tenantId: string, dataModelId?: string | null, listViewId?: string | null): Promise<string | null> {
+  if (!listViewId) return null;
+  if (!dataModelId) return 'List View requires a Data Model';
+  const layout = await db.tableLayout.findFirst({
+    where: {
+      id: listViewId,
+      tableId: dataModelId,
+      table: { tenantId }
+    },
+    select: { id: true }
+  });
+  return layout ? null : 'List View does not belong to the selected Data Model';
+}
+
+function pathConflictError(path?: string | null, label?: string) {
+  return NextResponse.json(
+    { success: false, error: `Browser Path "${path?.trim()}" is already used by menu "${label}"` },
+    { status: 409 }
+  );
+}
 
 /**
  * GET /api/console/menus
@@ -60,9 +104,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Application not found or access denied' }, { status: 404 });
     }
 
+    const pathError = validatePathFormat(path);
+    if (pathError) {
+      return NextResponse.json({ success: false, error: pathError }, { status: 400 });
+    }
+
+    const conflict = await findPathConflict(tenantId, path);
+    if (conflict) {
+      return pathConflictError(path, conflict.label);
+    }
+
+    const viewError = await validateListViewMapping(tenantId, dataModelId, listViewId);
+    if (viewError) {
+      return NextResponse.json({ success: false, error: viewError }, { status: 400 });
+    }
+
     const newMenu = await db.consoleMenu.create({
       data: {
         appId,
+        tenantId: app.tenantId,
         label,
         icon,
         path,
@@ -79,6 +139,9 @@ export async function POST(req: Request) {
     invalidateConfigCache(tenantId);
     return NextResponse.json({ success: true, data: newMenu });
   } catch (error: any) {
+    if (error?.code === 'P2002') {
+      return NextResponse.json({ success: false, error: 'Browser Path is already used by another menu' }, { status: 409 });
+    }
     console.error('[API CONSOLE MENUS POST]:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -115,6 +178,24 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: false, error: 'System menu items are protected and can only be modified by Super Admins' }, { status: 403 });
     }
 
+    const pathError = validatePathFormat(updateData.path);
+    if (pathError) {
+      return NextResponse.json({ success: false, error: pathError }, { status: 400 });
+    }
+
+    const conflict = await findPathConflict(tenantId, updateData.path, id);
+    if (conflict) {
+      return pathConflictError(updateData.path, conflict.label);
+    }
+
+    if (updateData.listViewId !== undefined) {
+      const effectiveDataModelId = updateData.dataModelId ?? existing.dataModelId;
+      const viewError = await validateListViewMapping(tenantId, effectiveDataModelId, updateData.listViewId);
+      if (viewError) {
+        return NextResponse.json({ success: false, error: viewError }, { status: 400 });
+      }
+    }
+
     const updatedMenu = await db.consoleMenu.update({
       where: { id },
       data: updateData
@@ -123,6 +204,9 @@ export async function PATCH(req: Request) {
     invalidateConfigCache(tenantId);
     return NextResponse.json({ success: true, data: updatedMenu });
   } catch (error: any) {
+    if (error?.code === 'P2002') {
+      return NextResponse.json({ success: false, error: 'Browser Path is already used by another menu' }, { status: 409 });
+    }
     console.error('[API CONSOLE MENUS PATCH]:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

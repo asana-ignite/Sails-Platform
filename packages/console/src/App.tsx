@@ -63,7 +63,7 @@ const SmartPageRouter: React.FC = () => {
     return <LoadingScreen />;
   }
 
-  const normalizePath = (p: string | null) => p ? p.replace(/\/+$/, '').toLowerCase() : '';
+  const normalizePath = (p: string | null | undefined) => p ? p.replace(/\/+$/, '').toLowerCase() : '';
 
   const findMenu = (menus: ConsoleMenu[]): ConsoleMenu | null => {
     const target = normalizePath(location.pathname);
@@ -115,17 +115,22 @@ const SmartPageRouter: React.FC = () => {
     }
   }
 
-  const isRecordDetailRoute = location.pathname.includes('/models/') || location.pathname.includes('/objects/');
-  if (isRecordDetailRoute) {
-    return <DynamicDetailPage />;
-  }
-
   const isDataModelRoute =
     activeMenu?.actionType === 'data_model' ||
     activeMenu?.actionType === 'table' ||
     activeMenu?.actionType === 'list_view' ||
     Boolean(activeMenu?.dataModelId) ||
     Boolean(activeMenu?.listViewId);
+
+  // Record detail routes use the nav path + layout + record id:
+  // /test/testtype/test_type_details_view/<recordId> (or .../new).
+  // If the URL extends the matched menu path, we are on a record route.
+  const targetPath = normalizePath(location.pathname);
+  const menuPath = normalizePath(activeMenu?.path);
+  const isRecordDetailRoute = isDataModelRoute && !!menuPath && targetPath.length > menuPath.length && targetPath.startsWith(menuPath + '/');
+  if (isRecordDetailRoute) {
+    return <DynamicDetailPage />;
+  }
 
   if (isDataModelRoute) {
     return <DynamicTablePage />;

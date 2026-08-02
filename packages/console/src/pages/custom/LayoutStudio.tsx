@@ -20,9 +20,11 @@ import {
   MousePointerClick,
 } from 'lucide-react';
 import type { SailsFieldDefinition, LayoutColumn, LayoutFilter, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction } from '@sails/shared';
+import { formatDateTimeValue } from '@sails/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { FieldControlRegistry } from '../../features/controls/FieldControlRegistry';
+import { DetailFieldInput, DetailFieldDisplay, mockFieldValue } from '../../features/controls/DetailFieldControl';
 import { ActionRegistry } from '../../features/actions';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchCached } from '../../api/client';
@@ -172,37 +174,43 @@ const MOCK_RELATED_CONTACTS = [
 function buildMockRecord(fields: SailsFieldDefinition[]): Record<string, any> {
   const record: Record<string, any> = {};
   fields.forEach((f) => {
-    switch (f.logicalType) {
-      case 'text': record[f.fieldName] = 'Sample text'; break;
-      case 'long_text': record[f.fieldName] = 'Lorem ipsum dolor sit amet.'; break;
-      case 'email': record[f.fieldName] = 'user@example.com'; break;
-      case 'phone': record[f.fieldName] = '+66 2 123 4567'; break;
-      case 'currency': record[f.fieldName] = 250000; break;
-      case 'number': record[f.fieldName] = 42; break;
-      case 'date': record[f.fieldName] = '2026-07-28'; break;
-      case 'select': {
-        const opts = (f.config as any)?.options || [];
-        record[f.fieldName] = opts[0]?.value ?? 'option_1';
-        break;
-      }
-      case 'boolean': {
-        const def = (f.config as any)?.defaultValue ?? f.defaultValue;
-        record[f.fieldName] = def === 'true' || def === true;
-        break;
-      }
-      case 'url': record[f.fieldName] = 'https://example.com'; break;
-      default: record[f.fieldName] = `Sample ${f.name}`; break;
-    }
+    // Delegate mock value generation to the resolved control plugin so the
+    // canvas preview looks exactly like the real front-end renderer.
+    record[f.fieldName] = mockFieldValue(f);
   });
   return record;
 }
 
-function renderFieldValue(field: SailsFieldDefinition, record: Record<string, any>, controlPluginId?: string): React.ReactNode {
-  const controlReg = FieldControlRegistry.getInstance();
-  const effectiveControlId = controlPluginId || (field?.config as any)?.defaultControl || (field?.config as any)?.controlStyle;
-  const controlPlugin = (effectiveControlId ? controlReg.getControl(effectiveControlId) : null) || controlReg.getFallbackControl(field.logicalType);
+function renderFieldValue(
+  field: SailsFieldDefinition,
+  record: Record<string, any>,
+  controlPluginId: string | undefined,
+  mode: 'edit' | 'display',
+  opts?: { inert?: boolean; onValueChange?: (val: any) => void }
+): React.ReactNode {
   const val = record[field.fieldName];
-  return <controlPlugin.RenderEdit field={field} value={val} readOnly={false} />;
+
+  // Read-Only View — mirrors the real page's DetailFieldDisplay
+  // (DynamicDetailPage.tsx): formatted display rendering, no input chrome.
+  if (mode === 'display') {
+    return <DetailFieldDisplay field={field} val={val} controlPluginId={controlPluginId} />;
+  }
+
+  // Edit mode — mirrors the real page's DetailFieldInput exactly:
+  // .ls-block__input-wrapper > control. Inert (pointer-events blocked) in
+  // design mode; fully interactive in Preview mode where typing updates the
+  // mock record so conditions evaluate live.
+  return (
+    <DetailFieldInput
+      field={field}
+      fieldKey={field.fieldName}
+      label={field.name}
+      val={val}
+      controlPluginId={controlPluginId}
+      inert={opts?.inert}
+      onChange={(_key, v) => opts?.onValueChange && opts.onValueChange(v)}
+    />
+  );
 }
 
 function buildPalette(fields: SailsFieldDefinition[], placedFieldIds: string[]): PaletteItem[] {
@@ -287,6 +295,10 @@ function renderListFieldValue(field: SailsFieldDefinition, record: Record<string
   if (val === undefined || val === null) return '\u2014';
   if (field.logicalType === 'currency') return `\u0E3F${val.toLocaleString()}`;
   if (field.logicalType === 'boolean') return val ? 'Yes' : 'No';
+  if (field.logicalType === 'date' || field.logicalType === 'datetime' || field.logicalType === 'timestamp' || field.logicalType === 'time') {
+    const formatted = formatDateTimeValue(val, field.config, field.logicalType);
+    return formatted || '\u2014';
+  }
   if (field.logicalType === 'select') {
     const options = (field.config as any)?.options || [];
     return options.find((o: any) => o.value === val)?.label || String(val);
@@ -1147,6 +1159,12 @@ const LayoutStudio: React.FC = () => {
         };
       });
     });
+  };
+
+  // Live-editable mock record — Preview mode writes back here so
+  // conditions evaluate against current input (true WYSIWYG).
+  const handleMockValueChange = (fieldName: string, value: any) => {
+    setMockRecord((prev) => ({ ...prev, [fieldName]: value }));
   };
 
   // ── LIST View Actions ─────────────────────────────────────
@@ -2196,7 +2214,16 @@ const LayoutStudio: React.FC = () => {
                                 </div>
                                 {controlsEl}
                                 <label className="ls-block__label">{blk.labelOverride || field.name}{field.isRequired && <span className="ls-block__required">*</span>}</label>
-                                <div className="ls-block__value">{blk.visible ? renderFieldValue(field, mockRecord, blk.controlPluginId) : <em>hidden</em>}</div>
+                                {blk.visible ? (
+                                  isReadOnly ? (
+                                    <div className="ls-block__value">{renderFieldValue(field, mockRecord, blk.controlPluginId, 'display')}</div>
+                                  ) : (
+                                    renderFieldValue(field, mockRecord, blk.controlPluginId, 'edit', {
+                                      inert: !previewMode,
+                                      onValueChange: (v) => handleMockValueChange(field.fieldName, v),
+                                    })
+                                  )
+                                ) : <em className="ls-block__empty">hidden</em>}
                                 <span className="ls-block__width-badge">{blk.width} cols</span>
                                 <span className="ls-block__type-badge">{field.logicalType}</span>
                                 <div className="ls-block__resize-handle" onMouseDown={(e) => handleResizeStart(e, blk.id, blk.width)} />
@@ -2318,7 +2345,16 @@ const LayoutStudio: React.FC = () => {
                                                 {hasValidations && <span className="ls-indicator ls-indicator--val"><ShieldAlert size={10} /></span>}
                                               </div>
                                               <label className="ls-block__label">{tb.labelOverride || tbField.name}{tbField.isRequired && <span className="ls-block__required">*</span>}</label>
-                                              <div className="ls-block__value">{tb.visible ? renderFieldValue(tbField, mockRecord) : <em>hidden</em>}</div>
+                                              {tb.visible ? (
+                                                isReadOnly ? (
+                                                  <div className="ls-block__value">{renderFieldValue(tbField, mockRecord, tb.controlPluginId, 'display')}</div>
+                                                ) : (
+                                                  renderFieldValue(tbField, mockRecord, tb.controlPluginId, 'edit', {
+                                                    inert: !previewMode,
+                                                    onValueChange: (v) => handleMockValueChange(tbField.fieldName, v),
+                                                  })
+                                                )
+                                              ) : <em className="ls-block__empty">hidden</em>}
                                               <span className="ls-block__width-badge">{tb.width} cols</span>
                                               <span className="ls-block__type-badge">{tbField.logicalType}</span>
                                               <div className="ls-block__resize-handle" onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, tb.id, tb.width); }} />

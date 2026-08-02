@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { formatDateTimeValue } from '@sails/shared';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
+import '../controls.css';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -11,6 +13,7 @@ const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 interface SailsDatePickerProps {
   value?: string;
+  displayText?: string;
   onChange?: (val: string) => void;
   disabled?: boolean;
   readOnly?: boolean;
@@ -20,6 +23,7 @@ interface SailsDatePickerProps {
 
 export const SailsDatePicker: React.FC<SailsDatePickerProps> = ({
   value,
+  displayText,
   onChange,
   disabled,
   readOnly,
@@ -130,108 +134,69 @@ export const SailsDatePicker: React.FC<SailsDatePickerProps> = ({
   const isTodayCurrentView = today.getFullYear() === viewYear && today.getMonth() === viewMonth;
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%', display: 'inline-block' }}>
+    <div ref={containerRef} className="sails-picker__wrapper">
       <div
         className={`sails-input sails-date-input-container ${disabled || readOnly ? 'disabled' : ''} ${className}`}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          cursor: disabled || readOnly ? 'not-allowed' : 'pointer',
-          padding: '7px 12px',
-          borderRadius: 8,
-          border: '1px solid var(--sails-border-color, #cbd5e1)',
-          background: 'var(--sails-bg-card, #ffffff)',
-          color: 'var(--sails-text-main, #0f172a)',
-          fontSize: 13,
-          boxSizing: 'border-box',
-          width: '100%'
-        }}
         onClick={() => !disabled && !readOnly && setIsOpen((prev) => !prev)}
       >
-        <span style={{ flex: 1, color: value ? 'var(--sails-text-main, #0f172a)' : 'var(--sails-text-muted, #94a3b8)' }}>
-          {value || placeholder}
+        <span className={`sails-picker__text ${value ? 'sails-picker__text--filled' : ''}`}>
+          {displayText || value || placeholder}
         </span>
         {value && !disabled && !readOnly ? (
           <X
             size={14}
-            style={{ color: 'var(--sails-text-muted)', cursor: 'pointer' }}
+            className="sails-picker__clear"
             onClick={(e) => {
               e.stopPropagation();
               if (onChange) onChange('');
             }}
           />
         ) : (
-          <Calendar size={15} style={{ color: 'var(--sails-primary, #0284c7)', flexShrink: 0 }} />
+          <Calendar size={15} className="sails-picker__icon" />
         )}
       </div>
 
       {isOpen && (
-        <div
-          className="sails-date-popover"
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 6px)',
-            left: 0,
-            zIndex: 9999,
-            width: 280,
-            padding: 16,
-            borderRadius: 14,
-            background: 'var(--sails-bg-card, #ffffff)',
-            border: '1px solid var(--sails-border-color, #e2e8f0)',
-            boxShadow: '0 12px 36px rgba(15, 23, 42, 0.14), 0 4px 12px rgba(0, 0, 0, 0.05)',
-            backdropFilter: 'blur(16px)',
-            fontFamily: 'var(--sails-font-sans, system-ui, -apple-system, sans-serif)',
-            animation: 'sailsFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
-          }}
-        >
+        <div className="sails-date-popover">
           {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--sails-text-main, #0f172a)' }}>
+          <div className="sails-popover__header sails-popover__header--compact">
+            <span className="sails-popover__title">
               {MONTH_NAMES[viewMonth]} {viewYear}
             </span>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div className="sails-popover__nav">
               <button
                 type="button"
-                className="sails-btn sails-btn--ghost"
+                className="sails-btn sails-btn--ghost sails-popover__nav-btn"
                 onClick={handlePrevMonth}
-                style={{ padding: 4, borderRadius: 6, cursor: 'pointer', border: 'none', background: 'transparent' }}
               >
-                <ChevronLeft size={16} style={{ color: 'var(--sails-text-main)' }} />
+                <ChevronLeft size={16} />
               </button>
               <button
                 type="button"
-                className="sails-btn sails-btn--ghost"
+                className="sails-btn sails-btn--ghost sails-popover__nav-btn"
                 onClick={handleNextMonth}
-                style={{ padding: 4, borderRadius: 6, cursor: 'pointer', border: 'none', background: 'transparent' }}
               >
-                <ChevronRight size={16} style={{ color: 'var(--sails-text-main)' }} />
+                <ChevronRight size={16} />
               </button>
             </div>
           </div>
 
           {/* Weekday Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 6, textAlign: 'center' }}>
+          <div className="sails-popover__weekdays">
             {WEEKDAYS.map((wd) => (
-              <span key={wd} style={{ fontSize: 11, fontWeight: 600, color: 'var(--sails-text-muted, #64748b)', padding: '4px 0' }}>
+              <span key={wd} className="sails-popover__weekday">
                 {wd}
               </span>
             ))}
           </div>
 
           {/* Days Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, textAlign: 'center' }}>
+          <div className="sails-popover__days">
             {/* Leading blank days from previous month */}
             {Array.from({ length: startWeekday }).map((_, idx) => (
               <span
                 key={`prev-${idx}`}
-                style={{
-                  fontSize: 12,
-                  padding: '6px 0',
-                  color: 'var(--sails-text-muted, #cbd5e1)',
-                  opacity: 0.35,
-                  userSelect: 'none'
-                }}
+                className="sails-popover__day sails-popover__day--muted"
               >
                 {prevMonthDays - startWeekday + idx + 1}
               </span>
@@ -247,38 +212,18 @@ export const SailsDatePicker: React.FC<SailsDatePickerProps> = ({
                 selectedDate.getDate() === dayNum;
               const isToday = isTodayCurrentView && today.getDate() === dayNum;
 
+              const dayClass = [
+                'sails-popover__day',
+                isSelected ? 'sails-popover__day--selected' : '',
+                isToday ? 'sails-popover__day--today' : ''
+              ].filter(Boolean).join(' ');
+
               return (
                 <button
                   type="button"
                   key={`day-${dayNum}`}
+                  className={dayClass}
                   onClick={() => handleSelectDay(dayNum)}
-                  style={{
-                    fontSize: 12,
-                    fontWeight: isSelected || isToday ? 700 : 500,
-                    padding: '6px 0',
-                    borderRadius: 8,
-                    border: isToday && !isSelected ? '1px solid var(--sails-primary, #0284c7)' : '1px solid transparent',
-                    background: isSelected
-                      ? 'var(--sails-primary, #0284c7)'
-                      : 'transparent',
-                    color: isSelected
-                      ? '#ffffff'
-                      : isToday
-                      ? 'var(--sails-primary, #0284c7)'
-                      : 'var(--sails-text-main, #0f172a)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected) {
-                      (e.currentTarget as HTMLElement).style.background = 'rgba(2, 132, 199, 0.1)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected) {
-                      (e.currentTarget as HTMLElement).style.background = 'transparent';
-                    }
-                  }}
                 >
                   {dayNum}
                 </button>
@@ -287,46 +232,11 @@ export const SailsDatePicker: React.FC<SailsDatePickerProps> = ({
           </div>
 
           {/* Footer Actions */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginTop: 12,
-              paddingTop: 10,
-              borderTop: '1px solid var(--sails-border-color, #f1f5f9)'
-            }}
-          >
-            <button
-              type="button"
-              onClick={handleClear}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--sails-danger, #ef4444)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                padding: '4px 8px',
-                borderRadius: 6
-              }}
-            >
+          <div className="sails-popover__footer">
+            <button type="button" className="sails-popover__action sails-popover__action--danger" onClick={handleClear}>
               Clear
             </button>
-            <button
-              type="button"
-              onClick={handleSelectToday}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--sails-primary, #0284c7)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                padding: '4px 8px',
-                borderRadius: 6
-              }}
-            >
+            <button type="button" className="sails-popover__action sails-popover__action--primary" onClick={handleSelectToday}>
               Today
             </button>
           </div>
@@ -344,9 +254,16 @@ export const DateControl: FieldControlPlugin = {
   compatibleTypes: ['date'],
   isDefault: true,
 
-  RenderEdit: ({ value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => (
+  mockValue: () => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  },
+
+  RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => (
     <SailsDatePicker
       value={value ? String(value) : ''}
+      displayText={value ? formatDateTimeValue(value, field?.config, field.logicalType || 'date') : ''}
       onChange={(val) => onChange && onChange(val)}
       disabled={disabled}
       readOnly={readOnly}
@@ -354,7 +271,8 @@ export const DateControl: FieldControlPlugin = {
     />
   ),
 
-  RenderDisplay: ({ value }: FieldControlProps) => (
-    <span className="text-xs text-slate-200">{value ? String(value) : '—'}</span>
-  ),
+  RenderDisplay: ({ field, value }: FieldControlProps) => {
+    const formatted = value ? formatDateTimeValue(value, field?.config, field.logicalType || 'date') : '';
+    return <span>{formatted || '—'}</span>;
+  },
 };

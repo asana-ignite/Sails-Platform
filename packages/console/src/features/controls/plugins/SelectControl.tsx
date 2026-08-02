@@ -1,6 +1,7 @@
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import { CustomSelect } from '../../../components/common/CustomSelect';
+import '../controls.css';
 
 export const SelectControl: FieldControlPlugin = {
   id: 'control:select',
@@ -9,6 +10,11 @@ export const SelectControl: FieldControlPlugin = {
   iconName: 'ListFilter',
   compatibleTypes: ['select', 'enum'],
   isDefault: true,
+
+  mockValue: (field) => {
+    const opts = (field.config as any)?.options || [];
+    return opts[0]?.value ?? 'option_1';
+  },
 
   RenderEdit: ({ field, value, onChange, disabled, readOnly, size = 'sm' }: FieldControlProps) => {
     const rawOptions: Array<{ label: string; value: string }> = (field.config as any)?.options || [];
@@ -22,19 +28,19 @@ export const SelectControl: FieldControlPlugin = {
         size={size === 'lg' ? 'lg' : size === 'sm' ? 'sm' : 'md'}
         disabled={disabled || readOnly}
         onChange={(newVal) => onChange && onChange(newVal)}
-        className="w-full"
+        className="sails-custom-select--full sails-custom-select--field"
       />
     );
   },
 
   RenderDisplay: ({ field, value }: FieldControlProps) => {
-    if (value === undefined || value === null || value === '') return <span className="text-xs text-slate-500">—</span>;
+    if (value === undefined || value === null || value === '') return <span>—</span>;
     const options: Array<{ label: string; value: string }> = (field.config as any)?.options || [];
     const found = options.find((o) => o.value === value);
     const label = found ? found.label : String(value);
 
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-200 border border-slate-700">
+      <span className="sails-control-select-badge">
         {label}
       </span>
     );

@@ -1,6 +1,13 @@
 @import './design-tokens.css';
 @import './admin-common.css';
 
+/* Shared animations — single source of truth (was duplicated in
+   pickers.css / UserDetailsModal.css with conflicting bodies) */
+@keyframes sailsFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* CSS Reset */
 *,
 *::before,
@@ -360,4 +367,86 @@ textarea:focus {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/* ── Spinner (was components/common/Spinner.css) ─────────────── */
+.sails-spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sails-spinner {
+  border: 2px solid transparent;
+  border-radius: 50%;
+  animation: sails-spin 0.8s linear infinite;
+}
+
+.sails-spinner-label {
+  font-size: 0.75rem;
+  color: var(--sails-text-muted);
+  font-weight: 500;
+}
+
+@keyframes sails-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Loading Screen (was components/common/LoadingScreen.css) ── */
+.sails-loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+  width: 100%;
+  gap: 20px;
+}
+
+.sails-loading-screen__spinner {
+  display: flex;
+  gap: 8px;
+}
+
+.sails-loading-screen__dot {
+  width: 12px;
+  height: 12px;
+  background-color: var(--sails-primary);
+  border-radius: 50%;
+  animation: sails-dot-bounce 0.6s infinite alternate;
+}
+
+.sails-loading-screen__dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.sails-loading-screen__dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes sails-dot-bounce {
+  from {
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  to {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+.sails-loading-screen__text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--sails-text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }

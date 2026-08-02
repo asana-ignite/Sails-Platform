@@ -107,13 +107,30 @@ const AdminMenuManager: React.FC = () => {
     e.preventDefault();
     if (!isEditing) return;
 
+    const normalizePath = (p?: string | null) => (p || '').trim().replace(/\/+$/, '').toLowerCase();
+    const newPath = (isEditing as any).path?.trim() || '';
+    if (newPath && !newPath.startsWith('/')) {
+      alert('Browser Path must start with "/"');
+      return;
+    }
+    if (newPath) {
+      const flatten = (list: ConsoleMenu[]): ConsoleMenu[] => list.flatMap(m => [m, ...flatten(m.children || [])]);
+      const conflict = flatten(menus).find(
+        m => m.id !== isEditing.id && normalizePath(m.path) === normalizePath(newPath)
+      );
+      if (conflict) {
+        alert(`Browser Path "${newPath}" is already used by menu "${conflict.label}"`);
+        return;
+      }
+    }
+
     setSaving(true);
     const method = isEditing.id.startsWith('new-') ? 'POST' : 'PATCH';
     const isNew = isEditing.id.startsWith('new-');
     const { children, appId: _appId, parentId: _parentId, dataModelId: _dataModelId, ...menuData } = isEditing as any;
     const payload = isNew
       ? { ...menuData, appId: selectedAppId, parentId: _parentId, dataModelId: _dataModelId, id: undefined as string | undefined }
-      : { ...menuData, id: isEditing.id };
+      : { ...menuData, dataModelId: _dataModelId, id: isEditing.id };
 
     try {
       const res = await fetch('/api/console/menus', {

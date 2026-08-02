@@ -1,5 +1,6 @@
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
+import '../controls.css';
 
 export const CurrencyControl: FieldControlPlugin = {
   id: 'control:currency',
@@ -9,12 +10,14 @@ export const CurrencyControl: FieldControlPlugin = {
   compatibleTypes: ['currency'],
   isDefault: true,
 
+  mockValue: () => 250000,
+
   RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => {
     const symbol = (field?.config as any)?.currencySymbol || '฿';
 
     return (
-      <div className={`sails-input flex items-center gap-2 w-full ${className}`}>
-        <span className="font-semibold text-slate-400 shrink-0">{symbol}</span>
+      <div className={`sails-input sails-control-currency ${className}`}>
+        <span className="sails-control-currency__symbol">{symbol}</span>
         <input
           type="number"
           readOnly={readOnly}
@@ -22,17 +25,17 @@ export const CurrencyControl: FieldControlPlugin = {
           value={value ?? ''}
           placeholder="0.00"
           onChange={(e) => onChange && onChange(e.target.value)}
-          className="bg-transparent border-none outline-none w-full text-slate-200 placeholder:text-slate-500"
+          className="sails-control-currency__input"
         />
       </div>
     );
   },
 
   RenderDisplay: ({ field, value }: FieldControlProps) => {
-    if (value === undefined || value === null || value === '') return <span className="text-xs text-slate-500">—</span>;
+    if (value === undefined || value === null || value === '') return <span>—</span>;
     const symbol = (field.config as any)?.currencySymbol || '฿';
     const num = Number(value);
     const formatted = isNaN(num) ? String(value) : num.toLocaleString();
-    return <span className="text-xs font-semibold text-emerald-400">{symbol}{formatted}</span>;
+    return <span className="sails-control-display-emerald">{symbol}{formatted}</span>;
   },
 };

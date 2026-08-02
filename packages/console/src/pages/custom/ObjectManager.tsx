@@ -1061,7 +1061,7 @@ const ObjectManager: React.FC = () => {
         </div>
       ) : (
         selectedTable && (
-          <div className="om-detail-view-full animate-fade-in">
+          <div className="om-detail-view-full">
             {/* Stats grid */}
             <div className="om-stats-grid-full">
               <div className="sails-card om-stat-card-full">
@@ -1894,6 +1894,10 @@ const ObjectManager: React.FC = () => {
 
                             <div className="om-form-grid-2">
                               {activeFieldTypeMeta.parametersSchema.map((param: FieldParameterDefinition) => {
+                                const vw = param.visibleWhen;
+                                if (vw && (dynamicConfigValues[vw.name] ?? activeFieldTypeMeta.parametersSchema.find(p => p.name === vw.name)?.defaultValue) !== vw.equals) {
+                                  return null;
+                                }
                                 if ((param.name === 'trueLabel' || param.name === 'falseLabel') && dynamicConfigValues['defaultControl'] !== 'control:boolean_dropdown') {
                                   return null;
                                 }
@@ -2319,6 +2323,10 @@ const ObjectManager: React.FC = () => {
 
                             <div className="om-form-grid-2">
                               {activeFieldTypeMeta.parametersSchema.map((param: FieldParameterDefinition) => {
+                                const vw = param.visibleWhen;
+                                if (vw && (editDynamicConfigValues[vw.name] ?? activeFieldTypeMeta.parametersSchema.find(p => p.name === vw.name)?.defaultValue) !== vw.equals) {
+                                  return null;
+                                }
                                 if ((param.name === 'trueLabel' || param.name === 'falseLabel') && editDynamicConfigValues['defaultControl'] !== 'control:boolean_dropdown') {
                                   return null;
                                 }
@@ -2531,7 +2539,7 @@ const ObjectManager: React.FC = () => {
       {/* Nice Error Notification Modal */}
       {errorMsg && createPortal(
         <div className="om-modal-overlay" style={{ zIndex: 10000 }}>
-          <div className="om-modal glass-morphism animate-fade-in" style={{ width: '400px', textAlign: 'center', padding: '24px 32px' }}>
+          <div className="om-modal glass-morphism" style={{ width: '400px', textAlign: 'center', padding: '24px 32px' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: 'var(--sails-danger, #ef4444)' }}>
               <XCircle size={48} />
             </div>
@@ -2555,7 +2563,7 @@ const ObjectManager: React.FC = () => {
       {/* Custom Delete Confirmation Modal */}
       {deleteConfirmTarget && createPortal(
         <div className="om-modal-overlay" style={{ zIndex: 10000 }}>
-          <div className="om-modal glass-morphism animate-fade-in" style={{ width: '440px', padding: '32px' }}>
+          <div className="om-modal glass-morphism" style={{ width: '440px', padding: '32px' }}>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
               <div style={{ 
                 background: 'rgba(253, 97, 97, 0.15)', 

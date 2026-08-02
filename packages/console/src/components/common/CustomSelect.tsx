@@ -114,7 +114,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       </button>
 
       {isOpen && (
-        <div className="sails-custom-select__dropdown animate-fade-in">
+        <div className="sails-custom-select__dropdown">
           {searchable && (
             <div className="sails-custom-select__search-wrapper" onClick={e => e.stopPropagation()}>
               <input

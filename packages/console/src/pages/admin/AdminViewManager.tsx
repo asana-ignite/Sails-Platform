@@ -577,6 +577,7 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
   const [isDefault, setIsDefault] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [systemNameError, setSystemNameError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTables = async () => {
@@ -613,6 +614,7 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
     }
 
     setSubmitting(true);
+    setSubmitError(null);
     try {
       const res = await fetch('/api/console/layouts', {
         method: 'POST',
@@ -631,7 +633,7 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
       if (!json.success) throw new Error(json.error);
       onCreated(json.data);
     } catch (err: any) {
-      alert(err.message);
+      setSubmitError(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -666,6 +668,7 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
                   setName(val);
                   setSystemName(derivedSystemName(val));
                   setSystemNameError(null);
+                  setSubmitError(null);
                 }}
               />
             </div>
@@ -680,6 +683,7 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
                   const val = e.target.value;
                   setSystemName(val);
                   setSystemNameError(validateSystemName(val));
+                  setSubmitError(null);
                 }}
               />
               <span className="sails-layout-dialog__hint">Alphanumeric only (e.g. leadlistdefault).</span>
@@ -719,7 +723,7 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
             <CustomSelect
               value={tableId}
               options={tables.map(t => ({ value: t.id, label: t.name }))}
-              onChange={(val) => setTableId(String(val))}
+              onChange={(val) => { setTableId(String(val)); setSubmitError(null); }}
               placeholder={isCustom ? 'Not applicable for custom layouts' : 'Select a model...'}
               searchable={true}
               disabled={isCustom}
@@ -753,6 +757,7 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
             />
             Set as default view
           </label>
+          {submitError && <div className="sails-confirm-modal__error">{submitError}</div>}
         </div>
         <div className="sails-layout-dialog__footer">
           <button className="sails-btn sails-btn--ghost" onClick={onClose}>Cancel</button>

@@ -8,11 +8,12 @@ import {
   Save,
   Loader2
 } from 'lucide-react';
-import type { TableLayout, SailsFieldDefinition } from '@sails/shared';
+import type { TableLayout, SailsFieldDefinition, ConsoleMenu } from '@sails/shared';
 import { isSystemField } from '@sails/shared';
 import LoadingScreen from '../components/common/LoadingScreen';
 import { fetchCached } from '../api/client';
-import { FieldControlRegistry } from '../features/controls';
+import { DetailFieldInput, DetailFieldDisplay, DetailFieldLabel } from '../features/controls/DetailFieldControl';
+import { useConsole } from '../contexts/ConsoleContext';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
 import './custom/layouts-responsive.css';
@@ -21,57 +22,50 @@ import './custom/layouts-responsive.css';
 interface DetailRouteParams {
   appSlug: string;
   dataModelId: string | null;
+  layoutKey: string | null;
   recordId: string | null;
   isNewMode: boolean;
 }
 
-const getDetailRouteParams = (pathname: string): DetailRouteParams => {
+/**
+ * Resolves the current URL against the nav menu tree.
+ * URL shape: /{appSlug}/{navPath}/{layoutKey}/{recordId}
+ * e.g. /test/testtype/test_type_details_view/<recordId> or .../new
+ */
+const getDetailRouteParams = (pathname: string, menus: ConsoleMenu[]): DetailRouteParams => {
   const parts = pathname.split('/').filter(Boolean);
-  const modelsIdx = parts.findIndex((p) => p === 'models' || p === 'objects');
-  const appSlug = modelsIdx > 0 ? parts[modelsIdx - 1] : (parts[0] || 'admin');
-  const dataModelId = modelsIdx >= 0 && parts.length > modelsIdx + 1 ? parts[modelsIdx + 1] : (parts.length >= 2 ? parts[1] : null);
-  const recordId = modelsIdx >= 0 && parts.length > modelsIdx + 2 ? parts[modelsIdx + 2] : (parts.length >= 3 ? parts[2] : null);
-  return { appSlug, dataModelId, recordId, isNewMode: recordId === 'new' };
-};
+  const appSlug = parts[0] || 'admin';
+  const normalize = (p: string | null) => p ? p.replace(/\/+$/, '').toLowerCase() : '';
 
-// ── Sub-Component: Client-Side Field Input Control ────────────
-interface FieldInputControlProps {
-  field: SailsFieldDefinition;
-  fieldKey: string;
-  label: string;
-  val: any;
-  controlPluginId?: string;
-  onChange: (key: string, value: any) => void;
-}
+  const allMenus: ConsoleMenu[] = [];
+  const collect = (items: ConsoleMenu[]) => {
+    for (const m of items) {
+      allMenus.push(m);
+      if (m.children) collect(m.children);
+    }
+  };
+  collect(menus);
 
-const FieldInputControl: React.FC<FieldInputControlProps> = memo(({ field, fieldKey, label, val, controlPluginId, onChange }) => {
-  const controlRegistry = FieldControlRegistry.getInstance();
-  const logicalType = field.logicalType || field.physicalType || 'text';
-  const effectiveControlId = controlPluginId || (field?.config as any)?.defaultControl || (field?.config as any)?.controlStyle;
-  const controlPlugin = (effectiveControlId ? controlRegistry.getControl(effectiveControlId) : null) || controlRegistry.getFallbackControl(logicalType);
+  const target = normalize(pathname);
+  const matched = allMenus
+    .filter(m => { const p = normalize(m.path); return !!p && target.startsWith(p + '/'); })
+    .sort((a, b) => normalize(b.path).length - normalize(a.path).length)[0];
 
-  if (controlPlugin && controlPlugin.RenderEdit) {
-    const RenderEditComponent = controlPlugin.RenderEdit;
-    return (
-      <RenderEditComponent
-        field={field}
-        value={val}
-        onChange={(v) => onChange(fieldKey, v)}
-      />
-    );
+  if (!matched) {
+    return { appSlug, dataModelId: null, layoutKey: null, recordId: null, isNewMode: false };
   }
 
-  return (
-    <input
-      type="text"
-      className="sails-detail-field-input"
-      value={val ?? ''}
-      onChange={(e) => onChange(fieldKey, e.target.value)}
-      placeholder={`Enter ${label.toLowerCase()}...`}
-      required={field.isRequired}
-    />
-  );
-});
+  const rest = target.slice(normalize(matched.path).length).split('/').filter(Boolean);
+  const layoutKey = rest[0] || null;
+  const recordId = rest[1] || null;
+  return {
+    appSlug,
+    dataModelId: matched.dataModelId || null,
+    layoutKey,
+    recordId,
+    isNewMode: recordId === 'new',
+  };
+};
 
 // ── Sub-Component: Page Header ────────────────────────────────
 interface DetailHeaderProps {
@@ -135,6 +129,7 @@ const DynamicDetailPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const navigationType = useNavigationType();
+  const { navigationItems, apps } = useConsole();
   const animClass = navigationType === 'POP' ? 'sails-dynamic-table--back' : '';
 
   const [layout, setLayout] = useState<TableLayout | null>(null);
@@ -148,10 +143,16 @@ const DynamicDetailPage: React.FC = () => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [activeTabMap, setActiveTabMap] = useState<Record<string, number>>({});
 
-  const { appSlug, dataModelId, recordId, isNewMode } = useMemo(
-    () => getDetailRouteParams(location.pathname),
-    [location.pathname]
-  );
+  const { dataModelId, layoutKey, recordId, isNewMode } = useMemo(() => {
+    const menus = navigationItems.length > 0 ? navigationItems : (apps || []).flatMap(a => a.menus || []);
+    return getDetailRouteParams(location.pathname, menus);
+  }, [location.pathname, navigationItems, apps]);
+
+  // Base nav route without the layout/record segments, e.g. /test/testtype
+  const baseRoute = useMemo(() => {
+    const parts = location.pathname.split('/').filter(Boolean);
+    return '/' + parts.slice(0, Math.max(1, parts.length - 2)).join('/');
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!dataModelId || !recordId) {
@@ -166,38 +167,30 @@ const DynamicDetailPage: React.FC = () => {
       setSaveError(null);
 
       try {
-        const searchParams = new URLSearchParams(window.location.search);
-        const targetLayoutId = searchParams.get('layoutId');
+        // Fetch the table's layouts once; resolve the layout from the URL segment
+        // (matches layout system_name or id, e.g. /test/testtype/test_type_details_view/<id>)
+        const lResult = await fetchCached(`/api/console/layouts?tableId=${dataModelId}&page=1&limit=100`);
+        const rows: any[] = lResult?.data?.rows || lResult?.rows || [];
 
+        const detailRows = rows.filter((r: any) => r.viewType === 'DETAIL' || r.viewType === 'FORM');
         let targetLayout: any = null;
-        let objectsData: any = null;
 
-        if (targetLayoutId) {
-          const layoutResult = await fetchCached(`/api/console/layouts?id=${targetLayoutId}`);
-          if (layoutResult.success) targetLayout = layoutResult.data;
-        } else {
-          objectsData = await fetchCached('/api/metadata/objects', undefined, 60000);
+        if (layoutKey) {
+          targetLayout = detailRows.find((r: any) => r.systemName === layoutKey || r.id === layoutKey) || null;
+        }
+        if (!targetLayout) {
+          targetLayout =
+            detailRows.find((r: any) => r.status === 'active' && r.isDefault) ||
+            detailRows.find((r: any) => r.status === 'active') ||
+            detailRows[0] ||
+            null;
         }
 
-        const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData?.rows || objectsData?.data || []);
-        const foundTable = objectRows.find((t: any) => t.id === dataModelId || t.tableName === dataModelId);
-
-        if (!targetLayout && dataModelId) {
-          const lResult = await fetchCached(`/api/console/layouts?tableId=${dataModelId}`);
-          if (lResult) {
-            const rows: any[] = lResult.data?.rows || lResult.rows || [];
-            targetLayout =
-              rows.find((r: any) => (r.viewType === 'DETAIL' || r.viewType === 'FORM') && r.status === 'active' && r.isDefault) ||
-              rows.find((r: any) => (r.viewType === 'DETAIL' || r.viewType === 'FORM') && r.status === 'active') ||
-              rows.find((r: any) => r.viewType === 'DETAIL' || r.viewType === 'FORM');
-          }
-        }
-
-        const resolvedTableName = targetLayout?.table?.tableName || foundTable?.tableName;
+        const resolvedTableName = targetLayout?.table?.tableName || null;
 
         if (isNewMode) {
-          let tableFields: SailsFieldDefinition[] = foundTable?.fields || [];
-          if (tableFields.length === 0 && resolvedTableName) {
+          let tableFields: SailsFieldDefinition[] = [];
+          if (resolvedTableName) {
             const schemaRes = await fetch(`/api/dynamic/${resolvedTableName}?page=1&pageSize=1`);
             if (schemaRes.ok) {
               const schemaData = await schemaRes.json();
@@ -207,7 +200,7 @@ const DynamicDetailPage: React.FC = () => {
 
           setFields(tableFields);
           setLayout(targetLayout || null);
-          setTableName(resolvedTableName || null);
+          setTableName(resolvedTableName);
           setRecord({});
 
           const initialForm: Record<string, any> = {};
@@ -234,8 +227,8 @@ const DynamicDetailPage: React.FC = () => {
 
         if (recordsRes.ok) {
           const recordsData = await recordsRes.json();
-          const rows = recordsData.rows || (Array.isArray(recordsData) ? recordsData : []);
-          setRecord(rows[0] || null);
+          const rowsArr = recordsData.rows || (Array.isArray(recordsData) ? recordsData : []);
+          setRecord(rowsArr[0] || null);
           setFields(recordsData.fields || []);
         } else {
           setError('Failed to load record details');
@@ -250,7 +243,7 @@ const DynamicDetailPage: React.FC = () => {
     };
 
     loadDetailData();
-  }, [location.pathname, location.search, dataModelId, recordId, isNewMode]);
+  }, [location.pathname, dataModelId, layoutKey, recordId, isNewMode]);
 
   const config = useMemo(() => {
     if (!layout) return null;
@@ -289,7 +282,7 @@ const DynamicDetailPage: React.FC = () => {
       const createdRecord = data.record || (Array.isArray(data.rows) ? data.rows[0] : data.rows) || data.data || data;
       const newId = createdRecord?.id || data.id;
 
-      navigate(newId ? `/${appSlug}/models/${dataModelId}/${newId}` : `/${appSlug}/models/${dataModelId}`, {
+      navigate(newId ? `${baseRoute}/${layoutKey}/${newId}` : baseRoute, {
         replace: true,
       });
     } catch (err: any) {
@@ -345,23 +338,19 @@ const DynamicDetailPage: React.FC = () => {
 
       const label = b.labelOverride || field.name;
       const key = field.fieldName || field.id;
-      if (isSystemField(key)) return null;
 
       const colSpan = b.width ? (typeof b.width === 'number' ? b.width : 4) : 4;
-      const val = isNewMode ? formData[key] ?? '' : record ? record[field.fieldName] ?? record[field.id] ?? '—' : '—';
+      const val = isNewMode ? formData[key] ?? '' : record ? record[field.fieldName] ?? record[field.id] : undefined;
 
       return (
         <div key={b.id || field.id} className="ls-block ls-block--field" style={{ gridColumn: `span ${colSpan}` }}>
-          <label className="ls-block__label">
-            {label}
-            {field.isRequired && <span className="ls-block__required">*</span>}
-          </label>
+          <DetailFieldLabel field={field} label={label} />
           {isNewMode ? (
-            <div className="ls-block__input-wrapper" style={{ marginTop: 6 }}>
-              <FieldInputControl field={field} fieldKey={key} label={label} val={val} controlPluginId={b.controlPluginId} onChange={handleFieldInputChange} />
-            </div>
+            <DetailFieldInput field={field} fieldKey={key} label={label} val={val} controlPluginId={b.controlPluginId} onChange={handleFieldInputChange} />
           ) : (
-            <div className="ls-block__value">{typeof val === 'object' ? JSON.stringify(val) : String(val)}</div>
+            <div className="ls-block__value">
+              <DetailFieldDisplay field={field} val={val} controlPluginId={b.controlPluginId} />
+            </div>
           )}
         </div>
       );

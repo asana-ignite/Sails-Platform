@@ -17,6 +17,10 @@ export interface ActionContext {
   tableName: string;
   /** The active layout ID */
   layoutId?: string;
+  /** The nav menu path for this list, e.g. /test/testtype */
+  menuPath?: string;
+  /** Default detail layout system_name, for building record links */
+  defaultDetailLayoutKey?: string;
   /** Selected record IDs (for bulk actions) */
   selectedIds?: string[];
   /** React-Router navigate function */

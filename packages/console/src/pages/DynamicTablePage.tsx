@@ -18,12 +18,13 @@ import {
 } from 'lucide-react';
 import { useConsole } from '../contexts/ConsoleContext';
 import type { ConsoleMenu, TableLayout, SailsFieldDefinition, ListAction } from '@sails/shared';
-import { isSystemField } from '@sails/shared';
+import { isSystemField, formatDateTimeValue } from '@sails/shared';
 import DynamicIcon from '../components/common/DynamicIcon';
 import CustomSelect from '../components/common/CustomSelect';
 import LoadingScreen from '../components/common/LoadingScreen';
 import { fetchCached } from '../api/client';
 import { ActionRegistry } from '../features/actions';
+import '../features/controls/controls.css';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
 import './custom/layouts-responsive.css';
@@ -38,6 +39,10 @@ function renderListFieldValue(field: SailsFieldDefinition, record: Record<string
   if (val === undefined || val === null) return '\u2014';
   if (field.logicalType === 'currency') return `\u0E3F${Number(val).toLocaleString()}`;
   if (field.logicalType === 'boolean') return val ? 'Yes' : 'No';
+  if (field.logicalType === 'date' || field.logicalType === 'datetime' || field.logicalType === 'timestamp' || field.logicalType === 'time') {
+    const formatted = formatDateTimeValue(val, field.config, field.logicalType);
+    return formatted || '\u2014';
+  }
   if (field.logicalType === 'select') {
     const options = (field.config as any)?.options || [];
     return options.find((o: any) => o.value === val)?.label || String(val);
@@ -115,6 +120,8 @@ const DynamicTablePage: React.FC = () => {
   const tableNameRef = useRef<string | null>(null);
   const layoutConfigRef = useRef<any>(null);
   const fieldsRef = useRef<SailsFieldDefinition[]>([]);
+  const detailLayoutMapRef = useRef<Map<string, string>>(new Map());
+  const defaultDetailLayoutKeyRef = useRef<string>('');
   const searchQueryRef = useRef(searchQuery);
   searchQueryRef.current = searchQuery;
   const runtimeFiltersRef = useRef(runtimeFilters);
@@ -195,46 +202,53 @@ const DynamicTablePage: React.FC = () => {
       initialLoadDone.current = false;
       try {
         let targetLayout: any = null;
+        let dataModelId = activeMenu?.dataModelId || null;
 
-        const searchParams = new URLSearchParams(window.location.search);
-        const targetLayoutId = searchParams.get('layoutId') || activeMenu?.listViewId;
-
-        if (targetLayoutId) {
-          const layoutResult = await fetchCached(`/api/console/layouts?id=${targetLayoutId}`);
-          if (layoutResult.success) targetLayout = layoutResult.data;
+        // Menu may only reference the list view layout — resolve the table from it.
+        if (!dataModelId && activeMenu?.listViewId) {
+          const byId = await fetchCached(`/api/console/layouts?id=${activeMenu.listViewId}`);
+          if (byId.success) targetLayout = byId.data;
+          dataModelId = targetLayout?.tableId || null;
         }
 
-        let objectsData: any = null;
-        const dataModelId = activeMenu?.dataModelId || targetLayout?.tableId;
+        // All layouts for this table — powers list layout selection, record detail
+        // links (layout id -> system_name) and the default detail layout key.
+        const lResult = dataModelId ? await fetchCached(`/api/console/layouts?tableId=${dataModelId}&page=1&limit=100`) : null;
+        const rows: any[] = lResult?.data?.rows || [];
+
+        const layoutMap = new Map<string, string>();
+        for (const r of rows) {
+          if (r.id && r.systemName) layoutMap.set(r.id, r.systemName);
+        }
+        detailLayoutMapRef.current = layoutMap;
+
+        const detailRows = rows.filter((r: any) => r.viewType === 'DETAIL' || r.viewType === 'FORM');
+        const defaultDetail =
+          detailRows.find((r: any) => r.status === 'active' && r.isDefault) ||
+          detailRows.find((r: any) => r.status === 'active') ||
+          detailRows[0];
+        defaultDetailLayoutKeyRef.current = defaultDetail?.systemName || '';
+
+        const listViewId = activeMenu?.listViewId;
+        if (!targetLayout && listViewId) {
+          targetLayout = rows.find((r: any) => r.id === listViewId || r.systemName === listViewId) || null;
+        }
+        if (!targetLayout) {
+          targetLayout =
+            rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active' && r.isDefault) ||
+            rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active') ||
+            rows.find((r: any) => r.viewType === 'LIST' && r.isDefault) ||
+            rows.find((r: any) => r.viewType === 'LIST');
+        }
+
         let tableName: string | null = targetLayout?.table?.tableName || null;
 
         if (!tableName) {
-          if (targetLayoutId) {
-            objectsData = await fetchCached('/api/metadata/objects', undefined, 60000);
-            const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData?.rows || objectsData?.data || []);
-            if (dataModelId) {
-              const foundTable = objectRows.find((t: any) => t.id === dataModelId || t.tableName === dataModelId);
-              if (foundTable) tableName = foundTable.tableName;
-            }
-          } else {
-            const lResult = dataModelId ? await fetchCached(`/api/console/layouts?tableId=${dataModelId}`) : null;
-            objectsData = await fetchCached('/api/metadata/objects', undefined, 60000);
-
-            if (lResult) {
-              const rows: any[] = lResult.data?.rows || [];
-              targetLayout =
-                rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active' && r.isDefault) ||
-                rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active') ||
-                rows.find((r: any) => r.viewType === 'LIST' && r.isDefault) ||
-                rows.find((r: any) => r.viewType === 'LIST');
-            }
-
-            tableName = targetLayout?.table?.tableName || null;
-            if (!tableName && dataModelId) {
-              const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData?.rows || objectsData?.data || []);
-              const foundTable = objectRows.find((t: any) => t.id === dataModelId || t.tableName === dataModelId);
-              if (foundTable) tableName = foundTable.tableName;
-            }
+          const objectsData = await fetchCached('/api/metadata/objects', undefined, 60000);
+          const objectRows = Array.isArray(objectsData) ? objectsData : (objectsData?.rows || objectsData?.data || []);
+          if (dataModelId) {
+            const foundTable = objectRows.find((t: any) => t.id === dataModelId || t.tableName === dataModelId);
+            if (foundTable) tableName = foundTable.tableName;
           }
         }
 
@@ -535,13 +549,15 @@ const DynamicTablePage: React.FC = () => {
         tableId: dataModelId,
         tableName: tableNameRef.current || '',
         layoutId: layout?.id,
+        menuPath: activeMenu?.path || undefined,
+        defaultDetailLayoutKey: defaultDetailLayoutKeyRef.current || undefined,
         navigate,
         refetch: () => doFetch(),
       });
     } else if (action.actionKey === 'create') {
-      const parts = location.pathname.split('/').filter(Boolean);
-      const appSlug = parts[0] || 'admin';
-      navigate(`/${appSlug}/models/${dataModelId}/new`);
+      const menuPath = activeMenu?.path?.replace(/\/+$/, '');
+      const createLayoutKey = defaultDetailLayoutKeyRef.current;
+      navigate(menuPath && createLayoutKey ? `${menuPath}/${createLayoutKey}/new` : (menuPath || '/'));
     }
   };
 
@@ -725,13 +741,14 @@ const DynamicTablePage: React.FC = () => {
                                       onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        const modelId = activeMenu?.dataModelId || layout?.tableId;
-                                        const parts = location.pathname.split('/').filter(Boolean);
-                                        const appSlug = parts[0] || 'admin';
-                                        const targetLayoutParam = col.targetDetailLayoutId ? `?layoutId=${col.targetDetailLayoutId}` : '';
-                                        const targetRoute = `/${appSlug}/models/${modelId}/${rec.id}${targetLayoutParam}`;
-                                        console.log('Navigating to Record Detail:', { route: targetRoute, recordId: rec.id, layoutId: col.targetDetailLayoutId });
-                                        navigate(targetRoute);
+                                        const menuPath = activeMenu?.path?.replace(/\/+$/, '');
+                                        const layoutKey =
+                                          detailLayoutMapRef.current.get(col.targetDetailLayoutId || '') ||
+                                          col.targetDetailLayoutId ||
+                                          defaultDetailLayoutKeyRef.current;
+                                        if (menuPath && layoutKey) {
+                                          navigate(`${menuPath}/${layoutKey}/${rec.id}`);
+                                        }
                                       }}
                                       title={`View detail for ${cellText}`}
                                     >

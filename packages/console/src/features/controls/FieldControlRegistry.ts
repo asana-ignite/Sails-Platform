@@ -13,6 +13,11 @@ import { TimeControl } from './plugins/TimeControl';
 import { DateTimeControl } from './plugins/DateTimeControl';
 import { UserControl } from './plugins/UserControl';
 import { PercentControl } from './plugins/PercentControl';
+import { AddressControl } from './plugins/AddressControl';
+import { AttachmentControl } from './plugins/AttachmentControl';
+import { CitizenIdControl } from './plugins/CitizenIdControl';
+import { LatLngControl } from './plugins/LatLngControl';
+import { AutoNumberControl } from './plugins/AutoNumberControl';
 
 export class FieldControlRegistry {
   private static instance: FieldControlRegistry;
@@ -37,6 +42,11 @@ export class FieldControlRegistry {
     this.register(TimeControl);
     this.register(DateTimeControl);
     this.register(UserControl);
+    this.register(AddressControl);
+    this.register(AttachmentControl);
+    this.register(CitizenIdControl);
+    this.register(LatLngControl);
+    this.register(AutoNumberControl);
   }
 
   public static getInstance(): FieldControlRegistry {

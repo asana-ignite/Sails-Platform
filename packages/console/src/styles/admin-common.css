@@ -740,8 +740,8 @@
 
 .sails-input {
   width: 100%;
-  height: 38px; /* MATCH SEARCH HEIGHT */
-  padding: 8px 12px;
+  height: var(--sails-field-height, 38px); /* MATCH SEARCH HEIGHT */
+  padding: var(--sails-field-padding, 8px 12px);
   background: white;
   border: 1px solid var(--sails-border-color);
   border-radius: var(--sails-radius-sm);

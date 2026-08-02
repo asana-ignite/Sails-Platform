@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, UserCheck, Search, ChevronDown, X, Check } from 'lucide-react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
+import '../controls.css';
 
 interface UserItem {
   id: string;
@@ -87,69 +88,67 @@ const RenderEdit: React.FC<FieldControlProps> = ({ field, value, onChange, disab
   };
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
       <div
         onClick={() => !disabled && !readOnly && setIsOpen(!isOpen)}
-        className={`sails-input sails-control-user-edit flex items-center justify-between cursor-pointer transition-colors min-h-[36px] ${
-          isOpen ? 'border-cyan-500' : ''
-        } ${disabled || readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
+        className={`sails-input sails-control-user-edit ${isOpen ? 'is-open' : ''} ${disabled || readOnly ? 'is-disabled' : ''}`}
       >
-        <div className="flex items-center gap-2 overflow-hidden">
+        <div className="sails-control-user-edit__main">
           {selectedUser ? (
             <>
               {selectedUser.avatar ? (
-                <img src={selectedUser.avatar} alt={selectedUser.name} className="w-5 h-5 rounded-full object-cover shrink-0" />
+                <img src={selectedUser.avatar} alt={selectedUser.name} className="sails-control-user-avatar sails-control-user-avatar--img" />
               ) : (
-                <div className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center text-[10px] font-semibold shrink-0">
+                <div className="sails-control-user-avatar">
                   {selectedUser.name.charAt(0).toUpperCase()}
                 </div>
               )}
-              <span className="truncate font-medium text-slate-200">{selectedUser.name}</span>
-              <span className="truncate text-slate-400 text-[11px]">({selectedUser.email})</span>
+              <span className="sails-control-user-edit__name">{selectedUser.name}</span>
+              <span className="sails-control-user-edit__meta">({selectedUser.email})</span>
             </>
           ) : currentValueStr ? (
             <>
-              <User size={14} className="text-slate-400 shrink-0" />
-              <span className="truncate text-slate-200">{currentValueStr}</span>
+              <User size={14} className="sails-control-user-edit__icon" />
+              <span className="sails-control-user-edit__name">{currentValueStr}</span>
             </>
           ) : (
             <>
-              <UserCheck size={14} className="text-slate-500 shrink-0" />
-              <span className="text-slate-500">Select user...</span>
+              <UserCheck size={14} className="sails-control-user-edit__icon" />
+              <span className="sails-control-user-edit__placeholder">Select user...</span>
             </>
           )}
         </div>
 
-        <div className="flex items-center gap-1 shrink-0 ml-1">
+        <div className="sails-control-user-edit__actions">
           {currentValueStr && !disabled && !readOnly && (
             <button
               type="button"
               onClick={handleClear}
-              className="text-slate-400 hover:text-slate-200 p-0.5 rounded"
+              className="sails-control-user-edit__clear"
             >
               <X size={12} />
             </button>
           )}
-          <ChevronDown size={14} className="text-slate-400" />
+          <ChevronDown size={14} className="sails-control-user-edit__icon" />
         </div>
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden text-xs">
-          <div className="p-2 border-b border-slate-800 flex items-center gap-2">
-            <Search size={12} className="text-slate-400 shrink-0" />
+        <div className="sails-control-user-dropdown">
+          <div className="sails-control-user-dropdown__search">
+            <Search size={12} className="sails-control-user-dropdown__search-icon" />
             <input
               type="text"
               autoFocus
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by name or email..."
-              className="bg-transparent border-none outline-none w-full text-xs text-slate-200 placeholder:text-slate-500"
+              className="sails-control-user-dropdown__search-input"
             />
           </div>
-          <div className="max-h-48 overflow-y-auto py-1">
+          <div className="sails-control-user-dropdown__list">
             {filteredUsers.length === 0 ? (
-              <div className="px-3 py-2 text-slate-500 text-center">No users found</div>
+              <div className="sails-control-user-dropdown__empty">No users found</div>
             ) : (
               filteredUsers.map((user) => {
                 const isSelected = selectedUser?.id === user.id || currentValueStr === user.name;
@@ -157,24 +156,22 @@ const RenderEdit: React.FC<FieldControlProps> = ({ field, value, onChange, disab
                   <div
                     key={user.id}
                     onClick={() => handleSelect(user)}
-                    className={`flex items-center justify-between px-3 py-2 cursor-pointer transition-colors ${
-                      isSelected ? 'bg-cyan-500/10 text-cyan-300' : 'hover:bg-slate-800/80 text-slate-200'
-                    }`}
+                    className={`sails-control-user-dropdown__option ${isSelected ? 'is-selected' : ''}`}
                   >
-                    <div className="flex items-center gap-2.5 overflow-hidden">
+                    <div className="sails-control-user-dropdown__option-main">
                       {user.avatar ? (
-                        <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full object-cover shrink-0" />
+                        <img src={user.avatar} alt={user.name} className="sails-control-user-avatar sails-control-user-avatar--lg sails-control-user-avatar--img" />
                       ) : (
-                        <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center text-[11px] font-semibold shrink-0">
+                        <div className="sails-control-user-avatar sails-control-user-avatar--lg">
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <div className="flex flex-col overflow-hidden">
-                        <span className="font-medium text-slate-200 truncate">{user.name}</span>
-                        <span className="text-[11px] text-slate-400 truncate">{user.email}</span>
+                      <div className="sails-control-user-dropdown__option-text">
+                        <span className="sails-control-user-dropdown__option-name">{user.name}</span>
+                        <span className="sails-control-user-dropdown__option-email">{user.email}</span>
                       </div>
                     </div>
-                    {isSelected && <Check size={14} className="text-cyan-400 shrink-0 ml-2" />}
+                    {isSelected && <Check size={14} className="sails-control-user-dropdown__check" />}
                   </div>
                 );
               })
@@ -188,15 +185,15 @@ const RenderEdit: React.FC<FieldControlProps> = ({ field, value, onChange, disab
 
 const RenderDisplay: React.FC<FieldControlProps> = ({ field, value }) => {
   if (value === undefined || value === null || value === '') {
-    return <span className="text-slate-500 text-xs">—</span>;
+    return <span>—</span>;
   }
 
   const displayVal = typeof value === 'object' ? value?.name || value?.email || value?.id : String(value);
   const initial = displayVal.charAt(0).toUpperCase();
 
   return (
-    <div className="sails-control-user-display inline-flex items-center gap-2 text-xs font-medium text-slate-200">
-      <div className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center text-[10px] font-semibold shrink-0">
+    <div className="sails-control-user-display">
+      <div className="sails-control-user-avatar">
         {initial}
       </div>
       <span>{displayVal}</span>
@@ -211,6 +208,8 @@ export const UserControl: FieldControlPlugin = {
   iconName: 'UserCheck',
   compatibleTypes: ['user'],
   isDefault: true,
+
+  mockValue: () => DEFAULT_USERS[0]?.id ?? 'usr_001',
 
   RenderEdit,
   RenderDisplay,

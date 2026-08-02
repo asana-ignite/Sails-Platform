@@ -13,7 +13,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: var(--sails-bg-tertiary, #f1f5f9);
+  background: var(--sails-bg-body, #f4f7f9);
   overflow: hidden;
 }
 
@@ -25,7 +25,7 @@
   justify-content: space-between;
   padding: 0 16px;
   height: 44px;
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   border-bottom: 1px solid var(--sails-border, #e2e8f0);
   flex-shrink: 0;
 }
@@ -110,7 +110,7 @@
   align-items: center;
   gap: 6px;
   padding: 7px 8px;
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 5px;
   font-size: 12px;
@@ -234,7 +234,7 @@
   overflow: hidden;
   display: flex;
   justify-content: center;
-  background: var(--sails-bg-tertiary, #f1f5f9);
+  background: var(--sails-bg-body, #f4f7f9);
 }
 
 .wys-canvas__scroll {
@@ -271,7 +271,7 @@
 .wys-page__empty {
   padding: 32px;
   text-align: center;
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   border: 2px dashed var(--sails-border, #e2e8f0);
   border-radius: 8px;
   font-size: 13px;
@@ -281,7 +281,7 @@
 /* ─── Section (card) ────────────────────────────────────────── */
 
 .wys-section {
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 8px;
   margin-bottom: 20px;
@@ -311,7 +311,7 @@
   padding: 3px 8px;
   border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 4px;
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   font-size: 11px;
   font-weight: 600;
   color: var(--sails-text-secondary, #64748b);
@@ -338,7 +338,7 @@
 .wys-section__title-input:focus {
   outline: none;
   border-color: var(--sails-primary, #9dcee0);
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
 }
 
 .wys-section__title-input:hover {
@@ -440,7 +440,7 @@
   align-items: center;
   gap: 2px;
   padding: 2px 4px;
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 0 6px 0 6px;
   opacity: 0;
@@ -775,7 +775,7 @@
   padding: 6px 10px;
   border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 4px;
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   color: var(--sails-text-primary, #1e293b);
 }
 
@@ -791,7 +791,7 @@
 
 .wys-cond-card {
   padding: 6px 8px;
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 4px;
   display: flex;
@@ -813,7 +813,7 @@
   padding: 1px 6px;
   border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: 3px;
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
@@ -1005,7 +1005,7 @@
 }
 
 .wys-modal {
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   border-radius: 8px;
   padding: 24px;
   max-width: 400px;

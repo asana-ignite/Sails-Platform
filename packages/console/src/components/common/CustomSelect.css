@@ -196,3 +196,20 @@
   color: #ffffff;
   flex-shrink: 0;
 }
+
+/* Full-width variant (SelectControl passes this instead of legacy Tailwind w-full) */
+.sails-custom-select--full {
+  width: 100%;
+}
+
+/* Field context (SelectControl in detail/Studio): match .sails-input metrics
+   via the shared field tokens so it can never drift from sibling controls */
+.sails-custom-select--field {
+  font-size: var(--sails-field-font-size, 13px);
+}
+
+.sails-custom-select--field .sails-custom-select__trigger {
+  min-height: var(--sails-field-height, 38px);
+  padding: var(--sails-field-padding, 7px 12px);
+  font-size: var(--sails-field-font-size, 13px);
+}

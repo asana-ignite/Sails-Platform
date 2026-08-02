@@ -9,6 +9,8 @@ export const PercentControl: FieldControlPlugin = {
   compatibleTypes: ['percentage', 'percent'],
   isDefault: true,
 
+  mockValue: () => 75,
+
   RenderEdit: ({ value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => (
     <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
       <input
@@ -19,7 +21,7 @@ export const PercentControl: FieldControlPlugin = {
         value={value ?? ''}
         placeholder="0.00"
         onChange={(e) => onChange && onChange(e.target.value)}
-        className={`sails-input w-full text-right ${className}`}
+        className={`sails-input ${className}`}
         style={{ textAlign: 'right', paddingRight: '28px' }}
       />
       <span
@@ -38,7 +40,7 @@ export const PercentControl: FieldControlPlugin = {
   ),
 
   RenderDisplay: ({ value }: FieldControlProps) => (
-    <span className="text-xs text-slate-200">
+    <span>
       {value !== undefined && value !== null && value !== '' ? `${value}%` : '—'}
     </span>
   ),

@@ -11,7 +11,7 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  animation: sailsFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: sails-modal-fade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sails-user-details-modal {
@@ -29,7 +29,7 @@
   overflow: hidden;
 }
 
-@keyframes sailsFadeIn {
+@keyframes sails-modal-fade {
   from { opacity: 0; }
   to { opacity: 1; }
 }

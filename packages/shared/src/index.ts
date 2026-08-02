@@ -256,6 +256,7 @@ export interface FieldParameterDefinition {
   min?: number;
   max?: number;
   required?: boolean;
+  visibleWhen?: { name: string; equals: any }; // Only show when another param equals a value
 }
 
 export interface FieldTypeMetadata {
@@ -329,6 +330,21 @@ export interface BooleanFieldConfig {
 
 export interface DateFieldConfig {
   dateFormat?: string;
+  dateFormatCustom?: string;
+  defaultCurrent?: boolean;
+}
+
+export interface TimeFieldConfig {
+  timeFormat?: string;
+  timeFormatCustom?: string;
+  defaultCurrent?: boolean;
+}
+
+export interface DateTimeFieldConfig {
+  dateFormat?: string;
+  dateFormatCustom?: string;
+  timeFormat?: string;
+  timeFormatCustom?: string;
   defaultCurrent?: boolean;
 }
 
@@ -572,6 +588,136 @@ export const isSystemField = (fieldName?: string | null): boolean => {
   const normalized = toSnakeCase(fieldName);
   const cleanTarget = normalized.replace(/_/g, '');
   return SYSTEM_FIELDS.has(normalized) || Array.from(SYSTEM_FIELDS).some(sys => sys.replace(/_/g, '') === cleanTarget);
+};
+
+// ─── Date / Time Formatting ────────────────────────────────────
+
+const WEEKDAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const WEEKDAY_NAMES_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_NAMES_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const pad2 = (n: number): string => String(n).padStart(2, '0');
+
+/**
+ * Parse a field value (JS Date, ISO string, "YYYY-MM-DD", "YYYY-MM-DD HH:mm[:ss]",
+ * "HH:mm[:ss]") into a Date. Returns null for empty/invalid input.
+ */
+export const parseDateTimeValue = (value: any): Date | null => {
+  if (value === undefined || value === null || value === '') return null;
+  if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
+  if (typeof value !== 'string') return null;
+
+  const str = value.trim();
+  if (!str) return null;
+
+  // Time-only: "HH:mm[:ss]"
+  const timeOnly = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (timeOnly) {
+    const h = parseInt(timeOnly[1], 10);
+    const m = parseInt(timeOnly[2], 10);
+    const s = timeOnly[3] ? parseInt(timeOnly[3], 10) : 0;
+    if (h > 23 || m > 59 || s > 59) return null;
+    return new Date(1970, 0, 1, h, m, s);
+  }
+
+  // Date with optional time: "YYYY-MM-DD[ T]HH:mm[:ss][Z|±HH:mm]"
+  const parts = str.split('T').length === 2 ? str.split('T') : (str.includes(' ') ? [str.slice(0, str.indexOf(' ')), str.slice(str.indexOf(' ') + 1)] : [str]);
+  const datePart = parts[0];
+  const dateMatch = datePart.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (dateMatch) {
+    const year = parseInt(dateMatch[1], 10);
+    const month = parseInt(dateMatch[2], 10) - 1;
+    const day = parseInt(dateMatch[3], 10);
+    const timePart = parts[1]?.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (timePart) {
+      const h = parseInt(timePart[1], 10);
+      const m = parseInt(timePart[2], 10);
+      const s = timePart[3] ? parseInt(timePart[3], 10) : 0;
+      return new Date(year, month, day, h, m, s);
+    }
+    return new Date(year, month, day);
+  }
+
+  // Last resort: ISO string via Date constructor
+  const parsed = new Date(str);
+  return isNaN(parsed.getTime()) ? null : parsed;
+};
+
+/**
+ * Format a Date (or parseable value) using moment-style tokens.
+ * Supported tokens: YYYY YY MMMM MMM MM M dddd ddd DD D HH H hh h mm ss A a
+ * Unknown tokens are preserved verbatim so literals like "-", "/" work.
+ */
+export const formatDateTokens = (date: Date, format: string): string => {
+  const tokens: Record<string, string> = {
+    'YYYY': String(date.getFullYear()),
+    'YY': String(date.getFullYear()).slice(-2),
+    'MMMM': MONTH_NAMES_FULL[date.getMonth()],
+    'MMM': MONTH_NAMES_SHORT[date.getMonth()],
+    'MM': pad2(date.getMonth() + 1),
+    'M': String(date.getMonth() + 1),
+    'dddd': WEEKDAY_NAMES_FULL[date.getDay()],
+    'ddd': WEEKDAY_NAMES_SHORT[date.getDay()],
+    'DD': pad2(date.getDate()),
+    'D': String(date.getDate()),
+    'HH': pad2(date.getHours()),
+    'H': String(date.getHours()),
+    'hh': pad2(date.getHours() % 12 === 0 ? 12 : date.getHours() % 12),
+    'h': String(date.getHours() % 12 === 0 ? 12 : date.getHours() % 12),
+    'mm': pad2(date.getMinutes()),
+    'ss': pad2(date.getSeconds()),
+    'A': date.getHours() < 12 ? 'AM' : 'PM',
+    'a': date.getHours() < 12 ? 'am' : 'pm',
+  };
+  return format.replace(/YYYY|YY|MMMM|MMM|dddd|ddd|HH|hh|mm|ss|MM|DD|M|D|H|h|A|a/g, (t) => tokens[t] ?? t);
+};
+
+/**
+ * Resolve the effective format token string from a field's config.
+ * Handles 'custom' selections falling back to the *Custom text parameter.
+ */
+export const resolveDateTimeFormat = (config: Record<string, any> | null | undefined, logicalType: string): string => {
+  const cfg = config || {};
+  const isDateType = logicalType === 'date' || logicalType === 'datetime' || logicalType === 'timestamp';
+
+  let dateFmt = '';
+  if (isDateType) {
+    const raw = cfg.dateFormat || 'YYYY-MM-DD';
+    dateFmt = raw === 'custom' ? (cfg.dateFormatCustom || 'YYYY-MM-DD') : raw;
+  }
+
+  const isTimeType = logicalType === 'time' || logicalType === 'datetime' || logicalType === 'timestamp';
+  let timeFmt = '';
+  if (isTimeType) {
+    const raw = cfg.timeFormat || '24h';
+    if (raw === 'custom') {
+      timeFmt = cfg.timeFormatCustom || 'HH:mm';
+    } else if (raw === '12h') {
+      timeFmt = 'hh:mm A';
+    } else {
+      timeFmt = 'HH:mm';
+    }
+  }
+
+  if (logicalType === 'datetime' || logicalType === 'timestamp') {
+    const d = dateFmt ? dateFmt : 'YYYY-MM-DD';
+    const t = timeFmt ? timeFmt : 'HH:mm';
+    return `${d} ${t}`;
+  }
+  if (logicalType === 'date') return dateFmt;
+  if (logicalType === 'time') return timeFmt;
+  return dateFmt || timeFmt;
+};
+
+/**
+ * Format a record value for display using the field's configured date/time format.
+ * Returns '' for empty/invalid values so callers can render their own placeholder.
+ */
+export const formatDateTimeValue = (value: any, config: Record<string, any> | null | undefined, logicalType: string): string => {
+  const date = parseDateTimeValue(value);
+  if (!date) return '';
+  return formatDateTokens(date, resolveDateTimeFormat(config, logicalType));
 };
 
 

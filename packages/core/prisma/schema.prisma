@@ -69,7 +69,7 @@ model TableLayout {
   table            TableDefinition? @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
   @@unique([tableId, viewType, name])
-  @@unique([tableId, systemName])
+  @@unique([systemName])
   @@index([tableId])
   @@map("table_layouts")
   @@schema("core")
@@ -139,6 +139,7 @@ model ConsoleApp {
 
 model ConsoleMenu {
   id                 String          @id @default(cuid())
+  tenantId           String          @map("tenant_id")
   appId              String?         @map("app_id")
   label              String
   icon               String?
@@ -158,6 +159,7 @@ model ConsoleMenu {
 
   @@index([appId])
   @@index([parentId])
+  @@index([tenantId])
   @@map("console_menus")
   @@schema("core")
 }

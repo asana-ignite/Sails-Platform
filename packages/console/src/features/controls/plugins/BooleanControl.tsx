@@ -17,6 +17,11 @@ export const BooleanToggleControl: FieldControlPlugin = {
   compatibleTypes: ['boolean'],
   isDefault: true,
 
+  mockValue: (field) => {
+    const def = (field.config as any)?.defaultValue ?? field.defaultValue;
+    return def === 'true' || def === true;
+  },
+
   RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => {
     const isChecked = parseBooleanValue(value, (field?.config as any)?.defaultValue);
 
@@ -33,13 +38,17 @@ export const BooleanToggleControl: FieldControlPlugin = {
             if (disabled || readOnly || !onChange) return;
             onChange(!isChecked);
           }}
-          className={`inline-flex items-center cursor-pointer select-none ${disabled || readOnly ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+          className={`${className}`}
           style={{
             background: 'none',
             border: 'none',
             padding: 0,
             margin: 0,
-            cursor: disabled || readOnly ? 'not-allowed' : 'pointer'
+            display: 'inline-flex',
+            alignItems: 'center',
+            cursor: disabled || readOnly ? 'not-allowed' : 'pointer',
+            opacity: disabled || readOnly ? 0.5 : 1,
+            userSelect: 'none'
           }}
         >
           <div
@@ -115,6 +124,11 @@ export const BooleanCheckboxControl: FieldControlPlugin = {
   compatibleTypes: ['boolean'],
   isDefault: false,
 
+  mockValue: (field) => {
+    const def = (field.config as any)?.defaultValue ?? field.defaultValue;
+    return def === 'true' || def === true;
+  },
+
   RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => {
     const isChecked = parseBooleanValue(value, (field?.config as any)?.defaultValue);
 
@@ -131,7 +145,7 @@ export const BooleanCheckboxControl: FieldControlPlugin = {
             if (disabled || readOnly || !onChange) return;
             onChange(!isChecked);
           }}
-          className={`sails-checkbox ${disabled || readOnly ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+          className={`sails-checkbox ${className}`}
           style={{
             width: 18,
             height: 18,
@@ -143,6 +157,7 @@ export const BooleanCheckboxControl: FieldControlPlugin = {
             justifyContent: 'center',
             cursor: disabled || readOnly ? 'not-allowed' : 'pointer',
             padding: 0,
+            opacity: disabled || readOnly ? 0.5 : 1,
             transition: 'all 0.15s ease'
           }}
         >
@@ -193,6 +208,11 @@ export const BooleanDropdownControl: FieldControlPlugin = {
   compatibleTypes: ['boolean'],
   isDefault: false,
 
+  mockValue: (field) => {
+    const def = (field.config as any)?.defaultValue ?? field.defaultValue;
+    return def === 'true' || def === true;
+  },
+
   RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => {
     const isTrue = value === true || value === 'true';
     const isFalse = value === false || value === 'false';
@@ -224,7 +244,7 @@ export const BooleanDropdownControl: FieldControlPlugin = {
     const trueLabel = (field?.config as any)?.trueLabel || 'Yes';
     const falseLabel = (field?.config as any)?.falseLabel || 'No';
     return (
-      <span className="text-xs text-slate-200">
+      <span>
         {isTrue ? trueLabel : isFalse ? falseLabel : '—'}
       </span>
     );

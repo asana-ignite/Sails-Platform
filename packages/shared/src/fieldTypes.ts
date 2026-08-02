@@ -219,10 +219,21 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
         type: 'select',
         defaultValue: 'YYYY-MM-DD',
         options: [
-          { label: 'YYYY-MM-DD (ISO)', value: 'YYYY-MM-DD' },
-          { label: 'DD/MM/YYYY', value: 'DD/MM/YYYY' },
-          { label: 'MM/DD/YYYY', value: 'MM/DD/YYYY' }
+          { label: 'ISO (2026-02-14)', value: 'YYYY-MM-DD' },
+          { label: 'Short (14/02/2026)', value: 'DD/MM/YYYY' },
+          { label: 'US (02/14/2026)', value: 'MM/DD/YYYY' },
+          { label: 'Short Text (14 Feb 2026)', value: 'DD MMM YYYY' },
+          { label: 'Long (February 14, 2026)', value: 'MMMM D, YYYY' },
+          { label: 'Full (Saturday, February 14, 2026)', value: 'dddd, MMMM D, YYYY' },
+          { label: 'Custom...', value: 'custom' }
         ]
+      },
+      {
+        name: 'dateFormatCustom',
+        label: 'Custom Date Format',
+        type: 'text',
+        placeholder: 'e.g. D MMMM YYYY / YYYY.MM.DD',
+        visibleWhen: { name: 'dateFormat', equals: 'custom' }
       },
       { name: 'defaultCurrent', label: 'Default to Today', type: 'boolean', defaultValue: false }
     ]
@@ -241,8 +252,16 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
         defaultValue: '24h',
         options: [
           { label: '24 Hour (14:30)', value: '24h' },
-          { label: '12 Hour AM/PM (2:30 PM)', value: '12h' }
+          { label: '12 Hour AM/PM (2:30 PM)', value: '12h' },
+          { label: 'Custom...', value: 'custom' }
         ]
+      },
+      {
+        name: 'timeFormatCustom',
+        label: 'Custom Time Format',
+        type: 'text',
+        placeholder: 'e.g. hh:mm A / HH:mm:ss',
+        visibleWhen: { name: 'timeFormat', equals: 'custom' }
       },
       { name: 'defaultCurrent', label: 'Default to Current Time', type: 'boolean', defaultValue: false }
     ]
@@ -260,10 +279,39 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
         type: 'select',
         defaultValue: 'YYYY-MM-DD',
         options: [
-          { label: 'YYYY-MM-DD (ISO)', value: 'YYYY-MM-DD' },
-          { label: 'DD/MM/YYYY', value: 'DD/MM/YYYY' },
-          { label: 'MM/DD/YYYY', value: 'MM/DD/YYYY' }
+          { label: 'ISO (2026-02-14)', value: 'YYYY-MM-DD' },
+          { label: 'Short (14/02/2026)', value: 'DD/MM/YYYY' },
+          { label: 'US (02/14/2026)', value: 'MM/DD/YYYY' },
+          { label: 'Short Text (14 Feb 2026)', value: 'DD MMM YYYY' },
+          { label: 'Long (February 14, 2026)', value: 'MMMM D, YYYY' },
+          { label: 'Full (Saturday, February 14, 2026)', value: 'dddd, MMMM D, YYYY' },
+          { label: 'Custom...', value: 'custom' }
         ]
+      },
+      {
+        name: 'dateFormatCustom',
+        label: 'Custom Date Format',
+        type: 'text',
+        placeholder: 'e.g. D MMMM YYYY / YYYY.MM.DD',
+        visibleWhen: { name: 'dateFormat', equals: 'custom' }
+      },
+      {
+        name: 'timeFormat',
+        label: 'Display Time Format',
+        type: 'select',
+        defaultValue: '24h',
+        options: [
+          { label: '24 Hour (14:30)', value: '24h' },
+          { label: '12 Hour AM/PM (2:30 PM)', value: '12h' },
+          { label: 'Custom...', value: 'custom' }
+        ]
+      },
+      {
+        name: 'timeFormatCustom',
+        label: 'Custom Time Format',
+        type: 'text',
+        placeholder: 'e.g. hh:mm A / HH:mm:ss',
+        visibleWhen: { name: 'timeFormat', equals: 'custom' }
       },
       { name: 'defaultCurrent', label: 'Default to Current Date/Time', type: 'boolean', defaultValue: false }
     ]
@@ -388,6 +436,36 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
         type: 'boolean',
         defaultValue: false,
         description: 'Allow assigning multiple team members or co-owners'
+      }
+    ]
+  },
+  {
+    type: 'citizen_id',
+    label: 'Thai Citizen ID',
+    description: '13-digit Thai national identification number',
+    iconName: 'CreditCard',
+    physicalType: 'text',
+    parametersSchema: [
+      {
+        name: 'placeholder',
+        label: 'Input Placeholder',
+        type: 'text',
+        placeholder: 'e.g. 1-2345-67890-12-3'
+      }
+    ]
+  },
+  {
+    type: 'lat_lng',
+    label: 'Latitude / Longitude',
+    description: 'Geographic coordinates (latitude, longitude)',
+    iconName: 'MapPin',
+    physicalType: 'text',
+    parametersSchema: [
+      {
+        name: 'placeholder',
+        label: 'Input Placeholder',
+        type: 'text',
+        placeholder: 'e.g. 13.7563, 100.5018'
       }
     ]
   }

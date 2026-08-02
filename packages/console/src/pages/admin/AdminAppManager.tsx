@@ -670,13 +670,31 @@ const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () =>
   const handleSaveMenu = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEditingMenu) return;
+
+    const normalizePath = (p?: string | null) => (p || '').trim().replace(/\/+$/, '').toLowerCase();
+    const newPath = (isEditingMenu as any).path?.trim() || '';
+    if (newPath && !newPath.startsWith('/')) {
+      alert('Browser Path must start with "/"');
+      return;
+    }
+    if (newPath && menus.length > 0) {
+      const flatten = (list: ConsoleMenu[]): ConsoleMenu[] => list.flatMap(m => [m, ...flatten(m.children || [])]);
+      const conflict = flatten(menus).find(
+        m => m.id !== isEditingMenu.id && normalizePath(m.path) === normalizePath(newPath)
+      );
+      if (conflict) {
+        alert(`Browser Path "${newPath}" is already used by menu "${conflict.label}"`);
+        return;
+      }
+    }
+
     setSaving(true);
     const method = isEditingMenu.id.startsWith('new-') ? 'POST' : 'PATCH';
     const isNew = isEditingMenu.id.startsWith('new-');
     const { children, appId: _appId, parentId: _parentId, dataModelId: _dataModelId, ...menuData } = isEditingMenu as any;
     const payload = isNew
       ? { ...menuData, appId, parentId: _parentId, dataModelId: _dataModelId, id: undefined as string | undefined }
-      : { ...menuData, id: isEditingMenu.id };
+      : { ...menuData, dataModelId: _dataModelId, id: isEditingMenu.id };
     try {
       const res = await fetch('/api/console/menus', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const result = await res.json();

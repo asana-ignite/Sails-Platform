@@ -2,8 +2,9 @@
  * CreateAction — System Action Plugin
  *
  * Toolbar-level action that appears on any List View where it is enabled.
- * Navigates to the "new record" route for the model using the active app slug:
- * /:appSlug/models/:tableId/new
+ * Navigates to the "new record" route for the model using the nav path and
+ * the default detail layout:
+ * /test/testtype/<detailLayoutSystemName>/new
  *
  * category: 'list' — always visible, no selection required.
  */
@@ -21,9 +22,12 @@ export const CreateAction: ActionPlugin = {
   defaultLabel: 'Create',
 
   execute(context: ActionContext): void {
-    const { tableId, navigate } = context;
-    const parts = window.location.pathname.split('/').filter(Boolean);
-    const appSlug = parts[0] || 'admin';
-    navigate(`/${appSlug}/models/${tableId}/new`);
+    const { navigate, menuPath, defaultDetailLayoutKey } = context;
+    const base = menuPath?.replace(/\/+$/, '');
+    if (base && defaultDetailLayoutKey) {
+      navigate(`${base}/${defaultDetailLayoutKey}/new`);
+    } else if (base) {
+      navigate(base);
+    }
   },
 };

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';
+import { normalizeMenuPath } from '@/lib/menuPaths';
 
 /**
  * GET /api/console/menus/[id]
@@ -51,6 +52,44 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     const body = await req.json();
+
+    const pathError = (() => {
+      if (!body.path || !body.path.trim()) return null;
+      if (!body.path.trim().startsWith('/')) return 'Browser Path must start with "/"';
+      return null;
+    })();
+    if (pathError) {
+      return NextResponse.json({ error: pathError }, { status: 400 });
+    }
+
+    if (body.path && body.path.trim()) {
+      const normalized = normalizeMenuPath(body.path);
+      const others = await db.consoleMenu.findMany({
+        where: {
+          app: { tenantId },
+          path: { not: '' },
+          id: { not: params.id }
+        },
+        select: { id: true, label: true, path: true }
+      });
+      const conflict = others.find(m => normalizeMenuPath(m.path) === normalized);
+      if (conflict) {
+        return NextResponse.json(
+          { error: `Browser Path "${body.path.trim()}" is already used by menu "${conflict.label}"` },
+          { status: 409 }
+        );
+      }
+    }
+
+    let targetAppTenantId: string | undefined;
+    if (body.appId && body.appId !== menu.appId) {
+      const targetApp = await db.consoleApp.findUnique({ where: { id: body.appId }, select: { tenantId: true } });
+      if (!targetApp || (role !== 'SUPER_ADMIN' && targetApp.tenantId !== tenantId)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      targetAppTenantId = targetApp.tenantId;
+    }
+
     const updated = await db.consoleMenu.update({
       where: { id: params.id },
       data: {
@@ -60,12 +99,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         actionType: body.actionType,
         parentId: body.parentId,
         order: body.order,
-        appId: body.appId // Moving to another app?
+        appId: body.appId, // Moving to another app?
+        tenantId: targetAppTenantId
       }
     });
 
     return NextResponse.json(updated);
   } catch (error: any) {
+    if (error?.code === 'P2002') {
+      return NextResponse.json({ error: 'Browser Path is already used by another menu' }, { status: 409 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

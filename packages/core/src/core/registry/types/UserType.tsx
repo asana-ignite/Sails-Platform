@@ -54,7 +54,7 @@ export const UserType: FieldTypePlugin = {
     if (!props.value) return <span></span>;
     const name = typeof props.value === 'object' ? props.value?.name || props.value?.email || props.value?.id : String(props.value);
     return (
-      <span className="flex items-center gap-1.5 text-slate-200">
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#e2e8f0' }}>
         👤 {name}
       </span>
     );

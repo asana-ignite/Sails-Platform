@@ -1,5 +1,6 @@
 import React from 'react';
 import type { FieldControlProps } from './types';
+import './controls.css';
 
 interface FieldControlWrapperProps extends FieldControlProps {
   children: React.ReactNode;
@@ -14,35 +15,33 @@ export const FieldControlWrapper: React.FC<FieldControlWrapperProps> = ({
   className = '',
   children,
 }) => {
-  const sizeClasses = {
-    sm: 'px-2 py-1 text-[11px] rounded-md',
-    md: 'px-3 py-1.5 text-xs rounded-lg',
-    lg: 'px-4 py-2.5 text-sm rounded-xl',
+  const sizeClass = {
+    sm: 'sails-control-wrapper__field--size-sm',
+    md: 'sails-control-wrapper__field--size-md',
+    lg: 'sails-control-wrapper__field--size-lg',
   }[size];
 
-  const variantClasses = {
-    default: 'bg-slate-900 border-slate-700 text-slate-200',
-    ghost: 'bg-transparent border-transparent text-slate-200 hover:bg-slate-800/40',
-    glass: 'bg-slate-900/90 backdrop-blur-sm border-slate-700/80 text-slate-200',
+  const variantClass = {
+    default: 'sails-control-wrapper__field--variant-default',
+    ghost: 'sails-control-wrapper__field--variant-ghost',
+    glass: 'sails-control-wrapper__field--variant-glass',
   }[variant];
 
-  const errorClasses = error
-    ? 'border-red-500/80 ring-1 ring-red-500/20 focus-within:border-red-500'
-    : 'focus-within:border-cyan-500/80 focus-within:ring-1 focus-within:ring-cyan-500/20';
+  const stateClass = disabled || readOnly
+    ? 'is-disabled'
+    : 'is-active';
 
-  const stateClasses = disabled || readOnly
-    ? 'opacity-60 cursor-not-allowed select-none'
-    : 'transition-all duration-150';
+  const errorClass = error ? 'is-error' : '';
 
   return (
-    <div className="w-full flex flex-col gap-1">
+    <div className="sails-control-wrapper">
       <div
-        className={`sails-control-wrapper flex items-center border ${sizeClasses} ${variantClasses} ${errorClasses} ${stateClasses} ${className}`}
+        className={`sails-control-wrapper__field ${sizeClass} ${variantClass} ${errorClass} ${stateClass} ${className}`}
       >
         {children}
       </div>
       {error && (
-        <span className="text-[11px] font-medium text-red-400 pl-1">
+        <span className="sails-control-wrapper__error">
           {error}
         </span>
       )}

@@ -46,6 +46,11 @@
   --sails-radius-md: 8px;
   --sails-radius-lg: 12px;
 
+  /* Field Controls — single source for input/picker/select metrics */
+  --sails-field-height: 38px;
+  --sails-field-padding: 7px 12px;
+  --sails-field-font-size: 13px;
+
   /* Transitions */
   --sails-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 

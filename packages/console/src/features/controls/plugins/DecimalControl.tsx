@@ -9,6 +9,8 @@ export const DecimalControl: FieldControlPlugin = {
   compatibleTypes: ['decimal'],
   isDefault: true,
 
+  mockValue: () => 42.5,
+
   RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => (
     <input
       type="number"
@@ -18,12 +20,12 @@ export const DecimalControl: FieldControlPlugin = {
       value={value ?? ''}
       placeholder="0.00"
       onChange={(e) => onChange && onChange(e.target.value)}
-      className={`sails-input w-full text-right ${className}`}
+      className={`sails-input ${className}`}
       style={{ textAlign: 'right' }}
     />
   ),
 
   RenderDisplay: ({ value }: FieldControlProps) => (
-    <span className="text-xs text-slate-200">{value !== undefined && value !== null && value !== '' ? String(value) : '—'}</span>
+    <span>{value !== undefined && value !== null && value !== '' ? String(value) : '—'}</span>
   ),
 };

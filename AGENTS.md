@@ -54,7 +54,6 @@ Never create ad-hoc dumps with `--create`/`--clean` (they emit `DROP DATABASE`, 
 - **Docs**: `docs/` — see especially `docs/ZONING_ARCHITECTURE.md` (zoning model), `docs/KB_UNLOADED_CONFIG.md` (diagnosis playbook) and `docs/CREATE_APP_NAV.md`.
 
 ## When You Change Things
-
 - New/changed Prisma models → create migration or document manual DDL; verify zero drift with `migrate diff`.
 - New admin menu/plugin → register `componentKey` in `registry.tsx`, seed menu via `TenantProvisioner.ts` (new tenants) **and** provide a script/SQL for existing tenants.
 - Touching RLS policies → check every column referenced in joined tables (new columns can make unqualified refs ambiguous).

@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     const id = searchParams.get('id');
     if (id) {
       const layout = await db.tableLayout.findFirst({
-        where: { id },
+        where: { OR: [{ id }, { systemName: id }] },
         include: {
           table: { select: { id: true, name: true, tableName: true } }
         }
@@ -36,13 +36,13 @@ export async function GET(req: Request) {
     const where: any = {};
 
     if (tableId) {
-      const targetTable = await db.tableDefinition.findUnique({
-        where: { id: tableId, tenantId }
+      const targetTable = await db.tableDefinition.findFirst({
+        where: { OR: [{ id: tableId }, { tableName: tableId }], tenantId }
       });
       if (!targetTable) {
         return NextResponse.json({ success: false, error: 'Table not found or access denied' }, { status: 404 });
       }
-      where.tableId = tableId;
+      where.tableId = targetTable.id;
     } else {
       where.OR = [
         { table: { tenantId } },
@@ -92,11 +92,13 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  let submittedSystemName: string | undefined;
   try {
     const { tenantId } = await requireSession();
 
     const body = await req.json();
     const { tableId, layoutType, viewType, name, systemName, description, isDefault, recordTitleField, config } = body;
+    submittedSystemName = systemName;
 
     if (!viewType || !name || !systemName) {
       return NextResponse.json({ success: false, error: 'viewType, name, and systemName are required' }, { status: 400 });
@@ -141,17 +143,26 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: layout });
   } catch (error: any) {
+    const target = Array.isArray(error?.meta?.target) ? error.meta.target.join(',') : '';
+    if (error?.code === 'P2002' && target.includes('system_name')) {
+      return NextResponse.json({
+        success: false,
+        error: `A layout with system name "${submittedSystemName}" already exists for this model. Please use a different name.`,
+      }, { status: 409 });
+    }
     console.error('[API CONSOLE LAYOUTS POST]:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export async function PATCH(req: Request) {
+  let submittedSystemName: string | undefined;
   try {
     const { tenantId } = await requireSession();
 
     const body = await req.json();
     const { id, action, tableId, layoutType, viewType, name, systemName, description, isDefault, recordTitleField, config } = body;
+    submittedSystemName = systemName;
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Layout ID is required' }, { status: 400 });
@@ -269,6 +280,13 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error: any) {
+    const target = Array.isArray(error?.meta?.target) ? error.meta.target.join(',') : '';
+    if (error?.code === 'P2002' && target.includes('system_name')) {
+      return NextResponse.json({
+        success: false,
+        error: `A layout with system name "${submittedSystemName}" already exists for this model. Please use a different name.`,
+      }, { status: 409 });
+    }
     console.error('[API CONSOLE LAYOUTS PATCH]:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

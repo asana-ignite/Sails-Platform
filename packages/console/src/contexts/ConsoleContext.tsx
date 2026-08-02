@@ -72,18 +72,32 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           let matchedAppId = null;
 
           if (currentPath !== '/') {
-            for (const app of filteredApps) {
-              const hasMatchingMenu = (menus: ConsoleMenu[]): boolean => {
-                return menus.some(m => {
-                  if (m.path && currentPath.startsWith(m.path)) return true;
-                  if (m.children) return hasMatchingMenu(m.children);
-                  return false;
-                });
-              };
-              
-              if (hasMatchingMenu(app.menus)) {
-                matchedAppId = app.id;
-                break;
+            // 1. App-first routing: match the first URL segment against app slugs
+            //    (e.g. /test/testtype/test_type_details_view/<recordId> -> slug "test").
+            //    This handles deep links that don't prefix any menu path.
+            const firstSegment = currentPath.split('/').filter(Boolean)[0]?.toLowerCase();
+            if (firstSegment) {
+              const slugApp = filteredApps.find((a: ConsoleApp) => a.slug && a.slug.toLowerCase() === firstSegment);
+              if (slugApp) {
+                matchedAppId = slugApp.id;
+              }
+            }
+
+            // 2. Fallback: match by menu path prefix (legacy paths like /table/..., /admin/...)
+            if (!matchedAppId) {
+              for (const app of filteredApps) {
+                const hasMatchingMenu = (menus: ConsoleMenu[]): boolean => {
+                  return menus.some(m => {
+                    if (m.path && currentPath.startsWith(m.path)) return true;
+                    if (m.children) return hasMatchingMenu(m.children);
+                    return false;
+                  });
+                };
+
+                if (hasMatchingMenu(app.menus)) {
+                  matchedAppId = app.id;
+                  break;
+                }
               }
             }
           }

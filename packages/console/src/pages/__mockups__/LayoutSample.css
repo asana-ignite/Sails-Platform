@@ -125,7 +125,7 @@
   font-size: 14px;
   border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: var(--sails-radius-sm, 4px);
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   color: var(--sails-text-primary, #1e293b);
 }
 
@@ -142,7 +142,7 @@
   font-family: inherit;
   border: 1px solid var(--sails-border, #e2e8f0);
   border-radius: var(--sails-radius-sm, 4px);
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   color: var(--sails-text-primary, #1e293b);
   resize: vertical;
 }
@@ -233,7 +233,7 @@
   font-size: 11px;
   font-family: 'SF Mono', 'Fira Code', monospace;
   line-height: 1.5;
-  background: var(--sails-bg-primary, #fff);
+  background: var(--sails-bg-card, #ffffff);
   color: var(--sails-text-primary, #1e293b);
   max-height: 400px;
   overflow: auto;

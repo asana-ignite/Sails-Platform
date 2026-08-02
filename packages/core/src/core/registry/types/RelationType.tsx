@@ -51,7 +51,7 @@ export const RelationType: FieldTypePlugin = {
   RenderTableCell: (props: { value: any }) => {
     if (!props.value) return <span></span>;
     return (
-      <span className="flex items-center text-blue-600 hover:underline cursor-pointer">
+      <span style={{ display: 'inline-flex', alignItems: 'center', color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}>
         🔗 {String(props.value)}
       </span>
     );

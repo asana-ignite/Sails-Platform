@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, Search, X, ExternalLink } from 'lucide-react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
+import '../controls.css';
 
 export const LookupControl: FieldControlPlugin = {
   id: 'control:lookup',
@@ -10,14 +11,16 @@ export const LookupControl: FieldControlPlugin = {
   compatibleTypes: ['lookup', 'relation'],
   isDefault: true,
 
+  mockValue: () => 'Sample Record',
+
   // ── ON-EDIT MODE (Interactive Form Input) ──
   RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => {
     const targetTable = (field?.config as any)?.targetTable || 'records';
     const displayVal = typeof value === 'object' ? value?.name || value?.title || value?.id : value;
 
     return (
-      <div className={`sails-input flex items-center gap-2 w-full ${className}`}>
-        <Search size={14} className="text-slate-400 shrink-0" />
+      <div className={`sails-input sails-control-lookup ${className}`}>
+        <Search size={14} className="sails-control-lookup__icon" />
         <input
           type="text"
           readOnly={readOnly}
@@ -25,18 +28,18 @@ export const LookupControl: FieldControlPlugin = {
           value={displayVal || ''}
           onChange={(e) => onChange && onChange(e.target.value)}
           placeholder={`Search ${targetTable}...`}
-          className="bg-transparent border-none outline-none w-full text-slate-200 placeholder:text-slate-500"
+          className="sails-control-lookup__input"
         />
         {displayVal && (
           <button
             type="button"
             onClick={() => onChange && onChange('')}
-            className="text-slate-400 hover:text-slate-200 p-0.5 rounded"
+            className="sails-control-lookup__clear"
           >
             <X size={12} />
           </button>
         )}
-        <span className="bg-cyan-500/10 text-cyan-400 text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 border border-cyan-500/20">
+        <span className="sails-control-lookup__badge">
           {targetTable}
         </span>
       </div>
@@ -46,13 +49,13 @@ export const LookupControl: FieldControlPlugin = {
   // ── ON-DISPLAY MODE (Clean Entity Link) ──
   RenderDisplay: ({ field, value }: FieldControlProps) => {
     if (value === undefined || value === null || value === '') {
-      return <span className="text-slate-500 text-xs">—</span>;
+      return <span>—</span>;
     }
 
     const displayVal = typeof value === 'object' ? value?.name || value?.title || value?.id : value;
 
     return (
-      <span className="sails-control-lookup-display text-xs text-blue-400 font-medium hover:underline cursor-pointer">
+      <span className="sails-control-lookup-display">
         {String(displayVal)}
       </span>
     );
