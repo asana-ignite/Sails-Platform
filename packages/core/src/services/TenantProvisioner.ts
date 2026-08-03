@@ -106,54 +106,54 @@ export class TenantProvisioner {
         menus: {
           create: [
             {
-              label: 'General', icon: 'Sliders', order: 0, actionType: 'plugin',
+              label: 'General', icon: 'Sliders', order: 0, actionType: 'plugin', tenantId,
               children: {
                 create: [
-                  { label: 'Company Profile', icon: 'Building', path: '/admin/profile', order: 0, requiredCapability: 'system.settings.profile', componentKey: 'AdminCompanyProfile', actionType: 'plugin' },
-                  { label: 'General Settings', icon: 'Settings', path: '/admin/general', order: 1, requiredCapability: 'system.settings.edit', componentKey: 'AdminGeneralSettings', actionType: 'plugin' },
-                  { label: 'Subscription & Billing', icon: 'CreditCard', path: '/admin/billing', order: 2, requiredCapability: 'system.billing.manage', componentKey: 'AdminBilling', actionType: 'plugin' }
+                  { label: 'Company Profile', icon: 'Building', path: '/admin/profile', order: 0, requiredCapability: 'system.settings.profile', componentKey: 'AdminCompanyProfile', actionType: 'plugin', tenantId },
+                  { label: 'General Settings', icon: 'Settings', path: '/admin/general', order: 1, requiredCapability: 'system.settings.edit', componentKey: 'AdminGeneralSettings', actionType: 'plugin', tenantId },
+                  { label: 'Subscription & Billing', icon: 'CreditCard', path: '/admin/billing', order: 2, requiredCapability: 'system.billing.manage', componentKey: 'AdminBilling', actionType: 'plugin', tenantId }
                 ]
               }
             },
             {
-              label: 'Users & Team', icon: 'Users', order: 1, actionType: 'plugin',
+              label: 'Users & Team', icon: 'Users', order: 1, actionType: 'plugin', tenantId,
               children: {
                 create: [
-                  { label: 'Users', icon: 'UserPlus', path: '/admin/users', order: 0, requiredCapability: 'system.users.manage', componentKey: 'AdminUserManager', actionType: 'plugin' },
-                  { label: 'Positions', icon: 'Award', path: '/admin/positions', order: 1, requiredCapability: 'system.users.manage', componentKey: 'AdminPositionManager', actionType: 'plugin' },
-                  { label: 'Teams', icon: 'GitBranch', path: '/admin/teams', order: 2, requiredCapability: 'system.teams.manage', componentKey: 'AdminTeamManager', actionType: 'plugin' },
-                  { label: 'Access Roles', icon: 'ShieldCheck', path: '/admin/roles', order: 3, requiredCapability: 'system.roles.assign', componentKey: 'AdminPermissions', actionType: 'plugin' }
+                  { label: 'Users', icon: 'UserPlus', path: '/admin/users', order: 0, requiredCapability: 'system.users.manage', componentKey: 'AdminUserManager', actionType: 'plugin', tenantId },
+                  { label: 'Positions', icon: 'Award', path: '/admin/positions', order: 1, requiredCapability: 'system.users.manage', componentKey: 'AdminPositionManager', actionType: 'plugin', tenantId },
+                  { label: 'Teams', icon: 'GitBranch', path: '/admin/teams', order: 2, requiredCapability: 'system.teams.manage', componentKey: 'AdminTeamManager', actionType: 'plugin', tenantId },
+                  { label: 'Access Roles', icon: 'ShieldCheck', path: '/admin/roles', order: 3, requiredCapability: 'system.roles.assign', componentKey: 'AdminPermissions', actionType: 'plugin', tenantId }
                 ]
               }
             },
             {
-              label: 'Platform Studio', icon: 'Layout', order: 2, actionType: 'plugin',
+              label: 'Platform Studio', icon: 'Layout', order: 2, actionType: 'plugin', tenantId,
               children: {
                 create: [
-                  { label: 'Data Model', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', componentKey: 'AdminEntityManager', actionType: 'plugin' },
-                  { label: 'Layouts', icon: 'LayoutTemplate', path: '/admin/views', order: 1, requiredCapability: 'system.schema.manage', componentKey: 'AdminViewManager', actionType: 'plugin' },
-                  { label: 'Workflow', icon: 'Workflow', path: '/admin/workflow', order: 2, requiredCapability: 'system.schema.manage', componentKey: 'AdminWorkflowManager', actionType: 'plugin' },
-                  { label: 'Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 3, requiredCapability: 'system.apps.manage', componentKey: 'AdminAppManager', actionType: 'plugin' }
+                  { label: 'Data Model', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', componentKey: 'AdminEntityManager', actionType: 'plugin', tenantId },
+                  { label: 'Layouts', icon: 'LayoutTemplate', path: '/admin/views', order: 1, requiredCapability: 'system.schema.manage', componentKey: 'AdminViewManager', actionType: 'plugin', tenantId },
+                  { label: 'Workflow', icon: 'Workflow', path: '/admin/workflow', order: 2, requiredCapability: 'system.schema.manage', componentKey: 'AdminWorkflowManager', actionType: 'plugin', tenantId },
+                  { label: 'Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 3, requiredCapability: 'system.apps.manage', componentKey: 'AdminAppManager', actionType: 'plugin', tenantId }
                 ]
               }
             },
             {
-              label: 'Login & Security', icon: 'ShieldCheck', order: 3, actionType: 'plugin',
+              label: 'Login & Security', icon: 'ShieldCheck', order: 3, actionType: 'plugin', tenantId,
               children: {
                 create: [
-                  { label: 'Login & Single Sign-On', icon: 'Key', path: '/admin/sso', order: 0, requiredCapability: 'system.security.sso', componentKey: 'AdminSSOConfig', actionType: 'plugin' },
-                  { label: 'API & Service Tokens', icon: 'FileDigit', path: '/admin/tokens', order: 1, requiredCapability: 'system.security.tokens', componentKey: 'AdminApiTokens', actionType: 'plugin' },
-                  { label: 'Audit History', icon: 'FileClock', path: '/admin/audit', order: 2, requiredCapability: 'system.audit.view', componentKey: 'AdminAuditLog', actionType: 'plugin' }
+                  { label: 'Login & Single Sign-On', icon: 'Key', path: '/admin/sso', order: 0, requiredCapability: 'system.security.sso', componentKey: 'AdminSSOConfig', actionType: 'plugin', tenantId },
+                  { label: 'API & Service Tokens', icon: 'FileDigit', path: '/admin/tokens', order: 1, requiredCapability: 'system.security.tokens', componentKey: 'AdminApiTokens', actionType: 'plugin', tenantId },
+                  { label: 'Audit History', icon: 'FileClock', path: '/admin/audit', order: 2, requiredCapability: 'system.audit.view', componentKey: 'AdminAuditLog', actionType: 'plugin', tenantId }
                 ]
               }
             },
             {
-              label: 'Integrations & Apps', icon: 'Blocks', order: 4, actionType: 'plugin',
+              label: 'Integrations & Apps', icon: 'Blocks', order: 4, actionType: 'plugin', tenantId,
               children: {
                 create: [
-                  { label: 'Connected Apps', icon: 'Link', path: '/admin/connected-apps', order: 0, requiredCapability: 'system.security.apps', componentKey: 'AdminConnectedApps', actionType: 'plugin' },
-                  { label: 'API & Webhooks', icon: 'Webhook', path: '/admin/integrations', order: 1, requiredCapability: 'system.integrations.api', componentKey: 'AdminIntegrations', actionType: 'plugin' },
-                  { label: 'Custom Modules (BYOC)', icon: 'Code2', path: '/admin/byoc', order: 2, requiredCapability: 'system.extensions.byoc', componentKey: 'AdminByocModules', actionType: 'plugin' }
+                  { label: 'Connected Apps', icon: 'Link', path: '/admin/connected-apps', order: 0, requiredCapability: 'system.security.apps', componentKey: 'AdminConnectedApps', actionType: 'plugin', tenantId },
+                  { label: 'API & Webhooks', icon: 'Webhook', path: '/admin/integrations', order: 1, requiredCapability: 'system.integrations.api', componentKey: 'AdminIntegrations', actionType: 'plugin', tenantId },
+                  { label: 'Custom Modules (BYOC)', icon: 'Code2', path: '/admin/byoc', order: 2, requiredCapability: 'system.extensions.byoc', componentKey: 'AdminByocModules', actionType: 'plugin', tenantId }
                 ]
               }
             }
@@ -189,7 +189,7 @@ export class TenantProvisioner {
       await db.consoleApp.create({
         data: {
           tenantId, name: 'Dashboard', icon: 'LayoutDashboard', order: 0,
-          menus: { create: [{ label: 'Overview', icon: 'Activity', path: '/dashboard', order: 0, actionType: 'plugin' }] }
+          menus: { create: [{ label: 'Overview', icon: 'Activity', path: '/dashboard', order: 0, actionType: 'plugin', tenantId }] }
         }
       });
     }
@@ -202,20 +202,20 @@ export class TenantProvisioner {
           menus: {
             create: [
               {
-                label: 'Intelligence', icon: 'Zap', order: 0, actionType: 'plugin',
+                label: 'Intelligence', icon: 'Zap', order: 0, actionType: 'plugin', tenantId,
                 children: {
                   create: [
-                    { label: 'Leads', icon: 'Target', path: '/crm/leads', order: 0, actionType: 'table' },
-                    { label: 'Pipeline', icon: 'GitMerge', path: '/crm/pipeline', order: 1, actionType: 'plugin' }
+                    { label: 'Leads', icon: 'Target', path: '/crm/leads', order: 0, actionType: 'table', tenantId },
+                    { label: 'Pipeline', icon: 'GitMerge', path: '/crm/pipeline', order: 1, actionType: 'plugin', tenantId }
                   ]
                 }
               },
               {
-                label: 'Accounts', icon: 'Building', order: 1, actionType: 'plugin',
+                label: 'Accounts', icon: 'Building', order: 1, actionType: 'plugin', tenantId,
                 children: {
                   create: [
-                    { label: 'Customers', icon: 'UserCheck', path: '/crm/customers', order: 0, actionType: 'table' },
-                    { label: 'Companies', icon: 'Briefcase', path: '/crm/companies', order: 1, actionType: 'table' }
+                    { label: 'Customers', icon: 'UserCheck', path: '/crm/customers', order: 0, actionType: 'table', tenantId },
+                    { label: 'Companies', icon: 'Briefcase', path: '/crm/companies', order: 1, actionType: 'table', tenantId }
                   ]
                 }
               }
@@ -233,11 +233,11 @@ export class TenantProvisioner {
           menus: {
             create: [
               {
-                label: 'Transactions', icon: 'ShoppingCart', order: 0, actionType: 'plugin',
+                label: 'Transactions', icon: 'ShoppingCart', order: 0, actionType: 'plugin', tenantId,
                 children: {
                   create: [
-                    { label: 'Orders', icon: 'sales/orders', order: 0, actionType: 'table' },
-                    { label: 'Invoices', icon: 'sales/invoices', order: 1, actionType: 'table' }
+                    { label: 'Orders', icon: 'sales/orders', order: 0, actionType: 'table', tenantId },
+                    { label: 'Invoices', icon: 'sales/invoices', order: 1, actionType: 'table', tenantId }
                   ]
                 }
               }

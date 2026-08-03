@@ -298,6 +298,16 @@ function renderListFieldValue(field: SailsFieldDefinition, record: Record<string
     const options = (field.config as any)?.options || [];
     return options.find((o: any) => o.value === val)?.label || String(val);
   }
+  if (field.logicalType === 'address' && typeof val === 'object' && val !== null) {
+    const parts = [
+      val.address1,
+      val.address2,
+      [val.city, val.state].filter((p: any) => typeof p === 'string' && p.trim() !== '').join(', '),
+      val.country,
+      val.postalCode,
+    ].filter((p: any) => typeof p === 'string' && p.trim() !== '');
+    return parts.length > 0 ? parts.join(', ') : JSON.stringify(val);
+  }
   return String(val);
 }
 

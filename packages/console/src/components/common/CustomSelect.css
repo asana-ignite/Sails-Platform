@@ -80,7 +80,7 @@
 }
 
 .sails-custom-select__placeholder {
-  color: var(--sails-text-muted);
+  color: var(--sails-field-placeholder, #D9D9D9);
 }
 
 .sails-custom-select__chevron {
@@ -100,7 +100,8 @@
   top: calc(100% + 4px);
   left: 0;
   width: 100%;
-  min-width: 140px;
+  min-width: 0;
+  max-width: 100%;
   background: var(--sails-bg-card, #ffffff);
   border: 1px solid var(--sails-border-color, #f1f2f6);
   border-radius: var(--sails-radius-md, 8px);
@@ -136,6 +137,11 @@
   box-sizing: border-box;
 }
 
+.sails-custom-select__search-input::placeholder {
+  color: var(--sails-field-placeholder, #D9D9D9);
+  opacity: 1;
+}
+
 .sails-custom-select__search-input:focus {
   border-color: var(--sails-primary);
   box-shadow: 0 0 0 3px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.2);
@@ -164,6 +170,9 @@
   color: var(--sails-text-main, #344759);
   cursor: pointer;
   transition: all 0.15s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sails-custom-select__option:hover:not(.is-selected) {

@@ -296,11 +296,18 @@ export class QueryLayer {
       limit?: number;
       validFields: Set<string>;
       textFields: string[];
+      jsonbFields?: Set<string>;
     }
   ): Promise<{ rows: any[]; total: number; page: number; limit: number; totalPages: number }> {
     const page = Math.max(1, options.page || 1);
     const limit = Math.min(100, Math.max(1, options.limit || 25));
     const offset = (page - 1) * limit;
+
+    // JSONB columns have no text comparison/ordering operators — cast to ::text.
+    const jsonbFields = options.jsonbFields || new Set<string>();
+    const eqExpr = (f: string) => (jsonbFields.has(f) ? '%I::text = %L' : '%I = %L');
+    const neqExpr = (f: string) => (jsonbFields.has(f) ? '%I::text != %L' : '%I != %L');
+    const cmpExpr = (f: string) => (jsonbFields.has(f) ? '%I::text %s %L' : '%I %s %L');
 
     const whereClauses: string[] = [];
 
@@ -318,25 +325,25 @@ export class QueryLayer {
 
         switch (operator) {
           case 'eq':
-            whereClauses.push(format('%I = %L', fieldName, rawValue));
+            whereClauses.push(format(eqExpr(fieldName), fieldName, rawValue));
             break;
           case 'neq':
-            whereClauses.push(format('%I != %L', fieldName, rawValue));
+            whereClauses.push(format(neqExpr(fieldName), fieldName, rawValue));
             break;
           case 'contains':
             whereClauses.push(format('%I::text ILIKE %L', fieldName, `%${rawValue}%`));
             break;
           case 'gt':
-            whereClauses.push(format('%I > %L', fieldName, rawValue));
+            whereClauses.push(format(cmpExpr(fieldName), fieldName, '>', rawValue));
             break;
           case 'gte':
-            whereClauses.push(format('%I >= %L', fieldName, rawValue));
+            whereClauses.push(format(cmpExpr(fieldName), fieldName, '>=', rawValue));
             break;
           case 'lt':
-            whereClauses.push(format('%I < %L', fieldName, rawValue));
+            whereClauses.push(format(cmpExpr(fieldName), fieldName, '<', rawValue));
             break;
           case 'lte':
-            whereClauses.push(format('%I <= %L', fieldName, rawValue));
+            whereClauses.push(format(cmpExpr(fieldName), fieldName, '<=', rawValue));
             break;
           case 'is_empty':
             whereClauses.push(format('(%I IS NULL OR %I::text = %L)', fieldName, fieldName, ''));
@@ -366,7 +373,8 @@ export class QueryLayer {
       for (const rule of options.sort) {
         if (!options.validFields.has(rule.fieldId)) continue;
         const dir = rule.dir === 'desc' ? 'DESC' : 'ASC';
-        orderByClauses.push(format('%I %s', rule.fieldId, dir));
+        const colExpr = jsonbFields.has(rule.fieldId) ? '%I::text %s' : '%I %s';
+        orderByClauses.push(format(colExpr, rule.fieldId, dir));
       }
     }
     if (orderByClauses.length === 0) {

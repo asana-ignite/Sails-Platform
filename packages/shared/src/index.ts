@@ -11,6 +11,8 @@
  */
 
 export { FIELD_TYPE_REGISTRY } from './fieldTypes';
+export { COUNTRY_OPTIONS } from './countries';
+export type { CountryOption } from './countries';
 export { SYSTEM_PERMISSION_REGISTRY, getAllCapabilities } from './permissions';
 export type { PermissionDefinition, SystemCapability } from './permissions';
 export {

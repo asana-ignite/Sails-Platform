@@ -367,11 +367,28 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
   {
     type: 'address',
     label: 'Address',
-    description: 'Unified single address text field',
+    description: 'Structured postal address (Address 1, Address 2, City, State, Country, Postal Code)',
     iconName: 'MapPin',
-    physicalType: 'text',
+    physicalType: 'jsonb',
     parametersSchema: [
-      { name: 'placeholder', label: 'Input Placeholder', type: 'text', placeholder: 'e.g. 123 Main St, Suite 400, New York, NY 10001' }
+      { name: 'includeAddress1', label: 'Include Address Line 1', type: 'boolean', defaultValue: true },
+      { name: 'includeAddress2', label: 'Include Address Line 2', type: 'boolean', defaultValue: true },
+      { name: 'includeCity', label: 'Include City / Province / State', type: 'boolean', defaultValue: true },
+      { name: 'includeState', label: 'Include State / Province', type: 'boolean', defaultValue: true },
+      { name: 'includeCountry', label: 'Include Country', type: 'boolean', defaultValue: true },
+      { name: 'includePostalCode', label: 'Include Zip / Postal Code', type: 'boolean', defaultValue: true },
+      {
+        name: 'countrySource',
+        label: 'Country Options Source',
+        type: 'select',
+        defaultValue: 'all',
+        options: [
+          { label: 'All Countries (searchable)', value: 'all' },
+          { label: 'Custom List', value: 'custom' }
+        ]
+      },
+      { name: 'countryOptions', label: 'Custom Country List (comma separated)', type: 'text', placeholder: 'e.g. Thailand, Singapore, Malaysia' },
+      { name: 'placeholder', label: 'Input Placeholder (legacy mode)', type: 'text', placeholder: 'e.g. 123 Main St, Suite 400, New York, NY 10001' }
     ]
   },
   {

@@ -135,6 +135,12 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       .filter((f: any) => textTypes.has(f.type?.toLowerCase() || ''))
       .map((f: any) => f.fieldName);
 
+    const jsonbFields = new Set<string>(
+      (tableMeta?.fields || [])
+        .filter((f: any) => (f.physicalType || '').toLowerCase() === 'jsonb')
+        .map((f: any) => f.fieldName)
+    );
+
     const filtersRaw = searchParams.get('filters');
     const sortRaw = searchParams.get('sort');
 
@@ -162,6 +168,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       limit: isNaN(limit) ? 25 : limit,
       validFields,
       textFields,
+      jsonbFields,
     });
 
     return NextResponse.json(

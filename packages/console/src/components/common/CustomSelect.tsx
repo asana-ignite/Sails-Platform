@@ -46,6 +46,17 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
   const selectedOption = options.find(opt => isValueMatch(opt.value, value));
 
+  // An empty-value option whose label duplicates the placeholder text is a
+  // "no selection" sentinel (e.g. Boolean's "Select option..."). Render it with
+  // the standard placeholder color instead of looking like a real selected value.
+  // Real empty-value labels (e.g. "All Actions", "Default Active Detail Layout")
+  // keep their normal selected styling.
+  const isEmptySentinel =
+    selectedOption !== undefined &&
+    (selectedOption.value === '' || selectedOption.value === null) &&
+    selectedOption.label === placeholder;
+  const showPlaceholder = selectedOption === undefined || isEmptySentinel;
+
   const filteredOptions = searchable && searchQuery
     ? options.filter(opt => opt.label.toLowerCase().includes(searchQuery.toLowerCase()) || String(opt.value).toLowerCase().includes(searchQuery.toLowerCase()))
     : options;
@@ -82,10 +93,13 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   }, [isOpen, searchable]);
 
   const dropClass = computedDropUp ? 'sails-custom-select--dropup' : '';
+  // md is the form-field size: default to full-width + .sails-input metrics so
+  // selects always match sibling controls. sm (pagination/page-size) stays compact.
+  const fieldSizeClass = size === 'md' ? ' sails-custom-select--full sails-custom-select--field' : '';
 
   return (
     <div 
-      className={`sails-custom-select sails-custom-select--${size} ${dropClass} ${isOpen ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''} ${className}`} 
+      className={`sails-custom-select sails-custom-select--${size}${fieldSizeClass} ${dropClass} ${isOpen ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''} ${className}`} 
       ref={containerRef}
       style={style}
     >
@@ -101,7 +115,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         disabled={disabled}
       >
         <span className="sails-custom-select__value">
-          {selectedOption ? (
+          {!showPlaceholder ? (
             <span className="sails-custom-select__value-content">
               {selectedOption.icon && <span className="sails-custom-select__option-icon">{selectedOption.icon}</span>}
               {selectedOption.label}

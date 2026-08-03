@@ -43,7 +43,7 @@
 /* Value text */
 .sails-picker__text {
   flex: 1;
-  color: var(--sails-text-muted, #94a3b8);
+  color: var(--sails-field-placeholder, #D9D9D9);
 }
 
 .sails-picker__text--filled {
@@ -585,7 +585,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   font-size: 11px;
 }
 .sails-control-user-edit__placeholder {
-  color: var(--sails-text-muted, #94a3b8);
+  color: var(--sails-field-placeholder, #D9D9D9);
 }
 .sails-control-user-edit__clear {
   color: var(--sails-text-muted, #94a3b8);
@@ -655,7 +655,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   color: #e2e8f0;
 }
 .sails-control-user-dropdown__search-input::placeholder {
-  color: #64748b;
+  color: var(--sails-field-placeholder, #D9D9D9);
 }
 .sails-control-user-dropdown__list {
   max-height: 192px;
@@ -748,7 +748,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   color: var(--sails-text-main, #344759);
 }
 .sails-control-lookup__input::placeholder {
-  color: var(--sails-text-muted, #94a3b8);
+  color: var(--sails-field-placeholder, #D9D9D9);
 }
 .sails-control-lookup__clear {
   color: var(--sails-text-muted, #94a3b8);
@@ -802,7 +802,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   color: var(--sails-text-main, #344759);
 }
 .sails-control-currency__input::placeholder {
-  color: var(--sails-text-muted, #94a3b8);
+  color: var(--sails-field-placeholder, #D9D9D9);
 }
 .sails-control-display-emerald {
   font-size: 12px;
@@ -1000,3 +1000,40 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   font-size: 10px;
   opacity: 0.7;
 }
+
+/* ─── Address control (responsive row layout) ─────────────────
+   2-col on wide containers (>370px): label | control
+   1-col on narrow containers (≤370px): label above control
+   Container-aware via flex-wrap — no media query needed for
+   Layout Studio narrow blocks.  Phone (≤640) forces full stack
+   in layouts-responsive.css. */
+
+.sails-address-control__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+.sails-address-control__row:last-child {
+  margin-bottom: 0;
+}
+
+.sails-address-control__label {
+  flex: 1 1 140px;
+  max-width: 200px;
+  font-size: 12px;
+  color: var(--sails-text-muted, #8b93a7);
+  padding-top: 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sails-address-control__control {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/* In inert design mode (Layout Studio canvas) the pointer-events
+   are blocked by the wrapper, so we don't need to touch them here. */

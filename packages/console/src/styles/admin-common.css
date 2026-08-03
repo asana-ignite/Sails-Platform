@@ -749,6 +749,11 @@
   transition: all 0.2s;
 }
 
+.sails-input::placeholder {
+  color: var(--sails-field-placeholder, #D9D9D9);
+  opacity: 1;
+}
+
 .sails-input:focus {
   border-color: var(--sails-primary);
   box-shadow: 0 0 0 3px var(--sails-primary-light);

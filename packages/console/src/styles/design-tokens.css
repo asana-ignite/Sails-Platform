@@ -18,6 +18,7 @@
   --sails-text-main: #344759;
   --sails-text-muted: #6b8ba4;
   --sails-text-light: #ffffff;
+  --sails-field-placeholder: #D9D9D9;
   --sails-text-sidebar: #5b7184;
   --sails-text-sidebar-active: #9DCEE0;
 
@@ -64,6 +65,7 @@
   --sails-bg-card: #252b3b;
   --sails-text-main: #f5f6fa;
   --sails-text-muted: #aeb7c2;
+  --sails-field-placeholder: #D9D9D9;
   --sails-border-color: #2d3436;
 }
 

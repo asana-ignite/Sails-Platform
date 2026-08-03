@@ -44,7 +44,7 @@
 }
 
 .om-search-input::placeholder {
-    color: var(--sails-text-muted, #64748b);
+    color: var(--sails-field-placeholder, #D9D9D9);
 }
 
 /* Master Table */
