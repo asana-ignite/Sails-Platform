@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { formatDateTimeValue } from '@sails/shared';
+import { useDateTimePrefs, resolveControlDisplayText } from '../../../utils/systemDateTime';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import '../controls.css';
 
@@ -260,19 +260,23 @@ export const DateControl: FieldControlPlugin = {
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   },
 
-  RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => (
-    <SailsDatePicker
-      value={value ? String(value) : ''}
-      displayText={value ? formatDateTimeValue(value, field?.config, field.logicalType || 'date') : ''}
-      onChange={(val) => onChange && onChange(val)}
-      disabled={disabled}
-      readOnly={readOnly}
-      className={className}
-    />
-  ),
+  RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => {
+    const prefs = useDateTimePrefs();
+    return (
+      <SailsDatePicker
+        value={value ? String(value) : ''}
+        displayText={resolveControlDisplayText(field, value, prefs, 'date')}
+        onChange={(val) => onChange && onChange(val)}
+        disabled={disabled}
+        readOnly={readOnly}
+        className={className}
+      />
+    );
+  },
 
   RenderDisplay: ({ field, value }: FieldControlProps) => {
-    const formatted = value ? formatDateTimeValue(value, field?.config, field.logicalType || 'date') : '';
+    const prefs = useDateTimePrefs();
+    const formatted = resolveControlDisplayText(field, value, prefs, 'date');
     return <span>{formatted || '—'}</span>;
   },
 };

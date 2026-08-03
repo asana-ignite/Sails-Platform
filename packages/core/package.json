@@ -1,7 +1,7 @@
 {
   "name": "sails-core",
   "version": "1.0.0",
-  "description": "Sails Core — Internal Operating System",
+  "description": "Sails Core — Enterprise-Grade CRM Application Engine",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

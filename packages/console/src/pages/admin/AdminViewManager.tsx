@@ -301,7 +301,7 @@ const AdminViewManager: React.FC = () => {
                   const ViewIcon = viewTypeInfo.icon;
 
                   return (
-                    <tr key={row.id} className="lav-clickable-row">
+                    <tr key={row.id} className="lav-clickable-row" onClick={() => handleOpenLayoutStudio(row)}>
                       <td>
                         <div className="lav-cell-name">
                           <div className="lav-icon-wrapper">

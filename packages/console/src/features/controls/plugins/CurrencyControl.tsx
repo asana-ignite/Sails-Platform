@@ -1,6 +1,7 @@
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
-import '../controls.css';
+import { formatDecimalValue } from '@sails/shared';
+import { NumberFormatInput } from '../NumberFormatInput';
 
 export const CurrencyControl: FieldControlPlugin = {
   id: 'control:currency',
@@ -16,26 +17,37 @@ export const CurrencyControl: FieldControlPlugin = {
     const symbol = (field?.config as any)?.currencySymbol || '฿';
 
     return (
-      <div className={`sails-input sails-control-currency ${className}`}>
-        <span className="sails-control-currency__symbol">{symbol}</span>
-        <input
-          type="number"
-          readOnly={readOnly}
-          disabled={disabled}
+      <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+        <span
+          style={{
+            position: 'absolute',
+            left: '12px',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: 'var(--sails-text-muted, #94a3b8)',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }}
+        >
+          {symbol}
+        </span>
+        <NumberFormatInput
+          field={field}
           value={value ?? ''}
+          onChange={onChange}
+          disabled={disabled}
+          readOnly={readOnly}
+          className={className}
           placeholder="0.00"
-          onChange={(e) => onChange && onChange(e.target.value)}
-          className="sails-control-currency__input"
+          style={{ paddingLeft: '28px' }}
         />
       </div>
     );
   },
 
   RenderDisplay: ({ field, value }: FieldControlProps) => {
-    if (value === undefined || value === null || value === '') return <span>—</span>;
+    if (value === undefined || value === null || value === '') return <span className="sails-control-numeric-display">—</span>;
     const symbol = (field.config as any)?.currencySymbol || '฿';
-    const num = Number(value);
-    const formatted = isNaN(num) ? String(value) : num.toLocaleString();
-    return <span className="sails-control-display-emerald">{symbol}{formatted}</span>;
+    return <span className="sails-control-numeric-display">{symbol}{formatDecimalValue(value, field?.config, field?.logicalType)}</span>;
   },
 };

@@ -9,6 +9,7 @@ Multi-tenant, schema-per-tenant platform. Monorepo: `packages/core` (Next.js API
 3. **"No data in the UI" is almost never a code bug.** Check in order: API response → core logs → browser session (stale JWT) → `DEFAULT_TENANT_ID` in `.env` → schema drift via `prisma migrate diff`. Full playbook: `docs/KB_UNLOADED_CONFIG.md`.
 4. **`prisma migrate status` does not detect drift** after a DB restore (the `_prisma_migrations` rows come with the dump). Only `prisma migrate diff --from-schema-datasource ... --to-schema-datamodel ... --script` tells the truth; expect `-- This is an empty migration.`
 5. **Check the compose project before concluding edits aren't applying.** Containers created from another directory/project mount different volumes. `docker inspect <c> --format '{{.Config.Labels}}' | grep compose.project`.
+6. **`packages/core/tests/*` (test-engine, test-security, test-validation, test-provisioner) are DESTRUCTIVE** — their CLEANUP phases run `tenant.deleteMany({})` / `user.deleteMany({})` on the LIVE dev DB. Running them wipes the real "Sails Default" tenant + admin user. Only run them on a throwaway database. After any such run, `db:clean` will drop the now-orphaned `tenant_sails_default` schema — restore from `backups/` per `docs/KB_UNLOADED_CONFIG.md` before continuing.
 
 ## Environment
 

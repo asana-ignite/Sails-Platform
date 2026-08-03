@@ -20,11 +20,12 @@ import {
   MousePointerClick,
 } from 'lucide-react';
 import type { SailsFieldDefinition, LayoutColumn, LayoutFilter, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction } from '@sails/shared';
-import { formatDateTimeValue } from '@sails/shared';
+import { formatDateTimeValue, formatDecimalValue } from '@sails/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { FieldControlRegistry } from '../../features/controls/FieldControlRegistry';
 import { DetailFieldInput, DetailFieldDisplay, mockFieldValue } from '../../features/controls/DetailFieldControl';
+import { UserControl } from '../../features/controls/plugins/UserControl';
 import type { FieldValidation, ConditionOp, ValidationType } from '../../features/controls/types';
 import { ActionRegistry } from '../../features/actions';
 import { useAuth } from '../../contexts/AuthContext';
@@ -285,10 +286,14 @@ function buildMockRows(fields: SailsFieldDefinition[]): Record<string, any>[] {
   });
 }
 
+const NUMERIC_COLUMN_TYPES = new Set(['number', 'decimal', 'currency', 'percentage', 'percent']);
+
 function renderListFieldValue(field: SailsFieldDefinition, record: Record<string, any>): string {
   const val = record[field.fieldName];
   if (val === undefined || val === null) return '\u2014';
-  if (field.logicalType === 'currency') return `\u0E3F${val.toLocaleString()}`;
+  if (field.logicalType === 'currency') return `\u0E3F${formatDecimalValue(val, field.config, field.logicalType)}`;
+  if (field.logicalType === 'percentage' || field.logicalType === 'percent') return `${formatDecimalValue(val, field.config, field.logicalType)}%`;
+  if (field.logicalType === 'decimal' || field.logicalType === 'number') return formatDecimalValue(val, field.config, field.logicalType);
   if (field.logicalType === 'boolean') return val ? 'Yes' : 'No';
   if (field.logicalType === 'date' || field.logicalType === 'datetime' || field.logicalType === 'timestamp' || field.logicalType === 'time') {
     const formatted = formatDateTimeValue(val, field.config, field.logicalType);
@@ -1963,7 +1968,7 @@ const LayoutStudio: React.FC = () => {
                               return (
                                 <th key={col.id}
                                   className={`ls-rth ${col.allowSorting ? 'ls-rth--sortable' : ''} ${isSorted ? 'ls-rth--sorted' : ''}`}
-                                  style={{ ...(col.width ? { width: `${col.width}${col.widthUnit || 'px'}` } : {}), textAlign: col.alignment || 'left' }}>
+                                  style={{ ...(col.width ? { width: `${col.width}${col.widthUnit || 'px'}` } : {}), textAlign: col.alignment || (NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}>
                                   <div className="ls-rth__inner">
                                     {col.allowSorting ? (
                                       <button className="ls-rth__sort-btn" onClick={() => handleListRuntimeSort(col.id)}>
@@ -2023,14 +2028,17 @@ const LayoutStudio: React.FC = () => {
                                     const isPrimary = col.id === primaryColId;
                                     if (!f) return <td key={col.id} className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''}`} style={{ textAlign: col.alignment || 'left' }}>—</td>;
                                     const val = renderListFieldValue(f, rec);
+                                    const cellNode = f.logicalType === 'user'
+                                      ? <UserControl.RenderDisplay field={f} value={rec[f.fieldName]} />
+                                      : val;
                                     return (
-                                      <td key={col.id} className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''}`} style={{ textAlign: col.alignment || 'left' }}>
+                                      <td key={col.id} className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''}`} style={{ textAlign: col.alignment || (NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}>
                                         {isPrimary ? (
                                           <span className="ls-primary-link" style={{ color: 'var(--sails-primary, #6366f1)', fontWeight: 500, cursor: 'pointer', textDecoration: 'underline' }}>
                                             {val}
                                           </span>
                                         ) : (
-                                          val
+                                          cellNode
                                         )}
                                       </td>
                                     );
@@ -2133,8 +2141,11 @@ const LayoutStudio: React.FC = () => {
                                 if (!f) return <td key={col.id} className={`ls-td ${!col.visible ? 'ls-td--hidden' : ''}`} style={{ textAlign: col.alignment || 'left' }}>—</td>;
                                 const isPrimary = col.isPrimaryLink;
                                 const val = renderListFieldValue(f, rec);
+                                const cellNode = f.logicalType === 'user'
+                                  ? <UserControl.RenderDisplay field={f} value={rec[f.fieldName]} />
+                                  : val;
                                 return (
-                                  <td key={col.id} className={`ls-td ${!col.visible ? 'ls-td--hidden' : ''} ${col.wrapText ? 'ls-td--wrap' : ''}`} style={{ textAlign: col.alignment || 'left' }}>
+                                  <td key={col.id} className={`ls-td ${!col.visible ? 'ls-td--hidden' : ''} ${col.wrapText ? 'ls-td--wrap' : ''}`} style={{ textAlign: col.alignment || (NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}>
                                     {isPrimary ? (
                                       <span
                                         className="ls-primary-link"
@@ -2145,7 +2156,7 @@ const LayoutStudio: React.FC = () => {
                                         {val}
                                       </span>
                                     ) : (
-                                      val
+                                      cellNode
                                     )}
                                   </td>
                                 );

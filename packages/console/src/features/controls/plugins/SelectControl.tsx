@@ -39,10 +39,6 @@ export const SelectControl: FieldControlPlugin = {
     const found = options.find((o) => o.value === value);
     const label = found ? found.label : String(value);
 
-    return (
-      <span className="sails-control-select-badge">
-        {label}
-      </span>
-    );
+    return <span>{label}</span>;
   },
 };

@@ -1,6 +1,6 @@
 # Workspace Configuration: Modules & Navigation
 
-This document outlines the standard configuration for the **SAILS** Workspace, including core modules and their navigation structures tailored for Ignite Idea operations.
+This document outlines the standard configuration for the **SAILS** Workspace, including core modules and their navigation structures tailored for enterprise operations.
 
 ## 1. Sales Module
 *Focus: Pipeline management and lead tracking.*

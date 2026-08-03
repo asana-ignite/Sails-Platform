@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { QueryLayer } from '@/core/engine/QueryLayer';
 import format from 'pg-format';
 import { requireSession } from '@/lib/auth/session';
-import { validateRecord } from '@sails/shared';
+import { validateRecord, sanitizeWritePayload } from '@sails/shared';
 
 type RouteContext = { params: { tableName: string } };
 
@@ -42,12 +42,14 @@ async function resolveTable(tableName: string) {
 export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
     const { tableName } = params;
-    const data = await req.json();
+    const rawData = await req.json();
 
     const resolved = await resolveTable(tableName);
     if (!resolved) {
       return NextResponse.json({ error: 'Table not found or access denied.' }, { status: 404 });
     }
+
+    const data = sanitizeWritePayload(resolved.table.fields, rawData);
 
     if (!data || Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'No data provided.' }, { status: 400 });
@@ -188,7 +190,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   try {
     const { tableName } = params;
     const recordId = req.nextUrl.searchParams.get('id');
-    const data = await req.json();
+    const rawData = await req.json();
 
     if (!recordId) {
       return NextResponse.json({ error: 'Missing required query param: id.' }, { status: 400 });
@@ -198,6 +200,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     if (!resolved) {
       return NextResponse.json({ error: 'Table not found or access denied.' }, { status: 404 });
     }
+
+    const data = sanitizeWritePayload(resolved.table.fields, rawData);
 
     // Server-side validation for partial updates — only fields present in the body.
     const patchFields = (resolved.table.fields || []).filter((f: any) =>

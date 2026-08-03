@@ -6,6 +6,7 @@ import './styles/globals.css';
 import { ConsoleProvider, useConsole, ConsoleMenu } from './contexts/ConsoleContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { DateTimePrefsProvider } from './utils/systemDateTime';
 
 // Lazy load pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -167,6 +168,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ConsoleProvider>
+                    <DateTimePrefsProvider>
                     <Routes>
                       <Route path="/audit-live" element={<Suspense fallback={<LoadingScreen />}><AdminAuditLog /></Suspense>} />
                       <Route path="*" element={
@@ -180,6 +182,7 @@ function App() {
                         </AppLayout>
                       } />
                     </Routes>
+                    </DateTimePrefsProvider>
                   </ConsoleProvider>
                 </ProtectedRoute>
               }

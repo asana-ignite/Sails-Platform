@@ -109,7 +109,7 @@
 }
 
 .lav-clickable-row {
-  cursor: default;
+  cursor: pointer;
   transition: background-color 0.15s ease;
 }
 

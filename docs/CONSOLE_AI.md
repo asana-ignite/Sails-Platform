@@ -2,13 +2,13 @@
 
 ## Product Identity
 - **Product Name**: SAILS (pronounced "ไอ-นิ-ดอส")
-- **Full Name**: Ignite Idea Operating System
-- **Domain**: Internal usage at Ignite Idea
+- **Product Type**: Enterprise-Grade CRM Application
+- **Positioning**: Flexible Configuration — data models, security policies, and workflows are configured visually, with no code required
 - **This Project**: **SAILS Console** — The frontend UI
-- **Backend**: **SAILS Core** — Headless Internal Engine (`/packages/core`)
+- **Backend**: **SAILS Core** — Headless CRM Engine (`/packages/core`)
 
 ## Project Overview
-SAILS Console is the frontend application for the SAILS platform. It connects to the SAILS Core backend API to provide a visual interface for managing projects, sales leads, cases, and timesheets within Ignite Idea.
+SAILS Console is the frontend application of the SAILS enterprise-grade CRM platform. It connects to the SAILS Core backend API to provide a visual, configurable interface for managing customers, sales pipelines, projects, cases, and timesheets.
 
 ## Technology Stack
 - **Framework**: React + TypeScript (Vite)

@@ -36,6 +36,11 @@
 }
 
 /* ── Standard SAILS Theme Alignment for Runtime Table & Layout Card ── */
+.sails-dynamic-table .ls-block__value {
+  margin-top: 6px;
+  font-size: 14px; /* match .sails-input so display baselines align with controls */
+}
+
 .sails-dynamic-table .ls-table-card {
   background-color: var(--sails-bg-card);
   border: 1px solid var(--sails-border-color);

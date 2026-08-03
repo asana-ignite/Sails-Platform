@@ -1,5 +1,7 @@
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
+import { formatDecimalValue } from '@sails/shared';
+import { NumberFormatInput } from '../NumberFormatInput';
 
 export const PercentControl: FieldControlPlugin = {
   id: 'control:percent',
@@ -11,18 +13,17 @@ export const PercentControl: FieldControlPlugin = {
 
   mockValue: () => 75,
 
-  RenderEdit: ({ value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => (
+  RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => (
     <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
-      <input
-        type="number"
-        step="0.01"
-        readOnly={readOnly}
-        disabled={disabled}
+      <NumberFormatInput
+        field={field}
         value={value ?? ''}
+        onChange={onChange}
+        disabled={disabled}
+        readOnly={readOnly}
+        className={className}
         placeholder="0.00"
-        onChange={(e) => onChange && onChange(e.target.value)}
-        className={`sails-input ${className}`}
-        style={{ textAlign: 'right', paddingRight: '28px' }}
+        style={{ paddingRight: '28px' }}
       />
       <span
         style={{
@@ -39,9 +40,9 @@ export const PercentControl: FieldControlPlugin = {
     </div>
   ),
 
-  RenderDisplay: ({ value }: FieldControlProps) => (
-    <span>
-      {value !== undefined && value !== null && value !== '' ? `${value}%` : '—'}
+  RenderDisplay: ({ field, value }: FieldControlProps) => (
+    <span className="sails-control-numeric-display">
+      {value !== undefined && value !== null && value !== '' ? `${formatDecimalValue(value, field?.config, field?.logicalType)}%` : '—'}
     </span>
   ),
 };

@@ -10,7 +10,7 @@ import {
   Pencil
 } from 'lucide-react';
 import type { TableLayout, SailsFieldDefinition, ConsoleMenu } from '@sails/shared';
-import { isSystemField } from '@sails/shared';
+import { isSystemField, SYSTEM_PROTECTED_COLUMNS } from '@sails/shared';
 import LoadingScreen from '../components/common/LoadingScreen';
 import { fetchCached } from '../api/client';
 import { DetailFieldInput, DetailFieldDisplay, DetailFieldLabel, validateFieldIssues } from '../features/controls/DetailFieldControl';
@@ -357,12 +357,16 @@ const DynamicDetailPage: React.FC = () => {
     setSaveError(null);
 
     try {
+      const payload = isUpdate
+        ? Object.fromEntries(Object.entries(formData).filter(([k]) => !SYSTEM_PROTECTED_COLUMNS.includes(k)))
+        : formData;
+
       const res = await fetch(
         isUpdate ? `/api/dynamic/${tableName}?id=${recordId}` : `/api/dynamic/${tableName}`,
         {
           method: isUpdate ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         }
       );
 
@@ -441,13 +445,18 @@ const DynamicDetailPage: React.FC = () => {
       const key = field.fieldName || field.id;
 
       const colSpan = b.width ? (typeof b.width === 'number' ? b.width : 4) : 4;
-      const isEditable = isNewMode || isEditing;
+      const isSystemFieldDef = !!field.isSystem || isSystemField(key);
+      const isEditable = (isNewMode || isEditing) && !isSystemFieldDef;
       const val = isEditable ? formData[key] ?? '' : record ? record[field.fieldName] ?? record[field.id] : undefined;
 
       return (
         <div key={b.id || field.id} className="ls-block ls-block--field" style={{ gridColumn: `span ${colSpan}` }}>
           <DetailFieldLabel field={field} label={label} />
-          {isEditable ? (
+          {isSystemFieldDef ? (
+            <div className="ls-block__value">
+              <DetailFieldDisplay field={field} val={val} controlPluginId={b.controlPluginId} />
+            </div>
+          ) : isEditable ? (
             <DetailFieldInput
               field={field}
               fieldKey={key}

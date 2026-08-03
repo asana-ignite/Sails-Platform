@@ -1,6 +1,6 @@
-# SAILS (Ignite Idea Operating System)
+# SAILS — Enterprise-Grade CRM Application
 
-Welcome to **SAILS**, a specialized fork of the Sails Platform tailored for internal operations at **Ignite Idea**. SAILS serves as the central engine for managing Sales, Projects, Cases, and Timesheets.
+Welcome to **SAILS**, an enterprise-grade CRM application engineered for flexible configuration. SAILS enables organizations to configure data models, security policies, workflows, and user interfaces visually — without writing code. The platform serves as a central operating layer for managing Customers, Sales Pipelines, Projects, Cases, and Timesheets.
 
 This project is structured as a Bun Workspace to centralize backend, frontend, and shared logic.
 
@@ -21,5 +21,5 @@ For deep dives into the platform's design, please refer to the files in the [doc
 - [ROADMAP.md](./docs/ROADMAP.md) - Strategic Roadmap
 
 ---
-*SAILS: Built for Ignite Idea Operations*
+*SAILS: Enterprise-Grade CRM, Configurable by Design*
 

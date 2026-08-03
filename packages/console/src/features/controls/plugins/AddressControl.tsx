@@ -16,7 +16,19 @@ const EMPTY_PARTS: AddressParts = {};
 
 const toParts = (value: any): AddressParts | null => {
   if (value === undefined || value === null) return null;
-  if (typeof value === 'string') return null; // legacy plain-string value
+  if (typeof value === 'string') {
+    if (value.trim() === '') return null;
+    // Structured addresses stored in TEXT columns come back as JSON strings.
+    if (value.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(value);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as AddressParts;
+      } catch {
+        return null;
+      }
+    }
+    return null; // legacy plain-string value
+  }
   if (typeof value !== 'object') return null;
   return value as AddressParts;
 };
@@ -50,10 +62,11 @@ export const AddressControl: FieldControlPlugin = {
     const cfg = (field?.config as any) || {};
     const placeholder = cfg.placeholder || 'Enter address...';
 
-    // Legacy plain-string values (pre-JSONB TEXT columns) keep the
-    // single-textarea mode. Empty strings mean "no value yet" — those use
-    // the structured parts UI.
-    if (typeof value === 'string' && value.trim() !== '') {
+    // Empty strings mean "no value yet" — those use the structured parts UI.
+    // Legacy plain-string values (non-JSON, pre-structured TEXT columns) keep
+    // the single-textarea mode. JSON-string values are structured and parse
+    // into the parts UI via toParts below.
+    if (typeof value === 'string' && value.trim() !== '' && !value.trim().startsWith('{')) {
       return (
         <textarea
           rows={2}
@@ -150,7 +163,7 @@ export const AddressControl: FieldControlPlugin = {
         {include('country', 'includeCountry') && (
           row('Country', (
             <CustomSelect
-              value={partValue(parts, 'country') || undefined}
+              value={partValue(parts, 'country') || ''}
               options={countryList}
               onChange={(val) => setPart('country', val || '')}
               placeholder="Select or search country..."
@@ -177,15 +190,18 @@ export const AddressControl: FieldControlPlugin = {
 
   RenderDisplay: ({ value }: FieldControlProps) => {
     if (value === undefined || value === null || value === '') return <span>—</span>;
-    if (typeof value === 'string') {
-      return (
-        <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-          {value}
-        </span>
-      );
+    const parts = toParts(value);
+    if (!parts) {
+      // Legacy plain-string value — render as-is.
+      if (typeof value === 'string') {
+        return (
+          <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+            {value}
+          </span>
+        );
+      }
+      return <span>{String(value)}</span>;
     }
-    if (typeof value !== 'object') return <span>{String(value)}</span>;
-    const parts = value as AddressParts;
     const lines = [
       typeof parts.address1 === 'string' && parts.address1.trim() !== '' ? parts.address1 : null,
       typeof parts.address2 === 'string' && parts.address2.trim() !== '' ? parts.address2 : null,

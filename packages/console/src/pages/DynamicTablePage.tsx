@@ -18,7 +18,9 @@ import {
 } from 'lucide-react';
 import { useConsole } from '../contexts/ConsoleContext';
 import type { ConsoleMenu, TableLayout, SailsFieldDefinition, ListAction } from '@sails/shared';
-import { isSystemField, formatDateTimeValue } from '@sails/shared';
+import { isSystemField, formatDateTimeValue, formatDecimalValue } from '@sails/shared';
+import { useDateTimePrefs, isSystemDateTimeField, formatSystemDateTimeValue } from '../utils/systemDateTime';
+import { UserControl, useTenantUsers } from '../features/controls/plugins/UserControl';
 import DynamicIcon from '../components/common/DynamicIcon';
 import CustomSelect from '../components/common/CustomSelect';
 import LoadingScreen from '../components/common/LoadingScreen';
@@ -34,10 +36,14 @@ function resolveLabel(col: any, fields: SailsFieldDefinition[]): string {
   return col.labelOverride || fd?.name || col.fieldId;
 }
 
+const NUMERIC_COLUMN_TYPES = new Set(['number', 'decimal', 'currency', 'percentage', 'percent']);
+
 function renderListFieldValue(field: SailsFieldDefinition, record: Record<string, any>): string {
   const val = record[field.fieldName];
   if (val === undefined || val === null) return '\u2014';
-  if (field.logicalType === 'currency') return `\u0E3F${Number(val).toLocaleString()}`;
+  if (field.logicalType === 'currency') return `\u0E3F${formatDecimalValue(val, field.config, field.logicalType)}`;
+  if (field.logicalType === 'percentage' || field.logicalType === 'percent') return `${formatDecimalValue(val, field.config, field.logicalType)}%`;
+  if (field.logicalType === 'decimal' || field.logicalType === 'number') return formatDecimalValue(val, field.config, field.logicalType);
   if (field.logicalType === 'boolean') return val ? 'Yes' : 'No';
   if (field.logicalType === 'date' || field.logicalType === 'datetime' || field.logicalType === 'timestamp' || field.logicalType === 'time') {
     const formatted = formatDateTimeValue(val, field.config, field.logicalType);
@@ -118,6 +124,17 @@ const DynamicTablePage: React.FC = () => {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [recordsPerPage, setRecordsPerPage] = useState<number>(25);
+  const datetimePrefs = useDateTimePrefs();
+  const tenantUsers = useTenantUsers();
+
+  /** Resolve a user field value (ID) to a display name; falls back to the raw value. */
+  const userDisplayName = useCallback((value: any): string => {
+    if (typeof value === 'object' && value) return value?.name || value?.email || value?.id || '';
+    const str = String(value ?? '').trim();
+    if (!str) return '';
+    const u = tenantUsers.find((x) => x.id === str || x.name === str || x.email === str);
+    return u?.name || str;
+  }, [tenantUsers]);
 
   const configuredActions: ListAction[] = useMemo(() => {
     if (!layout) return [];
@@ -418,7 +435,10 @@ const DynamicTablePage: React.FC = () => {
     const rows = records.map((rec) =>
       visibleListColumns.map((col: any) => {
         const f = fields.find((ff: any) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
-        return f ? renderListFieldValue(f, rec) : (rec[col.fieldId] !== undefined ? String(rec[col.fieldId]) : '');
+        if (!f) return rec[col.fieldId] !== undefined ? String(rec[col.fieldId]) : '';
+        if (isSystemDateTimeField(f)) return formatSystemDateTimeValue(rec[f.fieldName] ?? rec[f.id], datetimePrefs);
+        if (f.logicalType === 'user') return userDisplayName(rec[f.fieldName] ?? rec[f.id]);
+        return renderListFieldValue(f, rec);
       })
     );
     return { headers, rows };
@@ -656,7 +676,7 @@ const DynamicTablePage: React.FC = () => {
                           <th
                             key={col.id}
                             className={`ls-rth ${col.allowSorting !== false ? 'ls-rth--sortable' : ''} ${isSorted ? 'ls-rth--sorted' : ''}`}
-                            style={{ ...(col.width ? { width: `${col.width}${col.widthUnit || 'px'}` } : {}), textAlign: col.alignment || 'left' }}
+                            style={{ ...(col.width ? { width: `${col.width}${col.widthUnit || 'px'}` } : {}), textAlign: col.alignment || (f && NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}
                           >
                             <div className="ls-rth__inner">
                               {col.allowSorting !== false ? (
@@ -736,13 +756,23 @@ const DynamicTablePage: React.FC = () => {
                               const f = fields.find((ff) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
                               const val = f ? rec[f.fieldName] : rec[col.fieldId];
                               const isPrimary = col.id === primaryColId;
-                              const cellText = f ? renderListFieldValue(f, rec) : (val !== undefined && val !== null ? String(val) : '—');
+                              const isUserColumn = !!f && f.logicalType === 'user';
+                              const cellText = f
+                                ? isSystemDateTimeField(f)
+                                  ? formatSystemDateTimeValue(rec[f.fieldName] ?? rec[f.id], datetimePrefs)
+                                  : isUserColumn
+                                    ? userDisplayName(rec[f.fieldName] ?? rec[f.id])
+                                    : renderListFieldValue(f, rec)
+                                : (val !== undefined && val !== null ? String(val) : '—');
+                              const cellNode = isUserColumn
+                                ? <UserControl.RenderDisplay field={f} value={rec[f.fieldName] ?? rec[f.id]} />
+                                : cellText;
 
                               return (
                                 <td
                                   key={col.id}
                                   className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''} ${isPrimary ? 'ls-rtd--primary' : ''}`}
-                                  style={{ textAlign: col.alignment || 'left' }}
+                                  style={{ textAlign: col.alignment || (f && NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}
                                 >
                                   {isPrimary ? (
                                     <a
@@ -765,7 +795,7 @@ const DynamicTablePage: React.FC = () => {
                                       {cellText}
                                     </a>
                                   ) : (
-                                    cellText
+                                    cellNode
                                   )}
                                 </td>
                               );

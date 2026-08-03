@@ -19,8 +19,19 @@ export {
   validateFieldValue,
   validateRecord,
   isEmptyValue,
+  sanitizeWritePayload,
 } from './validation';
 export type { ValidationIssue, ValidatableField } from './validation';
+export {
+  resolveDecimalPlaces,
+  resolveThousandSeparator,
+  formatDecimalValue,
+  formatEditableValue,
+  normalizeEditableValue,
+  addThousandSeparators,
+  clampDecimalInput,
+  DEFAULT_DECIMAL_PLACES,
+} from './numbers';
 
 // ─── Core Models ──────────────────────────────────────────────
 
@@ -295,6 +306,17 @@ export interface NumberFieldConfig {
   min?: number;
   max?: number;
   defaultValue?: number;
+  /** Show thousands separators (e.g. 1,250) in display and edit. Default: true. */
+  useThousandSeparator?: boolean;
+}
+
+export interface DecimalFieldConfig {
+  decimalPlaces?: number;
+  min?: number;
+  max?: number;
+  defaultValue?: number;
+  /** Show thousands separators (e.g. 1,250.50) in display and edit. Default: true. */
+  useThousandSeparator?: boolean;
 }
 
 export interface CurrencyFieldConfig {
@@ -303,6 +325,8 @@ export interface CurrencyFieldConfig {
   min?: number;
   max?: number;
   defaultValue?: number;
+  /** Show thousands separators (e.g. $1,250.50) in display and edit. Default: true. */
+  useThousandSeparator?: boolean;
 }
 
 export interface PercentageFieldConfig {
@@ -310,6 +334,8 @@ export interface PercentageFieldConfig {
   min?: number;
   max?: number;
   showSymbol?: boolean;
+  /** Show thousands separators (e.g. 1,250.50%) in display and edit. Default: true. */
+  useThousandSeparator?: boolean;
 }
 
 export interface PhoneFieldConfig {
@@ -380,6 +406,7 @@ export type SailsFieldConfig =
   | ShortTextFieldConfig
   | LongTextFieldConfig
   | NumberFieldConfig
+  | DecimalFieldConfig
   | CurrencyFieldConfig
   | PercentageFieldConfig
   | PhoneFieldConfig
@@ -584,8 +611,29 @@ export const SYSTEM_FIELDS = new Set([
   'is_active',
   'created_at',
   'updated_at',
-  'owner_id'
+  'created_by',
+  'updated_by',
+  'owner_id',
+  'owner_team_id'
 ]);
+
+/**
+ * Columns that are owned by the platform and must NEVER be set from client
+ * payloads on insert/update. Server-side enforcement lives in QueryLayer
+ * (insertRecord / updateRecord) — the UI mirrors this for read-only rendering.
+ */
+export const SYSTEM_PROTECTED_COLUMNS = [
+  'id',
+  'tenant_id',
+  'is_system',
+  'is_active',
+  'created_at',
+  'updated_at',
+  'created_by',
+  'updated_by',
+  'owner_id',
+  'owner_team_id'
+];
 
 /**
  * Helper: Check if a field name matches a platform system/audit field,

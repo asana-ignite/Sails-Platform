@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Clock, X } from 'lucide-react';
-import { formatDateTimeValue } from '@sails/shared';
+import { useDateTimePrefs, resolveControlDisplayText } from '../../../utils/systemDateTime';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import '../controls.css';
 
@@ -180,19 +180,23 @@ export const TimeControl: FieldControlPlugin = {
     return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   },
 
-  RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => (
-    <SailsTimePicker
-      value={value ? String(value) : ''}
-      displayText={value ? formatDateTimeValue(value, field?.config, field.logicalType || 'time') : ''}
-      onChange={(val) => onChange && onChange(val)}
-      disabled={disabled}
-      readOnly={readOnly}
-      className={className}
-    />
-  ),
+  RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => {
+    const prefs = useDateTimePrefs();
+    return (
+      <SailsTimePicker
+        value={value ? String(value) : ''}
+        displayText={resolveControlDisplayText(field, value, prefs, 'time')}
+        onChange={(val) => onChange && onChange(val)}
+        disabled={disabled}
+        readOnly={readOnly}
+        className={className}
+      />
+    );
+  },
 
   RenderDisplay: ({ field, value }: FieldControlProps) => {
-    const formatted = value ? formatDateTimeValue(value, field?.config, field.logicalType || 'time') : '';
+    const prefs = useDateTimePrefs();
+    const formatted = resolveControlDisplayText(field, value, prefs, 'time');
     return <span>{formatted || '—'}</span>;
   },
 };

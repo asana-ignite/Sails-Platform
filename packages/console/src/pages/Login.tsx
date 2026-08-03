@@ -305,7 +305,7 @@ const Login: React.FC = () => {
             {rememberedName ? `Welcome back, ${rememberedName}!` : 'Welcome to SAILS Platform'}
           </h1>
           <p className="sails-hero-subtext">
-            Manage operations, monitor platform security, and automate business workflows with the intelligent internal operating system.
+            Manage customers, sales pipelines, and business workflows with the enterprise-grade CRM application — flexibly configured to fit your organization.
           </p>
         </div>
       </div>

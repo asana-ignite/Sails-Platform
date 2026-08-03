@@ -16,32 +16,45 @@ const DEFAULT_USERS: UserItem[] = [
   { id: 'usr_003', name: 'Pranee Srisuk', email: 'pranee@sails.io' },
 ];
 
-const RenderEdit: React.FC<FieldControlProps> = ({ field, value, onChange, disabled, readOnly }) => {
-  const [users, setUsers] = useState<UserItem[]>(DEFAULT_USERS);
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const containerRef = useRef<HTMLDivElement>(null);
+let cachedUsers: UserItem[] | null = null;
+
+/** Load the tenant user list once per session; shared by edit + display renderers. */
+export function useTenantUsers(): UserItem[] {
+  const [users, setUsers] = useState<UserItem[]>(cachedUsers || DEFAULT_USERS);
 
   useEffect(() => {
+    if (cachedUsers) return;
     let isMounted = true;
     fetch('/api/tenant/users')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
-          const mapped = data.map((u: any) => ({
+          const mapped: UserItem[] = data.map((u: any) => ({
             id: u.id,
             name: u.name || u.email,
             email: u.email,
-            avatar: u.image || u.avatar
+            avatar: u.image || u.avatar,
           }));
+          cachedUsers = mapped;
           setUsers(mapped);
         }
       })
       .catch(() => {
         // Keep DEFAULT_USERS fallback
       });
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  return users;
+}
+
+const RenderEdit: React.FC<FieldControlProps> = ({ field, value, onChange, disabled, readOnly }) => {
+  const users = useTenantUsers();
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -66,12 +79,13 @@ const RenderEdit: React.FC<FieldControlProps> = ({ field, value, onChange, disab
   const currentValueStr = typeof value === 'object' ? (value?.id || value?.name || '') : String(value || '');
 
   const selectedUser = users.find(
-    u => u.id === currentValueStr || u.name === currentValueStr || u.email === currentValueStr
+    (u) => u.id === currentValueStr || u.name === currentValueStr || u.email === currentValueStr
   );
 
   const filteredUsers = users.filter(
-    u => u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    (u) =>
+      u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSelect = (user: UserItem) => {
@@ -183,19 +197,38 @@ const RenderEdit: React.FC<FieldControlProps> = ({ field, value, onChange, disab
   );
 };
 
+const resolveUser = (value: any, users: UserItem[]): UserItem | null => {
+  if (typeof value === 'object' && value) {
+    const id = value.id || value.name || value.email;
+    if (id) return users.find((u) => u.id === id || u.name === id || u.email === id) || null;
+    return null;
+  }
+  if (typeof value !== 'string' || value.trim() === '') return null;
+  return users.find((u) => u.id === value || u.name === value || u.email === value) || null;
+};
+
+const UserAvatar: React.FC<{ user?: UserItem | null; size?: 'sm' | 'lg' }> = ({ user, size = 'sm' }) => {
+  const cls = `sails-control-user-avatar${size === 'lg' ? ' sails-control-user-avatar--lg' : ''}`;
+
+  if (user?.avatar) {
+    return <img src={user.avatar} alt={user.name} className={`${cls} sails-control-user-avatar--img`} />;
+  }
+  return <div className={cls}>@</div>;
+};
+
 const RenderDisplay: React.FC<FieldControlProps> = ({ field, value }) => {
+  const users = useTenantUsers();
+
   if (value === undefined || value === null || value === '') {
     return <span>—</span>;
   }
 
-  const displayVal = typeof value === 'object' ? value?.name || value?.email || value?.id : String(value);
-  const initial = displayVal.charAt(0).toUpperCase();
+  const user = resolveUser(value, users);
+  const displayVal = user?.name || (typeof value === 'object' ? value?.name || value?.email || value?.id : String(value));
 
   return (
     <div className="sails-control-user-display">
-      <div className="sails-control-user-avatar">
-        {initial}
-      </div>
+      <UserAvatar user={user} />
       <span>{displayVal}</span>
     </div>
   );

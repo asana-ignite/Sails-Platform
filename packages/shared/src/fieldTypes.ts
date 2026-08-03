@@ -34,7 +34,8 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
     parametersSchema: [
       { name: 'min', label: 'Minimum Value', type: 'number', placeholder: 'e.g. 0' },
       { name: 'max', label: 'Maximum Value', type: 'number', placeholder: 'e.g. 1000000' },
-      { name: 'defaultValue', label: 'Default Value', type: 'number', placeholder: 'e.g. 0' }
+      { name: 'defaultValue', label: 'Default Value', type: 'number', placeholder: 'e.g. 0' },
+      { name: 'useThousandSeparator', label: 'Show Thousands Separator (Comma)', type: 'boolean', defaultValue: true }
     ]
   },
   {
@@ -47,7 +48,8 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
       { name: 'decimalPlaces', label: 'No. Decimal Places', type: 'number', defaultValue: 4, min: 0, max: 10 },
       { name: 'min', label: 'Minimum Value', type: 'number', placeholder: 'e.g. 0' },
       { name: 'max', label: 'Maximum Value', type: 'number', placeholder: 'e.g. 1000000' },
-      { name: 'defaultValue', label: 'Default Value', type: 'number', placeholder: 'e.g. 0' }
+      { name: 'defaultValue', label: 'Default Value', type: 'number', placeholder: 'e.g. 0' },
+      { name: 'useThousandSeparator', label: 'Show Thousands Separator (Comma)', type: 'boolean', defaultValue: true }
     ]
   },
   {
@@ -122,18 +124,21 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
         name: 'optionsText',
         label: 'Custom Options (One Per Line)',
         type: 'textarea',
-        placeholder: 'Draft\nIn Review\nApproved\nClosed'
+        placeholder: 'Draft\nIn Review\nApproved\nClosed',
+        visibleWhen: { name: 'sourceType', equals: 'custom' }
       },
       {
         name: 'sourceTable',
         label: 'Source Data Model (For Object Lookup)',
-        type: 'model_select'
+        type: 'model_select',
+        visibleWhen: { name: 'sourceType', equals: 'object' }
       },
       {
         name: 'sourceColumn',
         label: 'Source Column / Field Name',
         type: 'text',
-        placeholder: 'e.g. status or category_name'
+        placeholder: 'e.g. status or category_name',
+        visibleWhen: { name: 'sourceType', equals: 'object' }
       },
       {
         name: 'allowMultiple',
@@ -338,7 +343,8 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
       },
       { name: 'decimalPlaces', label: 'No. Decimal Places', type: 'number', defaultValue: 2, min: 0, max: 6 },
       { name: 'min', label: 'Minimum Amount', type: 'number', placeholder: '0' },
-      { name: 'max', label: 'Maximum Amount', type: 'number', placeholder: '100000000' }
+      { name: 'max', label: 'Maximum Amount', type: 'number', placeholder: '100000000' },
+      { name: 'useThousandSeparator', label: 'Show Thousands Separator (Comma)', type: 'boolean', defaultValue: true }
     ]
   },
   {
@@ -351,7 +357,8 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
       { name: 'decimalPlaces', label: 'No. Decimal Places', type: 'number', defaultValue: 2, min: 0, max: 6 },
       { name: 'min', label: 'Minimum Percent (%)', type: 'number', defaultValue: 0, placeholder: '0' },
       { name: 'max', label: 'Maximum Percent (%)', type: 'number', defaultValue: 100, placeholder: '100' },
-      { name: 'showSymbol', label: 'Display % Symbol', type: 'boolean', defaultValue: true }
+      { name: 'showSymbol', label: 'Display % Symbol', type: 'boolean', defaultValue: true },
+      { name: 'useThousandSeparator', label: 'Show Thousands Separator (Comma)', type: 'boolean', defaultValue: true }
     ]
   },
   {

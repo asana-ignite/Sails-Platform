@@ -569,6 +569,12 @@
   color: var(--sails-text-primary, #1e293b);
   line-height: 1.4;
   width: 100%;
+  /* Align with .sails-input content box: same left/right padding and
+     min-height, so display values never shift when toggling edit mode. */
+  padding: 0 12px;
+  min-height: var(--sails-field-height, 38px);
+  display: flex;
+  align-items: center;
 }
 
 .ls-block__empty {

@@ -115,7 +115,7 @@
 10. `compilerOptions` - 17 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `SAILS Platform (Multi-tenant, schema-per-tenant monorepo)` --semantically_similar_to--> `SAILS (Ignite Idea Operating System)`  [INFERRED] [semantically similar]
+- `SAILS Platform (Multi-tenant, schema-per-tenant monorepo)` --semantically_similar_to--> `SAILS (Enterprise-Grade CRM Application)`  [INFERRED] [semantically similar]
   AGENTS.md → README.md
 - `db Service (PostgreSQL 16, sails-db)` --semantically_similar_to--> `db Service (standalone core compose)`  [INFERRED] [semantically similar]
   docker-compose.yml → packages/core/docker-compose.yml

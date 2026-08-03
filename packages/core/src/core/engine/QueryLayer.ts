@@ -1,6 +1,7 @@
 import { Pool, PoolClient } from 'pg';
 import format from 'pg-format';
 import crypto from 'crypto';
+import { SYSTEM_PROTECTED_COLUMNS } from '@sails/shared';
 import { AccessGuard, CrudAction } from './AccessGuard';
 import { TransactionContext } from './TransactionContext';
 import { getSession, SessionContext } from '@/lib/auth/session';
@@ -11,6 +12,20 @@ import { getSession, SessionContext } from '@/lib/auth/session';
  */
 function generateTimeOrderedId(): string {
   return Date.now().toString(36) + crypto.randomBytes(8).toString('hex');
+}
+
+/**
+ * Strips platform-owned columns from a client payload so system/audit
+ * values can never be set or overwritten by request bodies.
+ */
+function stripProtectedColumns(payload: Record<string, any>): Record<string, any> {
+  const clean: Record<string, any> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (!SYSTEM_PROTECTED_COLUMNS.includes(key)) {
+      clean[key] = value;
+    }
+  }
+  return clean;
 }
 
 async function resolveSessionContext(): Promise<SessionContext> {
@@ -91,7 +106,7 @@ export class QueryLayer {
         const generatedId = generateTimeOrderedId();
         const dataToInsert = { 
           id: generatedId,
-          ...payload, 
+          ...stripProtectedColumns(payload), 
           owner_id: resolvedCtx.userId, 
           owner_team_id: resolvedCtx.activeTeamId,
           created_by: resolvedCtx.userId, 
@@ -170,7 +185,7 @@ export class QueryLayer {
         const oldRecord = oldResult.rows[0];
 
         // 2. Build SET clauses with audit columns
-        const dataToUpdate = { ...payload, updated_by: resolvedCtx.userId, updated_at: new Date().toISOString() };
+        const dataToUpdate = { ...stripProtectedColumns(payload), updated_by: resolvedCtx.userId, updated_at: new Date().toISOString() };
         const setClauses = Object.keys(dataToUpdate).map((key) =>
           format('%I = %L', key, dataToUpdate[key])
         );

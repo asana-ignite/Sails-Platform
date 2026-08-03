@@ -1,14 +1,15 @@
-# SAILS Core — Internal Operating System Engine
+# SAILS Core — Enterprise-Grade CRM Application Engine
 
 ## Product Identity
 - **Product Name**: SAILS (pronounced "ไอ-นิ-ดอส")
-- **Full Name**: Ignite Idea Operating System
-- **Domain**: Internal usage at Ignite Idea
+- **Product Type**: Enterprise-Grade CRM Application
+- **Positioning**: Flexible Configuration — data models, security policies, and workflows are configured visually, with no code required
+- **Domain**: Enterprise CRM platform, configurable per organization
 - **Backend Packages**: **SAILS Core** (this repository — `/packages/core`)
 - **Frontend Packages**: **SAILS Console** (this repository — `/packages/console`, developed as a PWA and ready for offline usage)
 
 ## Project Overview
-SAILS Core is a high-performance, multi-tenant internal operating system engine built with Bun, TypeScript, and PostgreSQL. It operates as a completely **Headless Backend API** — no UI code exists in this project. The frontend (SAILS Console) is fully decoupled. The system enables Ignite Idea to define custom data structures (Sales Leads, Project Tasks, Cases, Timesheets) which are dynamically translated into native PostgreSQL tables in real-time.
+SAILS Core is the high-performance backend engine of the SAILS enterprise-grade CRM application. Built with Bun, TypeScript, and PostgreSQL, it operates as a completely **Headless Backend API** — no UI code exists in this project. The frontend (SAILS Console) is fully decoupled. The system enables organizations to define custom data structures (Customers, Sales Leads, Project Tasks, Cases, Timesheets) which are dynamically translated into native PostgreSQL tables in real-time.
 
 ## Project Documentation
 | File | Purpose |
@@ -23,7 +24,7 @@ SAILS Core is a high-performance, multi-tenant internal operating system engine 
 |---|---|
 | **Table** | A dynamic data structure defined by the platform (e.g., "Projects"). Prisma model: `TableDefinition`. |
 | **Field** | A column within a Table (e.g., "Deadline"). Prisma model: `FieldDefinition`. |
-| **Tenant** | A department or subsidiary within Ignite Idea. Owns a dedicated PostgreSQL schema. |
+| **Tenant** | An organization or business unit. Owns a dedicated PostgreSQL schema. |
 | **Console App** | A high-level application entry for the App Switcher (e.g., Sales, Timesheets). Prisma model: `ConsoleApp`. |
 | **Console Menu** | A navigation item in the Sidebar, potentially nested. Prisma model: `ConsoleMenu`. |
 
@@ -137,7 +138,7 @@ The following key endpoints provide the UI configuration and dynamic data necess
 ## CLI Tool Operations
 ```bash
 # provision initial tenant
-bun src/cli/sails-cli.ts tenant:create "Ignite Idea" admin@igniteidea.ai
+bun src/cli/sails-cli.ts tenant:create "Acme Corp" admin@acme.com
 bun src/cli/sails-cli.ts tenant:list
 bun src/cli/sails-cli.ts db:clean
 bun src/cli/sails-cli.ts db:check

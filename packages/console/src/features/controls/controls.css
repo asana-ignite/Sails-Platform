@@ -804,10 +804,12 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 .sails-control-currency__input::placeholder {
   color: var(--sails-field-placeholder, #D9D9D9);
 }
-.sails-control-display-emerald {
-  font-size: 12px;
-  font-weight: 600;
-  color: #34d399;
+
+/* Numeric display values align right, matching the right-aligned edit inputs. */
+.sails-control-numeric-display {
+  display: block;
+  width: 100%;
+  text-align: right;
 }
 
 /* ─── Select Control (SelectControl.tsx) ──────────────────────── */

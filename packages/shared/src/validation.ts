@@ -8,7 +8,11 @@
  *   - isRequired
  *   - min / max  (numeric types: number, decimal, currency, percentage, auto_number)
  *   - maxLength  (text types: short_text, text, email, phone, url, long_text, textarea, rich_text)
+ *   - decimalPlaces (decimal, currency, percentage — precision limited to the
+ *     configured number of decimal digits; default per type when unset)
  */
+
+import { resolveDecimalPlaces } from './numbers';
 
 export interface ValidationIssue {
   fieldName: string;
@@ -21,6 +25,7 @@ export interface ValidatableField {
   isRequired?: boolean;
   /** JSON-compatible metadata config (Prisma JsonValue on the server). */
   config?: any;
+  physicalType?: string;
 }
 
 const NUMERIC_TYPES = new Set([
@@ -86,6 +91,20 @@ export function validateFieldValue(
       if (config.max !== undefined && config.max !== null && !Number.isNaN(max) && num > max) {
         issues.push(`Must be at most ${config.max}`);
       }
+
+      // Precision check: value must not exceed the configured decimal places.
+      // Applies to decimal/currency/percentage (defaults per type in numbers.ts).
+      // Trailing zeros ("42.5000" with decimalPlaces=2) pass — only true
+      // precision is judged. Float-safe via the scaled-integer comparison.
+      if (field.logicalType === 'decimal' || field.logicalType === 'currency' || field.logicalType === 'percentage' || field.logicalType === 'percent') {
+        const dp = resolveDecimalPlaces(config, field.logicalType);
+        if (dp >= 0) {
+          const scaled = num * 10 ** dp;
+          if (Math.abs(scaled - Math.round(scaled)) > 1e-9) {
+            issues.push(`Maximum ${dp} decimal places allowed`);
+          }
+        }
+      }
     }
   }
 
@@ -109,8 +128,36 @@ export function validateRecord(
   for (const field of fields) {
     if (!field.fieldName) continue;
     for (const message of validateFieldValue(field, values[field.fieldName])) {
-      issues.push({ fieldName: field.fieldName, message });
     }
   }
   return issues;
+}
+
+const SANITIZE_NULL_TYPES = new Set([
+  'number', 'decimal', 'currency', 'percentage', 'percent',
+  'boolean', 'date', 'time', 'datetime', 'timestamp',
+]);
+
+const SANITIZE_NULL_PHYSICAL = new Set([
+  'date', 'time', 'timestamp', 'timestamptz', 'jsonb', 'boolean',
+]);
+
+/** Convert empty-string payload values to null for typed (non-text) columns. */
+export function sanitizeWritePayload(
+  fields: ValidatableField[],
+  payload: Record<string, any>
+): Record<string, any> {
+  const out = { ...payload };
+  for (const field of fields) {
+    const key = field.fieldName;
+    if (!key || !Object.prototype.hasOwnProperty.call(out, key)) continue;
+    const val = out[key];
+    if (typeof val !== 'string' || val.trim() !== '') continue;
+    const lt = (field.logicalType || '').toLowerCase();
+    const pt = (field.physicalType || '').toLowerCase();
+    if (SANITIZE_NULL_TYPES.has(lt) || SANITIZE_NULL_PHYSICAL.has(pt)) {
+      out[key] = null;
+    }
+  }
+  return out;
 }

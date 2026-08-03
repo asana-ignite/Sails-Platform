@@ -1,6 +1,6 @@
 # SAILS Console: Template Blueprint
 
-This document outlines the structural and visual DNA for the **SAILS Console**, serving as the design foundation for Ignite Idea's internal operating system.
+This document outlines the structural and visual DNA for the **SAILS Console**, serving as the design foundation for the enterprise-grade CRM application.
 
 ## 1. High-Level Semantic Structure
 

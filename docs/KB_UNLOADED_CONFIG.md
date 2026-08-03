@@ -113,6 +113,26 @@ docker exec sails-db psql -U postgres -c "DROP SCHEMA IF EXISTS tenant_sails_def
 cat backups/sails_schema_<TIMESTAMP>.sql | docker exec -i sails-db psql -U postgres -v ON_ERROR_STOP=1
 cat backups/sails_data_<TIMESTAMP>.sql   | docker exec -i sails-db psql -U postgres -v ON_ERROR_STOP=1
 
+# 2b. RESTORE rls_user GRANTS (pg_dump --no-privileges does NOT carry them!)
+# Without this: "permission denied for schema tenant_*" on every data query.
+# Tenant schema grants (USAGE + tables + sequences + future DDL defaults):
+docker exec -i sails-db psql -U postgres -v ON_ERROR_STOP=1 -c "
+  GRANT USAGE ON SCHEMA tenant_sails_default TO rls_user;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA tenant_sails_default GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rls_user;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA tenant_sails_default GRANT USAGE ON SEQUENCES TO rls_user;
+  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA tenant_sails_default TO rls_user;
+  GRANT USAGE ON ALL SEQUENCES IN SCHEMA tenant_sails_default TO rls_user;"
+# Core schema grants (RLS policies query core.object_permissions / user_teams /
+# position_slots / team_positions as rls_user):
+docker exec -i sails-db psql -U postgres -v ON_ERROR_STOP=1 -c "
+  GRANT USAGE ON SCHEMA core TO rls_user;
+  GRANT SELECT ON core.users TO rls_user;
+  GRANT SELECT ON core.teams TO rls_user;
+  GRANT SELECT ON core.user_teams TO rls_user;
+  GRANT SELECT ON core.object_permissions TO rls_user;
+  GRANT SELECT ON core.position_slots TO rls_user;
+  GRANT SELECT ON core.team_positions TO rls_user;"
+
 # 3. Sync any drift introduced since the backup (new Prisma models/columns)
 docker exec sails-core sh -c "cd packages/core && bun x prisma migrate diff \
   --from-schema-datasource prisma/schema.prisma \

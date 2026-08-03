@@ -1,6 +1,6 @@
-# SAILS — Internal Data Access & Security Roadmap
+# SAILS — Enterprise CRM: Security & Configuration Roadmap
 
-This document outlines the strategic security implementation plan for **SAILS** (Ignite Idea Operating System).
+This document outlines the strategic security and configuration roadmap for **SAILS**, an enterprise-grade CRM application built on a flexible, configuration-first architecture.
 
 **Strategic Architecture:**
 1. **SAILS Core**: Headless Backend API (Owned by **Backend Engineer**).
@@ -14,7 +14,7 @@ This document outlines the strategic security implementation plan for **SAILS** 
 | Phase | Status | Scope |
 |---|---|---|
 | **A — Foundation** | ✅ Complete | JWT session, RLS, RBAC, audit logs, Core-Console auth bridge, Prisma schema migration |
-| **B — Enterprise Federation** | 🟡 In Progress | OAuth 2.0 / OIDC: Google Workspace Domain Mapping, SSO discovery for Ignite Idea domains |
+| **B — Enterprise Federation** | 🟡 In Progress | OAuth 2.0 / OIDC: Google Workspace Domain Mapping, SSO discovery for enterprise domains |
 | **C — Advanced Governance** | 🔲 Pending | Field-Level Security (FLS) for sensitive financial/sales data |
 | **D — Module Expansion** | 🔲 Pending | Dedicated modules for Timesheets and Case Management |
 
@@ -29,7 +29,7 @@ This document outlines the strategic security implementation plan for **SAILS** 
 ---
 
 ## Phase 1: Foundation & MVP (✅ Complete)
-**Goal:** Secure data via Object-Level restrictions and native PostgreSQL RLS for internal Ignite Idea teams.
+**Goal:** Secure data via Object-Level restrictions and native PostgreSQL RLS for enterprise teams.
 
 - **Multi-Team Membership:** N:M relationship via `UserTeam` join table; permissions aggregated across all teams.
 - **Active Team Context:** `app.current_team_id` injected into transactions to support shared ownership.
@@ -61,7 +61,7 @@ Please see [DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md) for the consolid
 ---
 
 ## Phase 5: Google Workspace & Domain Routing (🔲 Pending)
-**Vision:** Enable seamless onboarding for Ignite Idea staff by mapping Google Workspace domains.
+**Vision:** Enable seamless onboarding for organizational staff by mapping Google Workspace domains.
 
 - **Domain Matching**: Automatically route users to the correct internal Tenant based on their @igniteidea.ai email domain.
 - **Just-in-Time (JIT) Provisioning**: Automatically create a `core.users` record and assign appropriate roles upon first successful Google login.

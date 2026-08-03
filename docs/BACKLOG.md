@@ -1,4 +1,4 @@
-# Project Backlog: SAILS (Ignite Idea Operating System)
+# Project Backlog: SAILS — Enterprise-Grade CRM Application
 
 ## Active & Pending Phases
 
@@ -76,7 +76,7 @@
     - [x] `GET/PATCH/DELETE /api/console/menus/[id]`: Full nav management.
 
 ### Phase 4: Multi-Tenancy & Security (100% Complete)
-- [x] Tenant metadata definition for Ignite Idea departments.
+- [x] Tenant metadata definition for enterprise departments.
 - [x] Automated Provisioning & Deduplication (`TenantProvisioner.ts`).
 - [x] Row-level security (RLS) via `TransactionContext`.
 - [x] Relation Fields & Foreign Keys constraint management.
@@ -114,7 +114,7 @@
 - [x] **Step 4: Automated Provisioning (Content)**
     - [x] Define "Settings & Admin" metadata structure JSON.
     - [x] Update `TenantProvisioner` for automated system app injection.
-    - [x] Provision "Settings & Admin" for Ignite Idea.
+    - [x] Provision "Settings & Admin" for the default tenant.
 - [x] **Step 5: Frontend Integration (Experience)**
     - [x] Create Admin UI route stubs in `sails-console`.
     - [x] Implement Permission Toggle component in Admin settings.

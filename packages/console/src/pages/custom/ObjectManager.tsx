@@ -54,6 +54,116 @@ const SortIcon: React.FC<{ active: boolean; direction?: 'asc' | 'desc' }> = ({ a
   return direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
 };
 
+interface SelectOptionSourceConfigProps {
+  values: Record<string, any>;
+  onChange: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+  tables: SailsTableDefinition[];
+}
+
+const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ values, onChange, tables }) => {
+  const isLookup = values.sourceType === 'object';
+  const selectCustom = () => onChange((prev: Record<string, any>) => ({ ...prev, sourceType: 'custom' }));
+  const selectObject = () => onChange((prev: Record<string, any>) => ({ ...prev, sourceType: 'object' }));
+
+  const lookupSourceTable = tables.find(t => t.tableName === values.sourceTable);
+  const lookupFieldOptions = lookupSourceTable?.fields
+    ? lookupSourceTable.fields.map(f => ({
+        value: f.fieldName,
+        label: `${f.name} (${f.fieldName})`
+      }))
+    : [];
+
+  return (
+    <div className="om-form-grid-2">
+      {/* Allow Multi-Select — applies to both sources */}
+      <div className="om-field-group" style={{ gridColumn: 'span 2' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <input
+            type="checkbox"
+            checked={!!values.allowMultiple}
+            onChange={e => onChange(prev => ({ ...prev, allowMultiple: e.target.checked }))}
+            style={{ width: 'auto' }}
+          />
+          <label className="om-field-label" style={{ margin: 0 }}>Allow Multi-Select</label>
+        </div>
+      </div>
+
+      {/* Column 1 — Custom entered options */}
+      <div
+        className={`om-source-zone${isLookup ? ' is-disabled' : ' is-active'}`}
+        onClick={selectCustom}
+      >
+        <label className="om-source-zone__header">
+          <input
+            type="radio"
+            name="optionSource"
+            checked={!isLookup}
+            onClick={selectCustom}
+          />
+          <span className="om-source-zone__title">Custom Entered Options List</span>
+        </label>
+        <div className="om-source-zone__body">
+          <label className="om-field-label">Custom Options (One Per Line) *</label>
+          <textarea
+            className="sails-input"
+            placeholder={'Draft\nIn Review\nApproved\nClosed'}
+            rows={10}
+            disabled={isLookup}
+            value={values.optionsText || ''}
+            onChange={e => onChange(prev => ({ ...prev, optionsText: e.target.value }))}
+            style={{ resize: 'vertical', minHeight: '180px' }}
+          />
+          <span className="om-field-hint">Enter choices on separate lines (one option per line).</span>
+        </div>
+      </div>
+
+      {/* Column 2 — Lookup values from data model */}
+      <div
+        className={`om-source-zone${isLookup ? ' is-active' : ' is-disabled'}`}
+        onClick={selectObject}
+      >
+        <label className="om-source-zone__header">
+          <input
+            type="radio"
+            name="optionSource"
+            checked={isLookup}
+            onClick={selectObject}
+          />
+          <span className="om-source-zone__title">Lookup Values from Data Model</span>
+        </label>
+        <div className="om-source-zone__body">
+          <div className="om-field-group" style={{ marginBottom: 12 }}>
+            <label className="om-field-label">Source Data Model *</label>
+            <CustomSelect
+              size="md"
+              disabled={!isLookup}
+              value={values.sourceTable || ''}
+              options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
+              onChange={val => onChange(prev => ({
+                ...prev,
+                sourceTable: val,
+                sourceColumn: ''
+              }))}
+              placeholder="Select Source Data Model"
+            />
+          </div>
+          <div className="om-field-group" style={{ marginBottom: 0 }}>
+            <label className="om-field-label">Source Field / Column *</label>
+            <CustomSelect
+              size="md"
+              disabled={!isLookup || !lookupSourceTable}
+              value={values.sourceColumn || ''}
+              options={lookupFieldOptions}
+              onChange={val => onChange(prev => ({ ...prev, sourceColumn: val }))}
+              placeholder={lookupSourceTable ? "Select Source Field" : "Select Data Model First"}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ObjectManager: React.FC = () => {
   const [tables, setTables] = useState<SailsTableDefinition[]>([]);
   const [selectedTable, setSelectedTable] = useState<SailsTableDefinition | null>(null);
@@ -1223,7 +1333,7 @@ const ObjectManager: React.FC = () => {
                           const displayLabel = fieldTypeMeta?.label || field.logicalType.replace('_', ' ').toUpperCase();
 
                           return (
-                            <tr key={field.id} className="om-clickable-row">
+                            <tr key={field.id} className="om-clickable-row" onClick={() => openEditFieldModal(field)}>
                               <td>
                                 <div className="om-table-cell-name">
                                   <div className="om-table-icon-wrapper">
@@ -1447,7 +1557,7 @@ const ObjectManager: React.FC = () => {
                         </thead>
                         <tbody>
                           {layouts.map(layout => (
-                            <tr key={layout.id} className="om-clickable-row">
+                            <tr key={layout.id} className="om-clickable-row" onClick={() => selectedTable && window.open(`/layout-studio/${selectedTable.id}/${layout.id}`, '_blank')}>
                               <td>
                                 <div className="om-table-cell-name">
                                   <div className="om-table-icon-wrapper">
@@ -1489,7 +1599,7 @@ const ObjectManager: React.FC = () => {
                                   {new Date(layout.createdAt).toLocaleDateString()}
                                 </span>
                               </td>
-                              <td style={{ textAlign: 'right' }}>
+                               <td style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                                 <button
                                   className="sails-btn sails-btn--ghost"
                                   onClick={() => selectedTable && window.open(`/layout-studio/${selectedTable.id}/${layout.id}`, '_blank')}
@@ -1758,108 +1868,11 @@ const ObjectManager: React.FC = () => {
                       <div className="om-config-section">
 
                         {newFieldLogicalType === 'select' ? (
-                          <div className="om-form-grid-2">
-                            {/* Tab Switcher for Source Type */}
-                            <div className="om-field-group om-field-group--full">
-                              <label className="om-field-label">Option Value Source *</label>
-                              <div className="om-tab-group">
-                                <button
-                                  type="button"
-                                  className={`om-tab-button ${dynamicConfigValues.sourceType !== 'object' ? 'om-tab-button--active' : ''}`}
-                                  onClick={() => {
-                                    setDynamicConfigValues((prev: Record<string, any>) => {
-                                      const next: Record<string, any> = { ...prev, sourceType: 'custom' };
-                                      delete next.sourceTable;
-                                      delete next.sourceColumn;
-                                      return next;
-                                    });
-                                  }}
-                                >
-                                  Manual Custom List
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`om-tab-button ${dynamicConfigValues.sourceType === 'object' ? 'om-tab-button--active' : ''}`}
-                                  onClick={() => {
-                                    setDynamicConfigValues((prev: Record<string, any>) => {
-                                      const next: Record<string, any> = { ...prev, sourceType: 'object' };
-                                      delete next.optionsText;
-                                      return next;
-                                    });
-                                  }}
-                                >
-                                  Lookup Values from Data Model
-                                </button>
-                              </div>
-                            </div>
-
-                            {dynamicConfigValues.sourceType !== 'object' ? (
-                              <div className="om-field-group om-field-group--full">
-                                <label className="om-field-label">Custom Options (One Per Line) *</label>
-                                <textarea
-                                  className="sails-input"
-                                  placeholder={'Draft\nIn Review\nApproved\nClosed'}
-                                  rows={10}
-                                  value={dynamicConfigValues.optionsText || ''}
-                                  onChange={e => setDynamicConfigValues(prev => ({ ...prev, optionsText: e.target.value }))}
-                                  style={{ resize: 'vertical', minHeight: '220px' }}
-                                />
-                                <span className="om-field-hint">Enter choices on separate lines (one option per line).</span>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="om-field-group">
-                                  <label className="om-field-label">Source Data Model *</label>
-                                  <CustomSelect
-                                    size="md"
-                                    value={dynamicConfigValues.sourceTable || ''}
-                                    options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
-                                    onChange={val => setDynamicConfigValues(prev => ({
-                                      ...prev,
-                                      sourceTable: val,
-                                      sourceColumn: '' // Clear selected column when target model changes
-                                    }))}
-                                    placeholder="Select Source Data Model"
-                                  />
-                                </div>
-                                <div className="om-field-group">
-                                  <label className="om-field-label">Source Field / Column *</label>
-                                  {(() => {
-                                    const selectedTargetTableObj = tables.find(t => t.tableName === dynamicConfigValues.sourceTable);
-                                    const fieldOptions = selectedTargetTableObj?.fields
-                                      ? selectedTargetTableObj.fields.map(f => ({
-                                          value: f.fieldName,
-                                          label: `${f.name} (${f.fieldName})`
-                                        }))
-                                      : [];
-
-                                    return (
-                                      <CustomSelect
-                                        size="md"
-                                        value={dynamicConfigValues.sourceColumn || ''}
-                                        options={fieldOptions}
-                                        onChange={val => setDynamicConfigValues(prev => ({ ...prev, sourceColumn: val }))}
-                                        placeholder={selectedTargetTableObj ? "Select Source Field" : "Select Data Model First"}
-                                        disabled={!selectedTargetTableObj}
-                                      />
-                                    );
-                                  })()}
-                                </div>
-                              </>
-                            )}
-
-                            <div className="om-field-group" style={{ gridColumn: 'span 2' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={!!dynamicConfigValues.allowMultiple}
-                                  onChange={e => setDynamicConfigValues(prev => ({ ...prev, allowMultiple: e.target.checked }))}
-                                  style={{ width: 'auto' }}
-                                />
-                                <label className="om-field-label" style={{ margin: 0 }}>Allow Multi-Select</label>
-                              </div>
-                            </div>
-                          </div>
+                          <SelectOptionSourceConfig
+                            values={dynamicConfigValues}
+                            onChange={setDynamicConfigValues}
+                            tables={tables}
+                          />
                         ) : (!activeFieldTypeMeta?.parametersSchema || activeFieldTypeMeta.parametersSchema.length === 0) ? (
                           <p style={{ color: 'var(--sails-text-muted)', fontSize: '0.875rem', margin: 0 }}>
                             This field type does not require additional parameters.
@@ -1900,6 +1913,29 @@ const ObjectManager: React.FC = () => {
                                 }
                                 if ((param.name === 'trueLabel' || param.name === 'falseLabel') && dynamicConfigValues['defaultControl'] !== 'control:boolean_dropdown') {
                                   return null;
+                                }
+
+                                // Selection field — source type rendered as tabs (standard pattern)
+                                if (param.type === 'select' && param.name === 'sourceType') {
+                                  const activeSource = dynamicConfigValues[param.name] ?? param.defaultValue ?? 'custom';
+                                  return (
+                                    <div key={param.name} className="om-field-group" style={{ gridColumn: '1 / -1' }}>
+                                      <label className="om-field-label">{param.label}</label>
+                                      <div style={{ display: 'flex', gap: 0, marginTop: 6, width: '100%' }}>
+                                        {(param.options || []).map((opt: any) => (
+                                          <button
+                                            key={opt.value}
+                                            type="button"
+                                            className={`sails-tab-btn${activeSource === opt.value ? ' sails-tab-btn--active' : ''}`}
+                                            style={{ flex: 1, justifyContent: 'center' }}
+                                            onClick={() => setDynamicConfigValues((prev: any) => ({ ...prev, [param.name]: opt.value }))}
+                                          >
+                                            {opt.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
                                 }
 
                                 if (param.type === 'select') {
@@ -2187,108 +2223,11 @@ const ObjectManager: React.FC = () => {
                       <div className="om-config-section">
 
                         {editFieldLogicalType === 'select' ? (
-                          <div className="om-form-grid-2">
-                            {/* Tab Switcher for Source Type */}
-                            <div className="om-field-group om-field-group--full">
-                              <label className="om-field-label">Option Value Source *</label>
-                              <div className="om-tab-group">
-                                <button
-                                  type="button"
-                                  className={`om-tab-button ${editDynamicConfigValues.sourceType !== 'object' ? 'om-tab-button--active' : ''}`}
-                                  onClick={() => {
-                                    setEditDynamicConfigValues((prev: Record<string, any>) => {
-                                      const next: Record<string, any> = { ...prev, sourceType: 'custom' };
-                                      delete next.sourceTable;
-                                      delete next.sourceColumn;
-                                      return next;
-                                    });
-                                  }}
-                                >
-                                  Manual Custom List
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`om-tab-button ${editDynamicConfigValues.sourceType === 'object' ? 'om-tab-button--active' : ''}`}
-                                  onClick={() => {
-                                    setEditDynamicConfigValues((prev: Record<string, any>) => {
-                                      const next: Record<string, any> = { ...prev, sourceType: 'object' };
-                                      delete next.optionsText;
-                                      return next;
-                                    });
-                                  }}
-                                >
-                                  Lookup Values from Data Model
-                                </button>
-                              </div>
-                            </div>
-
-                            {editDynamicConfigValues.sourceType !== 'object' ? (
-                              <div className="om-field-group om-field-group--full">
-                                <label className="om-field-label">Custom Options (One Per Line) *</label>
-                                <textarea
-                                  className="sails-input"
-                                  placeholder={'Draft\nIn Review\nApproved\nClosed'}
-                                  rows={10}
-                                  value={editDynamicConfigValues.optionsText || ''}
-                                  onChange={e => setEditDynamicConfigValues(prev => ({ ...prev, optionsText: e.target.value }))}
-                                  style={{ resize: 'vertical', minHeight: '220px' }}
-                                />
-                                <span className="om-field-hint">Enter choices on separate lines (one option per line).</span>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="om-field-group">
-                                  <label className="om-field-label">Source Data Model *</label>
-                                  <CustomSelect
-                                    size="md"
-                                    value={editDynamicConfigValues.sourceTable || ''}
-                                    options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
-                                    onChange={val => setEditDynamicConfigValues(prev => ({
-                                      ...prev,
-                                      sourceTable: val,
-                                      sourceColumn: ''
-                                    }))}
-                                    placeholder="Select Source Data Model"
-                                  />
-                                </div>
-                                <div className="om-field-group">
-                                  <label className="om-field-label">Source Field / Column *</label>
-                                  {(() => {
-                                    const selectedTargetTableObj = tables.find(t => t.tableName === editDynamicConfigValues.sourceTable);
-                                    const fieldOptions = selectedTargetTableObj?.fields
-                                      ? selectedTargetTableObj.fields.map(f => ({
-                                          value: f.fieldName,
-                                          label: `${f.name} (${f.fieldName})`
-                                        }))
-                                      : [];
-
-                                    return (
-                                      <CustomSelect
-                                        size="md"
-                                        value={editDynamicConfigValues.sourceColumn || ''}
-                                        options={fieldOptions}
-                                        onChange={val => setEditDynamicConfigValues(prev => ({ ...prev, sourceColumn: val }))}
-                                        placeholder={selectedTargetTableObj ? "Select Source Field" : "Select Data Model First"}
-                                        disabled={!selectedTargetTableObj}
-                                      />
-                                    );
-                                  })()}
-                                </div>
-                              </>
-                            )}
-
-                            <div className="om-field-group" style={{ gridColumn: 'span 2' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={!!editDynamicConfigValues.allowMultiple}
-                                  onChange={e => setEditDynamicConfigValues(prev => ({ ...prev, allowMultiple: e.target.checked }))}
-                                  style={{ width: 'auto' }}
-                                />
-                                <label className="om-field-label" style={{ margin: 0 }}>Allow Multi-Select</label>
-                              </div>
-                            </div>
-                          </div>
+                          <SelectOptionSourceConfig
+                            values={editDynamicConfigValues}
+                            onChange={setEditDynamicConfigValues}
+                            tables={tables}
+                          />
                         ) : (!activeFieldTypeMeta?.parametersSchema || activeFieldTypeMeta.parametersSchema.length === 0) ? (
                           <p style={{ color: 'var(--sails-text-muted)', fontSize: '0.875rem', margin: 0 }}>
                             This field type does not require additional parameters.
@@ -2329,6 +2268,29 @@ const ObjectManager: React.FC = () => {
                                 }
                                 if ((param.name === 'trueLabel' || param.name === 'falseLabel') && editDynamicConfigValues['defaultControl'] !== 'control:boolean_dropdown') {
                                   return null;
+                                }
+
+                                // Selection field — source type rendered as tabs (standard pattern)
+                                if (param.type === 'select' && param.name === 'sourceType') {
+                                  const activeSource = editDynamicConfigValues[param.name] ?? param.defaultValue ?? 'custom';
+                                  return (
+                                    <div key={param.name} className="om-field-group" style={{ gridColumn: '1 / -1' }}>
+                                      <label className="om-field-label">{param.label}</label>
+                                      <div style={{ display: 'flex', gap: 0, marginTop: 6, width: '100%' }}>
+                                        {(param.options || []).map((opt: any) => (
+                                          <button
+                                            key={opt.value}
+                                            type="button"
+                                            className={`sails-tab-btn${activeSource === opt.value ? ' sails-tab-btn--active' : ''}`}
+                                            style={{ flex: 1, justifyContent: 'center' }}
+                                            onClick={() => setEditDynamicConfigValues((prev: any) => ({ ...prev, [param.name]: opt.value }))}
+                                          >
+                                            {opt.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
                                 }
 
                                 if (param.type === 'select') {

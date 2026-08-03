@@ -138,6 +138,7 @@ interface DetailFieldInputProps {
   val: any;
   controlPluginId?: string;
   inert?: boolean; // designer mode: no onChange + pointer-events blocked
+  readOnly?: boolean; // system/locked fields: rendered as a control but not editable
   rules?: FieldValidation[]; // block-level rules from the layout config
   showErrors?: boolean; // touched / save-attempted / preview
   record?: Record<string, any>; // sibling values (cross_field rules)
@@ -145,11 +146,11 @@ interface DetailFieldInputProps {
 }
 
 export const DetailFieldInput: React.FC<DetailFieldInputProps> = ({
-  field, fieldKey, label, val, controlPluginId, inert, rules, showErrors, record, onChange,
+  field, fieldKey, label, val, controlPluginId, inert, readOnly = false, rules, showErrors, record, onChange,
 }) => {
   const { controlPlugin } = resolveControlPlugin(field, controlPluginId);
   const issues = validateFieldIssues(field, val, rules, record);
-  const showError = !!showErrors && !inert && issues.length > 0;
+  const showError = !!showErrors && !inert && !readOnly && issues.length > 0;
 
   const inner = controlPlugin && controlPlugin.RenderEdit ? (
     <ControlLazyBoundary>
@@ -157,7 +158,7 @@ export const DetailFieldInput: React.FC<DetailFieldInputProps> = ({
         field={field}
         value={inert ? undefined : val}
         onChange={inert ? undefined : (v) => onChange(fieldKey, v)}
-        readOnly={false}
+        readOnly={readOnly}
       />
     </ControlLazyBoundary>
   ) : (
@@ -165,7 +166,7 @@ export const DetailFieldInput: React.FC<DetailFieldInputProps> = ({
       type="text"
       className="sails-detail-field-input"
       value={inert ? '' : (val ?? '')}
-      readOnly={inert}
+      readOnly={inert || readOnly}
       onChange={(e) => onChange(fieldKey, e.target.value)}
       placeholder={`Enter ${label.toLowerCase()}...`}
     />

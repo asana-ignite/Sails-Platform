@@ -1,10 +1,12 @@
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
+import { formatDecimalValue } from '@sails/shared';
+import { NumberFormatInput } from '../NumberFormatInput';
 
 export const NumberControl: FieldControlPlugin = {
   id: 'control:number',
   name: 'Number Input',
-  description: 'Integer numeric input control',
+  description: 'Integer numeric input control (thousands separators follow config)',
   iconName: 'Hash',
   compatibleTypes: ['number'],
   isDefault: true,
@@ -12,20 +14,18 @@ export const NumberControl: FieldControlPlugin = {
   mockValue: () => 42,
 
   RenderEdit: ({ field, value, onChange, disabled, readOnly, className = '' }: FieldControlProps) => (
-    <input
-      type="number"
-      step="1"
-      readOnly={readOnly}
-      disabled={disabled}
+    <NumberFormatInput
+      field={field}
       value={value ?? ''}
+      onChange={onChange}
+      disabled={disabled}
+      readOnly={readOnly}
+      className={className}
       placeholder="0"
-      onChange={(e) => onChange && onChange(e.target.value)}
-      className={`sails-input ${className}`}
-      style={{ textAlign: 'right' }}
     />
   ),
 
-  RenderDisplay: ({ value }: FieldControlProps) => (
-    <span>{value !== undefined && value !== null && value !== '' ? String(value) : '—'}</span>
+  RenderDisplay: ({ field, value }: FieldControlProps) => (
+    <span className="sails-control-numeric-display">{formatDecimalValue(value, field?.config, field?.logicalType)}</span>
   ),
 };
