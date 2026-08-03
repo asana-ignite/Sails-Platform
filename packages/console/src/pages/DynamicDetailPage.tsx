@@ -6,7 +6,8 @@ import {
   AlertCircle,
   Table2,
   Save,
-  Loader2
+  Loader2,
+  Pencil
 } from 'lucide-react';
 import type { TableLayout, SailsFieldDefinition, ConsoleMenu } from '@sails/shared';
 import { isSystemField } from '@sails/shared';
@@ -73,57 +74,80 @@ interface DetailHeaderProps {
   primaryTitle: string;
   subtitle: string;
   isNewMode: boolean;
+  isEditing: boolean;
   saving: boolean;
+  canEdit: boolean;
   onBack: () => void;
+  onEdit: () => void;
+  onCancelEdit: () => void;
 }
 
-const DetailHeader: React.FC<DetailHeaderProps> = memo(({ primaryTitle, subtitle, isNewMode, saving, onBack }) => (
-  <header className="sails-page-header sails-dynamic-table__header">
-    <div className="sails-page-header__left" style={{ pointerEvents: 'auto' }}>
-      <button
-        type="button"
-        className="sails-btn sails-btn--secondary"
-        onClick={onBack}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginRight: 12 }}
-      >
-        <ChevronLeft size={16} />
-        <span>Back</span>
-      </button>
-      <div className="sails-page-header__icon-wrapper">
-        <Database size={24} />
-      </div>
-      <div>
-        <h1 className="sails-page-header__title">{primaryTitle}</h1>
-        <p className="sails-page-header__subtitle">{subtitle}</p>
-      </div>
-    </div>
-    {isNewMode && (
-      <div className="sails-page-header__right" style={{ pointerEvents: 'auto', display: 'flex', gap: 8 }}>
-        <button type="button" className="sails-btn sails-btn--secondary" onClick={onBack} disabled={saving}>
-          <span>Cancel</span>
-        </button>
+const DetailHeader: React.FC<DetailHeaderProps> = memo(
+  ({ primaryTitle, subtitle, isNewMode, isEditing, saving, canEdit, onBack, onEdit, onCancelEdit }) => (
+    <header className="sails-page-header sails-dynamic-table__header">
+      <div className="sails-page-header__left" style={{ pointerEvents: 'auto' }}>
         <button
-          type="submit"
-          className="sails-btn sails-btn--primary"
-          disabled={saving}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          type="button"
+          className="sails-btn sails-btn--secondary"
+          onClick={onBack}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginRight: 12 }}
         >
-          {saving ? (
-            <>
-              <Loader2 size={16} className="sails-spin" />
-              <span>Saving...</span>
-            </>
-          ) : (
-            <>
-              <Save size={16} />
-              <span>Save Record</span>
-            </>
-          )}
+          <ChevronLeft size={16} />
+          <span>Back</span>
         </button>
+        <div className="sails-page-header__icon-wrapper">
+          <Database size={24} />
+        </div>
+        <div>
+          <h1 className="sails-page-header__title">{primaryTitle}</h1>
+          <p className="sails-page-header__subtitle">{subtitle}</p>
+        </div>
       </div>
-    )}
-  </header>
-));
+      {isNewMode || isEditing ? (
+        <div className="sails-page-header__right" style={{ pointerEvents: 'auto', display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className="sails-btn sails-btn--secondary"
+            onClick={isNewMode ? onBack : onCancelEdit}
+            disabled={saving}
+          >
+            <span>Cancel</span>
+          </button>
+          <button
+            type="submit"
+            className="sails-btn sails-btn--primary"
+            disabled={saving}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            {saving ? (
+              <>
+                <Loader2 size={16} className="sails-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                <span>{isNewMode ? 'Save Record' : 'Update Record'}</span>
+              </>
+            )}
+          </button>
+        </div>
+      ) : canEdit ? (
+        <div className="sails-page-header__right" style={{ pointerEvents: 'auto' }}>
+          <button
+            type="button"
+            className="sails-btn sails-btn--primary"
+            onClick={onEdit}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <Pencil size={16} />
+            <span>Edit</span>
+          </button>
+        </div>
+      ) : null}
+    </header>
+  )
+);
 
 // ── Main Page Component ────────────────────────────────────────
 const DynamicDetailPage: React.FC = () => {
@@ -145,6 +169,7 @@ const DynamicDetailPage: React.FC = () => {
   const [activeTabMap, setActiveTabMap] = useState<Record<string, number>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [saveAttempted, setSaveAttempted] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
 
   const { dataModelId, layoutKey, recordId, isNewMode } = useMemo(() => {
     const menus = navigationItems.length > 0 ? navigationItems : (apps || []).flatMap(a => a.menus || []);
@@ -168,6 +193,10 @@ const DynamicDetailPage: React.FC = () => {
       setLoading(true);
       setError(null);
       setSaveError(null);
+      setIsEditing(false);
+      setFormData({});
+      setTouched({});
+      setSaveAttempted(false);
 
       try {
         // Fetch the table's layouts once; resolve the layout from the URL segment
@@ -281,6 +310,29 @@ const DynamicDetailPage: React.FC = () => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleEditRecord = () => {
+    if (!record) return;
+    const initialForm: Record<string, any> = {};
+    for (const field of fields) {
+      const key = field.fieldName || field.id;
+      if (!key || isSystemField(key)) continue;
+      initialForm[key] = record[key] ?? record[field.id] ?? '';
+    }
+    setFormData(initialForm);
+    setTouched({});
+    setSaveAttempted(false);
+    setSaveError(null);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setFormData({});
+    setTouched({});
+    setSaveAttempted(false);
+    setSaveError(null);
+  };
+
   const handleSaveRecord = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!tableName) return;
@@ -300,27 +352,40 @@ const DynamicDetailPage: React.FC = () => {
       return;
     }
 
+    const isUpdate = !isNewMode && isEditing;
     setSaving(true);
     setSaveError(null);
 
     try {
-      const res = await fetch(`/api/dynamic/${tableName}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+      const res = await fetch(
+        isUpdate ? `/api/dynamic/${tableName}?id=${recordId}` : `/api/dynamic/${tableName}`,
+        {
+          method: isUpdate ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        }
+      );
 
       const data = await res.json();
       if (!res.ok || data.error || data.success === false) {
-        throw new Error(data.error || data.message || 'Failed to create record.');
+        throw new Error(data.error || data.message || 'Failed to save record.');
       }
 
-      const createdRecord = data.record || (Array.isArray(data.rows) ? data.rows[0] : data.rows) || data.data || data;
-      const newId = createdRecord?.id || data.id;
+      if (isUpdate) {
+        const updatedRecord = data.record || data.data || (Array.isArray(data.rows) ? data.rows[0] : data.rows) || data;
+        setRecord(updatedRecord || {});
+        setIsEditing(false);
+        setFormData({});
+        setTouched({});
+        setSaveAttempted(false);
+      } else {
+        const createdRecord = data.record || (Array.isArray(data.rows) ? data.rows[0] : data.rows) || data.data || data;
+        const newId = createdRecord?.id || data.id;
 
-      navigate(newId ? `${baseRoute}/${layoutKey}/${newId}` : baseRoute, {
-        replace: true,
-      });
+        navigate(newId ? `${baseRoute}/${layoutKey}/${newId}` : baseRoute, {
+          replace: true,
+        });
+      }
     } catch (err: any) {
       setSaveError(err.message || 'Failed to save record.');
     } finally {
@@ -376,12 +441,13 @@ const DynamicDetailPage: React.FC = () => {
       const key = field.fieldName || field.id;
 
       const colSpan = b.width ? (typeof b.width === 'number' ? b.width : 4) : 4;
-      const val = isNewMode ? formData[key] ?? '' : record ? record[field.fieldName] ?? record[field.id] : undefined;
+      const isEditable = isNewMode || isEditing;
+      const val = isEditable ? formData[key] ?? '' : record ? record[field.fieldName] ?? record[field.id] : undefined;
 
       return (
         <div key={b.id || field.id} className="ls-block ls-block--field" style={{ gridColumn: `span ${colSpan}` }}>
           <DetailFieldLabel field={field} label={label} />
-          {isNewMode ? (
+          {isEditable ? (
             <DetailFieldInput
               field={field}
               fieldKey={key}
@@ -480,8 +546,12 @@ const DynamicDetailPage: React.FC = () => {
           primaryTitle={primaryTitle}
           subtitle={subtitle}
           isNewMode={isNewMode}
+          isEditing={isEditing}
           saving={saving}
+          canEdit={!isNewMode && !!record}
           onBack={() => navigate(-1)}
+          onEdit={handleEditRecord}
+          onCancelEdit={handleCancelEdit}
         />
 
         <section className="sails-page-body" style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', gap: 24 }}>
