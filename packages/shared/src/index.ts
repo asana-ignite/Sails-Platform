@@ -20,6 +20,7 @@ export {
   validateRecord,
   isEmptyValue,
   sanitizeWritePayload,
+  PRESET_REGEX_MAP,
 } from './validation';
 export type { ValidationIssue, ValidatableField } from './validation';
 export {

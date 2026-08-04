@@ -48,6 +48,41 @@ const TEXT_TYPES = new Set([
   'rich_text',
 ]);
 
+export const PRESET_REGEX_MAP: Record<string, { pattern: string; message: string }> = {
+  alphanumeric: {
+    pattern: '^[a-zA-Z0-9]+$',
+    message: 'Only alphanumeric characters allowed (no spaces)',
+  },
+  alphanumeric_spaces: {
+    pattern: '^[a-zA-Z0-9\\s\\-]+$',
+    message: 'Only alphanumeric characters, spaces, and dashes allowed',
+  },
+  alphabetic: {
+    pattern: '^[a-zA-Z]+$',
+    message: 'Only alphabetic letters allowed',
+  },
+  alphabetic_spaces: {
+    pattern: '^[a-zA-Z\\s]+$',
+    message: 'Only alphabetic letters and spaces allowed',
+  },
+  numeric: {
+    pattern: '^[0-9]+$',
+    message: 'Only numbers allowed',
+  },
+  no_special: {
+    pattern: '^[a-zA-Z0-9\\s.,\\-_]+$',
+    message: 'No special characters allowed',
+  },
+  url: {
+    pattern: '^(https?:\\/\\/)?([a-zA-Z0-9\\-]+\\.)+[a-zA-Z0-9\\-]+.*$',
+    message: 'Invalid URL format',
+  },
+  email: {
+    pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$',
+    message: 'Invalid email address format',
+  },
+};
+
 function toNumber(value: any): number | null {
   if (typeof value === 'number') return Number.isNaN(value) ? null : value;
   if (typeof value === 'string' && value.trim() !== '') {
@@ -113,6 +148,32 @@ export function validateFieldValue(
     const maxLen = Number(config.maxLength);
     if (config.maxLength !== undefined && config.maxLength !== null && !Number.isNaN(maxLen) && len > maxLen) {
       issues.push(`Max ${config.maxLength} characters`);
+    }
+
+    // Regex text format validation (Presets or Custom)
+    const preset = config.validationPreset || 'none';
+    let patternStr: string | null = null;
+    let defaultMsg = 'Invalid format';
+
+    if (preset === 'custom' && config.regexPattern) {
+      patternStr = config.regexPattern;
+      defaultMsg = 'Format does not match required pattern';
+    } else if (PRESET_REGEX_MAP[preset]) {
+      patternStr = PRESET_REGEX_MAP[preset].pattern;
+      defaultMsg = PRESET_REGEX_MAP[preset].message;
+    }
+
+    if (patternStr) {
+      try {
+        const regex = new RegExp(patternStr);
+        const strVal = typeof value === 'string' ? value : String(value ?? '');
+        if (!regex.test(strVal)) {
+          issues.push(config.customErrorMessage || defaultMsg);
+        }
+      } catch (err) {
+        // Safe fallback for malformed custom regex strings
+        issues.push('Invalid validation regex pattern');
+      }
     }
   }
 
