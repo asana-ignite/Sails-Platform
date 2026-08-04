@@ -313,6 +313,33 @@
   border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
 }
 
+.sails-detail-section-header-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 0 0 8px;
+  border: none;
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--sails-text-main, #0f172a);
+  transition: color 0.15s;
+}
+
+.sails-detail-section-header-btn:hover {
+  color: var(--sails-primary, #0284c7);
+}
+
+.sails-detail-section-header-btn svg {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
 .sails-detail-error-banner {
   padding: 16px 20px;
   border-radius: 8px;

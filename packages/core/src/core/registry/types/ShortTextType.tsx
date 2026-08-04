@@ -10,6 +10,37 @@ export const ShortTextType: FieldTypePlugin = {
   physicalType: 'text',
   parametersSchema: [
     { name: 'maxLength', label: 'Max Length (Characters)', type: 'number', defaultValue: 255, min: 1, max: 4000 },
+    {
+      name: 'validationPreset',
+      label: 'Text Validation (Format Preset)',
+      type: 'select',
+      defaultValue: 'none',
+      options: [
+        { label: 'None (Any Characters Allowed)', value: 'none' },
+        { label: 'Alphanumeric (No Spaces)', value: 'alphanumeric' },
+        { label: 'Alphanumeric + Spaces/Dashes', value: 'alphanumeric_spaces' },
+        { label: 'Alphabetic Only', value: 'alphabetic' },
+        { label: 'Alphabetic + Spaces', value: 'alphabetic_spaces' },
+        { label: 'Numeric Only', value: 'numeric' },
+        { label: 'No Special Characters', value: 'no_special' },
+        { label: 'URL', value: 'url' },
+        { label: 'Email', value: 'email' },
+        { label: 'Custom Regex Pattern...', value: 'custom' }
+      ]
+    },
+    {
+      name: 'regexPattern',
+      label: 'Custom Regex Pattern',
+      type: 'text',
+      placeholder: 'e.g. ^[A-Z]{3}-\\d{4}$',
+      visibleWhen: { name: 'validationPreset', equals: 'custom' }
+    },
+    {
+      name: 'customErrorMessage',
+      label: 'Custom Error Message',
+      type: 'text',
+      placeholder: 'e.g. Invalid format (e.g. ABC-1234)'
+    },
     { 
       name: 'transform', 
       label: 'Text Transform', 

@@ -42,7 +42,9 @@ import {
   LayoutTemplate,
   ShieldCheck,
   ExternalLink,
-  AlertCircle
+  AlertCircle,
+  ClipboardList,
+  FileText
 } from 'lucide-react';
 import { TableLayout, LayoutType, ViewType, FIELD_TYPE_REGISTRY } from '@sails/shared';
 import { CustomSelect } from '../../components/common/CustomSelect';
@@ -230,10 +232,10 @@ const ObjectManager: React.FC = () => {
     }
   };
 
-  const VIEW_TYPE_LABELS: Record<ViewType, { label: string; className: string }> = {
-    LIST: { label: 'List', className: 'om-layout-badge--list' },
-    DETAIL: { label: 'Detail', className: 'om-layout-badge--detail' },
-    FORM: { label: 'Form', className: 'om-layout-badge--form' },
+  const VIEW_TYPE_LABELS: Record<ViewType, { label: string; icon: React.ElementType; className: string }> = {
+    LIST: { label: 'List', icon: List, className: 'om-layout-badge--list' },
+    DETAIL: { label: 'Detail', icon: ClipboardList, className: 'om-layout-badge--detail' },
+    FORM: { label: 'Form', icon: FileText, className: 'om-layout-badge--form' },
   };
 
   const handleTableSort = (key: 'name' | 'description' | 'isSystem' | 'fields' | 'createdAt' | 'updatedAt') => {
@@ -1557,12 +1559,14 @@ const ObjectManager: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {layouts.map(layout => (
+                          {layouts.map(layout => {
+                            const LayoutIcon = VIEW_TYPE_LABELS[layout.viewType]?.icon || LayoutTemplate;
+                            return (
                             <tr key={layout.id} className="om-clickable-row" onClick={() => selectedTable && window.open(`/layout-studio/${selectedTable.id}/${layout.id}`, '_blank')}>
                               <td>
                                 <div className="om-table-cell-name">
                                   <div className="om-table-icon-wrapper">
-                                    <LayoutTemplate size={18} />
+                                    <LayoutIcon size={18} />
                                   </div>
                                   <div>
                                     <div className="om-name-primary">{layout.name}</div>
@@ -1610,7 +1614,8 @@ const ObjectManager: React.FC = () => {
                                 </button>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

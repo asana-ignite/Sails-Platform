@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, memo } from 'react';
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import {
   ChevronLeft,
-  Database,
+  ChevronDown,
+  ChevronRight,
   AlertCircle,
   Table2,
   Save,
@@ -90,14 +91,11 @@ const DetailHeader: React.FC<DetailHeaderProps> = memo(
           type="button"
           className="sails-btn sails-btn--secondary"
           onClick={onBack}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginRight: 12 }}
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 8, marginRight: 12 }}
+          title="Back"
         >
           <ChevronLeft size={16} />
-          <span>Back</span>
         </button>
-        <div className="sails-page-header__icon-wrapper">
-          <Database size={24} />
-        </div>
         <div>
           <h1 className="sails-page-header__title">{primaryTitle}</h1>
           <p className="sails-page-header__subtitle">{subtitle}</p>
@@ -167,6 +165,7 @@ const DynamicDetailPage: React.FC = () => {
   const [tableName, setTableName] = useState<string | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [activeTabMap, setActiveTabMap] = useState<Record<string, number>>({});
+  const [collapsedSectionMap, setCollapsedSectionMap] = useState<Record<string, boolean>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [saveAttempted, setSaveAttempted] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -404,8 +403,8 @@ const DynamicDetailPage: React.FC = () => {
       <div className={`sails-dynamic-table sails-page-container ${animClass}`}>
         <header className="sails-page-header sails-dynamic-table__header">
           <div className="sails-page-header__left">
-            <button className="sails-btn sails-btn--secondary" onClick={() => navigate(-1)} style={{ marginRight: 12 }}>
-              <ChevronLeft size={16} /> Back
+            <button className="sails-btn sails-btn--secondary" onClick={() => navigate(-1)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 8, marginRight: 12 }} title="Back">
+              <ChevronLeft size={16} />
             </button>
             <AlertCircle size={24} />
             <div>
@@ -418,10 +417,17 @@ const DynamicDetailPage: React.FC = () => {
     );
   }
 
+  const titleField = layout?.recordTitleField
+    ? fields.find((f) => f.id === layout.recordTitleField)
+      || fields.find((f) => f.fieldName === layout.recordTitleField)
+      || fields.find((f) => f.name === layout.recordTitleField)
+    : null;
   const primaryTitle = isNewMode
     ? `New ${tableName ? tableName.charAt(0).toUpperCase() + tableName.slice(1) : 'Record'}`
     : record
-    ? record.name || record.title || record.label || record.id
+    ? (titleField && record[titleField.fieldName] != null && record[titleField.fieldName] !== ''
+        ? record[titleField.fieldName]
+        : record.name || record.title || record.label || record.id)
     : `Record #${recordId}`;
 
   const subtitle = isNewMode
@@ -580,10 +586,29 @@ const DynamicDetailPage: React.FC = () => {
 
                 if (sectionBlocks.length === 0) return null;
 
+                const showHeader = section.showHeader !== false;
+                const isCollapsible = !!section.collapsible;
+                const isCollapsed = collapsedSectionMap[section.id] ?? section.collapsed ?? false;
+
+                const header = showHeader ? (
+                  isCollapsible ? (
+                    <button
+                      type="button"
+                      className="sails-detail-section-header-btn"
+                      onClick={() => setCollapsedSectionMap((prev) => ({ ...prev, [section.id]: !(prev[section.id] ?? section.collapsed ?? false) }))}
+                    >
+                      {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                      <span>{section.title || 'Section'}</span>
+                    </button>
+                  ) : (
+                    <h3 className="sails-detail-section-title">{section.title || 'Section'}</h3>
+                  )
+                ) : null;
+
                 return (
                   <div key={section.id} className="sails-detail-section-card">
-                    <h3 className="sails-detail-section-title">{section.title || 'Section'}</h3>
-                    <div className="ls-section__grid">{sectionBlocks.map((b: any) => renderBlock(b))}</div>
+                    {header}
+                    {!isCollapsed && <div className="ls-section__grid">{sectionBlocks.map((b: any) => renderBlock(b))}</div>}
                   </div>
                 );
               })

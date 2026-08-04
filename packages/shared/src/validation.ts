@@ -204,6 +204,7 @@ export function validateRecord(
   for (const field of fields) {
     if (!field.fieldName) continue;
     for (const message of validateFieldValue(field, values[field.fieldName])) {
+      issues.push({ fieldName: field.fieldName, message });
     }
   }
   return issues;

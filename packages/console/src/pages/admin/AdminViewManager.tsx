@@ -14,8 +14,8 @@ interface LayoutRow extends TableLayout {
 
 const VIEW_TYPE_LABELS: Record<ViewType, { label: string; icon: React.ElementType; className: string }> = {
   LIST: { label: 'List', icon: List, className: 'sails-layout-card__badge--list' },
-  DETAIL: { label: 'Detail', icon: FileText, className: 'sails-layout-card__badge--detail' },
-  FORM: { label: 'Form', icon: ClipboardList, className: 'sails-layout-card__badge--form' },
+  DETAIL: { label: 'Detail', icon: ClipboardList, className: 'sails-layout-card__badge--detail' },
+  FORM: { label: 'Form', icon: FileText, className: 'sails-layout-card__badge--form' },
 };
 
 const AdminViewManager: React.FC = () => {
@@ -305,7 +305,7 @@ const AdminViewManager: React.FC = () => {
                       <td>
                         <div className="lav-cell-name">
                           <div className="lav-icon-wrapper">
-                            <LayoutTemplate size={16} />
+                            <ViewIcon size={16} />
                           </div>
                           <div className="lav-cell-name__text">
                             <span className="lav-name-primary">{renderHighlightedText(row.name, search)}</span>
@@ -732,7 +732,7 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
           <div className="sails-layout-dialog__field">
             <label className="sails-layout-dialog__label">View Type</label>
             <div className="sails-layout-modal__view-options">
-              {(['LIST', 'DETAIL', 'FORM'] as ViewType[]).map(vt => {
+              {(['LIST', 'DETAIL'] as ViewType[]).map(vt => {
                 const info = VIEW_TYPE_LABELS[vt];
                 const Icon = info.icon;
                 return (

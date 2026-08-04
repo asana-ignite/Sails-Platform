@@ -131,7 +131,7 @@ const DynamicTablePage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [recordsPerPage, setRecordsPerPage] = useState<number>(25);
   const datetimePrefs = useDateTimePrefs();
-  const tenantUsers = useTenantUsers();
+  const { users: tenantUsers } = useTenantUsers();
 
   /** Resolve a user field value (ID) to a display name; falls back to the raw value. */
   const userDisplayName = useCallback((value: any): string => {

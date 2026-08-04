@@ -538,7 +538,9 @@ export interface LayoutSection {
   title: string;
   position: number;
   columns: number;                    // 1–4 columns in this section
-  collapsed?: boolean;
+  showHeader?: boolean;               // default: true — render the section header in preview/runtime
+  collapsible?: boolean;              // default: false — allow collapse/expand toggle
+  collapsed?: boolean;                // runtime persisted collapsed state
 }
 
 export interface LayoutField {

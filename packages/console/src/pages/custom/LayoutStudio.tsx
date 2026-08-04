@@ -14,7 +14,7 @@ import {
   LayoutGrid, Settings, ArrowRight, ListTree, FolderKanban, Columns,
   Table2, Filter, ShieldAlert, AlertCircle, ArrowUpDown,
   ArrowLeft, Loader2, Play, Pause, Minimize2, Maximize2, CheckCircle2,
-  Layers, Search, ArrowUp, ArrowDown, ChevronLeft, ChevronRight,
+  Layers, Search, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown,
   RotateCcw, AlignLeft, AlignCenter, AlignRight,
   Edit3, Zap, Undo2, AlertTriangle, Database, ExternalLink,
   MousePointerClick,
@@ -75,6 +75,9 @@ interface BuilderSection {
   id: string;
   title: string;
   columns: number;
+  showHeader?: boolean;
+  collapsible?: boolean;
+  collapsed?: boolean;
 }
 
 interface DragPayload {
@@ -109,7 +112,7 @@ interface TableMeta {
 let sectionCounter = 0;
 function newSection(): BuilderSection {
   sectionCounter++;
-  return { id: `sec_${Date.now()}_${sectionCounter}`, title: `Section ${sectionCounter}`, columns: 2 };
+  return { id: `sec_${Date.now()}_${sectionCounter}`, title: `Section ${sectionCounter}`, columns: 2, showHeader: true, collapsible: false };
 }
 sectionCounter = 0;
 
@@ -357,6 +360,9 @@ const LayoutStudio: React.FC = () => {
   const [sections, setSections] = useState<BuilderSection[]>([newSection()]);
   const [blocks, setBlocks] = useState<PlacedBlock[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [layoutRecordTitleField, setLayoutRecordTitleField] = useState<string | null>(null);
+  const [previewCollapsedMap, setPreviewCollapsedMap] = useState<Record<string, boolean>>({});
   const [dragOverSection, setDragOverSection] = useState<string | null>(null);
   const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
   const [activeTabMap, setActiveTabMap] = useState<Record<string, number>>({});
@@ -472,6 +478,7 @@ const LayoutStudio: React.FC = () => {
         setLayoutDescription(layout.description || '');
         setLayoutIsDefault(layout.isDefault || false);
         setLayoutSystemName(layout.systemName || '');
+        setLayoutRecordTitleField(vType === 'LIST' ? null : (layout.recordTitleField || null));
         const status = layout.status || 'draft';
         setLayoutStatus(status);
         setHasPublishedVersion(!!layout.publishedConfig);
@@ -518,12 +525,22 @@ const LayoutStudio: React.FC = () => {
   );
   const findBlockById = (blockId: string) => findBlockInArray(blocks, blockId);
   const selectedField = selectedBlock?.fieldId ? allFields.find((f) => f.id === selectedBlock.fieldId) : null;
+  const selectedSection = useMemo(
+    () => (selectedSectionId ? sections.find((s) => s.id === selectedSectionId) || null : null),
+    [sections, selectedSectionId],
+  );
 
   useEffect(() => {
     if (selectedBlockId && !findBlockInArray(blocks, selectedBlockId)) {
       setSelectedBlockId(null);
     }
   }, [blocks, selectedBlockId]);
+
+  useEffect(() => {
+    if (selectedSectionId && !sections.some((s) => s.id === selectedSectionId)) {
+      setSelectedSectionId(null);
+    }
+  }, [sections, selectedSectionId]);
 
   const blocksBySection = useMemo(() => {
     const map: Record<string, PlacedBlock[]> = {};
@@ -775,6 +792,8 @@ const LayoutStudio: React.FC = () => {
       setSections([newSection()]);
       setBlocks([]);
       setSelectedBlockId(null);
+      setSelectedSectionId(null);
+      setLayoutRecordTitleField(null);
       setActiveTabMap({});
       setDragOverTabBlockId(null);
       setDragOverChildBlockId(null);
@@ -867,7 +886,7 @@ const LayoutStudio: React.FC = () => {
       const res = await fetch('/api/console/layouts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: layoutId, config }),
+        body: JSON.stringify({ id: layoutId, config, recordTitleField: layoutRecordTitleField || null }),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Failed to save layout');
@@ -912,7 +931,7 @@ const LayoutStudio: React.FC = () => {
       const res = await fetch('/api/console/layouts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: layoutId, config, action: 'activate' }),
+        body: JSON.stringify({ id: layoutId, config, recordTitleField: layoutRecordTitleField || null, action: 'activate' }),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Failed to activate layout');
@@ -993,12 +1012,17 @@ const LayoutStudio: React.FC = () => {
 
   // ── Actions ─────────────────────────────────────────────────
 
-  const addSection = () => setSections((s) => [...s, newSection()]);
+  const addSection = () => {
+    setSections((s) => [...s, newSection()]);
+    setSelectedBlockId(null);
+    setSelectedSectionId(null);
+  };
 
   const removeSection = (sectionId: string) => {
     setBlocks((b) => b.filter((blk) => blk.sectionId !== sectionId));
     setSections((s) => s.filter((sec) => sec.id !== sectionId));
     if (selectedBlock?.sectionId === sectionId) setSelectedBlockId(null);
+    if (selectedSectionId === sectionId) setSelectedSectionId(null);
   };
 
   const updateSection = (sectionId: string, patch: Partial<BuilderSection>) => {
@@ -1031,6 +1055,14 @@ const LayoutStudio: React.FC = () => {
       return [...shifted, blk];
     });
     setSelectedBlockId(newId);
+    setSelectedSectionId(null);
+  };
+
+  const handleCanvasDeselect = () => {
+    setListSelectedColId(null);
+    setListSelectedActionId(null);
+    setSelectedBlockId(null);
+    setSelectedSectionId(null);
   };
 
   const removeBlock = (blockId: string) => {
@@ -1818,18 +1850,17 @@ const LayoutStudio: React.FC = () => {
         )}
 
         {/* ── CENTER: Canvas ── */}
-        <div className="ls-canvas">
-          <div className="ls-canvas__scroll">
+        <div className="ls-canvas" onClick={(e) => { if (e.target === e.currentTarget) handleCanvasDeselect(); }}>
+          <div className="ls-canvas__scroll" onClick={(e) => { if (e.target === e.currentTarget) handleCanvasDeselect(); }}>
             <div className="ls-page" onClick={(e) => {
               if (e.target === e.currentTarget) {
-                setListSelectedColId(null);
-                setListSelectedActionId(null);
+                handleCanvasDeselect();
               }
             }}>
               {viewType === 'LIST' ? (
                 <>
               {/* ── View Name ── */}
-              <div className="ls-page__header">
+              <div className="ls-page__header" onClick={handleCanvasDeselect}>
                 <h1 className="ls-page__title">{tableMeta.name}</h1>
                 <p className="ls-page__subtitle">Select columns, define filters and sort order to build your list view.</p>
               </div>
@@ -2211,7 +2242,7 @@ const LayoutStudio: React.FC = () => {
               ) : (
                 <>
               {/* ── Page Header ── */}
-              <div className="ls-page__header">
+              <div className="ls-page__header" onClick={handleCanvasDeselect}>
                 <h1 className="ls-page__title">{tableMeta.name} Detail</h1>
                 <p className="ls-page__subtitle">Drag blocks from the palette to build your page layout</p>
               </div>
@@ -2220,14 +2251,28 @@ const LayoutStudio: React.FC = () => {
                 const sectionBlocks = blocksBySection[section.id] || [];
                 return (
                   <div key={section.id}
-                    className={`ls-section ${dragOverSection === section.id ? 'ls-section--drag-over' : ''}`}
+                    className={`ls-section ${selectedSectionId === section.id ? 'ls-section--selected' : ''} ${dragOverSection === section.id ? 'ls-section--drag-over' : ''}`}
+                    onClick={() => { if (!isReadOnly) { setSelectedBlockId(null); setSelectedSectionId(section.id); } }}
                     onDragOver={(e) => { e.preventDefault(); setDragOverSection(section.id); setDragOverBlockId(null); setDragOverTabBlockId(null); }}
                     onDrop={(e) => handleDrop(e, section.id)}>
-                    <div className="ls-section__header">
-                      <div className="ls-section__col-btn" title="12-column grid"><Columns size={13} /><span>12-col grid</span></div>
-                      <input className="ls-section__title-input" value={section.title} onChange={(e) => updateSection(section.id, { title: e.target.value })} readOnly={isReadOnly} />
-                      <button className="ls-section__remove" onClick={() => removeSection(section.id)} title="Delete section"><X size={14} /></button>
-                    </div>
+                    {!(previewMode && section.showHeader === false) && (
+                      <div className="ls-section__header" onClick={(e) => { e.stopPropagation(); if (!isReadOnly) handleCanvasDeselect(); }}>
+                        {previewMode && section.collapsible && (
+                          <button
+                            type="button"
+                            className="ls-section__collapse-btn"
+                            title={previewCollapsedMap[section.id] ? 'Expand section' : 'Collapse section'}
+                            onClick={(e) => { e.stopPropagation(); setPreviewCollapsedMap((prev) => ({ ...prev, [section.id]: !(prev[section.id] ?? section.collapsed ?? false) })); }}
+                          >
+                            {previewCollapsedMap[section.id] ?? section.collapsed ?? false ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                          </button>
+                        )}
+                        <div className="ls-section__col-btn" title="12-column grid"><Columns size={13} /><span>12-col grid</span></div>
+                        <input className="ls-section__title-input" value={section.title} onChange={(e) => updateSection(section.id, { title: e.target.value })} readOnly={isReadOnly} />
+                        <button className="ls-section__remove" onClick={(e) => { e.stopPropagation(); removeSection(section.id); }} title="Delete section"><X size={14} /></button>
+                      </div>
+                    )}
+                    {!(previewMode && (previewCollapsedMap[section.id] ?? section.collapsed ?? false)) && (
                     <div className="ls-section__grid">
                       {sectionBlocks.length === 0 ? (
                         <div className="ls-section__empty" style={{ gridColumn: '1 / -1' }}>Drop blocks here from the palette →</div>
@@ -2261,7 +2306,7 @@ const LayoutStudio: React.FC = () => {
                                 draggable onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: blk.id, sourceSectionId: section.id })}
                                 onDragOver={(e) => handleBlockDrop(e, blk.id, section.id)}
                                 onDragLeave={() => setDragOverBlockId(null)}
-                                onClick={() => setSelectedBlockId(blk.id)}>
+                                onClick={(e) => { e.stopPropagation(); setSelectedBlockId(blk.id); setSelectedSectionId(null); }}>
                                 <div className="ls-block__indicators">
                                   {hasConditions && <span className="ls-indicator ls-indicator--cond" title="Has conditions"><Filter size={10} /></span>}
                                   {hasValidations && <span className="ls-indicator ls-indicator--val" title="Has validation"><ShieldAlert size={10} /></span>}
@@ -2298,7 +2343,7 @@ const LayoutStudio: React.FC = () => {
                                 draggable onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: blk.id, sourceSectionId: section.id })}
                                 onDragOver={(e) => handleBlockDrop(e, blk.id, section.id)}
                                 onDragLeave={() => setDragOverBlockId(null)}
-                                onClick={() => setSelectedBlockId(blk.id)}>
+                                onClick={(e) => { e.stopPropagation(); setSelectedBlockId(blk.id); setSelectedSectionId(null); }}>
                                 {controlsEl}
                                 <div className="ls-related__header">
                                   <Table2 size={14} />
@@ -2329,7 +2374,7 @@ const LayoutStudio: React.FC = () => {
                                 style={{ gridColumn: `span ${blk.width}` }}
                                 onDragOver={(e) => { e.stopPropagation(); handleBlockDrop(e, blk.id, section.id); }}
                                 onDragLeave={() => setDragOverBlockId(null)}
-                                onClick={(e) => { e.stopPropagation(); setSelectedBlockId(blk.id); }}>
+                                onClick={(e) => { e.stopPropagation(); setSelectedBlockId(blk.id); setSelectedSectionId(null); }}>
                                 <div className="ls-block__controls">
                                   <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockPosition(blk.id, section.id, 'up'); }} disabled={idx === 0}><MoveUp size={10} /></button>
                                   <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockPosition(blk.id, section.id, 'down'); }} disabled={idx === total - 1}><MoveDown size={10} /></button>
@@ -2394,7 +2439,7 @@ const LayoutStudio: React.FC = () => {
                                               onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: tb.id, sourceTabBlockId: blk.id, sourceTabId: activeTab.id })}
                                               onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverChildBlockId(tb.id); }}
                                               onDragLeave={(e) => { e.stopPropagation(); setDragOverChildBlockId(null); }}
-                                              onClick={(e) => { e.stopPropagation(); setSelectedBlockId(tb.id); }}>
+                                              onClick={(e) => { e.stopPropagation(); setSelectedBlockId(tb.id); setSelectedSectionId(null); }}>
                                               {tbControls}
                                               <div className="ls-block__indicators">
                                                 {hasConditions && <span className="ls-indicator ls-indicator--cond"><Filter size={10} /></span>}
@@ -2432,7 +2477,7 @@ const LayoutStudio: React.FC = () => {
                                               onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: tb.id, sourceTabBlockId: blk.id, sourceTabId: activeTab.id })}
                                               onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverChildBlockId(tb.id); }}
                                               onDragLeave={(e) => { e.stopPropagation(); setDragOverChildBlockId(null); }}
-                                              onClick={(e) => { e.stopPropagation(); setSelectedBlockId(tb.id); }}>
+                                              onClick={(e) => { e.stopPropagation(); setSelectedBlockId(tb.id); setSelectedSectionId(null); }}>
                                               {tbControls}
                                               <div className="ls-related__header">
                                                 <Table2 size={14} />
@@ -2464,6 +2509,7 @@ const LayoutStudio: React.FC = () => {
                         })
                       )}
                     </div>
+                    )}
                   </div>
                 );
               })}
@@ -3137,8 +3183,59 @@ const LayoutStudio: React.FC = () => {
                   </div>
                 )}
               </>
+            ) : selectedSection ? (
+              <>
+                <div className="ls-section-divider">Section Properties</div>
+                <div className="ls-prop__name">{selectedSection.title || 'Section'}</div>
+                <div className="ls-prop__type">section</div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label">Section Title</label>
+                  <input className="sails-input" value={selectedSection.title}
+                    onChange={(e) => updateSection(selectedSection.id, { title: e.target.value })} />
+                </div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label">
+                    <input type="checkbox" checked={selectedSection.showHeader !== false}
+                      onChange={(e) => updateSection(selectedSection.id, { showHeader: e.target.checked })} />{' '}
+                    Show Section Header
+                  </label>
+                  <p className="ls-prop-hint">Displays the section title in the detail page / preview.</p>
+                </div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label">
+                    <input type="checkbox" checked={!!selectedSection.collapsible}
+                      onChange={(e) => updateSection(selectedSection.id, { collapsible: e.target.checked })} />{' '}
+                    Collapsible
+                  </label>
+                  <p className="ls-prop-hint">Allows users to collapse / expand this section.</p>
+                </div>
+              </>
             ) : (
-              <p className="ls-empty">Select a block to edit its properties</p>
+              <>
+                <div className="ls-section-divider">Detail View Properties</div>
+                <div className="ls-prop__name">Detail View</div>
+                <div className="ls-prop__type">detail</div>
+
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label">Record Title Field</label>
+                  <CustomSelect
+                    value={layoutRecordTitleField || ''}
+                    options={[
+                      { label: 'None (Use Default Title)', value: '' },
+                      ...allFields.map((f) => ({ label: f.name, value: f.id })),
+                    ]}
+                    searchable
+                    placeholder="Select a field..."
+                    onChange={(val) => setLayoutRecordTitleField(val ? String(val) : null)}
+                  />
+                  <p className="ls-prop-hint">The selected model's field value is used as the detail page title.</p>
+                </div>
+
+                <p className="ls-empty" style={{ fontSize: 10 }}>Select a section or block to edit its properties.</p>
+              </>
             )}</>
                   )}
           </div>

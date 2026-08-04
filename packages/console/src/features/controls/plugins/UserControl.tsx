@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, UserCheck, Search, ChevronDown, X, Check } from 'lucide-react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
+import { useAuth } from '../../../contexts/AuthContext';
 import '../controls.css';
 
 interface UserItem {
@@ -19,8 +20,9 @@ const DEFAULT_USERS: UserItem[] = [
 let cachedUsers: UserItem[] | null = null;
 
 /** Load the tenant user list once per session; shared by edit + display renderers. */
-export function useTenantUsers(): UserItem[] {
+export function useTenantUsers(): { users: UserItem[]; loaded: boolean } {
   const [users, setUsers] = useState<UserItem[]>(cachedUsers || DEFAULT_USERS);
+  const [loaded, setLoaded] = useState(!!cachedUsers);
 
   useEffect(() => {
     if (cachedUsers) return;
@@ -41,17 +43,21 @@ export function useTenantUsers(): UserItem[] {
       })
       .catch(() => {
         // Keep DEFAULT_USERS fallback
+      })
+      .finally(() => {
+        if (isMounted) setLoaded(true);
       });
     return () => {
       isMounted = false;
     };
   }, []);
 
-  return users;
+  return { users, loaded };
 }
 
 const RenderEdit: React.FC<FieldControlProps> = ({ field, value, onChange, disabled, readOnly }) => {
-  const users = useTenantUsers();
+  const { users, loaded } = useTenantUsers();
+  const { user: sessionUser } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,12 +75,16 @@ const RenderEdit: React.FC<FieldControlProps> = ({ field, value, onChange, disab
   const config = (field?.config as any) || {};
   const defaultToCurrentUser = config.defaultToCurrentUser ?? true;
 
-  // Auto-populate default current user if empty and defaultToCurrentUser is enabled
+  // Auto-populate the current logged-in user if empty and defaultToCurrentUser is
+  // enabled. Waits for the real tenant user list (loaded) so it never assigns a
+  // mock fallback user, then prefers the session user over the first list entry.
   useEffect(() => {
-    if (!value && defaultToCurrentUser && users.length > 0 && onChange) {
-      onChange(users[0].id);
+    if (!value && defaultToCurrentUser && onChange) {
+      if (!loaded) return;
+      const current = users.find((u) => u.id === sessionUser?.id) || users[0];
+      onChange(current?.id || sessionUser?.id || '');
     }
-  }, [value, defaultToCurrentUser, users, onChange]);
+  }, [value, defaultToCurrentUser, users, loaded, onChange, sessionUser?.id]);
 
   const currentValueStr = typeof value === 'object' ? (value?.id || value?.name || '') : String(value || '');
 
@@ -213,11 +223,12 @@ const UserAvatar: React.FC<{ user?: UserItem | null; size?: 'sm' | 'lg' }> = ({ 
   if (user?.avatar) {
     return <img src={user.avatar} alt={user.name} className={`${cls} sails-control-user-avatar--img`} />;
   }
-  return <div className={cls}>@</div>;
+  const initial = user?.name ? user.name.trim().charAt(0).toUpperCase() : null;
+  return <div className={cls}>{initial || '@'}</div>;
 };
 
 const RenderDisplay: React.FC<FieldControlProps> = ({ field, value }) => {
-  const users = useTenantUsers();
+  const { users } = useTenantUsers();
 
   if (value === undefined || value === null || value === '') {
     return <span>—</span>;

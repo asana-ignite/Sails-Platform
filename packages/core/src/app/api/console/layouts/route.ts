@@ -213,6 +213,7 @@ export async function PATCH(req: Request) {
           config: activeConfig as any,
           publishedConfig: activeConfig as any,
           status: 'active',
+          ...(recordTitleField !== undefined ? { recordTitleField: recordTitleField || null } : {}),
         },
         include: {
           table: { select: { id: true, name: true, tableName: true } }
