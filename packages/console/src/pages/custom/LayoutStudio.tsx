@@ -26,6 +26,8 @@ import { CustomSelect } from '../../components/common/CustomSelect';
 import { FieldControlRegistry } from '../../features/controls/FieldControlRegistry';
 import { DetailFieldInput, DetailFieldDisplay, mockFieldValue } from '../../features/controls/DetailFieldControl';
 import { UserControl } from '../../features/controls/plugins/UserControl';
+import { PhoneControl } from '../../features/controls/plugins/PhoneControl';
+import { EmailControl } from '../../features/controls/plugins/EmailControl';
 import type { FieldValidation, ConditionOp, ValidationType } from '../../features/controls/types';
 import { ActionRegistry } from '../../features/actions';
 import { useAuth } from '../../contexts/AuthContext';
@@ -2030,7 +2032,11 @@ const LayoutStudio: React.FC = () => {
                                     const val = renderListFieldValue(f, rec);
                                     const cellNode = f.logicalType === 'user'
                                       ? <UserControl.RenderDisplay field={f} value={rec[f.fieldName]} />
-                                      : val;
+                                      : f.logicalType === 'phone'
+                                        ? <PhoneControl.RenderDisplay field={f} value={rec[f.fieldName]} />
+                                        : f.logicalType === 'email'
+                                          ? <EmailControl.RenderDisplay field={f} value={rec[f.fieldName]} />
+                                          : val;
                                     return (
                                       <td key={col.id} className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''}`} style={{ textAlign: col.alignment || (NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}>
                                         {isPrimary ? (
@@ -2143,7 +2149,11 @@ const LayoutStudio: React.FC = () => {
                                 const val = renderListFieldValue(f, rec);
                                 const cellNode = f.logicalType === 'user'
                                   ? <UserControl.RenderDisplay field={f} value={rec[f.fieldName]} />
-                                  : val;
+                                  : f.logicalType === 'phone'
+                                    ? <PhoneControl.RenderDisplay field={f} value={rec[f.fieldName]} />
+                                    : f.logicalType === 'email'
+                                      ? <EmailControl.RenderDisplay field={f} value={rec[f.fieldName]} />
+                                      : val;
                                 return (
                                   <td key={col.id} className={`ls-td ${!col.visible ? 'ls-td--hidden' : ''} ${col.wrapText ? 'ls-td--wrap' : ''}`} style={{ textAlign: col.alignment || (NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}>
                                     {isPrimary ? (

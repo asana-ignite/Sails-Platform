@@ -13,6 +13,7 @@ import { RichTextType } from './types/RichTextType';
 import { CurrencyType } from './types/CurrencyType';
 import { PercentageType } from './types/PercentageType';
 import { PhoneType } from './types/PhoneType';
+import { EmailType } from './types/EmailType';
 import { AddressType } from './types/AddressType';
 import { AttachmentType } from './types/AttachmentType';
 import { AutoNumberType } from './types/AutoNumberType';
@@ -41,6 +42,7 @@ export class FieldRegistry {
     this.register(CurrencyType);
     this.register(PercentageType);
     this.register(PhoneType);
+    this.register(EmailType);
     this.register(AddressType);
     this.register(AttachmentType);
   }

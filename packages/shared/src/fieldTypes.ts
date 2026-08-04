@@ -1,4 +1,5 @@
 import { FieldTypeMetadata } from './index';
+import { PHONE_COUNTRY_OPTIONS, phoneFlag } from './countries';
 
 export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
   {
@@ -368,7 +369,29 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
     iconName: 'PhoneCall',
     physicalType: 'text',
     parametersSchema: [
+      {
+        name: 'defaultCountryCode',
+        label: 'Default Country Code',
+        type: 'select',
+        searchable: true,
+        defaultValue: '+66',
+        options: PHONE_COUNTRY_OPTIONS.map(c => ({
+          label: `${phoneFlag(c.iso2)} ${c.name} (${c.value})`,
+          value: c.value
+        }))
+      },
       { name: 'placeholder', label: 'Input Placeholder', type: 'text', placeholder: 'e.g. +1 555-0199' }
+    ]
+  },
+  {
+    type: 'email',
+    label: 'Email Address',
+    description: 'Email address with click-to-send (mailto) display',
+    iconName: 'Mail',
+    physicalType: 'text',
+    parametersSchema: [
+      { name: 'placeholder', label: 'Input Placeholder', type: 'text', placeholder: 'e.g. name@company.com' },
+      { name: 'allowMultiple', label: 'Allow Multiple Addresses (comma separated)', type: 'boolean', defaultValue: false }
     ]
   },
   {

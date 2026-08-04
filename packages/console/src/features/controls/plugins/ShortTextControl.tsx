@@ -6,13 +6,11 @@ export const ShortTextControl: FieldControlPlugin = {
   name: 'Standard Textbox',
   description: 'Single-line text input control',
   iconName: 'Type',
-  compatibleTypes: ['short_text', 'text', 'email', 'phone', 'url'],
+  compatibleTypes: ['short_text', 'text', 'url'],
   isDefault: true,
 
   mockValue: (field) => {
     switch (field.logicalType) {
-      case 'email': return 'user@example.com';
-      case 'phone': return '+66 2 123 4567';
       case 'url': return 'https://example.com';
       default: return 'Sample text';
     }

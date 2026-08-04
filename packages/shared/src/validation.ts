@@ -116,6 +116,21 @@ export function validateFieldValue(
     }
   }
 
+  // Email format check — always enforced for email-typed fields. When
+  // allowMultiple is on, every comma/semicolon-separated address is validated.
+  if (field.logicalType === 'email') {
+    const rawStr = typeof value === 'string' ? value : String(value ?? '');
+    const addresses = config.allowMultiple
+      ? rawStr.split(/[,;]/).map((s: string) => s.trim()).filter(Boolean)
+      : [rawStr.trim()];
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    for (const addr of addresses) {
+      if (!EMAIL_REGEX.test(addr)) {
+        issues.push(config.allowMultiple ? `"${addr}" is not a valid email address` : 'Invalid email address');
+      }
+    }
+  }
+
   return issues;
 }
 

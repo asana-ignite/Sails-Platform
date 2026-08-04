@@ -1,5 +1,117 @@
 export interface CountryOption { value: string; label: string; }
 
+/** Country with E.164 dial code + ISO-2 code (for flag emoji). */
+export interface PhoneCountryOption {
+  value: string; // E.164 dial code, e.g. '+66'
+  iso2: string;  // ISO-2 country code, e.g. 'TH'
+  name: string;  // Country name, e.g. 'Thailand'
+}
+
+/** Compute a flag emoji from an ISO-2 country code, e.g. 'TH' -> 🇹🇭 */
+export function phoneFlag(iso2: string): string {
+  const letters = iso2.toUpperCase().split('').filter(c => c >= 'A' && c <= 'Z');
+  if (letters.length !== 2) return '';
+  return String.fromCodePoint(...letters.map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
+
+/**
+ * Dial codes + ISO-2 for the countries in COUNTRY_OPTIONS.
+ * Used by the Phone field type (searchable country-code dropdown) and
+ * the Object Manager wizard's Default Country Code parameter.
+ */
+export const PHONE_COUNTRY_OPTIONS: PhoneCountryOption[] = [
+  { value: '+93', iso2: 'AF', name: 'Afghanistan' },
+  { value: '+355', iso2: 'AL', name: 'Albania' },
+  { value: '+213', iso2: 'DZ', name: 'Algeria' },
+  { value: '+376', iso2: 'AD', name: 'Andorra' },
+  { value: '+244', iso2: 'AO', name: 'Angola' },
+  { value: '+54', iso2: 'AR', name: 'Argentina' },
+  { value: '+374', iso2: 'AM', name: 'Armenia' },
+  { value: '+61', iso2: 'AU', name: 'Australia' },
+  { value: '+43', iso2: 'AT', name: 'Austria' },
+  { value: '+994', iso2: 'AZ', name: 'Azerbaijan' },
+  { value: '+973', iso2: 'BH', name: 'Bahrain' },
+  { value: '+880', iso2: 'BD', name: 'Bangladesh' },
+  { value: '+32', iso2: 'BE', name: 'Belgium' },
+  { value: '+55', iso2: 'BR', name: 'Brazil' },
+  { value: '+673', iso2: 'BN', name: 'Brunei' },
+  { value: '+359', iso2: 'BG', name: 'Bulgaria' },
+  { value: '+855', iso2: 'KH', name: 'Cambodia' },
+  { value: '+1', iso2: 'CA', name: 'Canada' },
+  { value: '+56', iso2: 'CL', name: 'Chile' },
+  { value: '+86', iso2: 'CN', name: 'China' },
+  { value: '+57', iso2: 'CO', name: 'Colombia' },
+  { value: '+506', iso2: 'CR', name: 'Costa Rica' },
+  { value: '+385', iso2: 'HR', name: 'Croatia' },
+  { value: '+357', iso2: 'CY', name: 'Cyprus' },
+  { value: '+420', iso2: 'CZ', name: 'Czech Republic' },
+  { value: '+45', iso2: 'DK', name: 'Denmark' },
+  { value: '+20', iso2: 'EG', name: 'Egypt' },
+  { value: '+372', iso2: 'EE', name: 'Estonia' },
+  { value: '+358', iso2: 'FI', name: 'Finland' },
+  { value: '+33', iso2: 'FR', name: 'France' },
+  { value: '+995', iso2: 'GE', name: 'Georgia' },
+  { value: '+49', iso2: 'DE', name: 'Germany' },
+  { value: '+30', iso2: 'GR', name: 'Greece' },
+  { value: '+852', iso2: 'HK', name: 'Hong Kong' },
+  { value: '+36', iso2: 'HU', name: 'Hungary' },
+  { value: '+354', iso2: 'IS', name: 'Iceland' },
+  { value: '+91', iso2: 'IN', name: 'India' },
+  { value: '+62', iso2: 'ID', name: 'Indonesia' },
+  { value: '+353', iso2: 'IE', name: 'Ireland' },
+  { value: '+972', iso2: 'IL', name: 'Israel' },
+  { value: '+39', iso2: 'IT', name: 'Italy' },
+  { value: '+81', iso2: 'JP', name: 'Japan' },
+  { value: '+962', iso2: 'JO', name: 'Jordan' },
+  { value: '+7', iso2: 'KZ', name: 'Kazakhstan' },
+  { value: '+254', iso2: 'KE', name: 'Kenya' },
+  { value: '+965', iso2: 'KW', name: 'Kuwait' },
+  { value: '+856', iso2: 'LA', name: 'Laos' },
+  { value: '+371', iso2: 'LV', name: 'Latvia' },
+  { value: '+961', iso2: 'LB', name: 'Lebanon' },
+  { value: '+370', iso2: 'LT', name: 'Lithuania' },
+  { value: '+352', iso2: 'LU', name: 'Luxembourg' },
+  { value: '+60', iso2: 'MY', name: 'Malaysia' },
+  { value: '+960', iso2: 'MV', name: 'Maldives' },
+  { value: '+356', iso2: 'MT', name: 'Malta' },
+  { value: '+52', iso2: 'MX', name: 'Mexico' },
+  { value: '+377', iso2: 'MC', name: 'Monaco' },
+  { value: '+212', iso2: 'MA', name: 'Morocco' },
+  { value: '+95', iso2: 'MM', name: 'Myanmar' },
+  { value: '+977', iso2: 'NP', name: 'Nepal' },
+  { value: '+31', iso2: 'NL', name: 'Netherlands' },
+  { value: '+64', iso2: 'NZ', name: 'New Zealand' },
+  { value: '+234', iso2: 'NG', name: 'Nigeria' },
+  { value: '+47', iso2: 'NO', name: 'Norway' },
+  { value: '+968', iso2: 'OM', name: 'Oman' },
+  { value: '+92', iso2: 'PK', name: 'Pakistan' },
+  { value: '+507', iso2: 'PA', name: 'Panama' },
+  { value: '+51', iso2: 'PE', name: 'Peru' },
+  { value: '+63', iso2: 'PH', name: 'Philippines' },
+  { value: '+48', iso2: 'PL', name: 'Poland' },
+  { value: '+351', iso2: 'PT', name: 'Portugal' },
+  { value: '+974', iso2: 'QA', name: 'Qatar' },
+  { value: '+40', iso2: 'RO', name: 'Romania' },
+  { value: '+966', iso2: 'SA', name: 'Saudi Arabia' },
+  { value: '+65', iso2: 'SG', name: 'Singapore' },
+  { value: '+421', iso2: 'SK', name: 'Slovakia' },
+  { value: '+386', iso2: 'SI', name: 'Slovenia' },
+  { value: '+27', iso2: 'ZA', name: 'South Africa' },
+  { value: '+82', iso2: 'KR', name: 'South Korea' },
+  { value: '+34', iso2: 'ES', name: 'Spain' },
+  { value: '+94', iso2: 'LK', name: 'Sri Lanka' },
+  { value: '+46', iso2: 'SE', name: 'Sweden' },
+  { value: '+41', iso2: 'CH', name: 'Switzerland' },
+  { value: '+886', iso2: 'TW', name: 'Taiwan' },
+  { value: '+66', iso2: 'TH', name: 'Thailand' },
+  { value: '+90', iso2: 'TR', name: 'Turkey' },
+  { value: '+971', iso2: 'AE', name: 'United Arab Emirates' },
+  { value: '+44', iso2: 'GB', name: 'United Kingdom' },
+  { value: '+1', iso2: 'US', name: 'United States' },
+  { value: '+84', iso2: 'VN', name: 'Vietnam' }
+];
+
+
 /**
  * Country name list used by searchable Country selects
  * (Company Profile Contact & Address tab + Address field type).

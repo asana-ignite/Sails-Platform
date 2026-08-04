@@ -11,8 +11,8 @@
  */
 
 export { FIELD_TYPE_REGISTRY } from './fieldTypes';
-export { COUNTRY_OPTIONS } from './countries';
-export type { CountryOption } from './countries';
+export { COUNTRY_OPTIONS, PHONE_COUNTRY_OPTIONS, phoneFlag } from './countries';
+export type { CountryOption, PhoneCountryOption } from './countries';
 export { SYSTEM_PERMISSION_REGISTRY, getAllCapabilities } from './permissions';
 export type { PermissionDefinition, SystemCapability } from './permissions';
 export {
@@ -275,6 +275,7 @@ export interface FieldParameterDefinition {
   min?: number;
   max?: number;
   required?: boolean;
+  searchable?: boolean; // Render the select param with a search box (e.g. country lists)
   visibleWhen?: { name: string; equals: any }; // Only show when another param equals a value
 }
 
@@ -395,6 +396,12 @@ export interface RelationFieldConfig {
   relationType?: 'one_to_many' | 'many_to_one' | 'one_to_one';
 }
 
+export interface EmailFieldConfig {
+  placeholder?: string;
+  /** Accept comma/semicolon-separated multiple addresses. Default: false. */
+  allowMultiple?: boolean;
+}
+
 export interface AutoNumberFieldConfig {
   prefix?: string;
   suffix?: string;
@@ -410,6 +417,7 @@ export type SailsFieldConfig =
   | CurrencyFieldConfig
   | PercentageFieldConfig
   | PhoneFieldConfig
+  | EmailFieldConfig
   | AddressFieldConfig
   | AttachmentFieldConfig
   | BooleanFieldConfig

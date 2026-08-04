@@ -1944,6 +1944,7 @@ const ObjectManager: React.FC = () => {
                                       <label className="om-field-label">{param.label}</label>
                                       <CustomSelect
                                         size="md"
+                                        searchable={!!param.searchable}
                                         value={dynamicConfigValues[param.name] ?? param.defaultValue ?? ''}
                                         options={param.options || []}
                                         onChange={val => setDynamicConfigValues(prev => {
@@ -2299,6 +2300,7 @@ const ObjectManager: React.FC = () => {
                                       <label className="om-field-label">{param.label}</label>
                                       <CustomSelect
                                         size="md"
+                                        searchable={!!param.searchable}
                                         value={editDynamicConfigValues[param.name] ?? param.defaultValue ?? ''}
                                         options={param.options || []}
                                         onChange={val => setEditDynamicConfigValues(prev => {

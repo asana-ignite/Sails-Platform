@@ -18,6 +18,8 @@ import { AttachmentControl } from './plugins/AttachmentControl';
 import { CitizenIdControl } from './plugins/CitizenIdControl';
 import { LatLngControl } from './plugins/LatLngControl';
 import { AutoNumberControl } from './plugins/AutoNumberControl';
+import { PhoneControl } from './plugins/PhoneControl';
+import { EmailControl } from './plugins/EmailControl';
 
 export class FieldControlRegistry {
   private static instance: FieldControlRegistry;
@@ -47,6 +49,8 @@ export class FieldControlRegistry {
     this.register(CitizenIdControl);
     this.register(LatLngControl);
     this.register(AutoNumberControl);
+    this.register(PhoneControl);
+    this.register(EmailControl);
   }
 
   public static getInstance(): FieldControlRegistry {

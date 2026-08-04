@@ -1039,3 +1039,118 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 
 /* In inert design mode (Layout Studio canvas) the pointer-events
    are blocked by the wrapper, so we don't need to touch them here. */
+
+/* ─── Phone control (country code prefix + number) ────────────── */
+
+.sails-phone-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.sails-phone-number {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sails-phone-link,
+.sails-email-link {
+  color: var(--sails-primary, #2563eb);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.sails-phone-link:hover,
+.sails-email-link:hover {
+  text-decoration: underline;
+}
+
+/* ─── Email chip input (multiple addresses) ───────────────────── */
+
+.sails-email-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 10px;
+  min-height: 38px;
+  border-radius: var(--sails-radius-md, 8px);
+  border: 1px solid var(--sails-border-color, #cbd5e1);
+  background: var(--sails-bg-card, #ffffff);
+  cursor: text;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sails-email-chips:focus-within {
+  border-color: var(--sails-primary, #2563eb);
+}
+
+.sails-email-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px 2px 10px;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid var(--sails-border-color, #475569);
+  font-size: 12px;
+}
+
+.sails-email-chip--selected {
+  background: rgba(var(--sails-primary-r, 37), var(--sails-primary-g, 99), var(--sails-primary-b, 235), 0.15);
+  border-color: var(--sails-primary, #2563eb);
+}
+
+.sails-email-chip__link {
+  color: var(--sails-primary, #2563eb);
+  text-decoration: none;
+}
+
+.sails-email-chip__link:hover {
+  text-decoration: underline;
+}
+
+.sails-email-chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--sails-text-muted, #64748b);
+  cursor: pointer;
+}
+
+.sails-email-chip__remove:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.sails-email-chips__input {
+  flex: 1 1 120px;
+  min-width: 120px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--sails-field-font-size, 13px);
+  color: var(--sails-text-main, #0f172a);
+  padding: 2px 0;
+  height: 24px;
+}
+
+.sails-email-chips__hint {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: #ef4444;
+}
+
+.sails-email-list__sep {
+  white-space: pre;
+}
