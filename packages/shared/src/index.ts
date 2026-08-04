@@ -248,7 +248,6 @@ export const LOGICAL_TYPES = [
   'user',
   'address',
   'attachment',
-  'citizen_id',
   'lat_lng',
   'auto_number',
 ] as const;
@@ -402,6 +401,10 @@ export interface EmailFieldConfig {
   allowMultiple?: boolean;
 }
 
+export interface LatLngFieldConfig {
+  placeholder?: string;
+}
+
 export interface AutoNumberFieldConfig {
   prefix?: string;
   suffix?: string;
@@ -418,6 +421,7 @@ export type SailsFieldConfig =
   | PercentageFieldConfig
   | PhoneFieldConfig
   | EmailFieldConfig
+  | LatLngFieldConfig
   | AddressFieldConfig
   | AttachmentFieldConfig
   | BooleanFieldConfig

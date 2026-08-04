@@ -15,7 +15,6 @@ import { UserControl } from './plugins/UserControl';
 import { PercentControl } from './plugins/PercentControl';
 import { AddressControl } from './plugins/AddressControl';
 import { AttachmentControl } from './plugins/AttachmentControl';
-import { CitizenIdControl } from './plugins/CitizenIdControl';
 import { LatLngControl } from './plugins/LatLngControl';
 import { AutoNumberControl } from './plugins/AutoNumberControl';
 import { PhoneControl } from './plugins/PhoneControl';
@@ -46,7 +45,6 @@ export class FieldControlRegistry {
     this.register(UserControl);
     this.register(AddressControl);
     this.register(AttachmentControl);
-    this.register(CitizenIdControl);
     this.register(LatLngControl);
     this.register(AutoNumberControl);
     this.register(PhoneControl);

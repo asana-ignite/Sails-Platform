@@ -23,6 +23,7 @@ import { useDateTimePrefs, isSystemDateTimeField, formatSystemDateTimeValue } fr
 import { UserControl, useTenantUsers } from '../features/controls/plugins/UserControl';
 import { PhoneControl } from '../features/controls/plugins/PhoneControl';
 import { EmailControl } from '../features/controls/plugins/EmailControl';
+import { LatLngControl } from '../features/controls/plugins/LatLngControl';
 import DynamicIcon from '../components/common/DynamicIcon';
 import CustomSelect from '../components/common/CustomSelect';
 import LoadingScreen from '../components/common/LoadingScreen';
@@ -54,6 +55,9 @@ function renderListFieldValue(field: SailsFieldDefinition, record: Record<string
   if (field.logicalType === 'select') {
     const options = (field.config as any)?.options || [];
     return options.find((o: any) => o.value === val)?.label || String(val);
+  }
+  if (field.logicalType === 'lat_lng' && typeof val === 'object' && val !== null) {
+    return `${val.lat}, ${val.lng}`;
   }
   if (field.logicalType === 'address' && typeof val === 'object' && val !== null) {
     const parts = [
@@ -761,6 +765,7 @@ const DynamicTablePage: React.FC = () => {
                               const isUserColumn = !!f && f.logicalType === 'user';
                               const isPhoneColumn = !!f && f.logicalType === 'phone';
                               const isEmailColumn = !!f && f.logicalType === 'email';
+                              const isLatLngColumn = !!f && f.logicalType === 'lat_lng';
                               const cellText = f
                                 ? isSystemDateTimeField(f)
                                   ? formatSystemDateTimeValue(rec[f.fieldName] ?? rec[f.id], datetimePrefs)
@@ -774,7 +779,9 @@ const DynamicTablePage: React.FC = () => {
                                   ? <PhoneControl.RenderDisplay field={f} value={rec[f.fieldName] ?? rec[f.id]} />
                                   : isEmailColumn
                                     ? <EmailControl.RenderDisplay field={f} value={rec[f.fieldName] ?? rec[f.id]} />
-                                    : cellText;
+                                    : isLatLngColumn
+                                      ? <LatLngControl.RenderDisplay field={f} value={rec[f.fieldName] ?? rec[f.id]} />
+                                      : cellText;
 
                               return (
                                 <td

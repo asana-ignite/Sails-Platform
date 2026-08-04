@@ -14,6 +14,7 @@ import { CurrencyType } from './types/CurrencyType';
 import { PercentageType } from './types/PercentageType';
 import { PhoneType } from './types/PhoneType';
 import { EmailType } from './types/EmailType';
+import { LatLngType } from './types/LatLngType';
 import { AddressType } from './types/AddressType';
 import { AttachmentType } from './types/AttachmentType';
 import { AutoNumberType } from './types/AutoNumberType';
@@ -43,6 +44,7 @@ export class FieldRegistry {
     this.register(PercentageType);
     this.register(PhoneType);
     this.register(EmailType);
+    this.register(LatLngType);
     this.register(AddressType);
     this.register(AttachmentType);
   }

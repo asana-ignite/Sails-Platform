@@ -599,7 +599,7 @@ doc.add_paragraph("AdminPluginRegistry (src/features/admin/registry.tsx):")
 doc.add_paragraph("Maps componentKey strings (from core.console_menus) to React.lazy() components. 18 registered plugins: AdminCompanyProfile, AdminUserManager, AdminEntityManager, AdminMenuManager, AdminPermissions, LayoutStudio, etc.")
 
 doc.add_paragraph("FieldControlRegistry (src/features/controls/FieldControlRegistry.ts):")
-doc.add_paragraph("Singleton mapping logical field types to edit/display React components. 20 built-in controls: ShortText, LongText, RichText, Number, Decimal, Currency, Percent, Select, Boolean (3 variants), Date, Time, DateTime, User, Lookup, Address, Attachment, CitizenId, LatLng, AutoNumber.")
+doc.add_paragraph("Singleton mapping logical field types to edit/display React components. 19 built-in controls: ShortText, LongText, RichText, Number, Decimal, Currency, Percent, Select, Boolean (3 variants), Date, Time, DateTime, User, Lookup, Address, Attachment, LatLng, AutoNumber.")
 
 doc.add_paragraph("ActionRegistry (src/features/actions/ActionRegistry.ts):")
 doc.add_paragraph("Singleton for toolbar-level actions on list views. Currently one action: CreateAction (navigates to detail form). Extensible with custom action plugins.")

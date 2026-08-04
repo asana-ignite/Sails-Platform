@@ -487,32 +487,24 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
     ]
   },
   {
-    type: 'citizen_id',
-    label: 'Thai Citizen ID',
-    description: '13-digit Thai national identification number',
-    iconName: 'CreditCard',
-    physicalType: 'text',
-    parametersSchema: [
-      {
-        name: 'placeholder',
-        label: 'Input Placeholder',
-        type: 'text',
-        placeholder: 'e.g. 1-2345-67890-12-3'
-      }
-    ]
-  },
-  {
     type: 'lat_lng',
     label: 'Latitude / Longitude',
     description: 'Geographic coordinates (latitude, longitude)',
     iconName: 'MapPin',
-    physicalType: 'text',
+    physicalType: 'jsonb',
     parametersSchema: [
       {
         name: 'placeholder',
         label: 'Input Placeholder',
         type: 'text',
         placeholder: 'e.g. 13.7563, 100.5018'
+      },
+      {
+        name: 'allowGetCurrentLocation',
+        label: 'Allow Get Current Location',
+        type: 'boolean',
+        defaultValue: true,
+        description: 'Show the GPS capture button on this field'
       }
     ]
   }

@@ -28,6 +28,7 @@ import { DetailFieldInput, DetailFieldDisplay, mockFieldValue } from '../../feat
 import { UserControl } from '../../features/controls/plugins/UserControl';
 import { PhoneControl } from '../../features/controls/plugins/PhoneControl';
 import { EmailControl } from '../../features/controls/plugins/EmailControl';
+import { LatLngControl } from '../../features/controls/plugins/LatLngControl';
 import type { FieldValidation, ConditionOp, ValidationType } from '../../features/controls/types';
 import { ActionRegistry } from '../../features/actions';
 import { useAuth } from '../../contexts/AuthContext';
@@ -304,6 +305,9 @@ function renderListFieldValue(field: SailsFieldDefinition, record: Record<string
   if (field.logicalType === 'select') {
     const options = (field.config as any)?.options || [];
     return options.find((o: any) => o.value === val)?.label || String(val);
+  }
+  if (field.logicalType === 'lat_lng' && typeof val === 'object' && val !== null) {
+    return `${val.lat}, ${val.lng}`;
   }
   if (field.logicalType === 'address' && typeof val === 'object' && val !== null) {
     const parts = [
@@ -1001,19 +1005,32 @@ const LayoutStudio: React.FC = () => {
     setSections((s) => s.map((sec) => (sec.id === sectionId ? { ...sec, ...patch } : sec)));
   };
 
-  const addBlock = (item: PaletteItem, sectionId: string) => {
-    const existing = blocks.filter((b) => b.sectionId === sectionId);
-    const blk: PlacedBlock = {
-      id: blockId(),
-      blockType: item.blockType,
-      sectionId,
-      position: existing.length,
-      width: 6,
-      visible: true,
-      ...defaultPropsForBlock(item.blockType, item.fieldId),
-    };
-    setBlocks((b) => [...b, blk]);
-    setSelectedBlockId(blk.id);
+  const addBlock = (item: PaletteItem, sectionId: string, insertBeforeId?: string) => {
+    const newId = blockId();
+    setBlocks((prev) => {
+      const sectionBlocks = prev
+        .filter((b) => b.sectionId === sectionId)
+        .sort((a, b) => a.position - b.position);
+      let targetIdx = sectionBlocks.length;
+      if (insertBeforeId) {
+        const found = sectionBlocks.findIndex((b) => b.id === insertBeforeId);
+        if (found !== -1) targetIdx = found;
+      }
+      const blk: PlacedBlock = {
+        id: newId,
+        blockType: item.blockType,
+        sectionId,
+        position: targetIdx,
+        width: 6,
+        visible: true,
+        ...defaultPropsForBlock(item.blockType, item.fieldId),
+      };
+      const shifted = prev.map((b) =>
+        b.sectionId === sectionId && b.position >= targetIdx ? { ...b, position: b.position + 1 } : b
+      );
+      return [...shifted, blk];
+    });
+    setSelectedBlockId(newId);
   };
 
   const removeBlock = (blockId: string) => {
@@ -1034,7 +1051,7 @@ const LayoutStudio: React.FC = () => {
     if (selectedBlockId === blockId) setSelectedBlockId(null);
   };
 
-  const addBlockToTab = (tabGroupBlockId: string, tabId: string, item: PaletteItem) => {
+  const addBlockToTab = (tabGroupBlockId: string, tabId: string, item: PaletteItem, insertBeforeId?: string) => {
     setBlocks((prev) =>
       prev.map((blk) => {
         if (blk.id !== tabGroupBlockId || !blk.tabs) return blk;
@@ -1042,16 +1059,23 @@ const LayoutStudio: React.FC = () => {
           ...blk,
           tabs: blk.tabs.map((tab) => {
             if (tab.id !== tabId) return tab;
+            const list = [...tab.blocks];
+            let targetIdx = list.length;
+            if (insertBeforeId) {
+              const found = list.findIndex((b) => b.id === insertBeforeId);
+              if (found !== -1) targetIdx = found;
+            }
             const newBlock: PlacedBlock = {
               id: blockId(),
               blockType: item.blockType,
               sectionId: '',
-              position: tab.blocks.length,
+              position: targetIdx,
               width: 6,
               visible: true,
               ...defaultPropsForBlock(item.blockType, item.fieldId),
             };
-            return { ...tab, blocks: [...tab.blocks, newBlock] };
+            const reindexed = list.map((b, i) => ({ ...b, position: i >= targetIdx ? i + 1 : i }));
+            return { ...tab, blocks: [...reindexed, newBlock] };
           }),
         };
       })
@@ -1441,7 +1465,7 @@ const LayoutStudio: React.FC = () => {
           if (activeTab) {
             const item = palette.find((p) => p.id === payload.paletteId);
             if (item && item.blockType !== 'tab_group') {
-              addBlockToTab(dragOverTabBlockId, activeTab.id, item);
+              addBlockToTab(dragOverTabBlockId, activeTab.id, item, dragOverChildBlockId || undefined);
             }
           }
         }
@@ -1499,7 +1523,7 @@ const LayoutStudio: React.FC = () => {
 
       if (payload.type === 'palette') {
         const item = palette.find((p) => p.id === payload.paletteId);
-        if (item) addBlock(item, targetSectionId);
+        if (item) addBlock(item, targetSectionId, dragOverBlockId || undefined);
       } else if (payload.type === 'placed' && payload.blockId) {
         const draggedBlock = findBlockById(payload.blockId);
         if (!draggedBlock) return;
@@ -2036,7 +2060,9 @@ const LayoutStudio: React.FC = () => {
                                         ? <PhoneControl.RenderDisplay field={f} value={rec[f.fieldName]} />
                                         : f.logicalType === 'email'
                                           ? <EmailControl.RenderDisplay field={f} value={rec[f.fieldName]} />
-                                          : val;
+                                          : f.logicalType === 'lat_lng'
+                                            ? <LatLngControl.RenderDisplay field={f} value={rec[f.fieldName]} />
+                                            : val;
                                     return (
                                       <td key={col.id} className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''}`} style={{ textAlign: col.alignment || (NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}>
                                         {isPrimary ? (
@@ -2153,7 +2179,9 @@ const LayoutStudio: React.FC = () => {
                                     ? <PhoneControl.RenderDisplay field={f} value={rec[f.fieldName]} />
                                     : f.logicalType === 'email'
                                       ? <EmailControl.RenderDisplay field={f} value={rec[f.fieldName]} />
-                                      : val;
+                                      : f.logicalType === 'lat_lng'
+                                        ? <LatLngControl.RenderDisplay field={f} value={rec[f.fieldName]} />
+                                        : val;
                                 return (
                                   <td key={col.id} className={`ls-td ${!col.visible ? 'ls-td--hidden' : ''} ${col.wrapText ? 'ls-td--wrap' : ''}`} style={{ textAlign: col.alignment || (NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}>
                                     {isPrimary ? (

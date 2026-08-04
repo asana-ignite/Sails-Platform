@@ -18,6 +18,5 @@ export * from './plugins/UserControl';
 export * from './plugins/PercentControl';
 export * from './plugins/AddressControl';
 export * from './plugins/AttachmentControl';
-export * from './plugins/CitizenIdControl';
 export * from './plugins/LatLngControl';
 export * from './plugins/AutoNumberControl';

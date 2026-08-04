@@ -624,6 +624,7 @@ const ObjectManager: React.FC = () => {
   };
 
   const openEditFieldModal = (field: any) => {
+    if (field?.isSystem) return; // system fields are locked
     setEditingField(field);
     setEditFieldWizardStep(1);
     setEditFieldName(field.name);
@@ -1333,7 +1334,7 @@ const ObjectManager: React.FC = () => {
                           const displayLabel = fieldTypeMeta?.label || field.logicalType.replace('_', ' ').toUpperCase();
 
                           return (
-                            <tr key={field.id} className="om-clickable-row" onClick={() => openEditFieldModal(field)}>
+                            <tr key={field.id} className={`om-clickable-row${field.isSystem ? ' om-row--locked' : ''}`} onClick={() => { if (!field.isSystem) openEditFieldModal(field); }}>
                               <td>
                                 <div className="om-table-cell-name">
                                   <div className="om-table-icon-wrapper">

@@ -1154,3 +1154,81 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 .sails-email-list__sep {
   white-space: pre;
 }
+
+/* ─── Lat/Lng control (GPS capture + Google Maps link) ────────── */
+
+.sails-control-latlng {
+  width: 100%;
+}
+
+.sails-control-latlng__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.sails-control-latlng__row .sails-input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.sails-latlng-gps-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: var(--sails-radius-md, 8px);
+  border: 1px solid var(--sails-border-color, #cbd5e1);
+  background: rgba(var(--sails-primary-r, 37), var(--sails-primary-g, 99), var(--sails-primary-b, 235), 0.08);
+  color: var(--sails-primary, #2563eb);
+  font-family: inherit;
+  font-size: var(--sails-field-font-size, 13px);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sails-latlng-gps-btn:hover:not(:disabled) {
+  background: rgba(var(--sails-primary-r, 37), var(--sails-primary-g, 99), var(--sails-primary-b, 235), 0.15);
+  border-color: var(--sails-primary, #2563eb);
+}
+
+.sails-latlng-gps-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sails-latlng-gps-btn__spin {
+  animation: sailsSpin 1s linear infinite;
+}
+
+@keyframes sailsSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.sails-latlng-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: #ef4444;
+}
+
+.sails-latlng-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--sails-primary, #2563eb);
+  text-decoration: none;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.sails-latlng-link:hover {
+  text-decoration: underline;
+}
