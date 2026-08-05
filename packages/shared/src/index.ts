@@ -442,6 +442,7 @@ export type SailsFieldConfig =
 export type LayoutType = 'data' | 'custom';
 export type ViewType = 'LIST' | 'DETAIL' | 'FORM';
 export type LayoutStatus = 'draft' | 'active';
+export type MobileViewMode = 'table' | 'accordion' | 'card';
 
 export interface TableLayout {
   id: string;

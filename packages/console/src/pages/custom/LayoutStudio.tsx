@@ -17,9 +17,9 @@ import {
   Layers, Search, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown,
   RotateCcw, AlignLeft, AlignCenter, AlignRight,
   Edit3, Zap, Undo2, AlertTriangle, Database, ExternalLink,
-  MousePointerClick,
+  MousePointerClick, Smartphone, List, PanelRight,
 } from 'lucide-react';
-import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction } from '@sails/shared';
+import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction, MobileViewMode } from '@sails/shared';
 import { formatDateTimeValue, formatDecimalValue, normalizeFilters } from '@sails/shared';
 import { FilterBuilder } from '../../components/common/FilterBuilder';
 import DynamicIcon from '../../components/common/DynamicIcon';
@@ -529,6 +529,7 @@ const LayoutStudio: React.FC = () => {
   // ── Action Buttons state ──
   const [listActions, setListActions] = useState<ListAction[]>([]);
   const [listSelectedActionId, setListSelectedActionId] = useState<string | null>(null);
+  const [listMobileViewMode, setListMobileViewMode] = useState<MobileViewMode>('table');
 
   useEffect(() => {
     if (!tableId) { setFetchError('No table ID provided'); setFetchLoading(false); return; }
@@ -604,6 +605,7 @@ const LayoutStudio: React.FC = () => {
             if (typeof config.allowInlineEdit === 'boolean') setListAllowInlineEdit(config.allowInlineEdit);
             if (typeof config.allowInlineCreate === 'boolean') setListAllowInlineCreate(config.allowInlineCreate);
             if (typeof config.allowInlineDelete === 'boolean') setListAllowInlineDelete(config.allowInlineDelete);
+            if (config.mobileViewMode) setListMobileViewMode(config.mobileViewMode);
           } else {
             if (config.sections) setSections(config.sections);
             if (config.blocks) setBlocks(config.blocks);
@@ -915,6 +917,7 @@ const LayoutStudio: React.FC = () => {
       setListAllowInlineDelete(false);
       setListSelectedIndices(new Set());
       setListCurrentPage(1);
+      setListMobileViewMode('table');
     } else {
       setSections([newSection()]);
       setBlocks([]);
@@ -947,6 +950,7 @@ const LayoutStudio: React.FC = () => {
         allowInlineEdit: listAllowInlineEdit,
         allowInlineCreate: listAllowInlineCreate,
         allowInlineDelete: listAllowInlineDelete,
+        mobileViewMode: listMobileViewMode,
       };
     }
     return { sections, blocks };
@@ -1112,6 +1116,16 @@ const LayoutStudio: React.FC = () => {
           else setListSortBy([]);
           if (config.summaryFields) setListSummaryFields(config.summaryFields);
           else setListSummaryFields([]);
+          setListMobileViewMode((config.mobileViewMode as MobileViewMode) || 'table');
+          if (config.actions) setListActions(config.actions);
+          else setListActions([]);
+          if (typeof config.allowMultiSelect === 'boolean') setListAllowMultiSelect(config.allowMultiSelect);
+          if (typeof config.allowPaging === 'boolean') setListAllowPaging(config.allowPaging);
+          if (config.recordsPerPage) setListRecordsPerPage(config.recordsPerPage);
+          if (config.pagingMode) setListPagingMode(config.pagingMode);
+          if (typeof config.allowInlineEdit === 'boolean') setListAllowInlineEdit(config.allowInlineEdit);
+          if (typeof config.allowInlineCreate === 'boolean') setListAllowInlineCreate(config.allowInlineCreate);
+          if (typeof config.allowInlineDelete === 'boolean') setListAllowInlineDelete(config.allowInlineDelete);
         } else {
           if (config.sections) setSections(config.sections);
           else setSections([]);
@@ -1649,7 +1663,7 @@ const LayoutStudio: React.FC = () => {
   };
 
   const handleDragStart = (e: React.DragEvent, payload: DragPayload) => {
-    if (previewMode) { e.preventDefault(); return; }
+    if (previewMode || isReadOnly) { e.preventDefault(); return; }
     e.dataTransfer.setData('application/json', JSON.stringify(payload));
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -1657,6 +1671,7 @@ const LayoutStudio: React.FC = () => {
   const handleDrop = (e: React.DragEvent, targetSectionId: string) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isReadOnly) return;
     setDragOverSection(null);
     setDragOverBlockId(null);
     setDragOverChildBlockId(null);
@@ -1799,6 +1814,7 @@ const LayoutStudio: React.FC = () => {
   const handleBlockDrop = (e: React.DragEvent, targetBlockId: string, sectionId: string) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isReadOnly) return;
     setDragOverBlockId(targetBlockId);
     setDragOverTabBlockId(null);
     setDragOverChildBlockId(null);
@@ -1807,6 +1823,7 @@ const LayoutStudio: React.FC = () => {
   const handleResizeStart = (e: React.MouseEvent, blockId: string, currentSpan: number) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isReadOnly) return;
     const grid = (e.currentTarget as HTMLElement).closest('.ls-section__grid') as HTMLElement;
     setResizing({ blockId, startX: e.clientX, startSpan: currentSpan, sectionElement: grid });
   };
@@ -2480,7 +2497,7 @@ const LayoutStudio: React.FC = () => {
                                 draggable onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: blk.id, sourceSectionId: section.id })}
                                 onDragOver={(e) => handleBlockDrop(e, blk.id, section.id)}
                                 onDragLeave={() => setDragOverBlockId(null)}
-                                onClick={(e) => { e.stopPropagation(); setSelectedBlockId(blk.id); setSelectedSectionId(null); }}>
+                                onClick={(e) => { e.stopPropagation(); if (isReadOnly) return; setSelectedBlockId(blk.id); setSelectedSectionId(null); }}>
                                 <div className="ls-block__indicators">
                                   {hasConditions && <span className="ls-indicator ls-indicator--cond" title="Has conditions"><Filter size={10} /></span>}
                                   {hasValidations && <span className="ls-indicator ls-indicator--val" title="Has validation"><ShieldAlert size={10} /></span>}
@@ -2516,7 +2533,7 @@ const LayoutStudio: React.FC = () => {
                                 draggable onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: blk.id, sourceSectionId: section.id })}
                                 onDragOver={(e) => handleBlockDrop(e, blk.id, section.id)}
                                 onDragLeave={() => setDragOverBlockId(null)}
-                                onClick={(e) => { e.stopPropagation(); setSelectedBlockId(blk.id); setSelectedSectionId(null); }}>
+                                onClick={(e) => { e.stopPropagation(); if (isReadOnly) return; setSelectedBlockId(blk.id); setSelectedSectionId(null); }}>
                                 {controlsEl}
                                 <div className="ls-related__header">
                                   <Table2 size={14} />
@@ -2555,7 +2572,7 @@ const LayoutStudio: React.FC = () => {
                                 style={{ gridColumn: `span ${blk.width}` }}
                                 onDragOver={(e) => { e.stopPropagation(); handleBlockDrop(e, blk.id, section.id); }}
                                 onDragLeave={() => setDragOverBlockId(null)}
-                                onClick={(e) => { e.stopPropagation(); setSelectedBlockId(blk.id); setSelectedSectionId(null); }}>
+                                onClick={(e) => { e.stopPropagation(); if (isReadOnly) return; setSelectedBlockId(blk.id); setSelectedSectionId(null); }}>
                                 <div className="ls-block__controls">
                                   <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockPosition(blk.id, section.id, 'up'); }} disabled={idx === 0}><MoveUp size={10} /></button>
                                   <button className="ls-block__btn" onClick={(e) => { e.stopPropagation(); moveBlockPosition(blk.id, section.id, 'down'); }} disabled={idx === total - 1}><MoveDown size={10} /></button>
@@ -2620,7 +2637,7 @@ const LayoutStudio: React.FC = () => {
                                               onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: tb.id, sourceTabBlockId: blk.id, sourceTabId: activeTab.id })}
                                               onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverChildBlockId(tb.id); }}
                                               onDragLeave={(e) => { e.stopPropagation(); setDragOverChildBlockId(null); }}
-                                              onClick={(e) => { e.stopPropagation(); setSelectedBlockId(tb.id); setSelectedSectionId(null); }}>
+                                              onClick={(e) => { e.stopPropagation(); if (isReadOnly) return; setSelectedBlockId(tb.id); setSelectedSectionId(null); }}>
                                               {tbControls}
                                               <div className="ls-block__indicators">
                                                 {hasConditions && <span className="ls-indicator ls-indicator--cond"><Filter size={10} /></span>}
@@ -2657,7 +2674,7 @@ const LayoutStudio: React.FC = () => {
                                               onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: tb.id, sourceTabBlockId: blk.id, sourceTabId: activeTab.id })}
                                               onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverChildBlockId(tb.id); }}
                                               onDragLeave={(e) => { e.stopPropagation(); setDragOverChildBlockId(null); }}
-                                              onClick={(e) => { e.stopPropagation(); setSelectedBlockId(tb.id); setSelectedSectionId(null); }}>
+                                              onClick={(e) => { e.stopPropagation(); if (isReadOnly) return; setSelectedBlockId(tb.id); setSelectedSectionId(null); }}>
                                               {tbControls}
                                               <div className="ls-related__header">
                                                 <Table2 size={14} />
@@ -3026,25 +3043,25 @@ const LayoutStudio: React.FC = () => {
 
                             <div className="ls-prop-group">
                               <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <input type="checkbox" checked={listAllowMultiSelect}
+                                <input type="checkbox" checked={listAllowMultiSelect} disabled={isReadOnly}
                                   onChange={() => setListAllowMultiSelect((v) => !v)} /> Allow Multiple Selection
                               </label>
                             </div>
 
                             <div className="ls-prop-group">
                               <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <input type="checkbox" checked={listAllowPaging}
+                                <input type="checkbox" checked={listAllowPaging} disabled={isReadOnly}
                                   onChange={() => { setListAllowPaging((v) => !v); setListCurrentPage(1); }} /> Allow Paging
                               </label>
                               {listAllowPaging && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 22, marginTop: 6 }}>
                                   <div style={{ display: 'flex', gap: 16 }}>
                                     <label className="ls-radio-label">
-                                      <input type="radio" name="listPagingMode" checked={listPagingMode === 'fixed'}
+                                      <input type="radio" name="listPagingMode" checked={listPagingMode === 'fixed'} disabled={isReadOnly}
                                         onChange={() => setListPagingMode('fixed')} /> Fixed
                                     </label>
                                     <label className="ls-radio-label">
-                                      <input type="radio" name="listPagingMode" checked={listPagingMode === 'dynamic'}
+                                      <input type="radio" name="listPagingMode" checked={listPagingMode === 'dynamic'} disabled={isReadOnly}
                                         onChange={() => setListPagingMode('dynamic')} /> Dynamic
                                     </label>
                                   </div>
@@ -3059,7 +3076,7 @@ const LayoutStudio: React.FC = () => {
 
                             <div className="ls-prop-group">
                               <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <input type="checkbox" checked={listAllowInlineEdit}
+                                <input type="checkbox" checked={listAllowInlineEdit} disabled={isReadOnly}
                                   onChange={() => setListAllowInlineEdit((v) => !v)} /> Allow Inline Edit
                               </label>
                               <span className="ls-prop-hint" style={{ fontSize: 11, color: 'var(--sails-text-muted)', paddingLeft: 22, lineHeight: 1.35 }}>
@@ -3069,7 +3086,7 @@ const LayoutStudio: React.FC = () => {
 
                             <div className="ls-prop-group">
                               <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <input type="checkbox" checked={listAllowInlineCreate}
+                                <input type="checkbox" checked={listAllowInlineCreate} disabled={isReadOnly}
                                   onChange={() => setListAllowInlineCreate((v) => !v)} /> Allow Inline Create
                               </label>
                               <span className="ls-prop-hint" style={{ fontSize: 11, color: 'var(--sails-text-muted)', paddingLeft: 22, lineHeight: 1.35 }}>
@@ -3079,11 +3096,36 @@ const LayoutStudio: React.FC = () => {
 
                             <div className="ls-prop-group">
                               <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <input type="checkbox" checked={listAllowInlineDelete}
+                                <input type="checkbox" checked={listAllowInlineDelete} disabled={isReadOnly}
                                   onChange={() => setListAllowInlineDelete((v) => !v)} /> Allow Inline Delete
                               </label>
                               <span className="ls-prop-hint" style={{ fontSize: 11, color: 'var(--sails-text-muted)', paddingLeft: 22, lineHeight: 1.35 }}>
                                 Adds a delete button to each row (with confirmation) wherever this view renders.
+                              </span>
+                            </div>
+
+                            <div className="ls-prop-group">
+                              <label className="ls-prop-label" style={{ marginBottom: 4 }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  <Smartphone size={12} /> Mobile View Mode
+                                </span>
+                              </label>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                {(['table', 'accordion', 'card'] as MobileViewMode[]).map((mode) => (
+                                  <button
+                                    key={mode}
+                                    type="button"
+                                    disabled={isReadOnly}
+                                    className={`sails-btn sails-btn--ghost sails-btn--sm ${listMobileViewMode === mode ? 'ls-btn--active' : ''}`}
+                                    onClick={() => setListMobileViewMode(mode)}
+                                    style={{ flex: 1, justifyContent: 'center', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}
+                                  >
+                                    {mode === 'table' ? <><Table2 size={13} /> Table</> : mode === 'accordion' ? <><List size={13} /> Accordion</> : <><PanelRight size={13} /> Card</>}
+                                  </button>
+                                ))}
+                              </div>
+                              <span className="ls-prop-hint" style={{ fontSize: 11, color: 'var(--sails-text-muted)', marginTop: 4, lineHeight: 1.35 }}>
+                                How this list view renders on mobile screens (&le;640px). <strong>Table</strong> keeps the standard horizontal-scroll table. <strong>Accordion</strong> stacks rows as expandable cards using the primary column. <strong>Card</strong> shows one swipeable record card at a time.
                               </span>
                             </div>
                           </>
@@ -3096,6 +3138,7 @@ const LayoutStudio: React.FC = () => {
                           if (selectedAction) {
                             return (
                               <button className="sails-btn sails-btn--danger sails-btn--sm"
+                                disabled={isReadOnly}
                                 onClick={() => {
                                   setListSelectedActionId(null);
                                   toggleListAction(selectedAction.actionKey);
@@ -3108,6 +3151,7 @@ const LayoutStudio: React.FC = () => {
                           if (listSelectedCol) {
                             return (
                               <button className="sails-btn sails-btn--danger sails-btn--sm"
+                                disabled={isReadOnly}
                                 onClick={() => removeListColumn(listSelectedCol.id)}
                                 style={{ width: '100%', justifyContent: 'center' }}>
                                 <Trash2 size={12} /> Remove Column
@@ -3115,11 +3159,12 @@ const LayoutStudio: React.FC = () => {
                             );
                           }
                           return (
-                            <button className="sails-btn sails-btn--danger sails-btn--sm"
-                              onClick={() => setShowListDeleteConfirm(true)}
-                              style={{ width: '100%', justifyContent: 'center' }}>
-                              <Trash2 size={12} /> Delete Layout
-                            </button>
+                              <button className="sails-btn sails-btn--danger sails-btn--sm"
+                                disabled={isReadOnly}
+                                onClick={() => setShowListDeleteConfirm(true)}
+                                style={{ width: '100%', justifyContent: 'center' }}>
+                                <Trash2 size={12} /> Delete Layout
+                              </button>
                           );
                         })()}
                       </div>

@@ -3,6 +3,7 @@ import { Columns, AlertCircle, RotateCcw, Filter } from 'lucide-react';
 import type { TableLayout, SailsFieldDefinition, ListAction, FilterGroup } from '@sails/shared';
 import { isSystemField, normalizeFilters, serializeFilterGroups, validateRecord, sanitizeWritePayload } from '@sails/shared';
 import { ListViewTable, type RuntimeSortRule } from './ListViewTable';
+import { ListViewMobile } from './ListViewMobile';
 import DynamicIcon from '../common/DynamicIcon';
 import LoadingScreen from '../common/LoadingScreen';
 import { fetchCached } from '../../api/client';
@@ -586,107 +587,184 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
     );
   }
 
+  const mobileViewMode = config?.mobileViewMode as string || 'table';
+  const showMobileView = mobileViewMode === 'accordion' || mobileViewMode === 'card';
+
   return (
-    <div className={`sails-list-engine${embedded ? ' sails-list-engine--embedded' : ''}${creatingRow || editingRowId || activePreviewFilter ? ' sails-list-engine--inline-active' : ''}`}>
-      <ListViewTable
-        mode="page"
-        config={config}
-        fields={fields}
-        records={records}
-        totalRecords={totalRecords}
-        page={currentPage}
-        onPageChange={setCurrentPage}
-        recordsPerPage={recordsPerPage}
-        onRecordsPerPageChange={setRecordsPerPage}
-        sortRules={runtimeSortRules}
-        onSortRulesChange={setRuntimeSortRules}
-        runtimeFilters={runtimeFilters}
-        onRuntimeFiltersChange={setRuntimeFilters}
-        activePreviewFilter={activePreviewFilter}
-        onActivePreviewFilterChange={setActivePreviewFilter}
-        selectedIndices={selectedIndices}
-        onSelectionChange={setSelectedIndices}
-        onPrimaryLinkClick={(rec, col) => {
-          const layoutKey =
-            detailLayoutMapRef.current.get(col.targetDetailLayoutId || '') ||
-            col.targetDetailLayoutId ||
-            defaultDetailLayoutKeyRef.current;
-          if (onRecordOpen) {
-            onRecordOpen(rec, layoutKey || undefined);
-            return;
-          }
-          const base = menuPath?.replace(/\/+$/, '');
-          if (navigate && base && layoutKey) navigate(`${base}/${layoutKey}/${rec.id}`);
-        }}
-        allowInlineEdit={!!config?.allowInlineEdit}
-        editingRowId={editingRowId}
-        editDraft={editDraft}
-        editErrors={editErrors}
-        savingRow={savingRow}
-        onStartEdit={startEdit}
-        onCellChange={(fieldName, v) => {
-          if (editingRowId) updateEditCell(fieldName, v);
-          else updateCreateCell(fieldName, v);
-        }}
-        onSaveEdit={saveEdit}
-        onCancelEdit={cancelEdit}
-        creatingRow={creatingRow}
-        createDraft={createDraft}
-        createErrors={createErrors}
-        savingCreate={savingCreate}
-        onCreateSave={saveCreate}
-        onCreateCancel={cancelCreate}
-        formError={formError}
-        allowInlineDelete={!!config?.allowInlineDelete}
-        confirmDeleteId={confirmDeleteId}
-        deletingRow={deletingRow}
-        onRequestDelete={requestDelete}
-        onCancelDelete={cancelDelete}
-        onConfirmDelete={confirmDelete}
-        header={
-          <div className="ls-table-card__header">
-            <Columns size={13} />
-            <span className="ls-table-card__title">{title}</span>
-            <span className="ls-table-card__badge" style={{ marginLeft: 'auto' }}>
-              {totalRecords} rows
-            </span>
-            {(config?.allowMultiSelect ?? true) && selectedIndices.size > 0 && (
-              <span className="ls-table-card__badge" style={{ background: 'rgba(157,206,224,0.25)', color: 'var(--sails-primary)' }}>
-                {selectedIndices.size} selected
+    <div className={`sails-list-engine${embedded ? ' sails-list-engine--embedded' : ''}${creatingRow || editingRowId || activePreviewFilter ? ' sails-list-engine--inline-active' : ''}`}
+      data-mobile-mode={showMobileView ? mobileViewMode : 'table'}
+    >
+      <div className={`sails-list-view-table-wrap ${showMobileView ? 'sails-list-view-table-wrap--has-mobile' : ''}`}>
+        <ListViewTable
+          mode="page"
+          config={config}
+          fields={fields}
+          records={records}
+          totalRecords={totalRecords}
+          page={currentPage}
+          onPageChange={setCurrentPage}
+          recordsPerPage={recordsPerPage}
+          onRecordsPerPageChange={setRecordsPerPage}
+          sortRules={runtimeSortRules}
+          onSortRulesChange={setRuntimeSortRules}
+          runtimeFilters={runtimeFilters}
+          onRuntimeFiltersChange={setRuntimeFilters}
+          activePreviewFilter={activePreviewFilter}
+          onActivePreviewFilterChange={setActivePreviewFilter}
+          selectedIndices={selectedIndices}
+          onSelectionChange={setSelectedIndices}
+          onPrimaryLinkClick={(rec, col) => {
+            const layoutKey =
+              detailLayoutMapRef.current.get(col.targetDetailLayoutId || '') ||
+              col.targetDetailLayoutId ||
+              defaultDetailLayoutKeyRef.current;
+            if (onRecordOpen) {
+              onRecordOpen(rec, layoutKey || undefined);
+              return;
+            }
+            const base = menuPath?.replace(/\/+$/, '');
+            if (navigate && base && layoutKey) navigate(`${base}/${layoutKey}/${rec.id}`);
+          }}
+          allowInlineEdit={!!config?.allowInlineEdit}
+          editingRowId={editingRowId}
+          editDraft={editDraft}
+          editErrors={editErrors}
+          savingRow={savingRow}
+          onStartEdit={startEdit}
+          onCellChange={(fieldName, v) => {
+            if (editingRowId) updateEditCell(fieldName, v);
+            else updateCreateCell(fieldName, v);
+          }}
+          onSaveEdit={saveEdit}
+          onCancelEdit={cancelEdit}
+          creatingRow={creatingRow}
+          createDraft={createDraft}
+          createErrors={createErrors}
+          savingCreate={savingCreate}
+          onCreateSave={saveCreate}
+          onCreateCancel={cancelCreate}
+          formError={formError}
+          allowInlineDelete={!!config?.allowInlineDelete}
+          confirmDeleteId={confirmDeleteId}
+          deletingRow={deletingRow}
+          onRequestDelete={requestDelete}
+          onCancelDelete={cancelDelete}
+          onConfirmDelete={confirmDelete}
+          header={
+            <div className="ls-table-card__header">
+              <Columns size={13} />
+              <span className="ls-table-card__title">{title}</span>
+              <span className="ls-table-card__badge" style={{ marginLeft: 'auto' }}>
+                {totalRecords} rows
               </span>
-            )}
-            {runtimeSortRules.length > 0 && (
-              <button type="button" className="ls-block__btn" onClick={() => setRuntimeSortRules([])} title="Reset sort" style={{ marginLeft: 4 }}>
-                <RotateCcw size={11} />
-              </button>
-            )}
-            <div className="dtp-filter-head" style={{ marginLeft: 8 }}>
-              <button type="button" className="sails-btn sails-btn--ghost sails-btn--sm dtp-filter-btn" title="Saved view filters">
-                <Filter size={12} /> Filters
-              </button>
-            </div>
-            {actionsBar === 'card' && configuredActions.length > 0 && (
-              <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
-                {configuredActions.map((act) => {
-                  const plugin = ActionRegistry.getInstance().getAction(act.actionKey);
-                  const iconName = plugin?.iconName || (act.actionKey === 'create' ? 'Plus' : 'Zap');
-                  const variant = act.variant || 'primary';
-                  const variantClass = variant === 'primary' ? 'sails-btn--primary'
-                    : variant === 'danger' ? 'sails-btn--danger'
-                    : variant === 'secondary' ? 'sails-btn--secondary'
-                    : 'sails-btn--ghost';
-                  return (
-                    <button key={act.id} type="button" className={`sails-btn ${variantClass} sails-btn--sm`} onClick={() => handleExecuteAction(act)}>
-                      <DynamicIcon name={iconName} size={14} />
-                      <span>{act.label}</span>
-                    </button>
-                  );
-                })}
+              {(config?.allowMultiSelect ?? true) && selectedIndices.size > 0 && (
+                <span className="ls-table-card__badge" style={{ background: 'rgba(157,206,224,0.25)', color: 'var(--sails-primary)' }}>
+                  {selectedIndices.size} selected
+                </span>
+              )}
+              {runtimeSortRules.length > 0 && (
+                <button type="button" className="ls-block__btn" onClick={() => setRuntimeSortRules([])} title="Reset sort" style={{ marginLeft: 4 }}>
+                  <RotateCcw size={11} />
+                </button>
+              )}
+              <div className="dtp-filter-head" style={{ marginLeft: 8 }}>
+                <button type="button" className="sails-btn sails-btn--ghost sails-btn--sm dtp-filter-btn" title="Saved view filters">
+                  <Filter size={12} /> Filters
+                </button>
               </div>
-            )}
-          </div>
-        }
-      />
+              {actionsBar === 'card' && configuredActions.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
+                  {configuredActions.map((act) => {
+                    const plugin = ActionRegistry.getInstance().getAction(act.actionKey);
+                    const iconName = plugin?.iconName || (act.actionKey === 'create' ? 'Plus' : 'Zap');
+                    const variant = act.variant || 'primary';
+                    const variantClass = variant === 'primary' ? 'sails-btn--primary'
+                      : variant === 'danger' ? 'sails-btn--danger'
+                      : variant === 'secondary' ? 'sails-btn--secondary'
+                      : 'sails-btn--ghost';
+                    return (
+                      <button key={act.id} type="button" className={`sails-btn ${variantClass} sails-btn--sm`} onClick={() => handleExecuteAction(act)}>
+                        <DynamicIcon name={iconName} size={14} />
+                        <span>{act.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          }
+        />
+      </div>
+      {showMobileView && (
+        <div className="sails-list-view-mobile-wrap">
+          <ListViewMobile
+            config={config}
+            fields={fields}
+            records={records}
+            totalRecords={totalRecords}
+            page={currentPage}
+            onPageChange={setCurrentPage}
+            recordsPerPage={recordsPerPage}
+            onRecordsPerPageChange={setRecordsPerPage}
+            sortRules={runtimeSortRules}
+            onSortRulesChange={setRuntimeSortRules}
+            runtimeFilters={runtimeFilters}
+            onRuntimeFiltersChange={setRuntimeFilters}
+            activePreviewFilter={activePreviewFilter}
+            onActivePreviewFilterChange={setActivePreviewFilter}
+            selectedIndices={selectedIndices}
+            onSelectionChange={setSelectedIndices}
+            onPrimaryLinkClick={(rec, col) => {
+              const layoutKey =
+                detailLayoutMapRef.current.get(col.targetDetailLayoutId || '') ||
+                col.targetDetailLayoutId ||
+                defaultDetailLayoutKeyRef.current;
+              if (onRecordOpen) {
+                onRecordOpen(rec, layoutKey || undefined);
+                return;
+              }
+              const base = menuPath?.replace(/\/+$/, '');
+              if (navigate && base && layoutKey) navigate(`${base}/${layoutKey}/${rec.id}`);
+            }}
+            title={title}
+            allowInlineEdit={!!config?.allowInlineEdit}
+            editingRowId={editingRowId}
+            editDraft={editDraft}
+            editErrors={editErrors}
+            savingRow={savingRow}
+            onStartEdit={startEdit}
+            onCellChange={(fieldName, v) => {
+              if (editingRowId) updateEditCell(fieldName, v);
+              else updateCreateCell(fieldName, v);
+            }}
+            onSaveEdit={saveEdit}
+            onCancelEdit={cancelEdit}
+            creatingRow={creatingRow}
+            createDraft={createDraft}
+            createErrors={createErrors}
+            savingCreate={savingCreate}
+            onCreateSave={saveCreate}
+            onCreateCancel={cancelCreate}
+            formError={formError}
+            allowInlineDelete={!!config?.allowInlineDelete}
+            confirmDeleteId={confirmDeleteId}
+            deletingRow={deletingRow}
+            onRequestDelete={requestDelete}
+            onCancelDelete={cancelDelete}
+            onConfirmDelete={confirmDelete}
+            mobileViewMode={mobileViewMode as 'accordion' | 'card'}
+            actions={configuredActions.map((act) => {
+              const plugin = ActionRegistry.getInstance().getAction(act.actionKey);
+              return {
+                label: act.label,
+                variant: act.variant || 'primary',
+                iconName: plugin?.iconName || 'Plus',
+                onClick: () => handleExecuteAction(act),
+              };
+            })}
+          />
+        </div>
+      )}
     </div>
   );
 };

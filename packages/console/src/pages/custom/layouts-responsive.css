@@ -10,10 +10,13 @@
  *   Phone:  ≤ 640px
  */
 
-/* ─── Desktop: hide mobile-only accordion wrapper ──────────── */
+/* ─── Desktop: hide mobile list views ──────────── */
 
 @media (min-width: 641px) {
   .ls-tabs__accordion-wrapper {
+    display: none;
+  }
+  .sails-list-view-mobile-wrap {
     display: none;
   }
 }
@@ -71,6 +74,32 @@
 /* ─── Phone: ≤ 640px ──────────────────────────────────────── */
 
 @media (max-width: 640px) {
+  /* ── List View Mobile: visibility toggle ── */
+  .sails-list-view-mobile-wrap {
+    display: block;
+  }
+
+  [data-mobile-mode="table"] .sails-list-view-mobile-wrap {
+    display: none;
+  }
+
+  [data-mobile-mode="accordion"] .sails-list-view-table-wrap,
+  [data-mobile-mode="card"] .sails-list-view-table-wrap {
+    display: none;
+  }
+
+  /* ── Flyover support for mobile list views ── */
+  .sails-list-engine--inline-active .sails-list-view-mobile-wrap {
+    overflow: visible;
+  }
+
+  .sails-list-engine--inline-active .lvm-root {
+    overflow: visible;
+  }
+
+  .sails-list-engine--inline-active .lvm-card {
+    overflow: visible;
+  }
   /* DETAIL: single-column grid */
   .ls-section__grid {
     grid-template-columns: 1fr;

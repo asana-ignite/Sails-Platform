@@ -1011,6 +1011,20 @@
   grid-template-columns: 1fr 260px !important;
 }
 
+.ls-root--readonly .ls-properties input,
+.ls-root--readonly .ls-properties select,
+.ls-root--readonly .ls-properties textarea,
+.ls-root--readonly .ls-properties button,
+.ls-root--readonly .ls-properties .sails-custom-select {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.ls-root--readonly .ls-properties input[type="checkbox"],
+.ls-root--readonly .ls-properties input[type="radio"] {
+  pointer-events: none;
+}
+
 /* ─── Status Banner ─────────────────────────────────────────── */
 
 .ls-status-banner {
