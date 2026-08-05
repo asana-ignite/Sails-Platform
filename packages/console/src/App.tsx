@@ -23,8 +23,6 @@ const LayoutDemo = lazy(() => import('./pages/__mockups__/LayoutDemo'));
 const RouteBuilder = lazy(() => import('./pages/__mockups__/RouteBuilder'));
 const LayoutStudio = lazy(() => import('./pages/custom/LayoutStudio'));
 const TableBuilder = lazy(() => import('./pages/__mockups__/TableBuilder'));
-const QueryStudioDemo = lazy(() => import('./pages/__mockups__/QueryStudioDemo'));
-
 /**
  * ProtectedRoute
  * Redirects to /login if not authenticated.
@@ -162,7 +160,6 @@ function App() {
             <Route path="/layout-demo" element={<LayoutDemo />} />
             <Route path="/route-builder" element={<RouteBuilder />} />
             <Route path="/table-builder" element={<TableBuilder />} />
-            <Route path="/query-studio-demo" element={<QueryStudioDemo />} />
             <Route path="/layout-studio/:tableId/:layoutId" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingScreen />}>

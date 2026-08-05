@@ -62,7 +62,7 @@ This document defines the strategic roadmap for **Advanced Analytics** on the SA
 - **Charting library**: add **`recharts`** (React 18-native, lightest dependency). Swap to Apache ECharts only if heatmap/pivot-complex visuals become a hard requirement.
 - **`ChartRegistry.tsx`** — new `packages/console/src/features/charts/`; `componentKey` → lazy chart component (Line, Bar, Area, Pie, Funnel, StatCard, DataTable, KPI list). Same registry pattern as `features/admin/registry.tsx` and `features/widgets/registry.tsx`.
 - **`AnalyticsDashboardPage.tsx`** — route `/dashboard/:slug`, DB-driven grid layout, global date-range filter, click-to-drill-down (appends filter → re-queries).
-- **Ad-hoc Report Builder** — evolve the `QueryStudioDemo.tsx` mockup into a drag-drop dimensions/measures builder that emits a validated `AnalyticsQuerySpec`.
+- **Ad-hoc Report Builder** — evolve the `FilterBuilder.tsx` component into a drag-drop dimensions/measures builder that emits a validated `AnalyticsQuerySpec`.
 - **Wiring** — register menu items via `ConsoleMenu.componentKey` (`docs/CREATE_APP_NAV.md` payload pattern); gate on `analytics.dashboards.*`; extend `ExportCsvButton` to report results.
 
 ## Phase C — Performance & Materialization
