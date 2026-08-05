@@ -1524,3 +1524,82 @@
 .ls-vp-readonly:hover {
   border-color: var(--sails-border, #e2e8f0) !important;
 }
+
+/* ── Inline edit / create in list views ── */
+.ls-inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-start;
+}
+
+.ls-inline-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.12s ease;
+}
+
+.ls-rtd-row:hover .ls-inline-edit-btn {
+  opacity: 1;
+}
+
+.ls-inline-edit-btn:hover {
+  background: rgba(var(--sails-primary-r, 59), var(--sails-primary-g, 130), var(--sails-primary-b, 246), 0.12);
+  color: var(--sails-primary, #6366f1);
+}
+
+.ls-inline-edit-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--sails-danger, #ef4444);
+}
+
+.ls-rtd--editing {
+  background: rgba(var(--sails-primary-r, 59), var(--sails-primary-g, 130), var(--sails-primary-b, 246), 0.05);
+}
+
+.ls-rtd--editing .ls-block__input-wrapper {
+  margin-top: 0;
+}
+
+.ls-inline-create-row td {
+  background: rgba(var(--sails-primary-r, 59), var(--sails-primary-g, 130), var(--sails-primary-b, 246), 0.06);
+}
+
+.ls-inline-create-row .ls-rtd--actions,
+.ls-rtd--actions {
+  vertical-align: middle;
+}
+
+.ls-spin {
+  animation: ls-spin 0.9s linear infinite;
+}
+
+@keyframes ls-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Flyover mode: control popovers (selects, date/time pickers, user &
+   record pickers) escape the scroll/clip containers while inline editing,
+   inline creating, or a column filter popover is open. ── */
+.sails-list-engine--inline-active .ls-preview-wrap {
+  overflow: visible;
+}
+
+.sails-list-engine--inline-active .ls-table-card {
+  overflow: visible;
+}
+
+.sails-list-engine--inline-active .ls-rtd-row--editing,
+.sails-list-engine--inline-active .ls-inline-create-row {
+  position: relative;
+  z-index: 3;
+}

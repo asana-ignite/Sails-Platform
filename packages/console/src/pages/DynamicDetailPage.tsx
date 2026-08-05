@@ -13,10 +13,12 @@ import {
 import type { TableLayout, SailsFieldDefinition, ConsoleMenu } from '@sails/shared';
 import { isSystemField, SYSTEM_PROTECTED_COLUMNS } from '@sails/shared';
 import LoadingScreen from '../components/common/LoadingScreen';
+import RelatedListView from '../components/common/RelatedListView';
 import { fetchCached } from '../api/client';
 import { DetailFieldInput, DetailFieldDisplay, DetailFieldLabel, validateFieldIssues } from '../features/controls/DetailFieldControl';
 import type { FieldValidation } from '../features/controls/types';
 import { useConsole } from '../contexts/ConsoleContext';
+import { useRecordStack } from '../contexts/RecordStackContext';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
 import './custom/layouts-responsive.css';
@@ -81,21 +83,24 @@ interface DetailHeaderProps {
   onBack: () => void;
   onEdit: () => void;
   onCancelEdit: () => void;
+  showBack?: boolean;
 }
 
 const DetailHeader: React.FC<DetailHeaderProps> = memo(
-  ({ primaryTitle, subtitle, isNewMode, isEditing, saving, canEdit, onBack, onEdit, onCancelEdit }) => (
+  ({ primaryTitle, subtitle, isNewMode, isEditing, saving, canEdit, onBack, onEdit, onCancelEdit, showBack = true }) => (
     <header className="sails-page-header sails-dynamic-table__header">
       <div className="sails-page-header__left" style={{ pointerEvents: 'auto' }}>
-        <button
-          type="button"
-          className="sails-btn sails-btn--secondary"
-          onClick={onBack}
-          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 8, marginRight: 12 }}
-          title="Back"
-        >
-          <ChevronLeft size={16} />
-        </button>
+        {showBack && (
+          <button
+            type="button"
+            className="sails-btn sails-btn--secondary"
+            onClick={onBack}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 8, marginRight: 12 }}
+            title="Back"
+          >
+            <ChevronLeft size={16} />
+          </button>
+        )}
         <div>
           <h1 className="sails-page-header__title">{primaryTitle}</h1>
           <p className="sails-page-header__subtitle">{subtitle}</p>
@@ -148,11 +153,31 @@ const DetailHeader: React.FC<DetailHeaderProps> = memo(
 );
 
 // ── Main Page Component ────────────────────────────────────────
-const DynamicDetailPage: React.FC = () => {
+interface DynamicDetailPageProps {
+  /** When provided, override route-derived params (stacked card / generic route). */
+  tableName?: string;
+  layoutKey?: string;
+  recordId?: string;
+  isNewMode?: boolean;
+  /** Pre-filled values for a new record (e.g. parent FK binding from a Related List block). */
+  presetValues?: Record<string, any>;
+  /** Render as a compact card shell (stacked record panel) instead of a full page. */
+  inStack?: boolean;
+}
+
+const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
+  tableName: tableNameProp,
+  layoutKey: layoutKeyProp,
+  recordId: recordIdProp,
+  isNewMode: isNewModeProp,
+  presetValues,
+  inStack = false,
+}) => {
   const location = useLocation();
   const navigate = useNavigate();
   const navigationType = useNavigationType();
   const { navigationItems, apps } = useConsole();
+  const { requestClose, notifyRecordsChanged } = useRecordStack();
   const animClass = navigationType === 'POP' ? 'sails-dynamic-table--back' : '';
 
   const [layout, setLayout] = useState<TableLayout | null>(null);
@@ -171,15 +196,38 @@ const DynamicDetailPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
   const { dataModelId, layoutKey, recordId, isNewMode } = useMemo(() => {
+    // 1. Explicit props (stacked record card) override everything else.
+    if (tableNameProp) {
+      return {
+        dataModelId: tableNameProp,
+        layoutKey: layoutKeyProp || null,
+        recordId: recordIdProp || null,
+        // A stacked "new" card opens the create form (not an existing record).
+        isNewMode: isNewModeProp || recordIdProp === 'new',
+      };
+    }
+    // 2. Generic record route: /_r/:tableName/:layoutKey/:recordId (menu-independent).
+    const parts = location.pathname.split('/').filter(Boolean);
+    if (parts[0] === '_r') {
+      return {
+        dataModelId: parts[1] || null,
+        layoutKey: parts[2] || null,
+        recordId: parts[3] || null,
+        isNewMode: parts[3] === 'new',
+      };
+    }
+    // 3. Menu-bound route (default).
     const menus = navigationItems.length > 0 ? navigationItems : (apps || []).flatMap(a => a.menus || []);
     return getDetailRouteParams(location.pathname, menus);
-  }, [location.pathname, navigationItems, apps]);
+  }, [tableNameProp, layoutKeyProp, recordIdProp, isNewModeProp, location.pathname, navigationItems, apps]);
 
-  // Base nav route without the layout/record segments, e.g. /test/testtype
+  // Base nav route without the layout/record segments.
   const baseRoute = useMemo(() => {
+    if (tableNameProp) return `/_r/${tableNameProp}`;
     const parts = location.pathname.split('/').filter(Boolean);
+    if (parts[0] === '_r') return `/_r/${parts[1] || ''}`;
     return '/' + parts.slice(0, Math.max(1, parts.length - 2)).join('/');
-  }, [location.pathname]);
+  }, [location.pathname, tableNameProp]);
 
   useEffect(() => {
     if (!dataModelId || !recordId) {
@@ -238,10 +286,22 @@ const DynamicDetailPage: React.FC = () => {
           tableFields.forEach((f) => {
             const key = f.fieldName || f.id;
             if (isSystemField(key)) return;
-            if (f.defaultValue !== undefined && f.defaultValue !== null) {
-              initialForm[key] = f.defaultValue;
-            }
+            // Auto-number is generated by the DB on insert — leave it out of the
+            // payload so the column DEFAULT fires (and edit never re-runs it).
+            if ((f.logicalType || '').toLowerCase() === 'auto_number') return;
+            initialForm[key] = f.defaultValue !== undefined && f.defaultValue !== null
+              ? f.defaultValue
+              : '';
           });
+          // Pre-filled values (e.g. parent FK binding from a Related List block)
+          // win over defaults; hidden fields are still submitted on save.
+          if (presetValues && typeof presetValues === 'object') {
+            for (const [key, val] of Object.entries(presetValues)) {
+              if (isSystemField(key)) continue;
+              if (val === undefined || val === null || val === '') continue;
+              initialForm[key] = val;
+            }
+          }
           setFormData(initialForm);
           setLoading(false);
           return;
@@ -274,7 +334,7 @@ const DynamicDetailPage: React.FC = () => {
     };
 
     loadDetailData();
-  }, [location.pathname, dataModelId, layoutKey, recordId, isNewMode]);
+  }, [location.pathname, dataModelId, layoutKey, recordId, isNewMode, presetValues]);
 
   const config = useMemo(() => {
     if (!layout) return null;
@@ -385,6 +445,14 @@ const DynamicDetailPage: React.FC = () => {
         const createdRecord = data.record || (Array.isArray(data.rows) ? data.rows[0] : data.rows) || data.data || data;
         const newId = createdRecord?.id || data.id;
 
+        if (inStack) {
+          // Stacked create: close the "new" card fully (no created-record card) and
+          // tell lists/related blocks underneath to refetch so the record appears.
+          requestClose();
+          notifyRecordsChanged();
+          return;
+        }
+
         navigate(newId ? `${baseRoute}/${layoutKey}/${newId}` : baseRoute, {
           replace: true,
         });
@@ -396,11 +464,19 @@ const DynamicDetailPage: React.FC = () => {
     }
   };
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    return inStack ? (
+      <div className="record-detail-card record-detail-card--loading">
+        <LoadingScreen />
+      </div>
+    ) : (
+      <LoadingScreen />
+    );
+  }
 
   if (error) {
     return (
-      <div className={`sails-dynamic-table sails-page-container ${animClass}`}>
+      <div className={inStack ? 'record-detail-card' : `sails-dynamic-table sails-page-container ${animClass}`}>
         <header className="sails-page-header sails-dynamic-table__header">
           <div className="sails-page-header__left">
             <button className="sails-btn sails-btn--secondary" onClick={() => navigate(-1)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 8, marginRight: 12 }} title="Back">
@@ -521,32 +597,33 @@ const DynamicDetailPage: React.FC = () => {
 
     if (b.blockType === 'related_list') {
       if (isNewMode) return null;
-      const title = b.labelOverride || (b.relatedTableId === 't_tasks' ? 'Tasks' : 'Related Records');
       const colSpan = b.width ? (typeof b.width === 'number' ? b.width : 12) : 12;
+
+      // Configured via "Related List View" block (model + FK field + LIST view).
+      if (b.relatedTableName && b.relatedFieldName && recordId) {
+        return (
+          <div key={b.id} className="ls-block ls-block--related" style={{ gridColumn: `span ${colSpan}` }}>
+            <RelatedListView
+              tableName={b.relatedTableName}
+              fieldName={b.relatedFieldName}
+              viewId={b.relatedViewId}
+              parentRecordId={recordId}
+              title={b.labelOverride || b.relatedTableLabel || b.relatedTableName}
+            />
+          </div>
+        );
+      }
 
       return (
         <div key={b.id} className="ls-block ls-block--related" style={{ gridColumn: `span ${colSpan}` }}>
           <div className="ls-related__header">
             <Table2 size={14} />
-            <span className="ls-related__title">{title}</span>
+            <span className="ls-related__title">{b.labelOverride || 'Related Records'}</span>
             <span className="ls-related__count">0 records</span>
           </div>
-          <table className="ls-related__table">
-            <thead>
-              <tr>
-                <th>TITLE</th>
-                <th>STATUS</th>
-                <th>DUE DATE</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colSpan={3} style={{ textAlign: 'center', color: 'var(--sails-text-muted)', padding: '16px' }}>
-                  No related records.
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="ls-related__empty" style={{ padding: 16, textAlign: 'center', color: 'var(--sails-text-muted)', fontSize: '0.85rem' }}>
+            Configure a model and list view for this block in Layout Studio.
+          </div>
         </div>
       );
     }
@@ -555,7 +632,7 @@ const DynamicDetailPage: React.FC = () => {
   };
 
   return (
-    <div className={`sails-dynamic-table sails-page-container ${animClass}`}>
+    <div className={inStack ? 'record-detail-card' : `sails-dynamic-table sails-page-container ${animClass}`}>
       <form onSubmit={handleSaveRecord}>
         <DetailHeader
           primaryTitle={primaryTitle}
@@ -564,9 +641,10 @@ const DynamicDetailPage: React.FC = () => {
           isEditing={isEditing}
           saving={saving}
           canEdit={!isNewMode && !!record}
-          onBack={() => navigate(-1)}
+          onBack={inStack ? () => requestClose() : () => navigate(-1)}
           onEdit={handleEditRecord}
           onCancelEdit={handleCancelEdit}
+          showBack={!inStack}
         />
 
         <section className="sails-page-body" style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', gap: 24 }}>

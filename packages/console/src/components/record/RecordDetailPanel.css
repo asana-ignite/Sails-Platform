@@ -1,0 +1,94 @@
+/* ─── Record Detail Stack (stacked fly-in cards, main-content anchored) ─── */
+
+.record-stack {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.record-stack__card {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--sails-bg-body, #f1f5f9);
+  box-shadow: -12px 0 32px rgba(15, 23, 42, 0.22);
+  transition:
+    transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.record-stack__card.is-closing {
+  opacity: 0;
+  transition:
+    transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.32s ease-in-out;
+}
+
+.record-stack__chrome {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0 10px;
+  background: var(--sails-bg-subtle, #f1f5f9);
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+}
+
+.record-stack__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--sails-radius-sm, 6px);
+  background: transparent;
+  color: var(--sails-text-muted, #64748b);
+  cursor: pointer;
+}
+
+.record-stack__close:hover {
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--sails-text-main, #0f172a);
+}
+
+.record-stack__card-inner {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Compact detail shell used inside a stacked card — mirrors the real page
+   (horizontal padding like .sails-main-content, body background so the white
+   section cards stand out, tighter header gap). */
+.record-detail-card {
+  min-height: 100%;
+  background: var(--sails-bg-body, #f1f5f9);
+  padding: 0 calc(var(--sails-spacing-unit, 4px) * 4);
+  box-sizing: border-box;
+}
+
+.record-detail-card .sails-page-header {
+  margin-bottom: calc(var(--sails-spacing-unit, 4px) * 2);
+}
+
+.record-detail-card .sails-page-body {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.record-detail-card--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}

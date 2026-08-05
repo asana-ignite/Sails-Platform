@@ -7,7 +7,7 @@
  * Permission: requires SUPER_ADMIN or TENANT_ADMIN role.
  * TODO: refine when RBAC capability system supports 'layouts.design'
  */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   GripVertical, Plus, X, Eye, EyeOff, Trash2, MoveUp, MoveDown,
@@ -63,9 +63,14 @@ interface PlacedBlock {
   visible: boolean;
   fieldId?: string;
   labelOverride?: string;
+  /** Legacy mock-only related block fields (pre-"Related List View"). */
   relatedTableId?: string;
   relatedDisplayFields?: string[];
-  relatedMaxRows?: number;
+  /** "Related List View" block: child model owning the FK, the FK field, and the child LIST view. */
+  relatedTableName?: string;
+  relatedFieldName?: string;
+  relatedViewId?: string;
+  relatedTableLabel?: string;
   tabs?: { id: string; label: string; sectionIds: string[]; blocks: PlacedBlock[] }[];
   conditions?: BlockCondition[];
   validations?: FieldValidation[];
@@ -137,9 +142,6 @@ function findBlockInArray(arr: PlacedBlock[], blockId: string): PlacedBlock | nu
 function defaultPropsForBlock(blockType: BlockType, fieldId?: string): Partial<PlacedBlock> {
   if (blockType === 'field') return { fieldId, labelOverride: '', width: 6 };
   if (blockType === 'related_list') return {
-    relatedTableId: 't_tasks',
-    relatedDisplayFields: ['title', 'status', 'due_date'],
-    relatedMaxRows: 5,
     width: 12,
   };
   if (blockType === 'tab_group') return {
@@ -155,17 +157,6 @@ function defaultPropsForBlock(blockType: BlockType, fieldId?: string): Partial<P
 
 // ─── Mock related data ────────────────────────────────────────
 
-const MOCK_RELATED_TASKS = [
-  { title: 'Send proposal', status: 'Done', due_date: '2026-07-01' },
-  { title: 'Schedule demo', status: 'In Progress', due_date: '2026-07-05' },
-  { title: 'Contract review', status: 'Pending', due_date: '2026-07-15' },
-];
-
-const MOCK_RELATED_CONTACTS = [
-  { name: 'Jane Doe', email: 'jane@acme.com', phone: '+66 81 234 5678' },
-  { name: 'John Smith', email: 'john@acme.com', phone: '+66 89 876 5432' },
-];
-
 function buildMockRecord(fields: SailsFieldDefinition[]): Record<string, any> {
   const record: Record<string, any> = {};
   fields.forEach((f) => {
@@ -174,6 +165,19 @@ function buildMockRecord(fields: SailsFieldDefinition[]): Record<string, any> {
     record[f.fieldName] = mockFieldValue(f);
   });
   return record;
+}
+
+/** Mock preview for a "Related List View" block, derived from the child model's fields. */
+function buildRelatedPreview(blk: PlacedBlock, models: any[]): { title: string; cols: string[]; rows: Record<string, any>[]; configured: boolean } {
+  const child = models.find((t: any) => t.tableName === blk.relatedTableName);
+  const fields: SailsFieldDefinition[] = child?.fields || [];
+  const title = blk.relatedTableLabel || blk.relatedTableName || 'Related Records';
+  if (!blk.relatedTableName || !blk.relatedFieldName) {
+    return { title, cols: [], rows: [], configured: false };
+  }
+  const cols = fields.filter((f: any) => f.fieldName !== 'id').slice(0, 4).map((f: any) => f.fieldName);
+  const rows = fields.length > 0 ? [buildMockRecord(fields), buildMockRecord(fields)] : [];
+  return { title, cols, rows, configured: true };
 }
 
 function renderFieldValue(
@@ -223,8 +227,7 @@ function buildPalette(fields: SailsFieldDefinition[], placedFieldIds: string[]):
       items.push({ id: `pf_${f.id}`, blockType: 'field', fieldId: f.id, label: f.name, icon: null, description: f.logicalType });
     }
   });
-  items.push({ id: 'rel_tasks', blockType: 'related_list', label: 'Related Tasks', icon: <ListTree size={13} />, description: 'Inline child table' });
-  items.push({ id: 'rel_contacts', blockType: 'related_list', label: 'Related Contacts', icon: <ListTree size={13} />, description: 'Inline child table' });
+  items.push({ id: 'rel_list_view', blockType: 'related_list', label: 'Related List View', icon: <ListTree size={13} />, description: 'Inline list of records linked via FK' });
   items.push({ id: 'layout_tabs', blockType: 'tab_group', label: 'Tab Group', icon: <FolderKanban size={13} />, description: 'Tabbed container' });
   return items;
 }
@@ -446,6 +449,8 @@ const LayoutStudio: React.FC = () => {
   const [tableMeta, setTableMeta] = useState<TableMeta | null>(null);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [models, setModels] = useState<any[]>([]);
+  const [listViewsByTable, setListViewsByTable] = useState<Record<string, { id: string; name: string }[]>>({});
 
   const [sections, setSections] = useState<BuilderSection[]>([newSection()]);
   const [blocks, setBlocks] = useState<PlacedBlock[]>([]);
@@ -503,6 +508,9 @@ const LayoutStudio: React.FC = () => {
   const [listRuntimeFilters, setListRuntimeFilters] = useState<Record<string, string>>({});
   const [listActivePreviewFilter, setListActivePreviewFilter] = useState<string | null>(null);
   const [listAllowMultiSelect, setListAllowMultiSelect] = useState(false);
+  const [listAllowInlineEdit, setListAllowInlineEdit] = useState(false);
+  const [listAllowInlineCreate, setListAllowInlineCreate] = useState(false);
+  const [listAllowInlineDelete, setListAllowInlineDelete] = useState(false);
   const [listAllowPaging, setListAllowPaging] = useState(false);
   const [listRecordsPerPage, setListRecordsPerPage] = useState(25);
   const [listPagingMode, setListPagingMode] = useState<'fixed' | 'dynamic'>('fixed');
@@ -536,6 +544,7 @@ const LayoutStudio: React.FC = () => {
         const tables: any[] = Array.isArray(data) ? data : (data.data || []);
         const found = tables.find((t: any) => t.id === tableId);
         if (!found) throw new Error('Table not found');
+        setModels(tables);
         setTableMeta({ id: found.id, name: found.name, tableName: found.tableName, fields: found.fields || [] });
         setMockRecord(buildMockRecord(found.fields || []));
         setListMockRows(buildMockRows(found.fields || []));
@@ -588,6 +597,13 @@ const LayoutStudio: React.FC = () => {
             if (config.sortBy) setListSortBy(config.sortBy);
             if (config.summaryFields) setListSummaryFields(config.summaryFields);
             if (config.actions && Array.isArray(config.actions)) setListActions(config.actions);
+            if (typeof config.allowMultiSelect === 'boolean') setListAllowMultiSelect(config.allowMultiSelect);
+            if (typeof config.allowPaging === 'boolean') setListAllowPaging(config.allowPaging);
+            if (config.recordsPerPage) setListRecordsPerPage(config.recordsPerPage);
+            if (config.pagingMode) setListPagingMode(config.pagingMode);
+            if (typeof config.allowInlineEdit === 'boolean') setListAllowInlineEdit(config.allowInlineEdit);
+            if (typeof config.allowInlineCreate === 'boolean') setListAllowInlineCreate(config.allowInlineCreate);
+            if (typeof config.allowInlineDelete === 'boolean') setListAllowInlineDelete(config.allowInlineDelete);
           } else {
             if (config.sections) setSections(config.sections);
             if (config.blocks) setBlocks(config.blocks);
@@ -601,6 +617,36 @@ const LayoutStudio: React.FC = () => {
   }, [layoutId]);
 
   const allFields = tableMeta?.fields ?? [];
+  const currentTableName = tableMeta?.tableName || '';
+
+  // Models that reference the current model via a relation/lookup FK field.
+  const inboundModels = useMemo(() => {
+    if (!currentTableName) return [];
+    return models.filter((t: any) =>
+      t.tableName !== currentTableName &&
+      Array.isArray(t.fields) &&
+      t.fields.some((f: any) =>
+        (f.logicalType === 'relation' || f.logicalType === 'lookup') &&
+        f.config?.targetTable === currentTableName
+      )
+    );
+  }, [models, currentTableName]);
+
+  // LIST views of a child model (cached per table).
+  const loadListViewOptions = useCallback(async (tableName: string) => {
+    if (!tableName || listViewsByTable[tableName]) return;
+    try {
+      const lData = await fetchCached(`/api/console/layouts?tableId=${encodeURIComponent(tableName)}&viewType=LIST&limit=100`);
+      const rows: any[] = lData.data?.rows || lData.rows || [];
+      setListViewsByTable((prev) => ({
+        ...prev,
+        [tableName]: rows.filter((r: any) => r.viewType === 'LIST').map((r: any) => ({ id: r.id, name: r.name || r.systemName || r.id })),
+      }));
+    } catch (e) {
+      console.error('Failed to load list views for', tableName, e);
+    }
+  }, [listViewsByTable]);
+
 
   const isReadOnly = layoutStatus === 'active' && !isEditing;  // Auto-initialize LIST columns when fields load for a new/empty LIST layout
   useEffect(() => {
@@ -617,6 +663,16 @@ const LayoutStudio: React.FC = () => {
   );
   const findBlockById = (blockId: string) => findBlockInArray(blocks, blockId);
   const selectedField = selectedBlock?.fieldId ? allFields.find((f) => f.id === selectedBlock.fieldId) : null;
+
+  const selectedRelatedModel = inboundModels.find((t: any) => t.tableName === selectedBlock?.relatedTableName);
+  const relatedFkFields = (selectedRelatedModel?.fields || []).filter((f: any) =>
+    (f.logicalType === 'relation' || f.logicalType === 'lookup') &&
+    f.config?.targetTable === currentTableName
+  );
+
+  useEffect(() => {
+    if (selectedBlock?.relatedTableName) loadListViewOptions(selectedBlock.relatedTableName);
+  }, [selectedBlock?.relatedTableName, loadListViewOptions]);
   const selectedSection = useMemo(
     () => (selectedSectionId ? sections.find((s) => s.id === selectedSectionId) || null : null),
     [sections, selectedSectionId],
@@ -854,6 +910,9 @@ const LayoutStudio: React.FC = () => {
       setListAllowPaging(false);
       setListRecordsPerPage(25);
       setListPagingMode('fixed');
+      setListAllowInlineEdit(false);
+      setListAllowInlineCreate(false);
+      setListAllowInlineDelete(false);
       setListSelectedIndices(new Set());
       setListCurrentPage(1);
     } else {
@@ -875,7 +934,20 @@ const LayoutStudio: React.FC = () => {
 
   const serializeLayout = () => {
     if (viewType === 'LIST') {
-      return { columns: listColumns, filters: listFilters, sortBy: listSortBy, summaryFields: listSummaryFields, actions: listActions };
+      return {
+        columns: listColumns,
+        filters: listFilters,
+        sortBy: listSortBy,
+        summaryFields: listSummaryFields,
+        actions: listActions,
+        allowMultiSelect: listAllowMultiSelect,
+        allowPaging: listAllowPaging,
+        recordsPerPage: listRecordsPerPage,
+        pagingMode: listPagingMode,
+        allowInlineEdit: listAllowInlineEdit,
+        allowInlineCreate: listAllowInlineCreate,
+        allowInlineDelete: listAllowInlineDelete,
+      };
     }
     return { sections, blocks };
   };
@@ -2436,8 +2508,7 @@ const LayoutStudio: React.FC = () => {
 
                           // ── RELATED LIST BLOCK ──
                           if (blk.blockType === 'related_list') {
-                            const data = blk.relatedTableId === 't_tasks' ? MOCK_RELATED_TASKS : MOCK_RELATED_CONTACTS;
-                            const cols = blk.relatedDisplayFields || ['title', 'status'];
+                            const rel = buildRelatedPreview(blk, models);
                             return (
                               <div key={blk.id}
                                 className={`ls-block ls-block--related ${isSelected ? 'ls-block--selected' : ''} ${!blk.visible ? 'ls-block--hidden' : ''} ${dragOverBlockId === blk.id ? 'ls-block--drag-over' : ''} ${resizing?.blockId === blk.id ? 'ls-block--resizing' : ''}`}
@@ -2449,13 +2520,21 @@ const LayoutStudio: React.FC = () => {
                                 {controlsEl}
                                 <div className="ls-related__header">
                                   <Table2 size={14} />
-                                  <span className="ls-related__title">{blk.relatedTableId === 't_tasks' ? 'Tasks' : 'Contacts'}</span>
-                                  <span className="ls-related__count">{data.length} records</span>
+                                  <span className="ls-related__title">{rel.title}</span>
+                                  <span className="ls-related__count">{rel.configured ? `${rel.rows.length} records` : 'unconfigured'}</span>
                                 </div>
-                                <table className="ls-related__table">
-                                  <thead><tr>{cols.map((c) => <th key={c}>{c.replace(/_/g, ' ')}</th>)}</tr></thead>
-                                  <tbody>{data.map((row: any, ri) => <tr key={ri}>{cols.map((c) => <td key={c}>{row[c]}</td>)}</tr>)}</tbody>
-                                </table>
+                                {rel.configured && rel.cols.length > 0 ? (
+                                  <table className="ls-related__table">
+                                    <thead><tr>{rel.cols.map((c) => <th key={c}>{c.replace(/_/g, ' ')}</th>)}</tr></thead>
+                                    <tbody>{rel.rows.map((row: any, ri) => <tr key={ri}>{rel.cols.map((c) => <td key={c}>{row[c]}</td>)}</tr>)}</tbody>
+                                  </table>
+                                ) : (
+                                  <div className="ls-related__empty" style={{ padding: 16, textAlign: 'center', color: 'var(--sails-text-muted)', fontSize: '0.85rem' }}>
+                                    {rel.configured
+                                      ? 'This model has no visible fields for preview.'
+                                      : 'Select Model, Relation Field & List View in Properties.'}
+                                  </div>
+                                )}
                                 <span className="ls-block__width-badge">{blk.width} cols</span>
                                 <span className="ls-block__type-badge">relation</span>
                                 <div className="ls-block__resize-handle" onMouseDown={(e) => handleResizeStart(e, blk.id, blk.width)} />
@@ -2568,8 +2647,7 @@ const LayoutStudio: React.FC = () => {
                                         }
 
                                         if (tb.blockType === 'related_list') {
-                                          const data = tb.relatedTableId === 't_tasks' ? MOCK_RELATED_TASKS : MOCK_RELATED_CONTACTS;
-                                          const cols = tb.relatedDisplayFields || ['title', 'status'];
+                                          const rel = buildRelatedPreview(tb, models);
                                           const isDragOver = dragOverChildBlockId === tb.id;
                                           return (
                                             <div key={tb.id}
@@ -2583,13 +2661,21 @@ const LayoutStudio: React.FC = () => {
                                               {tbControls}
                                               <div className="ls-related__header">
                                                 <Table2 size={14} />
-                                                <span className="ls-related__title">{tb.relatedTableId === 't_tasks' ? 'Tasks' : 'Contacts'}</span>
-                                                <span className="ls-related__count">{data.length} records</span>
+                                                <span className="ls-related__title">{rel.title}</span>
+                                                <span className="ls-related__count">{rel.configured ? `${rel.rows.length} records` : 'unconfigured'}</span>
                                               </div>
-                                              <table className="ls-related__table">
-                                                <thead><tr>{cols.map((c) => <th key={c}>{c.replace(/_/g, ' ')}</th>)}</tr></thead>
-                                                <tbody>{data.map((row: any, ri) => <tr key={ri}>{cols.map((c) => <td key={c}>{row[c]}</td>)}</tr>)}</tbody>
-                                              </table>
+                                              {rel.configured && rel.cols.length > 0 ? (
+                                                <table className="ls-related__table">
+                                                  <thead><tr>{rel.cols.map((c) => <th key={c}>{c.replace(/_/g, ' ')}</th>)}</tr></thead>
+                                                  <tbody>{rel.rows.map((row: any, ri) => <tr key={ri}>{rel.cols.map((c) => <td key={c}>{row[c]}</td>)}</tr>)}</tbody>
+                                                </table>
+                                              ) : (
+                                                <div className="ls-related__empty" style={{ padding: 16, textAlign: 'center', color: 'var(--sails-text-muted)', fontSize: '0.85rem' }}>
+                                                  {rel.configured
+                                                    ? 'This model has no visible fields for preview.'
+                                                    : 'Select Model, Relation Field & List View in Properties.'}
+                                                </div>
+                                              )}
                                               <span className="ls-block__width-badge">{tb.width} cols</span>
                                               <span className="ls-block__type-badge">relation</span>
                                               <div className="ls-block__resize-handle" onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, tb.id, tb.width); }} />
@@ -2970,6 +3056,36 @@ const LayoutStudio: React.FC = () => {
                                 </div>
                               )}
                             </div>
+
+                            <div className="ls-prop-group">
+                              <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <input type="checkbox" checked={listAllowInlineEdit}
+                                  onChange={() => setListAllowInlineEdit((v) => !v)} /> Allow Inline Edit
+                              </label>
+                              <span className="ls-prop-hint" style={{ fontSize: 11, color: 'var(--sails-text-muted)', paddingLeft: 22, lineHeight: 1.35 }}>
+                                Lets users edit rows in place (hover the pencil icon) wherever this view renders.
+                              </span>
+                            </div>
+
+                            <div className="ls-prop-group">
+                              <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <input type="checkbox" checked={listAllowInlineCreate}
+                                  onChange={() => setListAllowInlineCreate((v) => !v)} /> Allow Inline Create
+                              </label>
+                              <span className="ls-prop-hint" style={{ fontSize: 11, color: 'var(--sails-text-muted)', paddingLeft: 22, lineHeight: 1.35 }}>
+                                Turns this view's Create action into an inline new-record row.
+                              </span>
+                            </div>
+
+                            <div className="ls-prop-group">
+                              <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <input type="checkbox" checked={listAllowInlineDelete}
+                                  onChange={() => setListAllowInlineDelete((v) => !v)} /> Allow Inline Delete
+                              </label>
+                              <span className="ls-prop-hint" style={{ fontSize: 11, color: 'var(--sails-text-muted)', paddingLeft: 22, lineHeight: 1.35 }}>
+                                Adds a delete button to each row (with confirmation) wherever this view renders.
+                              </span>
+                            </div>
                           </>
                         );
                       })()}
@@ -3013,7 +3129,7 @@ const LayoutStudio: React.FC = () => {
                     <>
                 <div className="ls-prop__name">
                   {selectedBlock.blockType === 'field' ? selectedField?.name :
-                   selectedBlock.blockType === 'related_list' ? (selectedBlock.relatedTableId === 't_tasks' ? 'Related Tasks' : 'Related Contacts') :
+                   selectedBlock.blockType === 'related_list' ? (selectedBlock.relatedTableLabel || 'Related List View') :
                    'Tab Group'}
                 </div>
                 <div className="ls-prop__type">{selectedBlock.blockType}</div>
@@ -3067,20 +3183,49 @@ const LayoutStudio: React.FC = () => {
                 {selectedBlock.blockType === 'related_list' && (
                   <>
                     <div className="ls-prop-group">
-                      <label className="ls-prop-label">Source Table</label>
-                      <select className="sails-input" value={selectedBlock.relatedTableId}
-                        onChange={(e) => updateBlock(selectedBlock.id, { relatedTableId: e.target.value })}
-                        style={{ fontSize: 12, padding: '6px 8px' }}>
-                        <option value="t_tasks">Tasks</option>
-                        <option value="t_contacts">Contacts</option>
-                      </select>
+                      <label className="ls-prop-label">Model (FK to this model)</label>
+                      <CustomSelect
+                        size="sm"
+                        searchable
+                        value={selectedBlock.relatedTableName || ''}
+                        options={inboundModels.map((t: any) => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
+                        onChange={(val) => updateBlock(selectedBlock.id, {
+                          relatedTableName: String(val),
+                          relatedFieldName: undefined,
+                          relatedViewId: undefined,
+                          relatedTableLabel: inboundModels.find((t: any) => t.tableName === val)?.name,
+                        })}
+                        placeholder={inboundModels.length === 0 ? 'No models reference this model' : 'Select Model'}
+                      />
                     </div>
-                    <div className="ls-prop-group">
-                      <label className="ls-prop-label">Max Rows</label>
-                      <input className="sails-input" type="number" value={selectedBlock.relatedMaxRows}
-                        onChange={(e) => updateBlock(selectedBlock.id, { relatedMaxRows: Number(e.target.value) })}
-                        style={{ fontSize: 12, padding: '6px 8px' }} />
-                    </div>
+
+                    {selectedBlock.relatedTableName && (
+                      <div className="ls-prop-group">
+                        <label className="ls-prop-label">Relation Field</label>
+                        <CustomSelect
+                          size="sm"
+                          searchable
+                          value={selectedBlock.relatedFieldName || ''}
+                          options={relatedFkFields.map((f: any) => ({ value: f.fieldName, label: `${f.name} (${f.fieldName})` }))}
+                          onChange={(val) => updateBlock(selectedBlock.id, { relatedFieldName: String(val) })}
+                          placeholder={relatedFkFields.length === 0 ? 'No FK fields' : 'Select FK field'}
+                        />
+                      </div>
+                    )}
+
+                    {selectedBlock.relatedTableName && (
+                      <div className="ls-prop-group">
+                        <label className="ls-prop-label">List View</label>
+                        <CustomSelect
+                          size="sm"
+                          searchable
+                          value={selectedBlock.relatedViewId || ''}
+                          options={(listViewsByTable[selectedBlock.relatedTableName] || []).map((v) => ({ value: v.id, label: v.name }))}
+                          onChange={(val) => updateBlock(selectedBlock.id, { relatedViewId: String(val) })}
+                          placeholder="Select List View"
+                        />
+                      </div>
+                    )}
                   </>
                 )}
 

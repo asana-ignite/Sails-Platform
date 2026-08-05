@@ -7,6 +7,8 @@ import { ConsoleProvider, useConsole, ConsoleMenu } from './contexts/ConsoleCont
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { DateTimePrefsProvider } from './utils/systemDateTime';
+import { RecordStackProvider } from './contexts/RecordStackContext';
+import RecordDetailPanel from './components/record/RecordDetailPanel';
 
 // Lazy load pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -62,6 +64,13 @@ const SmartPageRouter: React.FC = () => {
 
   if (isLoading) {
     return <LoadingScreen />;
+  }
+
+  // Generic record detail route: /_r/:tableName/:layoutKey/:recordId
+  // Menu-independent — used by relation links (stacked cards, direct links).
+  const pathParts = location.pathname.split('/').filter(Boolean);
+  if (pathParts[0] === '_r') {
+    return <DynamicDetailPage />;
   }
 
   const normalizePath = (p: string | null | undefined) => p ? p.replace(/\/+$/, '').toLowerCase() : '';
@@ -169,6 +178,8 @@ function App() {
                 <ProtectedRoute>
                   <ConsoleProvider>
                     <DateTimePrefsProvider>
+                    <RecordStackProvider>
+                    <RecordDetailPanel />
                     <Routes>
                       <Route path="/audit-live" element={<Suspense fallback={<LoadingScreen />}><AdminAuditLog /></Suspense>} />
                       <Route path="*" element={
@@ -182,6 +193,7 @@ function App() {
                         </AppLayout>
                       } />
                     </Routes>
+                    </RecordStackProvider>
                     </DateTimePrefsProvider>
                   </ConsoleProvider>
                 </ProtectedRoute>

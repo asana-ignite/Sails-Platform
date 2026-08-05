@@ -8,6 +8,9 @@ import {
   Search,
   X,
   Check,
+  Pencil,
+  Loader2,
+  Trash2,
 } from 'lucide-react';
 import type { SailsFieldDefinition } from '@sails/shared';
 import { isSystemField, formatDateTimeValue, formatDecimalValue } from '@sails/shared';
@@ -16,6 +19,7 @@ import { UserControl, useTenantUsers } from '../../features/controls/plugins/Use
 import { PhoneControl } from '../../features/controls/plugins/PhoneControl';
 import { EmailControl } from '../../features/controls/plugins/EmailControl';
 import { LatLngControl } from '../../features/controls/plugins/LatLngControl';
+import { DetailFieldInput } from '../../features/controls/DetailFieldControl';
 import { useDateTimePrefs, isSystemDateTimeField, formatSystemDateTimeValue } from '../../utils/systemDateTime';
 
 export interface RuntimeSortRule {
@@ -56,6 +60,31 @@ export interface ListViewTableProps {
 
   /** Optional toolbar row rendered above the table (page-level badges/actions). */
   header?: React.ReactNode;
+
+  // ── Inline edit / create / delete (page mode) ──
+  allowInlineEdit?: boolean;
+  editingRowId?: string | null;
+  editDraft?: Record<string, any>;
+  editErrors?: Record<string, string[]>;
+  savingRow?: boolean;
+  onStartEdit?: (rec: any) => void;
+  onCellChange?: (fieldName: string, value: any) => void;
+  onSaveEdit?: () => void;
+  onCancelEdit?: () => void;
+  creatingRow?: boolean;
+  createDraft?: Record<string, any>;
+  createErrors?: Record<string, string[]>;
+  savingCreate?: boolean;
+  onCreateSave?: () => void;
+  onCreateCancel?: () => void;
+  /** Non-field error banner shown above the inline edit/create row. */
+  formError?: string;
+  allowInlineDelete?: boolean;
+  confirmDeleteId?: string | null;
+  deletingRow?: boolean;
+  onRequestDelete?: (rec: any) => void;
+  onCancelDelete?: () => void;
+  onConfirmDelete?: () => void;
 }
 
 const NUMERIC_COLUMN_TYPES = new Set(['number', 'decimal', 'currency', 'percentage', 'percent']);
@@ -162,6 +191,28 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
   onPrimaryLinkClick,
   onRowClick,
   header,
+  allowInlineEdit = false,
+  editingRowId = null,
+  editDraft,
+  editErrors,
+  savingRow = false,
+  onStartEdit,
+  onCellChange,
+  onSaveEdit,
+  onCancelEdit,
+  creatingRow = false,
+  createDraft,
+  createErrors,
+  savingCreate = false,
+  onCreateSave,
+  onCreateCancel,
+  formError,
+  allowInlineDelete = false,
+  confirmDeleteId = null,
+  deletingRow = false,
+  onRequestDelete,
+  onCancelDelete,
+  onConfirmDelete,
 }) => {
   const datetimePrefs = useDateTimePrefs();
   const { users: tenantUsers } = useTenantUsers();
@@ -177,6 +228,7 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
   const allowMultiSelect = mode === 'page' && (config?.allowMultiSelect ?? true);
   const allowPaging = config?.allowPaging ?? true;
   const pagingMode = config?.pagingMode || 'dynamic';
+  const inlineEnabled = mode === 'page' && allowInlineEdit;
 
   const rawCols = useMemo(() => {
     if (config?.columns && config.columns.length > 0) return config.columns;
@@ -201,6 +253,20 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
   const visibleListColumns = useMemo(() => {
     return sortedListColumns.filter((c: any) => c.visible !== false);
   }, [sortedListColumns]);
+
+  /** Field defs of visible columns that are user-editable (non-system). */
+  const editableFields = useMemo(() => {
+    const seen = new Set<string>();
+    const out: SailsFieldDefinition[] = [];
+    for (const col of visibleListColumns) {
+      const f = fields.find((ff) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
+      if (f && !isSystemField(f.fieldName) && !seen.has(f.fieldName)) {
+        seen.add(f.fieldName);
+        out.push(f);
+      }
+    }
+    return out;
+  }, [visibleListColumns, fields]);
 
   const totalPages = useMemo(() => {
     if (!allowPaging) return 1;
@@ -266,6 +332,48 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
     })());
   };
 
+  /** Inline editor cell for an editable column (edit row or create row). */
+  const renderEditorCell = (f: SailsFieldDefinition, draft: Record<string, any> | undefined, errors: Record<string, string[]> | undefined) => {
+    return (
+      <DetailFieldInput
+        field={f}
+        fieldKey={f.fieldName}
+        label={f.name}
+        val={draft?.[f.fieldName] ?? ''}
+        showErrors={!!errors?.[f.fieldName]?.length}
+        record={draft || {}}
+        onChange={(_k, v) => onCellChange && onCellChange(f.fieldName, v)}
+      />
+    );
+  };
+
+  const renderInlineActions = (
+    saving: boolean,
+    onSave: (() => void) | undefined,
+    onCancel: (() => void) | undefined
+  ) => (
+    <div className="ls-inline-actions">
+      <button
+        type="button"
+        className="sails-btn sails-btn--primary sails-btn--sm"
+        onClick={onSave}
+        disabled={saving}
+        title="Save"
+      >
+        {saving ? <Loader2 size={13} className="ls-spin" /> : <Check size={13} />}
+      </button>
+      <button
+        type="button"
+        className="sails-btn sails-btn--ghost sails-btn--sm"
+        onClick={onCancel}
+        disabled={saving}
+        title="Cancel"
+      >
+        <X size={13} />
+      </button>
+    </div>
+  );
+
   return (
     <div className="ls-table-card">
       {header}
@@ -305,7 +413,7 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                       >
                         <div className="ls-rth__inner">
                           {col.allowSorting !== false ? (
-                            <button className="ls-rth__sort-btn" onClick={() => handleRuntimeSort(col.id)}>
+                            <button type="button" className="ls-rth__sort-btn" onClick={() => handleRuntimeSort(col.id)}>
                               <span className="ls-rth__label">{label}</span>
                               <span className="ls-rth__sort-indicator">
                                 {isSorted ? (
@@ -321,6 +429,7 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                           {col.allowFiltering !== false && (
                             <div className="ls-rth__filter-wrap">
                               <button
+                                type="button"
                                 className={`ls-rth__filter-btn ${isFiltering ? 'ls-rth__filter-btn--active' : ''}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -342,6 +451,7 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                                   />
                                   {runtimeFilters[col.fieldId]?.trim() && (
                                     <button
+                                      type="button"
                                       className="ls-rth__filter-clear"
                                       onClick={() => {
                                         handleRuntimeFilter(col.fieldId, '');
@@ -359,21 +469,67 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                       </th>
                     );
                   })}
+                  {(inlineEnabled || creatingRow || allowInlineDelete) && <th className="ls-rth ls-rth--actions" style={{ width: 88, minWidth: 88 }} />}
                 </tr>
               </thead>
               <tbody>
+                {formError && (
+                  <tr className="ls-inline-form-error-row">
+                    <td
+                      colSpan={visibleListColumns.length + (allowMultiSelect ? 1 : 0) + ((inlineEnabled || creatingRow) ? 1 : 0)}
+                      className="ls-inline-form-error"
+                    >
+                      {formError}
+                    </td>
+                  </tr>
+                )}
+                {creatingRow && (
+                  <tr
+                    className="ls-rtd-row ls-inline-create-row"
+                    onKeyDown={(e) => {
+                      // Inline editors can live inside a parent <form> (detail page) —
+                      // never let Enter implicitly submit the surrounding form.
+                      if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') e.preventDefault();
+                    }}
+                  >
+                    {allowMultiSelect && <td className="ls-rtd ls-rtd--cb" />}
+                    {visibleListColumns.map((col: any) => {
+                      const f = fields.find((ff) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
+                      const editable = !!f && !isSystemField(f.fieldName);
+                      return (
+                        <td key={col.id} className={`ls-rtd ${editable ? 'ls-rtd--editing' : ''}`}>
+                          {editable ? renderEditorCell(f, createDraft, createErrors) : '\u2014'}
+                        </td>
+                      );
+                    })}
+                    {(inlineEnabled || creatingRow) && (
+                      <td className="ls-rtd ls-rtd--actions">
+                        {renderInlineActions(savingCreate, onCreateSave, onCreateCancel)}
+                      </td>
+                    )}
+                  </tr>
+                )}
+
                 {records.map((rec, ri) => {
                   const globalIndex = ri;
                   const isPickerSelected = mode === 'picker' && !!pickerSelectedId && rec.id === pickerSelectedId;
+                  const isEditingRow = inlineEnabled && editingRowId === rec.id;
                   const rowClassName =
                     mode === 'picker'
                       ? `ls-rtd-row${isPickerSelected ? ' ls-rtd-row--selected' : ''}${onRowClick ? ' ls-rtd-row--clickable' : ''}`
-                      : `ls-rtd-row ${selectedIndices.has(globalIndex) ? 'ls-rtd-row--selected' : ''}`;
+                      : `ls-rtd-row ${selectedIndices.has(globalIndex) ? 'ls-rtd-row--selected' : ''}${isEditingRow ? ' ls-rtd-row--editing' : ''}`;
                   return (
                     <tr
                       key={rec.id || ri}
                       className={rowClassName}
                       onClick={mode === 'picker' && onRowClick ? () => onRowClick(rec, globalIndex) : undefined}
+                      onKeyDown={
+                        isEditingRow && inlineEnabled
+                          ? (e) => {
+                              if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') e.preventDefault();
+                            }
+                          : undefined
+                      }
                     >
                       {allowMultiSelect && (
                         <td className="ls-rtd ls-rtd--cb" onClick={(e) => e.stopPropagation()}>
@@ -394,6 +550,7 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                           const isPhoneColumn = !!f && f.logicalType === 'phone';
                           const isEmailColumn = !!f && f.logicalType === 'email';
                           const isLatLngColumn = !!f && f.logicalType === 'lat_lng';
+                          const editable = !!f && !isSystemField(f.fieldName);
                           const cellText = f
                             ? isSystemDateTimeField(f)
                               ? formatSystemDateTimeValue(rec[f.fieldName] ?? rec[f.id], datetimePrefs)
@@ -414,13 +571,15 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                           return (
                             <td
                               key={col.id}
-                              className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''} ${isPrimary ? 'ls-rtd--primary' : ''}`}
+                              className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''} ${isPrimary ? 'ls-rtd--primary' : ''} ${isEditingRow && editable ? 'ls-rtd--editing' : ''}`}
                               style={{ textAlign: col.alignment || (f && NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}
                             >
                               {mode === 'picker' && isPickerSelected && ci === 0 && (
                                 <Check size={13} className="ls-picker-check" />
                               )}
-                              {isPrimary ? (
+                              {isEditingRow && editable ? (
+                                renderEditorCell(f, editDraft, editErrors)
+                              ) : isPrimary ? (
                                 <a
                                   href={`#record-${rec.id}`}
                                   className="ls-primary-link"
@@ -440,13 +599,64 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                           );
                         });
                       })()}
+                      {(inlineEnabled || allowInlineDelete) && (
+                        <td className="ls-rtd ls-rtd--actions" onClick={(e) => e.stopPropagation()}>
+                          {isEditingRow ? (
+                            renderInlineActions(savingRow, onSaveEdit, onCancelEdit)
+                          ) : confirmDeleteId === rec.id ? (
+                            <div className="ls-inline-actions">
+                              <button
+                                type="button"
+                                className="sails-btn sails-btn--danger sails-btn--sm"
+                                onClick={onConfirmDelete}
+                                disabled={deletingRow}
+                                title="Confirm delete"
+                              >
+                                {deletingRow ? <Loader2 size={13} className="ls-spin" /> : <Trash2 size={13} />}
+                              </button>
+                              <button
+                                type="button"
+                                className="sails-btn sails-btn--ghost sails-btn--sm"
+                                onClick={onCancelDelete}
+                                disabled={deletingRow}
+                                title="Cancel"
+                              >
+                                <X size={13} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="ls-inline-actions">
+                              {allowInlineEdit && (
+                                <button
+                                  type="button"
+                                  className="ls-inline-edit-btn"
+                                  onClick={() => onStartEdit && onStartEdit(rec)}
+                                  title="Edit inline"
+                                >
+                                  <Pencil size={13} />
+                                </button>
+                              )}
+                              {allowInlineDelete && (
+                                <button
+                                  type="button"
+                                  className="ls-inline-edit-btn ls-inline-edit-btn--danger"
+                                  onClick={() => onRequestDelete && onRequestDelete(rec)}
+                                  title="Delete record"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
               </tbody>
             </table>
 
-            {totalRecords === 0 && (
+            {totalRecords === 0 && !creatingRow && (
               <div style={{ padding: 32, textAlign: 'center' }}>
                 <p className="ls-empty">No records found.</p>
               </div>
@@ -473,6 +683,7 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                 </div>
                 <div className="ls-pagination__controls">
                   <button
+                    type="button"
                     className="ls-pagination__btn"
                     disabled={safeCurrentPage <= 1}
                     onClick={() => onPageChange(safeCurrentPage - 1)}
@@ -485,10 +696,11 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                     ) : safeCurrentPage === p ? (
                       <span key={p} className="ls-pagination-page ls-pagination-page--active">{p}</span>
                     ) : (
-                      <button key={p} className="ls-pagination-page ls-pagination-page--clickable" onClick={() => onPageChange(p)}>{p}</button>
+                      <button key={p} type="button" className="ls-pagination-page ls-pagination-page--clickable" onClick={() => onPageChange(p)}>{p}</button>
                     )
                   )}
                   <button
+                    type="button"
                     className="ls-pagination__btn"
                     disabled={safeCurrentPage >= totalPages}
                     onClick={() => onPageChange(safeCurrentPage + 1)}

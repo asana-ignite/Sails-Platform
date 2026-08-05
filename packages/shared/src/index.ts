@@ -474,6 +474,12 @@ export interface LayoutConfig {
   allowPaging?: boolean;
   recordsPerPage?: number;
   pagingMode?: 'fixed' | 'dynamic';
+  /** Allow inline row editing wherever this LIST view renders (page + related blocks). */
+  allowInlineEdit?: boolean;
+  /** When set, the view's 'create' action opens an inline create row instead of navigating. */
+  allowInlineCreate?: boolean;
+  /** Allow inline row deletion (with confirmation) wherever this LIST view renders. */
+  allowInlineDelete?: boolean;
 
   // Action buttons (toolbar / context)
   actions?: ListAction[];              // List-level toolbar actions (e.g. Create)

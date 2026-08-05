@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import { X, MoreHorizontal, Search, Database } from 'lucide-react';
 import { normalizeFilters, serializeFilterGroups } from '@sails/shared';
 import { ListViewTable, type RuntimeSortRule } from '../../../components/list/ListViewTable';
+import { useRecordStack } from '../../../contexts/RecordStackContext';
+import { resolveDefaultDetailLayout } from '../../../utils/recordNavigation';
 import '../controls.css';
 
 // ── Shared helpers ──────────────────────────────────────────────
@@ -107,29 +108,6 @@ async function resolveRecordLabel(listViewId: string, targetTable: string, id: s
   } catch {
     return id;
   }
-}
-
-/** Default DETAIL view (active + isDefault → active → first) of a target model. */
-async function resolveDefaultDetailLayout(targetTable: string): Promise<any> {
-  try {
-    const list = await fetch(`/api/console/layouts?tableId=${encodeURIComponent(targetTable)}&viewType=DETAIL&page=1&limit=100`).then(r => r.json());
-    const rows: any[] = list?.data?.rows || [];
-    return (
-      rows.find((r: any) => r.status === 'active' && r.isDefault) ||
-      rows.find((r: any) => r.status === 'active') ||
-      rows[0] ||
-      null
-    );
-  } catch {
-    return null;
-  }
-}
-
-/** Build the record detail route: {current menu path}/{detail layout systemName}/{record id}. */
-function buildDetailRoute(pathname: string, detailSystemName: string, recordId: string): string {
-  const parts = pathname.split('/').filter(Boolean);
-  const menuPath = '/' + parts.slice(0, Math.max(1, parts.length - 2)).join('/');
-  return `${menuPath}/${detailSystemName}/${recordId}`;
 }
 
 // ── Search List modal (embedded List View picker) ───────────────
@@ -564,8 +542,7 @@ export const SearchListControl: FieldControlPlugin = {
   },
 
   RenderDisplay: ({ field, value }: FieldControlProps) => {
-    const location = useLocation();
-    const navigate = useNavigate();
+    const { pushRecord } = useRecordStack();
     const cfg = (field?.config as any) || {};
     const targetTable = cfg.targetTable || '';
     const listViewId = cfg.listView || '';
@@ -587,11 +564,13 @@ export const SearchListControl: FieldControlPlugin = {
 
     if (!raw) return <span>—</span>;
 
+    // Detail (view) mode: the value is a live link that opens the record's
+    // detail view as a stacked card (no navigation, no menu dependency).
     const openDetail = async () => {
       if (!isRealId || !targetTable) return;
       const detail = await resolveDefaultDetailLayout(targetTable);
       if (!detail?.systemName) return;
-      navigate(buildDetailRoute(location.pathname, detail.systemName, raw));
+      pushRecord({ tableName: targetTable, layoutKey: detail.systemName, recordId: raw });
     };
 
     // Detail (view) mode: the value is a live link to the record's detail view.
