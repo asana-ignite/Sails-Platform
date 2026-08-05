@@ -69,6 +69,14 @@ Please see [DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md) for the consolid
 
 ---
 
+## Topic Roadmaps
+
+- **Transaction & Multi-Tenant Resilience** → [TRANSACTION_RESILIENCE_ROADMAP.md](TRANSACTION_RESILIENCE_ROADMAP.md) — network-loss idempotency, transactional atomicity, bulk data API, and multi-tenant concurrency hardening.
+- **Advanced Analytics** → [ANALYTICS_ROADMAP.md](ANALYTICS_ROADMAP.md)
+- **Plugin Platform** → [PLUGIN_PLATFORM_ROADMAP.md](PLUGIN_PLATFORM_ROADMAP.md)
+
+---
+
 ## Phase 6: Cellular Zoning Architecture & Super Admin War Room (🔲 Planned)
 **Vision:** Evolve SAILS into a Cell-Based Zoning Architecture with global domain routing, dynamic DSN pool resolution, and unified War Room telemetry.
 

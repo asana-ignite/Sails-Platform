@@ -32,8 +32,13 @@ export async function GET(req: Request) {
     const search = searchParams.get('search') || '';
     const statusFilter = searchParams.get('status'); // 'draft' | 'active'
     const tableId = searchParams.get('tableId');
+    const viewTypeFilter = searchParams.get('viewType'); // 'LIST' | 'DETAIL' | 'FORM'
 
     const where: any = {};
+
+    if (viewTypeFilter) {
+      where.viewType = viewTypeFilter;
+    }
 
     if (tableId) {
       const targetTable = await db.tableDefinition.findFirst({

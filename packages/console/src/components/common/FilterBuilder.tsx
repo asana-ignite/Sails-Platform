@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Filter, Check } from 'lucide-react';
+import { Plus, Trash2, Filter, Check, ChevronDown } from 'lucide-react';
 import CustomSelect from './CustomSelect';
 import RecordPicker from './RecordPicker';
 import FieldPathPicker from './FieldPathPicker';
@@ -337,6 +337,41 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
     return literalValueEditor(rule);
   };
 
+  const [showSummary, setShowSummary] = useState(true);
+
+  /** Human-readable field label for the read-only summary. */
+  const summaryFieldLabel = (rule: FilterRule): string => {
+    if (rule.fieldPath) return rule.fieldPath;
+    return findFieldAnywhere(rule.fieldId)?.name || rule.fieldId || '(field)';
+  };
+
+  /** Human-readable RHS label for the read-only summary (no SQL is ever shown). */
+  const summaryValueLabel = (rule: FilterRule): string => {
+    const source = rule.valueSource || 'value';
+    if (source === 'context') {
+      const macro = rule.contextMacro || '@me';
+      const opt = CONTEXT_FLAT_OPTIONS.find((o) => o.value === macro);
+      return isNPeriodMacro(macro) ? `${opt?.label || macro} (${rule.contextN ?? 30})` : (opt?.label || macro);
+    }
+    if (source === 'field') {
+      const ref = rule.refFieldPath || findFieldAnywhere(rule.refFieldId || '')?.name || rule.refFieldId;
+      return ref ? `Field \u2192 ${ref}` : '(field)';
+    }
+    if (source === 'record') {
+      const ref = rule.refFieldPath || findFieldAnywhere(rule.refFieldId || '')?.name || rule.refFieldId || 'field';
+      const rec = rule.refRecordId ? `\u2026${rule.refRecordId.slice(-8)}` : '(record)';
+      return `${ref} of record ${rec}`;
+    }
+    const field = findFieldAnywhere(rule.fieldId);
+    const raw = rule.value ?? '';
+    if (field?.logicalType === 'boolean') return raw === 'true' ? 'Yes' : raw === 'false' ? 'No' : (raw === '' ? '(empty)' : raw);
+    if (Array.isArray(field?.options) && (field.options as { label: string; value: string }[]).length > 0) {
+      const hit = (field.options as { label: string; value: string }[]).find((o) => o.value === raw);
+      if (hit) return hit.label;
+    }
+    return raw === '' ? '(empty)' : String(raw);
+  };
+
   return (
     <div className="fb-widget">
       {showHeader && (
@@ -485,6 +520,50 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
             <Plus size={13} /> Add Filter Rule
           </button>
         </div>
+      </div>
+
+      <div className="fb-summary">
+        <button type="button" className="fb-summary-head" onClick={() => setShowSummary((v) => !v)}>
+          <span className="fb-summary-title">
+            <ChevronDown size={13} className={`fb-summary-chev ${showSummary ? '' : 'fb-summary-chev--closed'}`} />
+            Where Summary
+          </span>
+          <span className="fb-count-badge">{ruleCountLabel}</span>
+        </button>
+        {showSummary && (
+          <div className="fb-summary-body">
+            {groups.filter((g) => g.rules.some((r) => r.fieldId)).length === 0 ? (
+              <p className="fb-summary-empty">No filter rules configured.</p>
+            ) : (
+              groups.map((grp, gi) => {
+                const rules = grp.rules.filter((r) => r.fieldId);
+                if (rules.length === 0) return null;
+                return (
+                  <div key={grp.id} className="fb-summary-group">
+                    <div className="fb-summary-group-head">
+                      <span className="fb-summary-group-name">Group {grp.name}</span>
+                      {gi > 0 && (
+                        <span className={`fb-tab-logic-chip ${grp.groupLogic === 'and' ? 'fb-tab-logic-chip--and' : 'fb-tab-logic-chip--or'}`}>
+                          {grp.groupLogic.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    {rules.map((r, ri) => (
+                      <div key={r.id} className="fb-summary-row">
+                        <span className={`fb-summary-logic ${r.logic === 'or' ? 'fb-summary-logic--or' : ''}`}>
+                          {ri > 0 ? r.logic.toUpperCase() : '\u00a0'}
+                        </span>
+                        <span className="fb-summary-field">{summaryFieldLabel(r)}</span>
+                        <span className="fb-summary-op">{filterOperatorLabel(r.operator)}</span>
+                        {!NULL_OPS.has(r.operator) && <span className="fb-summary-value">{summaryValueLabel(r)}</span>}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
 
       <div className="fb-footer">

@@ -324,6 +324,106 @@
   background: var(--sails-bg-body, #f8fafc);
   border-top: 1px solid var(--sails-border-color, #e2e8f0);
   border-radius: 0 0 var(--sails-radius-md, 8px) var(--sails-radius-md, 8px);
+  flex-shrink: 0;
+}
+
+/* ─── Read-only Where Summary ─── */
+.fb-summary {
+  border-top: 1px solid var(--sails-border-color, #e2e8f0);
+  background: var(--sails-bg-body, #f8fafc);
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+}
+.fb-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--sails-text-main, #344759);
+}
+.fb-summary-head:hover {
+  background: rgba(157, 206, 224, 0.08);
+}
+.fb-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fb-summary-chev {
+  transition: transform 0.15s ease;
+}
+.fb-summary-chev--closed {
+  transform: rotate(-90deg);
+}
+.fb-summary-body {
+  padding: 0 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.fb-summary-empty {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--sails-text-muted, #64748b);
+  font-style: italic;
+}
+.fb-summary-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.fb-summary-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.fb-summary-group-name {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sails-text-muted, #64748b);
+}
+.fb-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.76rem;
+  padding: 3px 8px;
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 5px;
+}
+.fb-summary-logic {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--sails-primary, #9dcee0);
+  min-width: 24px;
+}
+.fb-summary-logic--or {
+  color: var(--sails-danger, #ef4444);
+}
+.fb-summary-field {
+  font-weight: 500;
+  color: var(--sails-text-main, #344759);
+}
+.fb-summary-op {
+  color: var(--sails-text-muted, #64748b);
+}
+.fb-summary-value {
+  color: var(--sails-text-main, #344759);
 }
 
 .fb-footer-right {

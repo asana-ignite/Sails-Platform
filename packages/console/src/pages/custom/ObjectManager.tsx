@@ -44,16 +44,51 @@ import {
   ExternalLink,
   AlertCircle,
   ClipboardList,
-  FileText
+  FileText,
+  Filter
 } from 'lucide-react';
-import { TableLayout, LayoutType, ViewType, FIELD_TYPE_REGISTRY } from '@sails/shared';
-import { CustomSelect } from '../../components/common/CustomSelect';
+import { TableLayout, LayoutType, ViewType, FIELD_TYPE_REGISTRY, FilterGroup } from '@sails/shared';
+import { CustomSelect, SelectOption } from '../../components/common/CustomSelect';
 import { DynamicIcon } from '../../components/common/DynamicIcon';
+import { FilterBuilder } from '../../components/common/FilterBuilder';
 import './ObjectManager.css';
 
 const SortIcon: React.FC<{ active: boolean; direction?: 'asc' | 'desc' }> = ({ active, direction }) => {
   if (!active) return <ArrowUpDown size={14} className="om-sort-icon--idle" />;
   return direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
+};
+
+/** List View picker for the relation "Search List" display control. */
+const LayoutSelectParam: React.FC<{ targetTable: string; value: string; onChange: (v: string) => void }> = ({ targetTable, value, onChange }) => {
+  const [options, setOptions] = useState<SelectOption[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!targetTable) { setOptions([]); return; }
+    let cancelled = false;
+    setLoading(true);
+    fetch(`/api/console/layouts?tableId=${encodeURIComponent(targetTable)}&viewType=LIST&page=1&limit=100`)
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return;
+        const rows: any[] = data?.data?.rows || [];
+        setOptions(rows.map(l => ({ value: l.id, label: `${l.name}${l.status === 'active' ? '' : ' (draft)'}` })));
+      })
+      .catch(() => { if (!cancelled) setOptions([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [targetTable]);
+
+  return (
+    <CustomSelect
+      size="md"
+      searchable
+      value={value || ''}
+      options={[{ value: '', label: 'Default List View' }, ...options]}
+      onChange={onChange}
+      placeholder={loading ? 'Loading List Views...' : 'Choose List View...'}
+    />
+  );
 };
 
 interface SelectOptionSourceConfigProps {
@@ -63,6 +98,7 @@ interface SelectOptionSourceConfigProps {
 }
 
 const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ values, onChange, tables }) => {
+  const [showFilterBuilder, setShowFilterBuilder] = useState(false);
   const isLookup = values.sourceType === 'object';
   const selectCustom = () => onChange((prev: Record<string, any>) => ({ ...prev, sourceType: 'custom' }));
   const selectObject = () => onChange((prev: Record<string, any>) => ({ ...prev, sourceType: 'object' }));
@@ -74,6 +110,10 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
         label: `${f.name} (${f.fieldName})`
       }))
     : [];
+
+  const filterRuleCount = Array.isArray(values.sourceFilter)
+    ? values.sourceFilter.reduce((acc: number, g: FilterGroup) => acc + (g.rules?.length || 0), 0)
+    : 0;
 
   return (
     <div className="om-form-grid-2">
@@ -138,13 +178,15 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
             <label className="om-field-label">Source Data Model *</label>
             <CustomSelect
               size="md"
+              searchable
               disabled={!isLookup}
               value={values.sourceTable || ''}
               options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
               onChange={val => onChange(prev => ({
                 ...prev,
                 sourceTable: val,
-                sourceColumn: ''
+                sourceColumn: '',
+                sourceFilter: undefined
               }))}
               placeholder="Select Source Data Model"
             />
@@ -153,6 +195,7 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
             <label className="om-field-label">Source Field / Column *</label>
             <CustomSelect
               size="md"
+              searchable
               disabled={!isLookup || !lookupSourceTable}
               value={values.sourceColumn || ''}
               options={lookupFieldOptions}
@@ -160,8 +203,50 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
               placeholder={lookupSourceTable ? "Select Source Field" : "Select Data Model First"}
             />
           </div>
+
+          {isLookup && values.sourceTable && values.sourceColumn && (
+            <button
+              type="button"
+              className="sails-btn sails-btn--secondary sails-btn--sm om-source-filter"
+              onClick={() => setShowFilterBuilder(true)}
+            >
+              <Filter size={13} style={{ marginRight: 6 }} />
+              {filterRuleCount > 0 ? `Filter (${filterRuleCount} ${filterRuleCount === 1 ? 'Rule' : 'Rules'})` : 'Filter'}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Query Studio modal — reuses the same FilterBuilder component as the List View */}
+      {showFilterBuilder && createPortal(
+        <div className="om-modal-overlay om-qstudio-overlay" onClick={() => setShowFilterBuilder(false)}>
+          <div className="om-modal om-qstudio-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="om-qstudio-modal__header">
+              <h3 className="om-qstudio-modal__title">
+                <Filter size={14} /> Filter Dropdown Values
+              </h3>
+              <button type="button" className="om-modal-close" onClick={() => setShowFilterBuilder(false)} aria-label="Close Query Studio">
+                <X size={14} />
+              </button>
+            </div>
+            <div className="om-qstudio-modal__body">
+              <FilterBuilder
+                fields={lookupSourceTable?.fields || []}
+                rootTableName={values.sourceTable}
+                initialGroups={values.sourceFilter ?? []}
+                showHeader={false}
+                title="Filter Dropdown Values"
+                onApply={groups => {
+                  onChange(prev => ({ ...prev, sourceFilter: groups }));
+                  setShowFilterBuilder(false);
+                }}
+                onCancel={() => setShowFilterBuilder(false)}
+              />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
@@ -589,6 +674,7 @@ const ObjectManager: React.FC = () => {
         delete finalConfig.optionsText;
         delete finalConfig.sourceTable;
         delete finalConfig.sourceColumn;
+        delete finalConfig.sourceFilter;
       } else {
         delete finalConfig.optionsText;
         delete finalConfig.options;
@@ -642,7 +728,8 @@ const ObjectManager: React.FC = () => {
           sourceType: 'object',
           sourceTable: cfg.sourceTable || '',
           sourceColumn: cfg.sourceColumn || '',
-          allowMultiple: !!cfg.allowMultiple
+          allowMultiple: !!cfg.allowMultiple,
+          sourceFilter: Array.isArray(cfg.sourceFilter) ? cfg.sourceFilter : undefined
         });
       } else {
         const text = Array.isArray(cfg.options)
@@ -676,6 +763,7 @@ const ObjectManager: React.FC = () => {
         delete finalConfig.optionsText;
         delete finalConfig.sourceTable;
         delete finalConfig.sourceColumn;
+        delete finalConfig.sourceFilter;
       } else {
         delete finalConfig.optionsText;
         delete finalConfig.options;
@@ -2013,6 +2101,24 @@ const ObjectManager: React.FC = () => {
                                   );
                                 }
 
+                                if (param.type === 'layout_select') {
+                                  return (
+                                    <div key={param.name} className="om-field-group">
+                                      <label className="om-field-label">{param.label}</label>
+                                      <LayoutSelectParam
+                                        targetTable={dynamicConfigValues['targetTable'] || ''}
+                                        value={dynamicConfigValues[param.name] || ''}
+                                        onChange={val => setDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
+                                      />
+                                      {param.description && (
+                                        <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                          {param.description}
+                                        </small>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
                                 if (param.type === 'textarea') {
                                   return (
                                     <div key={param.name} className="om-field-group om-field-group--full">
@@ -2359,6 +2465,24 @@ const ObjectManager: React.FC = () => {
                                         options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
                                         onChange={val => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
                                         placeholder="Search Target Model..."
+                                      />
+                                      {param.description && (
+                                        <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                                          {param.description}
+                                        </small>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
+                                if (param.type === 'layout_select') {
+                                  return (
+                                    <div key={param.name} className="om-field-group">
+                                      <label className="om-field-label">{param.label}</label>
+                                      <LayoutSelectParam
+                                        targetTable={editDynamicConfigValues['targetTable'] || ''}
+                                        value={editDynamicConfigValues[param.name] || ''}
+                                        onChange={val => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
                                       />
                                       {param.description && (
                                         <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>

@@ -1393,10 +1393,10 @@
 /* ─── Floating Overlay ────────────────────────────────────────── */
 
 .ls-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.ls-overlay-card { background: var(--sails-bg-card, #ffffff); border-radius: 10px; width: 560px; max-width: 90vw; max-height: 80vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15); }
-.ls-overlay-card__header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--sails-border, #e2e8f0); }
+.ls-overlay-card { background: var(--sails-bg-card, #ffffff); border-radius: 10px; width: 560px; max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15); }
+.ls-overlay-card__header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--sails-border, #e2e8f0); flex-shrink: 0; }
 .ls-overlay-card__title { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 14px; font-weight: 600; color: var(--sails-text-primary, #1e293b); }
-.ls-overlay-card__body { padding: 4px 16px 16px; }
+.ls-overlay-card__body { padding: 4px 16px 16px; flex: 1; min-height: 0; overflow-y: auto; }
 
 /* ─── View Properties (sort rules + filter chips) ──────────────── */
 

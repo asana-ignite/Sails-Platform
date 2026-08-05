@@ -3387,7 +3387,7 @@ const LayoutStudio: React.FC = () => {
         <div className="ls-overlay" onClick={closeListOverlay}>
           <div
             className="ls-overlay-card"
-            style={listOverlayMode === 'edit-filter' ? { width: 1080, maxWidth: '95vw' } : undefined}
+            style={listOverlayMode === 'edit-filter' ? { width: 1080, maxWidth: '95vw', height: '92vh', maxHeight: '95vh', minHeight: 560 } : undefined}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="ls-overlay-card__header">
@@ -3453,7 +3453,7 @@ const LayoutStudio: React.FC = () => {
                   </div>
                 </>
                ) : listOverlayMode === 'edit-filter' && (
-                <div className="ls-overlay-card__body" style={{ padding: '4px 16px 16px' }}>
+                <div style={{ padding: '4px 0 16px' }}>
                   <FilterBuilder
                     fields={allFields}
                     rootTableName={tableMeta?.tableName || ''}

@@ -486,6 +486,58 @@
     margin-top: 4px;
 }
 
+/* Query Studio filter button for Selection fields (Lookup source) */
+.om-source-filter {
+    display: flex;
+    margin-top: 12px;
+    margin-left: auto;
+    white-space: nowrap;
+    height: 38px;
+    width: auto;
+}
+
+/* Query Studio modal (reuses the FilterBuilder used by the List View overlay) */
+.om-qstudio-overlay {
+    z-index: 10000;
+}
+
+.om-qstudio-modal {
+    width: 1080px;
+    max-width: 95vw;
+    height: 92vh;
+    max-height: 95vh;
+    min-height: 560px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.om-qstudio-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--sails-border-color);
+    flex-shrink: 0;
+}
+
+.om-qstudio-modal__title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sails-text-main);
+}
+
+.om-qstudio-modal__body {
+    padding: 4px 16px 16px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
 /* Type Selector Grid */
 .om-type-grid {
     display: grid;

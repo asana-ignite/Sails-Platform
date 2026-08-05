@@ -267,7 +267,7 @@ export interface FieldParameterOption {
 export interface FieldParameterDefinition {
   name: string;             // Key in config JSON e.g. "maxLength"
   label: string;            // UI label e.g. "Max Character Length"
-  type: 'text' | 'number' | 'boolean' | 'select' | 'textarea' | 'model_select';
+  type: 'text' | 'number' | 'boolean' | 'select' | 'textarea' | 'model_select' | 'layout_select';
   defaultValue?: any;
   description?: string;
   placeholder?: string;
@@ -389,10 +389,16 @@ export interface SelectFieldConfig {
   sourceTable?: string;
   sourceColumn?: string;
   allowMultiple?: boolean;
+  /** Query Studio filter groups applied to the source model when resolving dropdown options. */
+  sourceFilter?: FilterGroup[];
 }
 
 export interface RelationFieldConfig {
   targetTable?: string;
+  /** Display Control: 'searchable_dropdown' | 'select' | 'search_list'. */
+  controlStyle?: 'searchable_dropdown' | 'select' | 'search_list';
+  /** For search_list: List View (layout id or systemName) of the target model to embed in the picker. */
+  listView?: string;
 }
 
 export interface EmailFieldConfig {

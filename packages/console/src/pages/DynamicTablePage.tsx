@@ -4,30 +4,17 @@ import {
   Columns,
   Layers,
   Database,
-  Plus,
-  Search,
   AlertCircle,
-  ArrowUp,
-  ArrowDown,
-  ArrowUpDown,
   RotateCcw,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Download,
   Filter,
 } from 'lucide-react';
 import { useConsole } from '../contexts/ConsoleContext';
 import type { ConsoleMenu, TableLayout, SailsFieldDefinition, ListAction, FilterGroup } from '@sails/shared';
-import { isSystemField, formatDateTimeValue, formatDecimalValue, normalizeFilters, serializeFilterGroups } from '@sails/shared';
-import { filterOperatorLabel } from '../components/common/FilterBuilder';
+import { isSystemField, normalizeFilters, serializeFilterGroups } from '@sails/shared';
 import { useDateTimePrefs, isSystemDateTimeField, formatSystemDateTimeValue } from '../utils/systemDateTime';
-import { UserControl, useTenantUsers } from '../features/controls/plugins/UserControl';
-import { PhoneControl } from '../features/controls/plugins/PhoneControl';
-import { EmailControl } from '../features/controls/plugins/EmailControl';
-import { LatLngControl } from '../features/controls/plugins/LatLngControl';
+import { useTenantUsers } from '../features/controls/plugins/UserControl';
+import { ListViewTable, renderListFieldValue, getVisibleColumns, resolveLabel } from '../components/list/ListViewTable';
 import DynamicIcon from '../components/common/DynamicIcon';
-import CustomSelect from '../components/common/CustomSelect';
 import LoadingScreen from '../components/common/LoadingScreen';
 import { fetchCached } from '../api/client';
 import { ActionRegistry } from '../features/actions';
@@ -35,52 +22,6 @@ import '../features/controls/controls.css';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
 import './custom/layouts-responsive.css';
-
-function resolveLabel(col: any, fields: SailsFieldDefinition[]): string {
-  const fd = fields.find((f) => f.id === col.fieldId || f.fieldName === col.fieldId);
-  return col.labelOverride || fd?.name || col.fieldId;
-}
-
-const NUMERIC_COLUMN_TYPES = new Set(['number', 'decimal', 'currency', 'percentage', 'percent']);
-
-function renderListFieldValue(field: SailsFieldDefinition, record: Record<string, any>): string {
-  const val = record[field.fieldName];
-  if (val === undefined || val === null) return '\u2014';
-  if (field.logicalType === 'currency') return `\u0E3F${formatDecimalValue(val, field.config, field.logicalType)}`;
-  if (field.logicalType === 'percentage' || field.logicalType === 'percent') return `${formatDecimalValue(val, field.config, field.logicalType)}%`;
-  if (field.logicalType === 'decimal' || field.logicalType === 'number') return formatDecimalValue(val, field.config, field.logicalType);
-  if (field.logicalType === 'boolean') return val ? 'Yes' : 'No';
-  if (field.logicalType === 'date' || field.logicalType === 'datetime' || field.logicalType === 'timestamp' || field.logicalType === 'time') {
-    const formatted = formatDateTimeValue(val, field.config, field.logicalType);
-    return formatted || '\u2014';
-  }
-  if (field.logicalType === 'select') {
-    const options = (field.config as any)?.options || [];
-    return options.find((o: any) => o.value === val)?.label || String(val);
-  }
-  if (field.logicalType === 'lat_lng' && typeof val === 'object' && val !== null) {
-    return `${val.lat}, ${val.lng}`;
-  }
-  if (field.logicalType === 'address' && typeof val === 'object' && val !== null) {
-    const parts = [
-      val.address1,
-      val.address2,
-      [val.city, val.state].filter((p: any) => typeof p === 'string' && p.trim() !== '').join(', '),
-      val.country,
-      val.postalCode,
-    ].filter((p: any) => typeof p === 'string' && p.trim() !== '');
-    return parts.length > 0 ? parts.join(', ') : JSON.stringify(val);
-  }
-  return String(val);
-}
-
-const LIST_PER_PAGE_OPTIONS = [
-  { value: 5, label: '5' },
-  { value: 10, label: '10' },
-  { value: 25, label: '25' },
-  { value: 50, label: '50' },
-  { value: 100, label: '100' },
-];
 
 const DynamicTablePage: React.FC = () => {
   const { apps, navigationItems } = useConsole();
@@ -413,49 +354,11 @@ const DynamicTablePage: React.FC = () => {
     return raw;
   }, [layout]);
 
-  const allowMultiSelect = config?.allowMultiSelect ?? true;
-  const allowPaging = config?.allowPaging ?? true;
-  const pagingMode = config?.pagingMode || 'dynamic';
-
-  const rawCols = useMemo(() => {
-    if (config?.columns && config.columns.length > 0) return config.columns;
-    return fields
-      .filter((f) => !isSystemField(f.fieldName))
-      .map((f, idx) => ({
-        id: `col-${f.id}`,
-        fieldId: f.id,
-        labelOverride: f.name,
-        visible: true,
-        alignment: 'left',
-        allowSorting: true,
-        allowFiltering: true,
-        position: idx
-      }));
-  }, [config, fields]);
-
-  const sortedListColumns = useMemo(() => {
-    return [...rawCols].sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0));
-  }, [rawCols]);
-
-  const visibleListColumns = useMemo(() => {
-    return sortedListColumns.filter((c: any) => c.visible !== false);
-  }, [sortedListColumns]);
-
-  const listRuntimeRecords = useMemo(() => records, [records]);
-
-  const totalPages = useMemo(() => {
-    if (!allowPaging) return 1;
-    return Math.max(1, Math.ceil(totalRecords / recordsPerPage));
-  }, [allowPaging, totalRecords, recordsPerPage]);
-
-  const safeCurrentPage = useMemo(() => {
-    return Math.max(1, Math.min(currentPage, totalPages));
-  }, [currentPage, totalPages]);
-
   const csvExportData = useMemo(() => {
-    const headers = visibleListColumns.map((col: any) => resolveLabel(col, fields));
+    const cols = getVisibleColumns(config, fields);
+    const headers = cols.map((col: any) => resolveLabel(col, fields));
     const rows = records.map((rec) =>
-      visibleListColumns.map((col: any) => {
+      cols.map((col: any) => {
         const f = fields.find((ff: any) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
         if (!f) return rec[col.fieldId] !== undefined ? String(rec[col.fieldId]) : '';
         if (isSystemDateTimeField(f)) return formatSystemDateTimeValue(rec[f.fieldName] ?? rec[f.id], datetimePrefs);
@@ -464,66 +367,7 @@ const DynamicTablePage: React.FC = () => {
       })
     );
     return { headers, rows };
-  }, [visibleListColumns, fields, records]);
-
-  const currentPageRecords = useMemo(() => records, [records]);
-
-  const allSelectedOnPage = useMemo(() => {
-    if (currentPageRecords.length === 0) return false;
-    return currentPageRecords.every((_, i) => selectedIndices.has(i));
-  }, [currentPageRecords, selectedIndices]);
-
-  const pageNumbers = useMemo(() => {
-    const items: (number | 'ellipsis')[] = [];
-    for (let p = 1; p <= totalPages; p++) {
-      if (p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1) {
-        if (items.length > 0 && p - (items[items.length - 1] as number) > 1) items.push('ellipsis');
-        items.push(p);
-      }
-    }
-    return items;
-  }, [totalPages, safeCurrentPage]);
-
-  const handleRuntimeSort = (columnId: string) => {
-    const col = visibleListColumns.find((c: any) => c.id === columnId);
-    if (!col) return;
-    const fieldId = col.fieldId;
-    setRuntimeSortRules((prev) => {
-      const idx = prev.findIndex((r) => r.fieldId === fieldId);
-      if (idx === -1) return [...prev, { fieldId, direction: 'asc' }];
-      if (prev[idx].direction === 'asc') {
-        const next = [...prev];
-        next[idx] = { fieldId, direction: 'desc' };
-        return next;
-      }
-      return prev.filter((r) => r.fieldId !== fieldId);
-    });
-  };
-
-  const handleRuntimeFilter = (fieldId: string, value: string) => {
-    setRuntimeFilters((prev) => ({ ...prev, [fieldId]: value }));
-  };
-
-  const toggleSelectAll = () => {
-    if (allSelectedOnPage) {
-      setSelectedIndices(new Set());
-    } else {
-      const next = new Set<number>();
-      currentPageRecords.forEach((_, i) => next.add(i));
-      setSelectedIndices(next);
-    }
-  };
-
-  const toggleSelectRecord = (globalIdx: number) => {
-    setSelectedIndices((prev) => {
-      const next = new Set(prev);
-      if (next.has(globalIdx)) next.delete(globalIdx);
-      else next.add(globalIdx);
-      return next;
-    });
-  };
-
-
+  }, [config, fields, records]);
 
   if (!activeMenu?.dataModelId && !activeMenu?.listViewId) {
     return (
@@ -647,258 +491,59 @@ const DynamicTablePage: React.FC = () => {
 
       {/* ── Layout Studio Preview Mode Runtime Table ── */}
       <section className="sails-dynamic-table__content">
-        <div className="ls-table-card">
-          <div className="ls-table-card__header">
-            <Columns size={13} />
-            <span className="ls-table-card__title">{displayTitle}</span>
-            <span className="ls-table-card__badge" style={{ marginLeft: 'auto' }}>
-              {totalRecords} rows
-            </span>
-            {allowMultiSelect && selectedIndices.size > 0 && (
-              <span className="ls-table-card__badge" style={{ background: 'rgba(157,206,224,0.25)', color: 'var(--sails-primary)' }}>
-                {selectedIndices.size} selected
+        <ListViewTable
+          mode="page"
+          config={config}
+          fields={fields}
+          records={records}
+          totalRecords={totalRecords}
+          page={currentPage}
+          onPageChange={setCurrentPage}
+          recordsPerPage={recordsPerPage}
+          onRecordsPerPageChange={setRecordsPerPage}
+          sortRules={runtimeSortRules}
+          onSortRulesChange={setRuntimeSortRules}
+          runtimeFilters={runtimeFilters}
+          onRuntimeFiltersChange={setRuntimeFilters}
+          activePreviewFilter={activePreviewFilter}
+          onActivePreviewFilterChange={setActivePreviewFilter}
+          selectedIndices={selectedIndices}
+          onSelectionChange={setSelectedIndices}
+          onPrimaryLinkClick={(rec, col) => {
+            const menuPath = activeMenu?.path?.replace(/\/+$/, '');
+            const layoutKey =
+              detailLayoutMapRef.current.get(col.targetDetailLayoutId || '') ||
+              col.targetDetailLayoutId ||
+              defaultDetailLayoutKeyRef.current;
+            if (menuPath && layoutKey) {
+              navigate(`${menuPath}/${layoutKey}/${rec.id}`);
+            }
+          }}
+          header={
+            <div className="ls-table-card__header">
+              <Columns size={13} />
+              <span className="ls-table-card__title">{displayTitle}</span>
+              <span className="ls-table-card__badge" style={{ marginLeft: 'auto' }}>
+                {totalRecords} rows
               </span>
-            )}
-            {runtimeSortRules.length > 0 && (
-              <button className="ls-block__btn" onClick={() => setRuntimeSortRules([])} title="Reset sort" style={{ marginLeft: 4 }}>
-                <RotateCcw size={11} />
-              </button>
-            )}
-            <div className="dtp-filter-head" style={{ marginLeft: 8 }}>
-              <button type="button" className="sails-btn sails-btn--ghost sails-btn--sm dtp-filter-btn" title="Saved view filters">
-                <Filter size={12} /> Filters
-              </button>
-            </div>
-          </div>
-
-          <div className="ls-table-card__body" style={{ padding: 0 }}>
-            {visibleListColumns.length === 0 ? (
-              <div style={{ padding: 16 }}><p className="ls-empty">No columns visible in this list view configuration.</p></div>
-            ) : (
-              <div className="ls-preview-wrap">
-                <table className="ls-runtime-table">
-                  <thead>
-                    <tr>
-                      {allowMultiSelect && (
-                        <th className="ls-rth ls-rth--cb" style={{ width: 40, minWidth: 40 }}>
-                          <div className="ls-rth__inner" style={{ justifyContent: 'center' }}>
-                            <input
-                              type="checkbox"
-                              checked={currentPageRecords.length > 0 && allSelectedOnPage}
-                              ref={(el) => { if (el) el.indeterminate = !allSelectedOnPage && currentPageRecords.some((_, i) => selectedIndices.has(i)); }}
-                              onChange={toggleSelectAll}
-                              title="Select all on page"
-                            />
-                          </div>
-                        </th>
-                      )}
-                      {visibleListColumns.map((col: any) => {
-                        const f = fields.find((ff) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
-                        const label = resolveLabel(col, fields);
-                        const runtimeSortIdx = runtimeSortRules.findIndex((r) => r.fieldId === col.fieldId || (f && r.fieldId === f.id));
-                        const isSorted = runtimeSortIdx !== -1;
-                        const sortDir = isSorted ? runtimeSortRules[runtimeSortIdx].direction : null;
-                        const isFiltering = !!(col.fieldId && runtimeFilters[col.fieldId]?.trim());
-                        return (
-                          <th
-                            key={col.id}
-                            className={`ls-rth ${col.allowSorting !== false ? 'ls-rth--sortable' : ''} ${isSorted ? 'ls-rth--sorted' : ''}`}
-                            style={{ ...(col.width ? { width: `${col.width}${col.widthUnit || 'px'}` } : {}), textAlign: col.alignment || (f && NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}
-                          >
-                            <div className="ls-rth__inner">
-                              {col.allowSorting !== false ? (
-                                <button className="ls-rth__sort-btn" onClick={() => handleRuntimeSort(col.id)}>
-                                  <span className="ls-rth__label">{label}</span>
-                                  <span className="ls-rth__sort-indicator">
-                                    {isSorted ? (
-                                      sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
-                                    ) : (
-                                      <ArrowUpDown size={11} className="ls-rth__sort-icon" />
-                                    )}
-                                  </span>
-                                </button>
-                              ) : (
-                                <span className="ls-rth__label">{label}</span>
-                              )}
-                              {col.allowFiltering !== false && (
-                                <div className="ls-rth__filter-wrap">
-                                  <button
-                                    className={`ls-rth__filter-btn ${isFiltering ? 'ls-rth__filter-btn--active' : ''}`}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setActivePreviewFilter(activePreviewFilter === col.fieldId ? null : col.fieldId);
-                                    }}
-                                    title="Filter this column"
-                                  >
-                                    <Search size={11} />
-                                  </button>
-                                  {activePreviewFilter === col.fieldId && (
-                                    <div className="ls-rth__filter-popover" onClick={(e) => e.stopPropagation()}>
-                                      <input
-                                        className="sails-input"
-                                        value={runtimeFilters[col.fieldId] || ''}
-                                        onChange={(e) => handleRuntimeFilter(col.fieldId, e.target.value)}
-                                        placeholder={`Filter ${label}...`}
-                                        autoFocus
-                                        style={{ fontSize: 12, padding: '5px 8px', width: 180 }}
-                                      />
-                                      {runtimeFilters[col.fieldId]?.trim() && (
-                                        <button
-                                          className="ls-rth__filter-clear"
-                                          onClick={() => {
-                                            handleRuntimeFilter(col.fieldId, '');
-                                            setActivePreviewFilter(null);
-                                          }}
-                                        >
-                                          <X size={12} /> Clear
-                                        </button>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentPageRecords.map((rec, ri) => {
-                      const globalIndex = ri;
-                      return (
-                        <tr key={rec.id || ri} className={`ls-rtd-row ${selectedIndices.has(globalIndex) ? 'ls-rtd-row--selected' : ''}`}>
-                          {allowMultiSelect && (
-                            <td className="ls-rtd ls-rtd--cb" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="checkbox"
-                                checked={selectedIndices.has(globalIndex)}
-                                onChange={() => toggleSelectRecord(globalIndex)}
-                              />
-                            </td>
-                          )}
-                          {(() => {
-                            const primaryColId = visibleListColumns.find((c: any) => c.isPrimaryLink)?.id || visibleListColumns[0]?.id;
-                            return visibleListColumns.map((col: any) => {
-                              const f = fields.find((ff) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
-                              const val = f ? rec[f.fieldName] : rec[col.fieldId];
-                              const isPrimary = col.id === primaryColId;
-                              const isUserColumn = !!f && f.logicalType === 'user';
-                              const isPhoneColumn = !!f && f.logicalType === 'phone';
-                              const isEmailColumn = !!f && f.logicalType === 'email';
-                              const isLatLngColumn = !!f && f.logicalType === 'lat_lng';
-                              const cellText = f
-                                ? isSystemDateTimeField(f)
-                                  ? formatSystemDateTimeValue(rec[f.fieldName] ?? rec[f.id], datetimePrefs)
-                                  : isUserColumn
-                                    ? userDisplayName(rec[f.fieldName] ?? rec[f.id])
-                                    : renderListFieldValue(f, rec)
-                                : (val !== undefined && val !== null ? String(val) : '—');
-                              const cellNode = isUserColumn
-                                ? <UserControl.RenderDisplay field={f} value={rec[f.fieldName] ?? rec[f.id]} />
-                                : isPhoneColumn
-                                  ? <PhoneControl.RenderDisplay field={f} value={rec[f.fieldName] ?? rec[f.id]} />
-                                  : isEmailColumn
-                                    ? <EmailControl.RenderDisplay field={f} value={rec[f.fieldName] ?? rec[f.id]} />
-                                    : isLatLngColumn
-                                      ? <LatLngControl.RenderDisplay field={f} value={rec[f.fieldName] ?? rec[f.id]} />
-                                      : cellText;
-
-                              return (
-                                <td
-                                  key={col.id}
-                                  className={`ls-rtd ${col.wrapText ? 'ls-rtd--wrap' : ''} ${isPrimary ? 'ls-rtd--primary' : ''}`}
-                                  style={{ textAlign: col.alignment || (f && NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}
-                                >
-                                  {isPrimary ? (
-                                    <a
-                                      href={`#record-${rec.id}`}
-                                      className="ls-primary-link"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        const menuPath = activeMenu?.path?.replace(/\/+$/, '');
-                                        const layoutKey =
-                                          detailLayoutMapRef.current.get(col.targetDetailLayoutId || '') ||
-                                          col.targetDetailLayoutId ||
-                                          defaultDetailLayoutKeyRef.current;
-                                        if (menuPath && layoutKey) {
-                                          navigate(`${menuPath}/${layoutKey}/${rec.id}`);
-                                        }
-                                      }}
-                                      title={`View detail for ${cellText}`}
-                                    >
-                                      {cellText}
-                                    </a>
-                                  ) : (
-                                    cellNode
-                                  )}
-                                </td>
-                              );
-                            });
-                          })()}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-
-                {totalRecords === 0 && (
-                  <div style={{ padding: 32, textAlign: 'center' }}>
-                    <p className="ls-empty">No records found.</p>
-                  </div>
-                )}
-
-                {allowPaging && totalRecords > 0 && (
-                  <div className="ls-pagination">
-                    <div className="ls-pagination__info">
-                      <span className="ls-pagination__range">
-                        Showing <strong>{(safeCurrentPage - 1) * recordsPerPage + 1}</strong> to <strong>{Math.min(safeCurrentPage * recordsPerPage, totalRecords)}</strong> of <strong>{totalRecords}</strong>
-                      </span>
-                      {pagingMode === 'dynamic' && (
-                        <div className="ls-pagination__page-size">
-                          <span className="ls-pagination__page-size-label">Records per page:</span>
-                          <CustomSelect
-                            value={recordsPerPage}
-                            options={LIST_PER_PAGE_OPTIONS}
-                            onChange={(v: number) => { setRecordsPerPage(v); }}
-                            size="sm"
-                            direction="up"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="ls-pagination__controls">
-                      <button
-                        className="ls-pagination__btn"
-                        disabled={safeCurrentPage <= 1}
-                        onClick={() => setCurrentPage(safeCurrentPage - 1)}
-                      >
-                        <ChevronLeft size={14} />
-                      </button>
-                      {pageNumbers.map((p, i) =>
-                        p === 'ellipsis' ? (
-                          <span key={`e-${i}`} className="ls-pagination__ellipsis">...</span>
-                        ) : safeCurrentPage === p ? (
-                          <span key={p} className="ls-pagination-page ls-pagination-page--active">{p}</span>
-                        ) : (
-                          <button key={p} className="ls-pagination-page ls-pagination-page--clickable" onClick={() => setCurrentPage(p)}>{p}</button>
-                        )
-                      )}
-                      <button
-                        className="ls-pagination__btn"
-                        disabled={safeCurrentPage >= totalPages}
-                        onClick={() => setCurrentPage(safeCurrentPage + 1)}
-                      >
-                        <ChevronRight size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )}
+              {(config?.allowMultiSelect ?? true) && selectedIndices.size > 0 && (
+                <span className="ls-table-card__badge" style={{ background: 'rgba(157,206,224,0.25)', color: 'var(--sails-primary)' }}>
+                  {selectedIndices.size} selected
+                </span>
+              )}
+              {runtimeSortRules.length > 0 && (
+                <button className="ls-block__btn" onClick={() => setRuntimeSortRules([])} title="Reset sort" style={{ marginLeft: 4 }}>
+                  <RotateCcw size={11} />
+                </button>
+              )}
+              <div className="dtp-filter-head" style={{ marginLeft: 8 }}>
+                <button type="button" className="sails-btn sails-btn--ghost sails-btn--sm dtp-filter-btn" title="Saved view filters">
+                  <Filter size={12} /> Filters
+                </button>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          }
+        />
       </section>
     </div>
   );

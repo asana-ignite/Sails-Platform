@@ -13,7 +13,12 @@ import type { FieldValidation, ConditionOp } from './types';
 export function resolveControlPlugin(field: SailsFieldDefinition, controlPluginId?: string) {
   const controlRegistry = FieldControlRegistry.getInstance();
   const logicalType = field.logicalType || field.physicalType || 'text';
-  const effectiveControlId = controlPluginId || (field?.config as any)?.defaultControl || (field?.config as any)?.controlStyle;
+  const configStyle = (field?.config as any)?.controlStyle;
+  // Legacy field-level Display Control values map onto registered control ids.
+  const styleToControlId: Record<string, string> = {
+    search_list: 'control:relation_search_list',
+  };
+  const effectiveControlId = controlPluginId || (field?.config as any)?.defaultControl || (styleToControlId[configStyle] || configStyle);
   const controlPlugin = (effectiveControlId ? controlRegistry.getControl(effectiveControlId) : null) || controlRegistry.getFallbackControl(logicalType);
   return { controlPlugin, logicalType, effectiveControlId };
 }

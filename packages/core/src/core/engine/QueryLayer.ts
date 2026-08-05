@@ -64,6 +64,202 @@ async function resolveSessionContext(): Promise<SessionContext> {
 
 export type { SessionContext };
 
+/** Options consumed by `buildWhereClause` — the filter/search inputs for a list query. */
+export interface WhereClauseOptions {
+  filters?: Record<string, string>;
+  filterGroups?: { groupLogic: 'and' | 'or'; rules: FilterGroupRule[] }[];
+  search?: string;
+  validFields: Set<string>;
+  textFields: string[];
+  jsonbFields?: Set<string>;
+}
+
+/**
+ * Builds the SQL `WHERE …` fragment for legacy flat filters, Query Studio grouped
+ * filters, and free-text search. Field names are validated against `validFields`;
+ * every value is bound via pg-format. Returns an empty string when no filter applies.
+ */
+export function buildWhereClause(schemaName: string, options: WhereClauseOptions): string {
+  const jsonbFields = options.jsonbFields || new Set<string>();
+  const eqExpr = (f: string) => (jsonbFields.has(f) ? '%I::text = %L' : '%I = %L');
+  const neqExpr = (f: string) => (jsonbFields.has(f) ? '%I::text != %L' : '%I != %L');
+  const cmpExpr = (f: string) => (jsonbFields.has(f) ? '%I::text %s %L' : '%I %s %L');
+
+  /** Build a WHERE fragment for one rule (chain + operand parts combined); null when unusable. */
+  const buildClause = (
+    fieldName: string,
+    operator: string,
+    rawValue: string,
+    extra?: { refField?: string; refRecordId?: string; targetTable?: string; chain?: string[]; chainTables?: string[]; refChain?: string[]; refChainTables?: string[] }
+  ): string | null => {
+    // LHS drill chain: chain[0] must be a valid column of the root table.
+    if (extra?.chain && extra.chain.length > 0 && !options.validFields.has(extra.chain[0])) return null;
+    if (!extra?.chain && !options.validFields.has(fieldName)) return null;
+
+    const parts: string[] = [];
+
+    // ── LHS drill chain: nested EXISTS through related models ──
+    // chain = [c0 (root), c1, c2 …]; chainTables[i] = table where chain[i] lives.
+    if (extra?.chain && extra.chain.length > 1 && extra.chainTables && extra.chainTables.length === extra.chain.length) {
+      const chain = extra.chain;
+      const tables = extra.chainTables;
+      let inner = '';
+      for (let i = chain.length - 1; i >= 1; i--) {
+        const alias = `c${i}`;
+        // Link this table's id to the previous hop's relation column.
+        const outerRef = i - 1 === 0 ? format('%I', chain[0]) : format('%I.%I', `c${i - 1}`, chain[i - 1]);
+        const conds = [format('%I.%I = %s', alias, 'id', outerRef)];
+        if (i === chain.length - 1) {
+          // Terminal hop: also compare the drilled field against the operand.
+          switch (operator) {
+            case 'contains': conds.push(format('%I.%I::text ILIKE %L', alias, chain[i], `%${rawValue}%`)); break;
+            case 'is_empty': conds.push(format('(%I.%I IS NULL OR %I.%I::text = %L)', alias, chain[i], alias, chain[i], '')); break;
+            case 'is_not_empty': conds.push(format('(%I.%I IS NOT NULL AND %I.%I::text != %L)', alias, chain[i], alias, chain[i], '')); break;
+            default: {
+              const sym = operator === 'eq' ? '=' : operator === 'neq' ? '!=' : operator === 'gt' ? '>' : operator === 'gte' ? '>=' : operator === 'lt' ? '<' : operator === 'lte' ? '<=' : null;
+              if (!sym) return null;
+              conds.push(format('%I.%I %s %L', alias, chain[i], sym, rawValue));
+            }
+          }
+        }
+        inner = `EXISTS (SELECT 1 FROM ${format('%I.%I', schemaName, tables[i])} ${alias} WHERE ${conds.join(' AND ')}${inner ? ` AND ${inner}` : ''})`;
+      }
+      // The chain clause is self-contained (terminal comparison included) — do not
+      // fall through to the plain literal branch below.
+      return inner;
+    }
+
+    // ── RHS field-source drill chain: lhs op ANY (JOIN walk to the terminal field) ──
+    if (extra?.refChain && extra.refChain.length > 1 && extra.refChainTables && extra.refChainTables.length === extra.refChain.length) {
+      const rc = extra.refChain;
+      const tables = extra.refChainTables;
+      const lhs = extra.chain && extra.chain.length > 0 ? extra.chain[0] : fieldName;
+      const lastIdx = rc.length - 1;
+      // SELECT from the deepest table; join shallower tables back through their
+      // relation columns: prev."rc[i]" = cur."id".
+      let joins = '';
+      for (let i = lastIdx - 1; i >= 1; i--) {
+        joins += ` JOIN ${format('%I.%I', schemaName, tables[i])} c${i} ON c${i}.${rc[i]} = c${i + 1}.id`;
+      }
+      const sub = `SELECT c${lastIdx}.${rc[lastIdx]}::text FROM ${format('%I.%I', schemaName, tables[lastIdx])} c${lastIdx}${joins} WHERE c1.id = ${format('%I', rc[0])}`;
+      const sym = operator === 'eq' ? '=' : operator === 'neq' ? '!=' : operator === 'gt' ? '>' : operator === 'gte' ? '>=' : operator === 'lt' ? '<' : operator === 'lte' ? '<=' : null;
+      if (sym) parts.push(format('%I::text %s ANY (%s)', lhs, sym, sub));
+      return parts.length > 0 ? parts.join(' AND ') : null;
+    }
+
+    // Record source: compare against a field of a specific related record.
+    if (extra?.refField && extra.refRecordId && extra.targetTable) {
+      const sub = format('SELECT %I::text FROM %I.%I WHERE id = %L', extra.refField, schemaName, extra.targetTable, extra.refRecordId);
+      const sym = operator === 'eq' ? '=' : operator === 'neq' ? '!=' : operator === 'gt' ? '>' : operator === 'gte' ? '>=' : operator === 'lt' ? '<' : operator === 'lte' ? '<=' : null;
+      if (sym) parts.push(format('%I::text %s (%s)', fieldName, sym, sub));
+      return parts.length > 0 ? parts.join(' AND ') : null;
+    }
+
+    // Field-to-field comparison on the same row: lhs <op> rhs (both identifiers).
+    if (extra?.refField && !extra.refRecordId) {
+      const rhs = extra.refField;
+      switch (operator) {
+        case 'eq': parts.push(format('%I = %I', fieldName, rhs)); break;
+        case 'neq': parts.push(format('%I != %I', fieldName, rhs)); break;
+        case 'gt': parts.push(format('%I > %I', fieldName, rhs)); break;
+        case 'gte': parts.push(format('%I >= %I', fieldName, rhs)); break;
+        case 'lt': parts.push(format('%I < %I', fieldName, rhs)); break;
+        case 'lte': parts.push(format('%I <= %I', fieldName, rhs)); break;
+        case 'contains': parts.push(format('%I::text ILIKE %I::text', fieldName, rhs)); break;
+        default: return null;
+      }
+      return parts.length > 0 ? parts.join(' AND ') : null;
+    }
+
+    // Plain literal comparison.
+    if (
+      rawValue === undefined ||
+      rawValue === null ||
+      (typeof rawValue === 'string' && rawValue.trim() === '' && operator !== 'is_empty' && operator !== 'is_not_empty')
+    ) {
+      return null;
+    }
+
+    switch (operator) {
+      case 'eq': parts.push(format(eqExpr(fieldName), fieldName, rawValue)); break;
+      case 'neq': parts.push(format(neqExpr(fieldName), fieldName, rawValue)); break;
+      case 'contains': parts.push(format('%I::text ILIKE %L', fieldName, `%${rawValue}%`)); break;
+      case 'gt': parts.push(format(cmpExpr(fieldName), fieldName, '>', rawValue)); break;
+      case 'gte': parts.push(format(cmpExpr(fieldName), fieldName, '>=', rawValue)); break;
+      case 'lt': parts.push(format(cmpExpr(fieldName), fieldName, '<', rawValue)); break;
+      case 'lte': parts.push(format(cmpExpr(fieldName), fieldName, '<=', rawValue)); break;
+      case 'is_empty': parts.push(format('(%I IS NULL OR %I::text = %L)', fieldName, fieldName, '')); break;
+      case 'is_not_empty': parts.push(format('(%I IS NOT NULL AND %I::text != %L)', fieldName, fieldName, '')); break;
+      default: return null;
+    }
+
+    return parts.length > 0 ? parts.join(' AND ') : null;
+  };
+
+  const whereClauses: { sql: string; joinLogic: 'and' | 'or' }[] = [];
+
+  // Legacy flat filters — treated as a single implicit AND group.
+  if (options.filters) {
+    for (const [rawKey, rawValue] of Object.entries(options.filters)) {
+      const colonIdx = rawKey.lastIndexOf(':');
+      const fieldName = colonIdx > -1 ? rawKey.substring(0, colonIdx) : rawKey;
+      const operator = colonIdx > -1 ? rawKey.substring(colonIdx + 1) : 'eq';
+      const clause = buildClause(fieldName, operator, rawValue);
+      if (clause) whereClauses.push({ sql: clause, joinLogic: 'and' });
+    }
+  }
+
+  // Query Studio grouped filters — (rules AND/OR) joined by groupLogic.
+  if (options.filterGroups && options.filterGroups.length > 0) {
+    for (const grp of options.filterGroups) {
+      if (!grp || !Array.isArray(grp.rules) || grp.rules.length === 0) continue;
+      const ruleClauses: string[] = [];
+      for (const rule of grp.rules) {
+        if (!rule) continue;
+        const clause = buildClause(rule.field, rule.operator || 'eq', rule.value, {
+          refField: rule.refField,
+          refRecordId: rule.refRecordId,
+          targetTable: rule.targetTable,
+          chain: rule.chain,
+          chainTables: rule.chainTables,
+          refChain: rule.refChain,
+          refChainTables: rule.refChainTables,
+        });
+        if (clause) ruleClauses.push(clause);
+      }
+      if (ruleClauses.length === 0) continue;
+      let groupSQL = ruleClauses[0];
+      for (let i = 1; i < ruleClauses.length; i++) {
+        const logic = grp.rules[i]?.logic === 'or' ? 'OR' : 'AND';
+        groupSQL = `(${groupSQL} ${logic} ${ruleClauses[i]})`;
+      }
+      whereClauses.push({ sql: groupSQL, joinLogic: grp.groupLogic === 'or' ? 'or' : 'and' });
+    }
+  }
+
+  if (options.search && options.search.trim()) {
+    const q = options.search.trim();
+    const searchClauses = options.textFields
+      .filter(f => options.validFields.has(f))
+      .map(f => format('%I::text ILIKE %L', f, `%${q}%`));
+
+    if (searchClauses.length > 0) {
+      whereClauses.push({ sql: `(${searchClauses.join(' OR ')})`, joinLogic: 'and' });
+    }
+  }
+
+  let whereSQL = '';
+  if (whereClauses.length > 0) {
+    let sql = whereClauses[0].sql;
+    for (let i = 1; i < whereClauses.length; i++) {
+      sql = `${sql} ${whereClauses[i].joinLogic.toUpperCase()} ${whereClauses[i].sql}`;
+    }
+    whereSQL = `WHERE ${sql}`;
+  }
+
+  return whereSQL;
+}
+
 export class QueryLayer {
   /**
    * Executes a database query within a fully-secured transaction context.
@@ -340,183 +536,8 @@ export class QueryLayer {
     const limit = Math.min(100, Math.max(1, options.limit || 25));
     const offset = (page - 1) * limit;
 
-    // JSONB columns have no text comparison/ordering operators — cast to ::text.
     const jsonbFields = options.jsonbFields || new Set<string>();
-    const eqExpr = (f: string) => (jsonbFields.has(f) ? '%I::text = %L' : '%I = %L');
-    const neqExpr = (f: string) => (jsonbFields.has(f) ? '%I::text != %L' : '%I != %L');
-    const cmpExpr = (f: string) => (jsonbFields.has(f) ? '%I::text %s %L' : '%I %s %L');
-
-    /** Build a WHERE fragment for one rule (chain + operand parts combined); null when unusable. */
-    const buildClause = (
-      fieldName: string,
-      operator: string,
-      rawValue: string,
-      extra?: { refField?: string; refRecordId?: string; targetTable?: string; chain?: string[]; chainTables?: string[]; refChain?: string[]; refChainTables?: string[] }
-    ): string | null => {
-      // LHS drill chain: chain[0] must be a valid column of the root table.
-      if (extra?.chain && extra.chain.length > 0 && !options.validFields.has(extra.chain[0])) return null;
-      if (!extra?.chain && !options.validFields.has(fieldName)) return null;
-
-      const parts: string[] = [];
-
-      // ── LHS drill chain: nested EXISTS through related models ──
-      // chain = [c0 (root), c1, c2 …]; chainTables[i] = table where chain[i] lives.
-      if (extra?.chain && extra.chain.length > 1 && extra.chainTables && extra.chainTables.length === extra.chain.length) {
-        const chain = extra.chain;
-        const tables = extra.chainTables;
-        let inner = '';
-        for (let i = chain.length - 1; i >= 1; i--) {
-          const alias = `c${i}`;
-          // Link this table's id to the previous hop's relation column.
-          const outerRef = i - 1 === 0 ? format('%I', chain[0]) : format('%I.%I', `c${i - 1}`, chain[i - 1]);
-          const conds = [format('%I.%I = %s', alias, 'id', outerRef)];
-          if (i === chain.length - 1) {
-            // Terminal hop: also compare the drilled field against the operand.
-            switch (operator) {
-              case 'contains': conds.push(format('%I.%I::text ILIKE %L', alias, chain[i], `%${rawValue}%`)); break;
-              case 'is_empty': conds.push(format('(%I.%I IS NULL OR %I.%I::text = %L)', alias, chain[i], alias, chain[i], '')); break;
-              case 'is_not_empty': conds.push(format('(%I.%I IS NOT NULL AND %I.%I::text != %L)', alias, chain[i], alias, chain[i], '')); break;
-              default: {
-                const sym = operator === 'eq' ? '=' : operator === 'neq' ? '!=' : operator === 'gt' ? '>' : operator === 'gte' ? '>=' : operator === 'lt' ? '<' : operator === 'lte' ? '<=' : null;
-                if (!sym) return null;
-                conds.push(format('%I.%I %s %L', alias, chain[i], sym, rawValue));
-              }
-            }
-          }
-          inner = `EXISTS (SELECT 1 FROM ${format('%I.%I', schemaName, tables[i])} ${alias} WHERE ${conds.join(' AND ')}${inner ? ` AND ${inner}` : ''})`;
-        }
-        // The chain clause is self-contained (terminal comparison included) — do not
-        // fall through to the plain literal branch below.
-        return inner;
-      }
-
-      // ── RHS field-source drill chain: lhs op ANY (JOIN walk to the terminal field) ──
-      if (extra?.refChain && extra.refChain.length > 1 && extra.refChainTables && extra.refChainTables.length === extra.refChain.length) {
-        const rc = extra.refChain;
-        const tables = extra.refChainTables;
-        const lhs = extra.chain && extra.chain.length > 0 ? extra.chain[0] : fieldName;
-        const lastIdx = rc.length - 1;
-        // SELECT from the deepest table; join shallower tables back through their
-        // relation columns: prev."rc[i]" = cur."id".
-        let joins = '';
-        for (let i = lastIdx - 1; i >= 1; i--) {
-          joins += ` JOIN ${format('%I.%I', schemaName, tables[i])} c${i} ON c${i}.${rc[i]} = c${i + 1}.id`;
-        }
-        const sub = `SELECT c${lastIdx}.${rc[lastIdx]}::text FROM ${format('%I.%I', schemaName, tables[lastIdx])} c${lastIdx}${joins} WHERE c1.id = ${format('%I', rc[0])}`;
-        const sym = operator === 'eq' ? '=' : operator === 'neq' ? '!=' : operator === 'gt' ? '>' : operator === 'gte' ? '>=' : operator === 'lt' ? '<' : operator === 'lte' ? '<=' : null;
-        if (sym) parts.push(format('%I::text %s ANY (%s)', lhs, sym, sub));
-        return parts.length > 0 ? parts.join(' AND ') : null;
-      }
-
-      // Record source: compare against a field of a specific related record.
-      if (extra?.refField && extra.refRecordId && extra.targetTable) {
-        const sub = format('SELECT %I::text FROM %I.%I WHERE id = %L', extra.refField, schemaName, extra.targetTable, extra.refRecordId);
-        const sym = operator === 'eq' ? '=' : operator === 'neq' ? '!=' : operator === 'gt' ? '>' : operator === 'gte' ? '>=' : operator === 'lt' ? '<' : operator === 'lte' ? '<=' : null;
-        if (sym) parts.push(format('%I::text %s (%s)', fieldName, sym, sub));
-        return parts.length > 0 ? parts.join(' AND ') : null;
-      }
-
-      // Field-to-field comparison on the same row: lhs <op> rhs (both identifiers).
-      if (extra?.refField && !extra.refRecordId) {
-        const rhs = extra.refField;
-        switch (operator) {
-          case 'eq': parts.push(format('%I = %I', fieldName, rhs)); break;
-          case 'neq': parts.push(format('%I != %I', fieldName, rhs)); break;
-          case 'gt': parts.push(format('%I > %I', fieldName, rhs)); break;
-          case 'gte': parts.push(format('%I >= %I', fieldName, rhs)); break;
-          case 'lt': parts.push(format('%I < %I', fieldName, rhs)); break;
-          case 'lte': parts.push(format('%I <= %I', fieldName, rhs)); break;
-          case 'contains': parts.push(format('%I::text ILIKE %I::text', fieldName, rhs)); break;
-          default: return null;
-        }
-        return parts.length > 0 ? parts.join(' AND ') : null;
-      }
-
-      // Plain literal comparison.
-      if (
-        rawValue === undefined ||
-        rawValue === null ||
-        (typeof rawValue === 'string' && rawValue.trim() === '' && operator !== 'is_empty' && operator !== 'is_not_empty')
-      ) {
-        return null;
-      }
-
-      switch (operator) {
-        case 'eq': parts.push(format(eqExpr(fieldName), fieldName, rawValue)); break;
-        case 'neq': parts.push(format(neqExpr(fieldName), fieldName, rawValue)); break;
-        case 'contains': parts.push(format('%I::text ILIKE %L', fieldName, `%${rawValue}%`)); break;
-        case 'gt': parts.push(format(cmpExpr(fieldName), fieldName, '>', rawValue)); break;
-        case 'gte': parts.push(format(cmpExpr(fieldName), fieldName, '>=', rawValue)); break;
-        case 'lt': parts.push(format(cmpExpr(fieldName), fieldName, '<', rawValue)); break;
-        case 'lte': parts.push(format(cmpExpr(fieldName), fieldName, '<=', rawValue)); break;
-        case 'is_empty': parts.push(format('(%I IS NULL OR %I::text = %L)', fieldName, fieldName, '')); break;
-        case 'is_not_empty': parts.push(format('(%I IS NOT NULL AND %I::text != %L)', fieldName, fieldName, '')); break;
-        default: return null;
-      }
-
-      return parts.length > 0 ? parts.join(' AND ') : null;
-    };
-
-    const whereClauses: { sql: string; joinLogic: 'and' | 'or' }[] = [];
-
-    // Legacy flat filters — treated as a single implicit AND group.
-    if (options.filters) {
-      for (const [rawKey, rawValue] of Object.entries(options.filters)) {
-        const colonIdx = rawKey.lastIndexOf(':');
-        const fieldName = colonIdx > -1 ? rawKey.substring(0, colonIdx) : rawKey;
-        const operator = colonIdx > -1 ? rawKey.substring(colonIdx + 1) : 'eq';
-        const clause = buildClause(fieldName, operator, rawValue);
-        if (clause) whereClauses.push({ sql: clause, joinLogic: 'and' });
-      }
-    }
-
-    // Query Studio grouped filters — (rules AND/OR) joined by groupLogic.
-    if (options.filterGroups && options.filterGroups.length > 0) {
-      for (const grp of options.filterGroups) {
-        if (!grp || !Array.isArray(grp.rules) || grp.rules.length === 0) continue;
-        const ruleClauses: string[] = [];
-        for (const rule of grp.rules) {
-          if (!rule) continue;
-          const clause = buildClause(rule.field, rule.operator || 'eq', rule.value, {
-            refField: rule.refField,
-            refRecordId: rule.refRecordId,
-            targetTable: rule.targetTable,
-            chain: rule.chain,
-            chainTables: rule.chainTables,
-            refChain: rule.refChain,
-            refChainTables: rule.refChainTables,
-          });
-          if (clause) ruleClauses.push(clause);
-        }
-        if (ruleClauses.length === 0) continue;
-        let groupSQL = ruleClauses[0];
-        for (let i = 1; i < ruleClauses.length; i++) {
-          const logic = grp.rules[i]?.logic === 'or' ? 'OR' : 'AND';
-          groupSQL = `(${groupSQL} ${logic} ${ruleClauses[i]})`;
-        }
-        whereClauses.push({ sql: groupSQL, joinLogic: grp.groupLogic === 'or' ? 'or' : 'and' });
-      }
-    }
-
-    if (options.search && options.search.trim()) {
-      const q = options.search.trim();
-      const searchClauses = options.textFields
-        .filter(f => options.validFields.has(f))
-        .map(f => format('%I::text ILIKE %L', f, `%${q}%`));
-
-      if (searchClauses.length > 0) {
-        whereClauses.push({ sql: `(${searchClauses.join(' OR ')})`, joinLogic: 'and' });
-      }
-    }
-
-    let whereSQL = '';
-    if (whereClauses.length > 0) {
-      let sql = whereClauses[0].sql;
-      for (let i = 1; i < whereClauses.length; i++) {
-        sql = `${sql} ${whereClauses[i].joinLogic.toUpperCase()} ${whereClauses[i].sql}`;
-      }
-      whereSQL = `WHERE ${sql}`;
-    }
+    const whereSQL = buildWhereClause(schemaName, options);
 
     const orderByClauses: string[] = [];
     if (options.sort && options.sort.length > 0) {

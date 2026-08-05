@@ -17,8 +17,16 @@ export const RelationType: FieldTypePlugin = {
       defaultValue: 'searchable_dropdown',
       options: [
         { label: 'Searchable Dropdown (Combobox)', value: 'searchable_dropdown' },
-        { label: 'Simple Select Dropdown', value: 'select' }
+        { label: 'Simple Select Dropdown', value: 'select' },
+        { label: 'Search List (List View Picker)', value: 'search_list' }
       ]
+    },
+    {
+      name: 'listView',
+      label: 'List View',
+      type: 'layout_select',
+      description: 'List View of the target model to embed in the Search List picker. Leave empty to use the default List View.',
+      visibleWhen: { name: 'controlStyle', equals: 'search_list' }
     }
   ],
   getPostgresColumnDefinition: (isRequired?: boolean) => {

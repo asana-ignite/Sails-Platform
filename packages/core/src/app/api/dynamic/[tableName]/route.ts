@@ -1,41 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/knex';
-import { db } from '@/lib/db';
 import { QueryLayer, FilterGroupRule } from '@/core/engine/QueryLayer';
-import { resolveContextMacro } from '@/core/engine/contextMacros';
+import { preprocessFilterGroups } from '@/core/engine/filterPreprocess';
+import { resolveTable } from '@/lib/dynamicTable';
 import format from 'pg-format';
 import { requireSession } from '@/lib/auth/session';
 import { validateRecord, sanitizeWritePayload } from '@sails/shared';
 
 type RouteContext = { params: { tableName: string } };
-
-/**
- * Shared helper: look up the physical table definition and validate tenant ownership.
- * Returns the schemaName for the active session's tenant.
- */
-async function resolveTable(tableName: string) {
-  const { tenantId } = await requireSession();
-
-  const table = await db.tableDefinition.findFirst({
-    where: {
-      tableName,
-      tenantId,
-    },
-    include: {
-      tenant: true,
-      fields: {
-        include: { rules: true },
-      },
-      rules: true,
-    },
-  });
-
-  if (!table) {
-    return null;
-  }
-
-  return { table, schemaName: table.tenant.schemaName };
-}
 
 // ---------------------------------------------------------------------------
 // POST /api/dynamic/[tableName] — Create a record
@@ -86,6 +58,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 //   ?sort=<json>        — [{"fieldId":"name","dir":"asc"}]
 //   ?page=1&limit=25    — pagination (default 1, 25; max 100)
 //   ?id=<recordId>      — single-record lookup (detail page)
+//   ?ids=c1,c2,c3       — batch lookup of specific records (chip label resolution)
 //
 // Every field name is validated against tableDefinition.fields before use.
 // Both SELECT and COUNT run inside executeSecureQuery for RLS enforcement.
@@ -101,6 +74,35 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     }
 
     const recordId = searchParams.get('id');
+    const idsRaw = searchParams.get('ids');
+
+    if (idsRaw) {
+      const tableMeta = resolved.table;
+      const ids = idsRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+      const rows = await QueryLayer.executeSecureQuery(
+        pool,
+        tableName,
+        'read',
+        async (client) => {
+          if (ids.length === 0) return [];
+          // Parameterized ANY($1::text[]) — pg-format %L renders single-element
+          // arrays without braces, producing "malformed array literal".
+          const sql = format(
+            'SELECT * FROM %I.%I WHERE id = ANY($1::text[])',
+            resolved.schemaName,
+            tableName
+          );
+          const result = await client.query(sql, [ids]);
+          return result.rows;
+        }
+      );
+
+      return NextResponse.json(
+        { rows, total: rows.length, page: 1, limit: ids.length, totalPages: 1, fields: tableMeta?.fields || [] },
+        { status: 200 }
+      );
+    }
 
     if (recordId) {
       const tableMeta = resolved.table;
@@ -175,94 +177,12 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     //  - resolve record-source subquery table from the relation field config
     if (filterGroups && filterGroups.length > 0) {
       const session = await requireSession();
-      const tableFields = (tableMeta?.fields || []) as any[];
-      const fieldByName = new Map(tableFields.map((f: any) => [f.fieldName, f]));
-
-      // Related-table metadata cache for drill-chain resolution (per request).
-      const tableCache = new Map<string, any[]>();
-      tableCache.set(tableName, tableFields);
-      const loadTableFields = async (tName: string): Promise<any[] | null> => {
-        if (tableCache.has(tName)) return tableCache.get(tName) || null;
-        const t = await db.tableDefinition.findFirst({
-          where: { tenantId: session.tenantId, tableName: tName },
-          include: { fields: true },
-        });
-        const flds = (t?.fields || []) as any[];
-        tableCache.set(tName, flds);
-        return flds.length > 0 ? flds : null;
-      };
-
-      // Resolve a drill chain [c0, c1, ...] into per-hop table names.
-      // chain[0] lives on the root table; chain[i] (i>0) must be a field of the
-      // table targeted by relation field chain[i-1].
-      const resolveChain = async (chain: string[]): Promise<string[] | null> => {
-        if (!Array.isArray(chain) || chain.length === 0) return null;
-        const tables: string[] = [tableName];
-        let curFields = tableFields;
-        if (!curFields.some((f: any) => f.fieldName === chain[0])) return null;
-        for (let i = 1; i < chain.length; i++) {
-          const relField = curFields.find((f: any) => f.fieldName === chain[i - 1]);
-          const lt = relField?.logicalType;
-          const target = relField && (lt === 'relation' || lt === 'lookup') ? (relField.config as any)?.targetTable : null;
-          if (!target) return null;
-          const nextFields = await loadTableFields(target);
-          if (!nextFields || !nextFields.some((f: any) => f.fieldName === chain[i])) return null;
-          tables.push(target);
-          curFields = nextFields;
-        }
-        return tables;
-      };
-
-      for (const grp of filterGroups) {
-        if (!grp || !Array.isArray(grp.rules)) continue;
-        for (const rule of grp.rules) {
-          if (!rule) continue;
-          const isChainRule = Array.isArray(rule.chain) && rule.chain.length > 0;
-
-          if (isChainRule) {
-            const tables = await resolveChain(rule.chain);
-            if (!tables) { rule.value = ''; continue; }
-            rule.chainTables = tables;
-          } else if (!validFields.has(rule.field)) {
-            rule.value = '';
-            continue;
-          }
-
-          // RHS field-source drill chain (drilled deeper than one hop).
-          if (Array.isArray(rule.refChain) && rule.refChain.length > 1) {
-            const refTables = await resolveChain(rule.refChain);
-            if (!refTables) { rule.value = ''; continue; }
-            rule.refChainTables = refTables;
-          }
-
-          // Field-to-field (single hop): refField must be a valid root column.
-          if (rule.refField && !rule.refRecordId && !Array.isArray(rule.refChain) && !validFields.has(rule.refField)) {
-            rule.value = '';
-            continue;
-          }
-
-          // Record source: resolve the related table from the LHS relation field.
-          if (rule.refField && rule.refRecordId) {
-            const lhsCol = isChainRule && rule.chain ? rule.chain[0] : rule.field;
-            const lhsFieldMeta = fieldByName.get(lhsCol) || tableFields.find((f: any) => f.fieldName === lhsCol);
-            const targetTable = (lhsFieldMeta?.config as any)?.targetTable || '';
-            if (!targetTable) {
-              rule.value = '';
-              continue;
-            }
-            rule.targetTable = targetTable;
-          }
-
-          // Context macros resolve to concrete values before SQL generation.
-          if (typeof rule.value === 'string' && rule.value.startsWith('@')) {
-            rule.value = resolveContextMacro(rule.value, rule.contextN, {
-              userId: session.userId,
-              teams: session.teams,
-              role: session.role,
-            });
-          }
-        }
-      }
+      await preprocessFilterGroups({
+        session,
+        tableName,
+        tableFields: (tableMeta?.fields || []) as any[],
+        filterGroups,
+      });
     }
 
     const page = parseInt(searchParams.get('page') || '1');

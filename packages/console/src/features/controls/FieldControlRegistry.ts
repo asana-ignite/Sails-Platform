@@ -19,6 +19,7 @@ import { LatLngControl } from './plugins/LatLngControl';
 import { AutoNumberControl } from './plugins/AutoNumberControl';
 import { PhoneControl } from './plugins/PhoneControl';
 import { EmailControl } from './plugins/EmailControl';
+import { SearchListControl } from './plugins/SearchListControl';
 
 export class FieldControlRegistry {
   private static instance: FieldControlRegistry;
@@ -49,6 +50,7 @@ export class FieldControlRegistry {
     this.register(AutoNumberControl);
     this.register(PhoneControl);
     this.register(EmailControl);
+    this.register(SearchListControl);
   }
 
   public static getInstance(): FieldControlRegistry {
