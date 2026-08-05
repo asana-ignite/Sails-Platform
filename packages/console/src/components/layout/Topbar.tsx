@@ -99,7 +99,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
         </button>
         <div className="sails-topbar__logo">
           <img src={themeMode === 'dark' ? logoDarkUrl : logoLightUrl} alt="SAILS Logo" className="sails-topbar__logo-icon" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-          <span className="sails-topbar__logo-text">SAILS</span>
+          <span className="sails-topbar__logo-text">Sails</span>
         </div>
       </div>
 

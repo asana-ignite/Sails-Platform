@@ -383,7 +383,7 @@
 .sails-sidebar__status-text {
   font-size: 0.7rem;
   color: var(--sails-text-sidebar);
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 1px;
 }
 

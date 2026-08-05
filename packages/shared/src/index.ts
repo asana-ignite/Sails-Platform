@@ -393,7 +393,6 @@ export interface SelectFieldConfig {
 
 export interface RelationFieldConfig {
   targetTable?: string;
-  relationType?: 'one_to_many' | 'many_to_one' | 'one_to_one';
 }
 
 export interface EmailFieldConfig {
@@ -462,7 +461,7 @@ export interface LayoutConfig {
 
   // LIST/Table view config
   columns?: LayoutColumn[];
-  filters?: LayoutFilter[];
+  filters?: FilterGroup[] | LayoutFilter[];  // grouped (Query Studio) or legacy flat
   sortBy?: LayoutSort[];
   summaryFields?: SummaryField[];
   allowMultiSelect?: boolean;
@@ -526,6 +525,117 @@ export interface LayoutFilter {
   operator: string;
   value: string;
   logic: 'and' | 'or';
+}
+
+/**
+ * A single filter rule inside a filter group (tab). Mirrors the Query Studio
+ * builder model. `fieldId` references a FieldDefinition id; `operator` is one
+ * of eq | neq | gt | gte | lt | lte | contains | is_empty | is_not_empty.
+ * `logic` joins this rule to the previous rule in the same group.
+ *
+ * The right operand is described by `valueSource`:
+ *  - 'value'   → compare against a literal `value`
+ *  - 'field'   → compare against another field (`refFieldId`) on the same record
+ *  - 'record'  → compare against a field (`refFieldId`) of a specific related
+ *                record (`refRecordId`) from the LHS relation field's target model
+ *  - 'context' → compare against a dynamic macro (`contextMacro`), with optional
+ *                N period (`contextN`) for relative date macros
+ */
+export type FilterValueSource = 'value' | 'field' | 'record' | 'context';
+
+export interface FilterRule {
+  id: string;
+  fieldId: string;
+  operator: string;
+  value: string;
+  logic: 'and' | 'or';
+  valueSource?: FilterValueSource;
+  /** LHS drill path (field ids) through relation/lookup models; fieldId = terminal hop. */
+  fieldChain?: string[];
+  refFieldId?: string;
+  /** RHS field-source drill path (field ids); refFieldId = terminal hop. */
+  refFieldChain?: string[];
+  refRecordId?: string;
+  contextMacro?: string;
+  contextN?: number;
+  /** Display-only: human-readable LHS path, e.g. "Company → Industry". */
+  fieldPath?: string;
+  /** Display-only: human-readable RHS path. */
+  refFieldPath?: string;
+}
+
+/** Context macro categories used by the Query Studio context source picker. */
+export const CONTEXT_CATEGORIES = [
+  {
+    category: 'User Context',
+    items: [
+      { label: 'Current User', value: '@me' },
+      { label: 'Current User Team', value: '@my_team' },
+      { label: 'Current User Role', value: '@user.role' },
+      { label: 'My Subordinates', value: '@my_subordinates' }
+    ]
+  },
+  {
+    category: 'Fixed Date Macros',
+    items: [
+      { label: 'Today', value: '@today' },
+      { label: 'Yesterday', value: '@yesterday' },
+      { label: 'Tomorrow', value: '@tomorrow' },
+      { label: 'This Week', value: '@this_week' },
+      { label: 'This Month', value: '@this_month' },
+      { label: 'This Quarter', value: '@this_quarter' },
+      { label: 'This Year', value: '@this_year' },
+      { label: 'This Fiscal Quarter', value: '@this_fiscal_quarter' },
+      { label: 'This Fiscal Year', value: '@this_fiscal_year' }
+    ]
+  },
+  {
+    category: 'Dynamic Relative N-Period Macros',
+    items: [
+      { label: 'Next N Days', value: '@next_n_days' },
+      { label: 'Last N Days', value: '@last_n_days' },
+      { label: 'Next N Weeks', value: '@next_n_weeks' },
+      { label: 'Last N Weeks', value: '@last_n_weeks' },
+      { label: 'Next N Months', value: '@next_n_months' },
+      { label: 'Last N Months', value: '@last_n_months' },
+      { label: 'Next N Years', value: '@next_n_years' },
+      { label: 'Last N Years', value: '@last_n_years' },
+      { label: 'Next N Fiscal Quarters', value: '@next_n_fiscal_quarters' },
+      { label: 'Last N Fiscal Quarters', value: '@last_n_fiscal_quarters' },
+      { label: 'Next N Fiscal Years', value: '@next_n_fiscal_years' },
+      { label: 'Last N Fiscal Years', value: '@last_n_fiscal_years' }
+    ]
+  }
+];
+
+export const CONTEXT_FLAT_OPTIONS = CONTEXT_CATEGORIES.flatMap((cat) => [
+  { value: `cat_${cat.category}`, label: `\u2500\u2500 ${cat.category} \u2500\u2500`, disabled: true },
+  ...cat.items.map((item) => ({ value: item.value, label: item.label }))
+]);
+
+const N_PERIOD_MACROS = new Set([
+  '@next_n_days', '@last_n_days',
+  '@next_n_weeks', '@last_n_weeks',
+  '@next_n_months', '@last_n_months',
+  '@next_n_years', '@last_n_years',
+  '@next_n_fiscal_quarters', '@last_n_fiscal_quarters',
+  '@next_n_fiscal_years', '@last_n_fiscal_years'
+]);
+
+export function isNPeriodMacro(macroValue: string): boolean {
+  return N_PERIOD_MACROS.has(macroValue);
+}
+
+/**
+ * A group of filter rules — rendered as one tab in the Query Studio builder,
+ * equivalent to a parenthesized block: (rule1 AND rule2). `groupLogic` joins
+ * this group to the previous group (tab).
+ */
+export interface FilterGroup {
+  id: string;
+  name: string;
+  groupLogic: 'and' | 'or';
+  rules: FilterRule[];
 }
 
 export interface LayoutSort {
@@ -790,6 +900,115 @@ export const formatDateTimeValue = (value: any, config: Record<string, any> | nu
   if (!date) return '';
   return formatDateTokens(date, resolveDateTimeFormat(config, logicalType));
 };
+
+// ─── Filter helpers ─────────────────────────────────────────────
+
+const EMPTY_VALUE_OPS = new Set(['is_empty', 'is_not_empty']);
+
+/** True when a filter rule carries no usable comparison operand. */
+export function isFilterRuleEmpty(rule: FilterRule): boolean {
+  if (EMPTY_VALUE_OPS.has(rule.operator || '')) return false;
+  const source = rule.valueSource || 'value';
+  if (source === 'field') return !rule.refFieldId;
+  if (source === 'record') return !rule.refFieldId || !rule.refRecordId;
+  if (source === 'context') return !rule.contextMacro;
+  return rule.value === undefined || rule.value === null || String(rule.value).trim() === '';
+}
+
+/**
+ * Normalize any persisted filters shape into Query Studio FilterGroup[].
+ * - undefined/null → a single empty group (builder-ready)
+ * - FilterGroup[]   → returned as-is (a group is detected by having `rules`)
+ * - legacy LayoutFilter[] (flat) → wrapped into one AND group
+ */
+export function normalizeFilters(filters: FilterGroup[] | LayoutFilter[] | undefined | null): FilterGroup[] {
+  if (!filters || filters.length === 0) {
+    return [{ id: 'grp_1', name: '1', groupLogic: 'and', rules: [] }];
+  }
+  // Group format: every item carries a `rules` array.
+  if (filters.every((f) => Array.isArray((f as FilterGroup).rules))) {
+    return filters as FilterGroup[];
+  }
+  const flat = filters as LayoutFilter[];
+  return [{
+    id: 'grp_1',
+    name: '1',
+    groupLogic: 'and',
+    rules: flat.map((f) => ({ id: f.id, fieldId: f.fieldId, operator: f.operator || 'eq', value: f.value ?? '', logic: f.logic || 'and' })),
+  }];
+}
+
+/** Serialized filter rule payload sent to /api/dynamic (field names, not ids). */
+export interface SerializedFilterRule {
+  field: string;
+  operator: string;
+  value: string;
+  logic: 'and' | 'or';
+  /** LHS drill path as physical column names; chain[0] is on the root table. */
+  chain?: string[];
+  refField?: string;
+  /** RHS field-source drill path as physical column names. */
+  refChain?: string[];
+  refRecordId?: string;
+  contextN?: number;
+}
+
+/** Serialize groups into the API-ready filterGroups param (field names, not ids). */
+export function serializeFilterGroups(
+  groups: FilterGroup[],
+  resolveFieldName: (fieldId: string) => string | null
+): { groupLogic: 'and' | 'or'; rules: SerializedFilterRule[] }[] {
+  const out: { groupLogic: 'and' | 'or'; rules: SerializedFilterRule[] }[] = [];
+  for (const grp of groups || []) {
+    const rules: SerializedFilterRule[] = [];
+    for (const rule of grp.rules || []) {
+      if (isFilterRuleEmpty(rule)) continue;
+      const source = rule.valueSource || 'value';
+
+      // LHS drill chain: resolve every hop (field ids → physical names).
+      const lhsChainIds = rule.fieldChain && rule.fieldChain.length > 0 ? rule.fieldChain : [rule.fieldId];
+      const chain: string[] = [];
+      for (const id of lhsChainIds) {
+        const name = resolveFieldName(id);
+        if (!name) break;
+        chain.push(name);
+      }
+      if (chain.length === 0) continue;
+      const fieldName = chain[chain.length - 1];
+      const base = {
+        field: fieldName,
+        operator: rule.operator || 'eq',
+        value: String(rule.value ?? ''),
+        logic: rule.logic || 'and',
+      };
+
+      if (source === 'field') {
+        const refChainIds = rule.refFieldChain && rule.refFieldChain.length > 0 ? rule.refFieldChain : [rule.refFieldId || ''];
+        const refChain: string[] = [];
+        for (const id of refChainIds) {
+          const name = id ? resolveFieldName(id) : null;
+          if (!name) break;
+          refChain.push(name);
+        }
+        if (refChain.length === 0) continue;
+        rules.push({ ...base, value: '', chain, refChain, refField: refChain[0] });
+      } else if (source === 'record') {
+        const refFieldName = rule.refFieldId ? resolveFieldName(rule.refFieldId) : null;
+        if (!refFieldName || !rule.refRecordId) continue;
+        rules.push({ ...base, value: '', chain, refField: refFieldName, refRecordId: rule.refRecordId });
+      } else if (source === 'context') {
+        if (!rule.contextMacro) continue;
+        rules.push({ ...base, value: rule.contextMacro, chain, contextN: rule.contextN });
+      } else {
+        rules.push({ ...base, chain });
+      }
+    }
+    if (rules.length > 0) {
+      out.push({ groupLogic: grp.groupLogic || 'and', rules });
+    }
+  }
+  return out;
+}
 
 
 

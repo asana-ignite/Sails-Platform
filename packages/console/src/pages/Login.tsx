@@ -180,7 +180,7 @@ const Login: React.FC = () => {
         <div className="sails-auth-form-wrapper">
           <div className="sails-auth-brand">
             <img src={themeMode === 'dark' ? logoDarkUrl : logoLightUrl} alt="SAILS Logo" className="sails-auth-logo-img" />
-            <span className="sails-auth-logo-text">SAILS</span>
+            <span className="sails-auth-logo-text">Sails</span>
           </div>
 
           <div>
@@ -277,7 +277,7 @@ const Login: React.FC = () => {
 
 
           <div className="sails-login-footer" style={{ marginTop: '10px' }}>
-            <p>© 2026 Ignite Idea. SAILS Internal Platform.</p>
+            <p>© 2026 Ignite Idea. Sails Internal Platform.</p>
           </div>
         </div>
       </div>
@@ -302,7 +302,7 @@ const Login: React.FC = () => {
 
         <div className="sails-auth-hero-content">
           <h1 className="sails-hero-greeting" style={{ fontSize: '2.5rem' }}>
-            {rememberedName ? `Welcome back, ${rememberedName}!` : 'Welcome to SAILS Platform'}
+            {rememberedName ? `Welcome back, ${rememberedName}!` : 'Welcome to Sails Platform'}
           </h1>
           <p className="sails-hero-subtext">
             Manage customers, sales pipelines, and business workflows with the enterprise-grade CRM application — flexibly configured to fit your organization.

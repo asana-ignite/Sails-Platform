@@ -15,10 +15,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Filter,
 } from 'lucide-react';
 import { useConsole } from '../contexts/ConsoleContext';
-import type { ConsoleMenu, TableLayout, SailsFieldDefinition, ListAction } from '@sails/shared';
-import { isSystemField, formatDateTimeValue, formatDecimalValue } from '@sails/shared';
+import type { ConsoleMenu, TableLayout, SailsFieldDefinition, ListAction, FilterGroup } from '@sails/shared';
+import { isSystemField, formatDateTimeValue, formatDecimalValue, normalizeFilters, serializeFilterGroups } from '@sails/shared';
+import { filterOperatorLabel } from '../components/common/FilterBuilder';
 import { useDateTimePrefs, isSystemDateTimeField, formatSystemDateTimeValue } from '../utils/systemDateTime';
 import { UserControl, useTenantUsers } from '../features/controls/plugins/UserControl';
 import { PhoneControl } from '../features/controls/plugins/PhoneControl';
@@ -130,6 +132,11 @@ const DynamicTablePage: React.FC = () => {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [recordsPerPage, setRecordsPerPage] = useState<number>(25);
+
+  // Saved layout filter state (session runtime, initialized from the layout config)
+  const [appliedFilterGroups, setAppliedFilterGroups] = useState<FilterGroup[]>([]);
+  const appliedFilterGroupsRef = useRef<FilterGroup[]>([]);
+
   const datetimePrefs = useDateTimePrefs();
   const { users: tenantUsers } = useTenantUsers();
 
@@ -177,13 +184,6 @@ const DynamicTablePage: React.FC = () => {
       flds.find((fd: any) => fd.id === idOrName || fd.fieldName === idOrName);
 
     const mergedFilters: Record<string, string> = {};
-    const layoutFilters = lc?.filters || [];
-    for (const f of layoutFilters) {
-      const field = findField(f.fieldId || f.id);
-      if (!field) continue;
-      const op = f.operator && f.operator !== 'eq' ? `:${f.operator}` : '';
-      mergedFilters[`${field.fieldName}${op}`] = f.value;
-    }
     const rf = runtimeFiltersRef.current;
     for (const [fieldId, value] of Object.entries(rf)) {
       if (!value?.trim()) continue;
@@ -191,6 +191,11 @@ const DynamicTablePage: React.FC = () => {
       if (!field) continue;
       mergedFilters[`${field.fieldName}:contains`] = value;
     }
+
+    const filterGroups = serializeFilterGroups(appliedFilterGroupsRef.current, (fieldId) => {
+      const field = findField(fieldId);
+      return field?.fieldName || null;
+    });
 
     const mergedSort: { fieldId: string; dir: 'asc' | 'desc' }[] = [];
     const layoutSort = lc?.sortBy || [];
@@ -207,6 +212,7 @@ const DynamicTablePage: React.FC = () => {
 
     const params = new URLSearchParams();
     if (Object.keys(mergedFilters).length) params.set('filters', JSON.stringify(mergedFilters));
+    if (filterGroups.length) params.set('filterGroups', JSON.stringify(filterGroups));
     if (mergedSort.length) params.set('sort', JSON.stringify(mergedSort));
     const sq = searchQueryRef.current;
     if (sq?.trim()) params.set('search', sq.trim());
@@ -343,6 +349,10 @@ const DynamicTablePage: React.FC = () => {
         layoutConfigRef.current = cfg;
         currentPageRef.current = 1;
 
+        const initialGroups = normalizeFilters(cfg?.filters);
+        appliedFilterGroupsRef.current = initialGroups;
+        setAppliedFilterGroups(initialGroups);
+
         setRecordsPerPage(cfg?.recordsPerPage || 25);
         setFields(tableFields);
         setLayout(targetLayout);
@@ -370,6 +380,12 @@ const DynamicTablePage: React.FC = () => {
     const t = setTimeout(() => doFetch(1), 300);
     return () => clearTimeout(t);
   }, [runtimeFilters, doFetch]);
+
+  useEffect(() => {
+    if (!initialLoadDone.current) return;
+    const t = setTimeout(() => doFetch(1), 300);
+    return () => clearTimeout(t);
+  }, [appliedFilterGroups, doFetch]);
 
   useEffect(() => {
     if (!initialLoadDone.current) return;
@@ -648,6 +664,11 @@ const DynamicTablePage: React.FC = () => {
                 <RotateCcw size={11} />
               </button>
             )}
+            <div className="dtp-filter-head" style={{ marginLeft: 8 }}>
+              <button type="button" className="sails-btn sails-btn--ghost sails-btn--sm dtp-filter-btn" title="Saved view filters">
+                <Filter size={12} /> Filters
+              </button>
+            </div>
           </div>
 
           <div className="ls-table-card__body" style={{ padding: 0 }}>

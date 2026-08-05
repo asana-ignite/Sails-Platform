@@ -11,17 +11,6 @@ export const RelationType: FieldTypePlugin = {
   parametersSchema: [
     { name: 'targetTable', label: 'Target Data Model', type: 'model_select', required: true },
     {
-      name: 'relationType',
-      label: 'Relation Type',
-      type: 'select',
-      defaultValue: 'many_to_one',
-      options: [
-        { label: 'Many-to-One (Lookup Foreign Key)', value: 'many_to_one' },
-        { label: 'One-to-Many', value: 'one_to_many' },
-        { label: 'One-to-One', value: 'one_to_one' }
-      ]
-    },
-    {
       name: 'controlStyle',
       label: 'Display Control',
       type: 'select',
@@ -33,7 +22,9 @@ export const RelationType: FieldTypePlugin = {
     }
   ],
   getPostgresColumnDefinition: (isRequired?: boolean) => {
-    return `UUID${isRequired ? ' NOT NULL' : ''}`;
+    // Platform record ids are VARCHAR(30) — the FK column must match or
+    // PostgreSQL cannot implement the constraint ("cannot be implemented").
+    return `VARCHAR(30)${isRequired ? ' NOT NULL' : ''}`;
   },
   getZodSchema: (isRequired?: boolean) => {
     const schema = z.string().uuid();

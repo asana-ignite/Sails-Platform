@@ -241,7 +241,7 @@
   padding: 10px 24px;
   font-size: 0.75rem;
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 1px;
   color: var(--sails-text-muted);
   border-bottom: 1px solid var(--sails-border-color);
@@ -733,7 +733,7 @@
 .sails-label {
   font-size: 0.75rem;
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.5px;
   color: var(--sails-text-muted);
 }

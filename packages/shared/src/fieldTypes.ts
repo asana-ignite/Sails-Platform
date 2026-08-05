@@ -189,17 +189,6 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
     parametersSchema: [
       { name: 'targetTable', label: 'Target Data Model', type: 'model_select', required: true },
       {
-        name: 'relationType',
-        label: 'Relation Type',
-        type: 'select',
-        defaultValue: 'many_to_one',
-        options: [
-          { label: 'Many-to-One (Lookup Foreign Key)', value: 'many_to_one' },
-          { label: 'One-to-Many', value: 'one_to_many' },
-          { label: 'One-to-One', value: 'one_to_one' }
-        ]
-      },
-      {
         name: 'controlStyle',
         label: 'Display Control',
         type: 'select',

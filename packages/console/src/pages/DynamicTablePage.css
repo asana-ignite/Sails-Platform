@@ -100,7 +100,7 @@
   padding: 10px 14px;
   font-weight: 600;
   font-size: 0.75rem;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.5px;
   color: var(--sails-text-muted);
   border-bottom: 1px solid var(--sails-border-color);
@@ -132,7 +132,7 @@
   color: var(--sails-text-muted);
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.5px;
   border: none;
   background: transparent;
@@ -351,3 +351,12 @@
   gap: 10px;
 }
 
+
+/* ─── Saved Filters Indicator (runtime list view) ─── */
+
+.dtp-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}

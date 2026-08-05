@@ -578,7 +578,7 @@
 .ls-block__label {
   font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.3px;
   color: var(--sails-text-secondary, #64748b);
 }
@@ -1471,3 +1471,56 @@
 }
 
 
+
+/* ─── Filter groups (Query Studio) in view properties ─── */
+
+.ls-vp-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border: 1px solid var(--sails-border, #e2e8f0);
+  border-radius: 5px;
+  padding: 5px;
+  background: rgba(157, 206, 224, 0.04);
+}
+
+.ls-vp-filter-group-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 3px;
+}
+
+.ls-vp-filter-group-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sails-primary-dark, #6b8ba4);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ls-vp-filter-group-head .ls-vp-filter-remove {
+  margin-left: auto;
+  opacity: 0.5;
+}
+
+.ls-vp-filter-group .ls-vp-filter-row {
+  border: none;
+  border-top: 1px dashed var(--sails-border, #e2e8f0);
+  border-radius: 0;
+  padding: 4px 6px;
+}
+
+.ls-vp-filter-group .ls-vp-filter-row:hover {
+  border-top: 1px dashed var(--sails-primary, #9dcee0);
+}
+
+/* Read-only (published layout, not editing) list-view rows */
+.ls-vp-readonly {
+  cursor: default !important;
+  opacity: 0.75;
+}
+
+.ls-vp-readonly:hover {
+  border-color: var(--sails-border, #e2e8f0) !important;
+}

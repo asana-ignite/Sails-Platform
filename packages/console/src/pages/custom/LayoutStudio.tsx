@@ -19,8 +19,9 @@ import {
   Edit3, Zap, Undo2, AlertTriangle, Database, ExternalLink,
   MousePointerClick,
 } from 'lucide-react';
-import type { SailsFieldDefinition, LayoutColumn, LayoutFilter, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction } from '@sails/shared';
-import { formatDateTimeValue, formatDecimalValue } from '@sails/shared';
+import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction } from '@sails/shared';
+import { formatDateTimeValue, formatDecimalValue, normalizeFilters } from '@sails/shared';
+import { FilterBuilder } from '../../components/common/FilterBuilder';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { FieldControlRegistry } from '../../features/controls/FieldControlRegistry';
@@ -263,9 +264,6 @@ function evaluateConditions(conditions: BlockCondition[] | undefined, record: Re
 let listColCounter = 0;
 function listColId(): string { listColCounter++; return `col_${Date.now()}_${listColCounter}`; }
 
-let listFiltCounter = 0;
-function listFiltId(): string { listFiltCounter++; return `filt_${Date.now()}_${listFiltCounter}`; }
-
 function buildDefaultListColumns(fields: SailsFieldDefinition[]): LayoutColumn[] {
   listColCounter = 0;
   return fields.slice(0, 5).map((f, i) => ({
@@ -293,6 +291,98 @@ function buildMockRows(fields: SailsFieldDefinition[]): Record<string, any>[] {
 }
 
 const NUMERIC_COLUMN_TYPES = new Set(['number', 'decimal', 'currency', 'percentage', 'percent']);
+
+// Synthesize a single value for a field that satisfies the given operator against the rule value.
+function synthValueForRule(rule: FilterRule, field: SailsFieldDefinition, current: any): any {
+  const lt = field.logicalType;
+  const numeric = NUMERIC_COLUMN_TYPES.has(lt);
+  const val = rule.value;
+  switch (rule.operator) {
+    case 'neq': {
+      if (numeric) return (Number(val) || 0) + 1;
+      if (typeof val === 'string' && val.trim() !== '') return `${val} 2`;
+      return 'sample';
+    }
+    case 'contains': return val == null || String(val).trim() === '' ? current : `${String(val)} sample`;
+    case 'is_empty': return lt === 'boolean' ? false : '';
+    case 'is_not_empty': return lt === 'boolean' ? true : (current == null || current === '' ? 'sample' : current);
+    case 'gt':
+    case 'gte': {
+      if (numeric) return (Number(val) || 0) + (rule.operator === 'gt' ? 1 : 0);
+      if ((lt === 'date' || lt === 'datetime' || lt === 'timestamp') && typeof val === 'string' && val.length >= 10) {
+        const d = new Date(`${val.slice(0, 10)}T00:00:00Z`);
+        if (!isNaN(d.getTime())) { d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
+      }
+      return val ?? current;
+    }
+    case 'lt':
+    case 'lte': {
+      if (numeric) return (Number(val) || 0) - (rule.operator === 'lt' ? 1 : 0);
+      if ((lt === 'date' || lt === 'datetime' || lt === 'timestamp') && typeof val === 'string' && val.length >= 10) {
+        const d = new Date(`${val.slice(0, 10)}T00:00:00Z`);
+        if (!isNaN(d.getTime())) { d.setUTCDate(d.getUTCDate() - 1); return d.toISOString().slice(0, 10); }
+      }
+      return val ?? current;
+    }
+    default: return val ?? current; // eq and others: match the criteria value exactly
+  }
+}
+
+// Shape a mock row so the given filter rule passes against it.
+function applyRuleToMockRow(rec: Record<string, any>, rule: FilterRule, fields: SailsFieldDefinition[]): void {
+  const field = fields.find((fd) => fd.id === rule.fieldId || fd.fieldName === rule.fieldId);
+  const source = rule.valueSource || 'value';
+  if (source === 'record' || source === 'context') return; // resolve server-side; match-all in preview
+  if (source === 'field' && rule.refFieldId) {
+    const refField = fields.find((fd) => fd.id === rule.refFieldId || fd.fieldName === rule.refFieldId);
+    if (!field || !refField) return;
+    const refVal = rec[refField.fieldName];
+    switch (rule.operator) {
+      case 'eq':            rec[field.fieldName] = refVal; break;
+      case 'neq':           rec[field.fieldName] = refVal == null || refVal === '' ? 'sample' : `${refVal} 2`; break;
+      case 'contains':      rec[field.fieldName] = refVal == null || refVal === '' ? 'sample' : `${refVal} sample`; break;
+      case 'gt':
+      case 'gte':           rec[field.fieldName] = synthValueForRule({ ...rule, valueSource: 'value', operator: 'gt' }, field, refVal); break;
+      case 'lt':
+      case 'lte':           rec[field.fieldName] = synthValueForRule({ ...rule, valueSource: 'value', operator: 'lt' }, field, refVal); break;
+      default:              rec[field.fieldName] = refVal;
+    }
+    return;
+  }
+  if (!field) return;
+  const val = synthValueForRule(rule, field, rec[field.fieldName]);
+  if (rule.operator === 'is_empty') rec[field.fieldName] = '';
+  else rec[field.fieldName] = val;
+}
+
+// Produce fake rows that follow the filter criteria so the preview table is never empty.
+function synthesizeFilteredRows(baseRows: Record<string, any>[], filters: FilterGroup[], fields: SailsFieldDefinition[]): Record<string, any>[] {
+  const groups = filters.filter((g) => g.rules && g.rules.length > 0);
+  if (groups.length === 0) return baseRows;
+  const skeleton = baseRows.length > 0 ? baseRows : [{}];
+  const cloneRow = (i: number): Record<string, any> => {
+    const rec: Record<string, any> = {};
+    Object.keys(skeleton[i % skeleton.length]).forEach((k) => { rec[k] = skeleton[i % skeleton.length][k]; });
+    return rec;
+  };
+  const out: Record<string, any>[] = [];
+  if (groups.every((g) => g.groupLogic === 'or')) {
+    groups.forEach((grp) => {
+      for (let i = 0; i < skeleton.length; i++) {
+        const rec = cloneRow(i);
+        grp.rules.forEach((r) => applyRuleToMockRow(rec, r, fields));
+        out.push(rec);
+      }
+    });
+  } else {
+    for (let i = 0; i < skeleton.length; i++) {
+      const rec = cloneRow(i);
+      groups.forEach((grp) => grp.rules.forEach((r) => applyRuleToMockRow(rec, r, fields)));
+      out.push(rec);
+    }
+  }
+  return out;
+}
 
 function renderListFieldValue(field: SailsFieldDefinition, record: Record<string, any>): string {
   const val = record[field.fieldName];
@@ -395,7 +485,7 @@ const LayoutStudio: React.FC = () => {
   // ── LIST mode state ──
   const [listColumns, setListColumns] = useState<LayoutColumn[]>([]);
   const [availableDetailLayouts, setAvailableDetailLayouts] = useState<{ id: string; name: string; viewType: string }[]>([]);
-  const [listFilters, setListFilters] = useState<LayoutFilter[]>([]);
+  const [listFilters, setListFilters] = useState<FilterGroup[]>([]);
   const [listSortBy, setListSortBy] = useState<LayoutSort[]>([]);
   const [listSelectedColId, setListSelectedColId] = useState<string | null>(null);
   const [listSelectedFiltId, setListSelectedFiltId] = useState<string | null>(null);
@@ -406,7 +496,9 @@ const LayoutStudio: React.FC = () => {
   // ── New LIST state (from TableBuilder mockup) ──
   const [listSummaryFields, setListSummaryFields] = useState<SummaryField[]>([]);
   const [listOverlayMode, setListOverlayMode] = useState<'edit-sort' | 'edit-filter' | null>(null);
-  const [listEditingFilterId, setListEditingFilterId] = useState<string | null>(null);
+  const [filterDraft, setFilterDraft] = useState<FilterGroup[] | null>(null);
+  const [sortDraft, setSortDraft] = useState<LayoutSort[] | null>(null);
+  const [sortNewFieldId, setSortNewFieldId] = useState<string>('');
   const [listRuntimeSortRules, setListRuntimeSortRules] = useState<LayoutSort[]>([]);
   const [listRuntimeFilters, setListRuntimeFilters] = useState<Record<string, string>>({});
   const [listActivePreviewFilter, setListActivePreviewFilter] = useState<string | null>(null);
@@ -492,7 +584,7 @@ const LayoutStudio: React.FC = () => {
           const config = typeof configSource === 'string' ? JSON.parse(configSource) : configSource;
           if (vType === 'LIST') {
             if (config.columns && config.columns.length > 0) setListColumns(config.columns);
-            if (config.filters) setListFilters(config.filters);
+            if (config.filters) setListFilters(normalizeFilters(config.filters));
             if (config.sortBy) setListSortBy(config.sortBy);
             if (config.summaryFields) setListSummaryFields(config.summaryFields);
             if (config.actions && Array.isArray(config.actions)) setListActions(config.actions);
@@ -576,38 +668,11 @@ const LayoutStudio: React.FC = () => {
     () => listFilters.find((f) => f.id === listSelectedFiltId) ?? null,
     [listFilters, listSelectedFiltId]
   );
-  const listEditingFilter = useMemo(
-    () => (listEditingFilterId ? listFilters.find((f) => f.id === listEditingFilterId) ?? null : null),
-    [listFilters, listEditingFilterId]
-  );
 
-  // Runtime preview computed values
+  // Runtime preview computed values — the fake rows are shaped to follow the filter
+  // criteria (client-side simulation over mock data only; never touches the real API/DB)
   const listFilteredRecords = useMemo(() => {
-    return listMockRows.filter((rec) => {
-      if (listFilters.length === 0) return true;
-      let result = true;
-      for (let i = 0; i < listFilters.length; i++) {
-        const f = listFilters[i];
-        const field = allFields.find((fd) => fd.id === f.fieldId);
-        if (!field) continue;
-        const val = rec[field.fieldName];
-        const cmp = f.value;
-        let match = true;
-        switch (f.operator) {
-          case 'eq':          match = String(val) === cmp; break;
-          case 'neq':         match = String(val) !== cmp; break;
-          case 'contains':    match = String(val || '').toLowerCase().includes(cmp.toLowerCase()); break;
-          case 'is_empty':    match = val === undefined || val === null || String(val).trim() === ''; break;
-          case 'is_not_empty':match = val !== undefined && val !== null && String(val).trim() !== ''; break;
-          case 'gt':          match = Number(val) > Number(cmp); break;
-          case 'gte':         match = Number(val) >= Number(cmp); break;
-          case 'lt':          match = Number(val) < Number(cmp); break;
-          case 'lte':         match = Number(val) <= Number(cmp); break;
-        }
-        result = i === 0 ? match : (f.logic === 'or' ? (result || match) : (result && match));
-      }
-      return result;
-    });
+    return synthesizeFilteredRows(listMockRows, listFilters, allFields);
   }, [listMockRows, listFilters, allFields]);
 
   const listSortedRecords = useMemo(() => {
@@ -778,7 +843,10 @@ const LayoutStudio: React.FC = () => {
       setListDragOverColId(null);
       setListColResizing(null);
       setListOverlayMode(null);
-      setListEditingFilterId(null);
+      setListSelectedFiltId(null);
+      setFilterDraft(null);
+      setSortDraft(null);
+      setSortNewFieldId('');
       setListRuntimeSortRules([]);
       setListRuntimeFilters({});
       setListActivePreviewFilter(null);
@@ -966,7 +1034,7 @@ const LayoutStudio: React.FC = () => {
         if (viewType === 'LIST') {
           if (config.columns && config.columns.length > 0) setListColumns(config.columns);
           else setListColumns([]);
-          if (config.filters) setListFilters(config.filters);
+          if (config.filters) setListFilters(normalizeFilters(config.filters));
           else setListFilters([]);
           if (config.sortBy) setListSortBy(config.sortBy);
           else setListSortBy([]);
@@ -1298,48 +1366,27 @@ const LayoutStudio: React.FC = () => {
   };
 
   const addListFilter = () => {
-    const f: LayoutFilter = { id: listFiltId(), fieldId: allFields[0]?.id || '', operator: 'eq', value: '', logic: 'and' };
-    setListFilters((fs) => [...fs, f]);
+    setFilterDraft([...listFilters]);
     setListSelectedColId(null);
-    setListEditingFilterId(f.id);
     setListOverlayMode('edit-filter');
   };
 
-  const removeListFilter = (filterId: string) => {
-    setListFilters((fs) => fs.filter((f) => f.id !== filterId));
-    if (listSelectedFiltId === filterId) setListSelectedFiltId(null);
-    if (listEditingFilterId === filterId) { setListEditingFilterId(null); setListOverlayMode(null); }
+  const removeListFilterRule = (groupId: string, ruleId: string) => {
+    setListFilters((groups) =>
+      groups
+        .map((g) => (g.id === groupId ? { ...g, rules: g.rules.filter((r) => r.id !== ruleId) } : g))
+        .filter((g) => g.rules.length > 0)
+    );
+    setListSelectedFiltId(null);
   };
 
-  const updateListFilter = (filterId: string, patch: Partial<LayoutFilter>) => {
-    setListFilters((fs) => fs.map((f) => f.id === filterId ? { ...f, ...patch } : f));
-  };
-
-  const addListSortRule = () => {
-    setListSortBy((prev) => {
-      if (prev.length >= MAX_SORT_RULES) return prev;
-      const usedFieldIds = prev.map((r) => r.fieldId);
-      const nextField = allFields.find((f) => !usedFieldIds.includes(f.id));
-      return [...prev, { fieldId: nextField?.id || allFields[0]?.id || '', direction: 'asc' as const }];
-    });
+  const removeListFilterGroup = (groupId: string) => {
+    setListFilters((groups) => groups.filter((g) => g.id !== groupId));
+    setListSelectedFiltId(null);
   };
 
   const removeListSortRule = (index: number) => {
     setListSortBy((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateListSortRule = (index: number, patch: Partial<LayoutSort>) => {
-    setListSortBy((prev) => prev.map((r, i) => i === index ? { ...r, ...patch } : r));
-  };
-
-  const moveListSortRule = (index: number, direction: 'up' | 'down') => {
-    setListSortBy((prev) => {
-      const targetIdx = direction === 'up' ? index - 1 : index + 1;
-      if (targetIdx < 0 || targetIdx >= prev.length) return prev;
-      const next = [...prev];
-      [next[index], next[targetIdx]] = [next[targetIdx], next[index]];
-      return next;
-    });
   };
 
   // ── Summary Actions ──
@@ -1353,18 +1400,73 @@ const LayoutStudio: React.FC = () => {
   };
 
   // ── Overlay Actions ──
-  const openListFilterEditor = (filterId: string) => {
+  const openListFilterEditor = (filterId?: string) => {
+    setFilterDraft([...listFilters]);
+    if (filterId) setListSelectedFiltId(filterId);
     setListOverlayMode('edit-filter');
-    setListEditingFilterId(filterId);
+  };
+
+  const cancelListFilterEditor = () => {
+    setFilterDraft(null);
+    setListSelectedFiltId(null);
+    setListOverlayMode(null);
+  };
+
+  const doneListFilterEditor = (groups: FilterGroup[]) => {
+    setListFilters(groups);
+    setFilterDraft(null);
+    setListSelectedFiltId(null);
+    setListOverlayMode(null);
   };
 
   const openListSortEditor = () => {
+    setSortDraft([...listSortBy]);
+    setSortNewFieldId('');
     setListOverlayMode('edit-sort');
   };
 
-  const closeListOverlay = () => {
+  const cancelListSortEditor = () => {
+    setSortDraft(null);
+    setSortNewFieldId('');
     setListOverlayMode(null);
-    setListEditingFilterId(null);
+    setListSelectedFiltId(null);
+  };
+
+  const doneListSortEditor = () => {
+    if (sortDraft) setListSortBy(sortDraft);
+    setSortDraft(null);
+    setSortNewFieldId('');
+    setListOverlayMode(null);
+    setListSelectedFiltId(null);
+  };
+
+  const updateSortDraftRule = (index: number, patch: Partial<LayoutSort>) => {
+    setSortDraft((prev) => (prev ? prev.map((r, i) => (i === index ? { ...r, ...patch } : r)) : prev));
+  };
+
+  const removeSortDraftRule = (index: number) => {
+    setSortDraft((prev) => (prev ? prev.filter((_, i) => i !== index) : prev));
+  };
+
+  const addSortDraftRule = () => {
+    setSortDraft((prev) => {
+      if (!prev || prev.length >= MAX_SORT_RULES || !sortNewFieldId) return prev;
+      return [...prev, { fieldId: sortNewFieldId, direction: 'asc' as const }];
+    });
+    setSortNewFieldId('');
+  };
+
+  const closeListOverlay = () => {
+    if (listOverlayMode === 'edit-sort') {
+      cancelListSortEditor();
+      return;
+    }
+    if (listOverlayMode === 'edit-filter') {
+      cancelListFilterEditor();
+      return;
+    }
+    setListOverlayMode(null);
+    setListSelectedFiltId(null);
   };
 
   const saveListMetadata = async () => {
@@ -1984,7 +2086,7 @@ const LayoutStudio: React.FC = () => {
                     </>
                   )}
                   <span className="ls-table-card__badge" style={{ marginLeft: 'auto' }}>
-                    {previewMode ? listRuntimeRecords.length : listMockRows.length} rows
+                    {previewMode ? listRuntimeRecords.length : listSortedRecords.length} rows
                   </span>
                   {previewMode && listAllowMultiSelect && listSelectedIndices.size > 0 && (
                     <span className="ls-table-card__badge" style={{ background: 'rgba(157,206,224,0.25)', color: 'var(--sails-primary)' }}>
@@ -2192,7 +2294,7 @@ const LayoutStudio: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {listMockRows.map((rec, ri) => (
+                          {listSortedRecords.map((rec, ri) => (
                             <tr key={ri}>
                               {listAllowMultiSelect && (
                                 <td className="ls-td ls-td--cb" style={{ width: 40, minWidth: 40, textAlign: 'center', padding: '8px 0' }}>
@@ -2752,7 +2854,7 @@ const LayoutStudio: React.FC = () => {
                                   </span>
                                 </label>
                                 <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={openListSortEditor}
-                                  disabled={listSortBy.length >= MAX_SORT_RULES}
+                                  disabled={isReadOnly || listSortBy.length >= MAX_SORT_RULES}
                                   style={{ fontSize: 10, padding: '2px 8px' }}><Plus size={11} /> Add</button>
                               </div>
                               {listSortBy.length === 0 ? (
@@ -2762,11 +2864,13 @@ const LayoutStudio: React.FC = () => {
                                   {listSortBy.map((rule, idx) => {
                                     const sf = allFields.find((f) => f.id === rule.fieldId);
                                     return (
-                                      <div key={idx} className="ls-vp-sort-rule" onClick={() => openListSortEditor()}>
+                                      <div key={idx} className={`ls-vp-sort-rule ${isReadOnly ? 'ls-vp-readonly' : ''}`} onClick={() => { if (!isReadOnly) openListSortEditor(); }}>
                                         <span className="ls-vp-sort-rule__seq">{idx + 1}</span>
                                         <span className="ls-vp-sort-rule__field">{sf?.name || rule.fieldId}</span>
                                         <span className="ls-vp-sort-rule__dir">{rule.direction === 'asc' ? '\u25B2' : '\u25BC'}</span>
-                                        <button className="ls-vp-sort-rule__remove" onClick={(e) => { e.stopPropagation(); removeListSortRule(idx); }}><X size={10} /></button>
+                                        {!isReadOnly && (
+                                          <button className="ls-vp-sort-rule__remove" onClick={(e) => { e.stopPropagation(); removeListSortRule(idx); }}><X size={10} /></button>
+                                        )}
                                       </div>
                                     );
                                   })}
@@ -2782,26 +2886,54 @@ const LayoutStudio: React.FC = () => {
                                   </span>
                                 </label>
                                 <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={addListFilter}
+                                  disabled={isReadOnly}
                                   style={{ fontSize: 10, padding: '2px 8px' }}><Plus size={11} /> Add</button>
                               </div>
                               {listFilters.length === 0 ? (
                                 <p className="ls-vp-empty">No filters applied</p>
                               ) : (
                                 <div className="ls-vp-filter-list">
-                                  {listFilters.map((f, i) => {
-                                    const ff = allFields.find((fd) => fd.id === f.fieldId);
-                                    return (
-                                      <div key={f.id} className="ls-vp-filter-row" onClick={() => openListFilterEditor(f.id)}>
-                                        {i > 0 && <span className="ls-vp-filter-logic">{f.logic.toUpperCase()}</span>}
-                                        <span className="ls-vp-filter-field">{ff?.name || f.fieldId}</span>
-                                        <span className="ls-vp-filter-op">{listOperatorLabel(f.operator)}</span>
-                                        {!['is_empty', 'is_not_empty'].includes(f.operator) && (
-                                          <span className="ls-vp-filter-value">{f.value || '(empty)'}</span>
+                                  {listFilters.map((grp, gi) => (
+                                    <div key={grp.id} className="ls-vp-filter-group">
+                                      <div className="ls-vp-filter-group-head">
+                                        <span className="ls-vp-filter-group-name">Group {grp.name}</span>
+                                        {gi > 0 && (
+                                          <button
+                                            className={`ls-btn-logic ${grp.groupLogic === 'or' ? 'ls-btn-logic--active' : ''}`}
+                                            disabled={isReadOnly}
+                                            onClick={() => {
+                                              setListFilters((gs) => gs.map((g) =>
+                                                g.id === grp.id ? { ...g, groupLogic: g.groupLogic === 'or' ? 'and' : 'or' } : g
+                                              ));
+                                            }}
+                                            title="Toggle logic joining with previous group"
+                                          >
+                                            {grp.groupLogic.toUpperCase()}
+                                          </button>
                                         )}
-                                        <button className="ls-vp-filter-remove" onClick={(e) => { e.stopPropagation(); removeListFilter(f.id); }}><X size={10} /></button>
+                                        {!isReadOnly && (
+                                          <button className="ls-vp-filter-remove" onClick={() => removeListFilterGroup(grp.id)} title="Remove group"><X size={10} /></button>
+                                        )}
                                       </div>
-                                    );
-                                  })}
+                                      {grp.rules.map((r, ri) => {
+                                        const ff = allFields.find((fd) => fd.id === r.fieldId);
+                                        return (
+                                          <div key={r.id} className={`ls-vp-filter-row ${isReadOnly ? 'ls-vp-readonly' : ''}`} onClick={() => { if (!isReadOnly) openListFilterEditor(); }}>
+                                            {ri > 0 && <span className="ls-vp-filter-logic">{r.logic.toUpperCase()}</span>}
+                                            {ri === 0 && <span className="ls-vp-filter-logic" />}
+                                            <span className="ls-vp-filter-field">{r.fieldPath || ff?.name || r.fieldId}</span>
+                                            <span className="ls-vp-filter-op">{listOperatorLabel(r.operator)}</span>
+                                            {!['is_empty', 'is_not_empty'].includes(r.operator) && (
+                                              <span className="ls-vp-filter-value">{r.value || r.refFieldPath || '(empty)'}</span>
+                                            )}
+                                            {!isReadOnly && (
+                                              <button className="ls-vp-filter-remove" onClick={(e) => { e.stopPropagation(); removeListFilterRule(grp.id, r.id); }}><X size={10} /></button>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </div>
@@ -3253,13 +3385,17 @@ const LayoutStudio: React.FC = () => {
       {/* ── Floating Overlay for Sort/Filter Editing ── */}
       {listOverlayMode && (
         <div className="ls-overlay" onClick={closeListOverlay}>
-          <div className="ls-overlay-card" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="ls-overlay-card"
+            style={listOverlayMode === 'edit-filter' ? { width: 1080, maxWidth: '95vw' } : undefined}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="ls-overlay-card__header">
               <h3 className="ls-overlay-card__title">
                 {listOverlayMode === 'edit-sort' ? (
                   <><ArrowUpDown size={14} /> Edit Sort</>
                 ) : (
-                  <><Filter size={14} /> {listEditingFilterId ? 'Edit Filter' : 'Add Filter'}</>
+                  <><Filter size={14} /> Edit View Filters</>
                 )}
               </h3>
               <button className="ls-block__btn" onClick={closeListOverlay}><X size={14} /></button>
@@ -3267,19 +3403,19 @@ const LayoutStudio: React.FC = () => {
             <div className="ls-overlay-card__body">
               {listOverlayMode === 'edit-sort' ? (
                 <>
-                  {listSortBy.length === 0 && <p className="ls-empty" style={{ padding: 20 }}>No sort rules configured.</p>}
-                  {listSortBy.map((rule, idx) => {
+                  {(sortDraft ?? listSortBy).length === 0 && <p className="ls-empty" style={{ padding: 20 }}>No sort rules configured.</p>}
+                  {(sortDraft ?? listSortBy).map((rule, idx) => {
                     const sf = allFields.find((f) => f.id === rule.fieldId);
                     return (
                       <div key={idx} className="ls-prop-group" style={idx === 0 ? { borderTop: 'none', paddingTop: 0 } : undefined}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
                           <label className="ls-prop-label" style={{ marginBottom: 0 }}>Rule {idx + 1}</label>
-                          <button className="ls-block__btn ls-block__btn--danger" onClick={() => removeListSortRule(idx)} title="Remove sort rule"><Trash2 size={12} /></button>
+                          <button className="ls-block__btn ls-block__btn--danger" onClick={() => removeSortDraftRule(idx)} title="Remove sort rule"><Trash2 size={12} /></button>
                         </div>
                         <CustomSelect
                           value={rule.fieldId}
                           options={allFields.map((f) => ({ value: f.id, label: f.name }))}
-                          onChange={(v) => updateListSortRule(idx, { fieldId: String(v) })}
+                          onChange={(v) => updateSortDraftRule(idx, { fieldId: String(v) })}
                           size="sm"
                           searchable
                           style={{ marginBottom: 6 }}
@@ -3287,7 +3423,7 @@ const LayoutStudio: React.FC = () => {
                         <div style={{ display: 'flex', gap: 4 }}>
                           {(['asc', 'desc'] as const).map((d) => (
                             <button key={d} className={`ls-btn-sort ${rule.direction === d ? 'ls-btn-sort--active' : ''}`}
-                              onClick={() => updateListSortRule(idx, { direction: d })}>
+                              onClick={() => updateSortDraftRule(idx, { direction: d })}>
                               {d === 'asc' ? '\u25B2 ASC' : '\u25BC DESC'}
                             </button>
                           ))}
@@ -3295,81 +3431,39 @@ const LayoutStudio: React.FC = () => {
                       </div>
                     );
                   })}
-                  <div className="ls-prop-group">
-                    <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={addListSortRule}
-                      disabled={listSortBy.length >= MAX_SORT_RULES}
-                      style={{ width: '100%', justifyContent: 'center' }}><Plus size={12} /> Add Sort Rule</button>
+                  <div className="ls-prop-group" style={{ display: 'flex', flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                    <CustomSelect
+                      value={sortNewFieldId}
+                      options={allFields
+                        .filter((f) => !(sortDraft ?? listSortBy).some((r) => r.fieldId === f.id))
+                        .map((f) => ({ value: f.id, label: f.name }))}
+                      onChange={(v) => setSortNewFieldId(String(v))}
+                      size="sm"
+                      searchable
+                      placeholder="Select field to sort..."
+                      style={{ flex: 1, minWidth: 160 }}
+                    />
+                    <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={addSortDraftRule}
+                      disabled={!sortNewFieldId || (sortDraft ?? listSortBy).length >= MAX_SORT_RULES}
+                      style={{ whiteSpace: 'nowrap' }}><Plus size={12} /> Add</button>
                   </div>
-                  <div className="ls-prop-group" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={closeListOverlay}>Done</button>
+                  <div className="ls-prop-group" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                    <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={cancelListSortEditor}>Cancel</button>
+                    <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={doneListSortEditor}>Done</button>
                   </div>
                 </>
-               ) : listEditingFilter && (
-                <>
-                 <div className="ls-prop-group" style={{ borderTop: 'none', paddingTop: 0 }}>
-                    <label className="ls-prop-label">Field</label>
-                    <CustomSelect
-                      value={listEditingFilter.fieldId}
-                      options={allFields.map((f) => ({ value: f.id, label: f.name }))}
-                      onChange={(v) => updateListFilter(listEditingFilter.id, { fieldId: String(v) })}
-                      size="sm" searchable
-                    />
-                  </div>
-                  <div className="ls-prop-group">
-                    <label className="ls-prop-label">Operator</label>
-                    <CustomSelect
-                      value={listEditingFilter.operator}
-                      options={[
-                        { value: 'eq', label: '= equals' },
-                        { value: 'neq', label: '\u2260 not equal' },
-                        { value: 'gt', label: '> greater than' },
-                        { value: 'gte', label: '\u2265 gte' },
-                        { value: 'lt', label: '< less than' },
-                        { value: 'lte', label: '\u2264 lte' },
-                        { value: 'contains', label: 'contains' },
-                        { value: 'is_empty', label: 'is empty' },
-                        { value: 'is_not_empty', label: 'is not empty' },
-                      ]}
-                      onChange={(v) => updateListFilter(listEditingFilter.id, { operator: String(v) })}
-                      size="sm" searchable
-                    />
-                  </div>
-                  {!['is_empty', 'is_not_empty'].includes(listEditingFilter.operator) && (
-                    <div className="ls-prop-group">
-                      <label className="ls-prop-label">Value</label>
-                      {(() => {
-                        const eff = allFields.find((f) => f.id === listEditingFilter.fieldId);
-                        const effOptions: { label: string; value: string }[] = (eff?.config as any)?.options || [];
-                        return effOptions.length > 0 ? (
-                          <CustomSelect
-                            value={listEditingFilter.value}
-                            options={effOptions}
-                            onChange={(v) => updateListFilter(listEditingFilter.id, { value: String(v) })}
-                            size="sm"
-                            searchable
-                            placeholder="— select —"
-                          />
-                        ) : (
-                          <input className="sails-input" value={listEditingFilter.value}
-                            onChange={(e) => updateListFilter(listEditingFilter.id, { value: e.target.value })}
-                            placeholder="value..." style={{ fontSize: 12, padding: '5px 7px' }} />
-                        );
-                      })()}
-                    </div>
-                  )}
-                  <div className="ls-prop-group">
-                    <label className="ls-prop-label">Logic (if chained)</label>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {(['and', 'or'] as const).map((l) => (
-                        <button key={l} className={`ls-btn-logic ls-btn-logic--large ${listEditingFilter.logic === l ? 'ls-btn-logic--active' : ''}`}
-                          onClick={() => updateListFilter(listEditingFilter.id, { logic: l })}>{l.toUpperCase()}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="ls-prop-group" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={closeListOverlay}>Done</button>
-                  </div>
-                </>
+               ) : listOverlayMode === 'edit-filter' && (
+                <div className="ls-overlay-card__body" style={{ padding: '4px 16px 16px' }}>
+                  <FilterBuilder
+                    fields={allFields}
+                    rootTableName={tableMeta?.tableName || ''}
+                    initialGroups={filterDraft ?? listFilters}
+                    showHeader={false}
+                    title="Edit View Filters"
+                    onApply={doneListFilterEditor}
+                    onCancel={cancelListFilterEditor}
+                  />
+                </div>
               )}
             </div>
           </div>

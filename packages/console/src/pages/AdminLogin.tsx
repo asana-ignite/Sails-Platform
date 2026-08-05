@@ -125,7 +125,7 @@ const AdminLogin: React.FC = () => {
 
           <div className="sails-auth-brand">
             <img src={themeMode === 'dark' ? logoDarkUrl : logoLightUrl} alt="SAILS Logo" className="sails-auth-logo-img" />
-            <span className="sails-auth-logo-text">SAILS</span>
+            <span className="sails-auth-logo-text">Sails</span>
           </div>
 
           <div>

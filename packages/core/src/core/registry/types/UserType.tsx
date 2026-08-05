@@ -37,7 +37,8 @@ export const UserType: FieldTypePlugin = {
     }
   ],
   getPostgresColumnDefinition: (isRequired?: boolean) => {
-    return `UUID${isRequired ? ' NOT NULL' : ''}`;
+    // Platform user ids are VARCHAR(30) CUIDs — a UUID column cannot store them.
+    return `VARCHAR(30)${isRequired ? ' NOT NULL' : ''}`;
   },
   getZodSchema: (isRequired?: boolean) => {
     const schema = z.string().uuid();
