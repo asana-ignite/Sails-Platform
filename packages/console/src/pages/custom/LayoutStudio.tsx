@@ -17,7 +17,7 @@ import {
   Layers, Search, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown,
   RotateCcw, AlignLeft, AlignCenter, AlignRight,
   Edit3, Zap, Undo2, AlertTriangle, Database, ExternalLink,
-  MousePointerClick, Smartphone, List, PanelRight,
+  MousePointerClick, Smartphone, List, PanelRight, History,
 } from 'lucide-react';
 import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction, MobileViewMode } from '@sails/shared';
 import { formatDateTimeValue, formatDecimalValue, normalizeFilters } from '@sails/shared';
@@ -486,6 +486,11 @@ const LayoutStudio: React.FC = () => {
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [activatingLayout, setActivatingLayout] = useState(false);
   const [hasPublishedVersion, setHasPublishedVersion] = useState(false);
+  const [activateNotes, setActivateNotes] = useState('');
+  const [layoutVersions, setLayoutVersions] = useState<{ id: string; version: number; notes: string | null; publishedBy: string | null; publishedAt: string }[]>([]);
+  const [currentVersion, setCurrentVersion] = useState(1);
+  const [rollbackLoading, setRollbackLoading] = useState(false);
+  const [rollbackConfirmVersion, setRollbackConfirmVersion] = useState<number | null>(null);
 
   // ── LIST mode state ──
   const [listColumns, setListColumns] = useState<LayoutColumn[]>([]);
@@ -584,6 +589,8 @@ const LayoutStudio: React.FC = () => {
         const status = layout.status || 'draft';
         setLayoutStatus(status);
         setHasPublishedVersion(!!layout.publishedConfig);
+        if (layout.versions && Array.isArray(layout.versions)) setLayoutVersions(layout.versions);
+        if (typeof layout.currentVersion === 'number') setCurrentVersion(layout.currentVersion);
         if (status === 'active') {
           setIsEditing(false);
         } else {
@@ -1075,19 +1082,83 @@ const LayoutStudio: React.FC = () => {
       const res = await fetch('/api/console/layouts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: layoutId, config, recordTitleField: layoutRecordTitleField || null, action: 'activate' }),
+        body: JSON.stringify({
+          id: layoutId,
+          config,
+          recordTitleField: layoutRecordTitleField || null,
+          action: 'activate',
+          notes: activateNotes.trim() || undefined,
+        }),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Failed to activate layout');
       setLayoutStatus('active');
       setIsEditing(false);
       setHasPublishedVersion(true);
-      setSavedSuccessMsg('Layout activated successfully.');
+      setActivateNotes('');
+      const fresh = await fetchCached(`/api/console/layouts?id=${layoutId}`);
+      if (fresh.success) {
+        if (Array.isArray(fresh.data.versions)) setLayoutVersions(fresh.data.versions);
+        if (typeof fresh.data.currentVersion === 'number') setCurrentVersion(fresh.data.currentVersion);
+      }
+      setSavedSuccessMsg(`Layout activated — version ${currentVersion} published.`);
       setTimeout(() => setSavedSuccessMsg(null), 4000);
     } catch (err: any) {
       setSaveError(err.message || 'Failed to activate layout');
     } finally {
       setActivatingLayout(false);
+    }
+  };
+
+  const doRollback = async (targetVersion: number) => {
+    if (!layoutId) return;
+    setRollbackLoading(true);
+    try {
+      const res = await fetch('/api/console/layouts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: layoutId, action: 'rollback', targetVersion }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to rollback layout');
+      // Reload the whole layout so the editor reflects the rolled-back config.
+      const fresh = await fetchCached(`/api/console/layouts?id=${layoutId}`);
+      if (fresh.success) {
+        const layout = fresh.data;
+        setLayoutStatus('draft');
+        setIsEditing(true);
+        const vType = (layout.viewType as ViewType) || 'DETAIL';
+        setViewType(vType);
+        if (Array.isArray(layout.versions)) setLayoutVersions(layout.versions);
+        if (typeof layout.currentVersion === 'number') setCurrentVersion(layout.currentVersion);
+        const configSource = layout.config;
+        if (configSource) {
+          const config = typeof configSource === 'string' ? JSON.parse(configSource) : configSource;
+          if (vType === 'LIST') {
+            if (config.columns) setListColumns(config.columns);
+            if (config.filters) setListFilters(normalizeFilters(config.filters));
+            if (config.sortBy) setListSortBy(config.sortBy);
+            if (config.summaryFields) setListSummaryFields(config.summaryFields);
+            if (config.actions && Array.isArray(config.actions)) setListActions(config.actions);
+            if (typeof config.allowMultiSelect === 'boolean') setListAllowMultiSelect(config.allowMultiSelect);
+            if (typeof config.allowPaging === 'boolean') setListAllowPaging(config.allowPaging);
+            if (config.recordsPerPage) setListRecordsPerPage(config.recordsPerPage);
+            if (config.pagingMode) setListPagingMode(config.pagingMode);
+            if (typeof config.allowInlineEdit === 'boolean') setListAllowInlineEdit(config.allowInlineEdit);
+            if (typeof config.allowInlineCreate === 'boolean') setListAllowInlineCreate(config.allowInlineCreate);
+            if (typeof config.allowInlineDelete === 'boolean') setListAllowInlineDelete(config.allowInlineDelete);
+          } else {
+            if (config.sections) setSections(config.sections);
+            if (config.blocks) setBlocks(config.blocks);
+          }
+        }
+      }
+      setSavedSuccessMsg(`Rolled back to version ${targetVersion}. Activate to publish it.`);
+      setTimeout(() => setSavedSuccessMsg(null), 4000);
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to rollback layout');
+    } finally {
+      setRollbackLoading(false);
     }
   };
 
@@ -1839,6 +1910,9 @@ const LayoutStudio: React.FC = () => {
           </button>
           <span className="ls-toolbar__brand">Layout Studio</span>
           <span style={{ fontSize: 11, color: 'var(--sails-text-muted)' }}>— {tableMeta.name}{viewType === 'LIST' ? ' (List View)' : ''}</span>
+          <span className={`ls-version-badge ${layoutStatus === 'draft' ? 'ls-version-badge--draft' : layoutStatus === 'active' ? 'ls-version-badge--active' : ''}`}>
+            {layoutStatus === 'draft' ? `Draft v${currentVersion}${isEditing ? ' (editing)' : ''}` : layoutStatus === 'active' ? `Active v${layoutVersions[0]?.version ?? Math.max(1, currentVersion - 1)}` : ''}
+          </span>
         </div>
         <div className="ls-toolbar__actions">
           {previewMode ? (
@@ -3560,6 +3634,48 @@ const LayoutStudio: React.FC = () => {
               </>
             )}</>
                   )}
+
+                {/* ── Version History ── */}
+                <div className="ls-prop-group ls-version-history">
+                  <div className="ls-section-divider" style={{ borderTop: 'none', margin: '8px -10px 0' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <History size={12} /> Version History
+                    </span>
+                  </div>
+                  {layoutVersions.length === 0 ? (
+                    <p className="ls-vp-empty">No published versions yet. Activate to create version 1.</p>
+                  ) : (
+                    <div className="ls-version-list">
+                      {layoutVersions.map((v) => {
+                        const isLatest = v.version === layoutVersions[0]?.version;
+                        return (
+                          <div key={v.id} className={`ls-version-row ${isLatest ? 'ls-version-row--current' : ''}`}>
+                            <span className="ls-version-badge ls-version-badge--num">v{v.version}</span>
+                            <div className="ls-version-info">
+                              <span className="ls-version-notes">{v.notes || '—'}</span>
+                              <span className="ls-version-meta">
+                                {new Date(v.publishedAt).toLocaleString()}
+                                {v.publishedBy ? ` · by ${v.publishedBy.slice(0, 8)}` : ''}
+                              </span>
+                            </div>
+                            {!isLatest && (
+                              <button
+                                type="button"
+                                className="sails-btn sails-btn--ghost sails-btn--sm"
+                                disabled={rollbackLoading || isReadOnly}
+                                title="Roll back to this version (copies it into the draft)"
+                                onClick={() => setRollbackConfirmVersion(v.version)}
+                              >
+                                <Undo2 size={11} /> Rollback
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="ls-prop-hint">Rollback copies the chosen version into the draft — activate to publish it as the next version.</p>
+                </div>
           </div>
               </>
             )}
@@ -3787,11 +3903,19 @@ const LayoutStudio: React.FC = () => {
         <div className="ls-modal-overlay" onClick={() => { if (!activatingLayout) setShowActivateConfirm(false); }}>
           <div className="ls-modal" onClick={(e) => e.stopPropagation()}>
             <h3 className="ls-modal__title">Activate Layout</h3>
-            <p className="ls-modal__text">This will overwrite the currently active layout with the draft configuration. Continue?</p>
+            <p className="ls-modal__text">This will publish the draft as <strong>version {currentVersion}</strong> and overwrite the currently active layout. Running records keep rendering from the published config — this only updates what new views use.</p>
+            <label className="ls-prop-label" style={{ marginBottom: 4 }}>Version Notes</label>
+            <input
+              className="sails-input"
+              value={activateNotes}
+              onChange={(e) => setActivateNotes(e.target.value)}
+              placeholder="e.g. Added collapsible section + mobile card mode"
+              style={{ width: '100%', boxSizing: 'border-box', marginBottom: 16 }}
+            />
             <div className="ls-modal__actions">
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowActivateConfirm(false)} disabled={activatingLayout}>Cancel</button>
               <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={doActivate} disabled={activatingLayout}>
-                {activatingLayout ? 'Activating...' : 'Activate'}
+                {activatingLayout ? 'Activating...' : `Activate v${currentVersion}`}
               </button>
             </div>
           </div>
@@ -3805,6 +3929,31 @@ const LayoutStudio: React.FC = () => {
             <div className="ls-modal__actions">
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowDiscardConfirm(false)}>Cancel</button>
               <button className="sails-btn sails-btn--danger sails-btn--sm" onClick={doDiscard}>Discard</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {rollbackConfirmVersion !== null && (
+        <div className="ls-modal-overlay" onClick={() => { if (!rollbackLoading) setRollbackConfirmVersion(null); }}>
+          <div className="ls-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="ls-modal__title">Rollback to version {rollbackConfirmVersion}?</h3>
+            <p className="ls-modal__text">
+              This copies version {rollbackConfirmVersion}'s configuration into the draft, replacing all current unsaved changes.
+              It does <strong>not</strong> publish — activate afterwards to release it as a new version. Running records are never affected.
+            </p>
+            <div className="ls-modal__actions">
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setRollbackConfirmVersion(null)} disabled={rollbackLoading}>Cancel</button>
+              <button
+                className="sails-btn sails-btn--danger sails-btn--sm"
+                onClick={() => {
+                  const target = rollbackConfirmVersion;
+                  setRollbackConfirmVersion(null);
+                  doRollback(target);
+                }}
+                disabled={rollbackLoading}
+              >
+                {rollbackLoading ? 'Rolling back...' : `Rollback to v${rollbackConfirmVersion}`}
+              </button>
             </div>
           </div>
         </div>

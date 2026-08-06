@@ -4,6 +4,7 @@ import { Search, MoreHorizontal, Shield, Circle, UserPlus, Filter, ChevronUp, Ch
 import { useConsole } from '../../contexts/ConsoleContext';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { UserDetailsModal } from './UserDetailsModal';
+import { UiTableCard, UiTable, UiTh, UiTr, UiTd, UiActionsMenu, UiActionsItem, UiActionsDivider, UiPagination, UiCheckboxTh, UiCheckboxTd } from '../../components/ui';
 import './UserManager.css';
 
 interface User {
@@ -349,44 +350,20 @@ const UserManager: React.FC = () => {
       </div>
 
       {/* 2. User Data Table */}
-      <div className="sails-card sails-user-manager__table-wrapper">
-        <table className="sails-user-manager__table">
+      <UiTableCard>
+        <UiTable>
           <thead>
             <tr>
-              <th className="sails-user-manager__th sails-user-manager__th--checkbox">
-                <input
-                  type="checkbox"
-                  className="sails-checkbox"
-                  ref={selectAllRef}
-                  checked={paginatedUsers.length > 0 && paginatedUsers.every(u => selectedUserIds.has(u.id))}
-                  onChange={handleSelectAll}
-                />
-              </th>
-              <th className="sails-user-manager__th sails-user-manager__th--sortable" onClick={() => handleSort('name')}>
-                <div className="sails-user-manager__th-content">
-                  <span>User Identity</span>
-                  {getSortIcon('name')}
-                </div>
-              </th>
-              <th className="sails-user-manager__th sails-user-manager__th--sortable" onClick={() => handleSort('role')}>
-                <div className="sails-user-manager__th-content">
-                  <span>Name & Title</span>
-                  <ArrowUpDown size={14} className="sails-user-manager__sort-icon--idle" />
-                </div>
-              </th>
-              <th className="sails-user-manager__th sails-user-manager__th--sortable" onClick={() => handleSort('status')}>
-                <div className="sails-user-manager__th-content">
-                  <span>Status</span>
-                  {getSortIcon('status')}
-                </div>
-              </th>
-              <th className="sails-user-manager__th sails-user-manager__th--sortable" onClick={() => handleSort('lastLogin')}>
-                <div className="sails-user-manager__th-content">
-                  <span>Last Activity</span>
-                  {getSortIcon('lastLogin')}
-                </div>
-              </th>
-              <th className="sails-user-manager__th sails-user-manager__th--actions"></th>
+              <UiCheckboxTh
+                checked={paginatedUsers.length > 0 && paginatedUsers.every(u => selectedUserIds.has(u.id))}
+                indeterminate={paginatedUsers.some(u => selectedUserIds.has(u.id)) && !paginatedUsers.every(u => selectedUserIds.has(u.id))}
+                onChange={handleSelectAll}
+              />
+              <UiTh sortable sortState={sortConfig?.key === 'name' ? sortConfig.direction : 'idle'} onSort={() => handleSort('name')}>User Identity</UiTh>
+              <UiTh sortable sortState={sortConfig?.key === 'role' ? sortConfig.direction : 'idle'} onSort={() => handleSort('role')}>Name & Title</UiTh>
+              <UiTh sortable sortState={sortConfig?.key === 'status' ? sortConfig.direction : 'idle'} onSort={() => handleSort('status')}>Status</UiTh>
+              <UiTh sortable sortState={sortConfig?.key === 'lastLogin' ? sortConfig.direction : 'idle'} onSort={() => handleSort('lastLogin')}>Last Activity</UiTh>
+              <th style={{ textAlign: 'right', width: 48 }}></th>
             </tr>
           </thead>
           <tbody>
@@ -404,28 +381,16 @@ const UserManager: React.FC = () => {
                 </td>
               </tr>
             ) : paginatedUsers.map((user) => (
-              <tr
-                key={user.id}
-                className={`sails-user-manager__tr ${selectedUserIds.has(user.id) ? 'sails-user-manager__tr--selected' : ''}`}
-                onClick={() => setSelectedUserIdForDetails(user.id)}
-                style={{ cursor: 'pointer' }}
-              >
-                <td className="sails-user-manager__td sails-user-manager__td--checkbox" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    className="sails-checkbox"
-                    checked={selectedUserIds.has(user.id)}
-                    onChange={() => toggleUserSelection(user.id)}
-                  />
-                </td>
-                <td className="sails-user-manager__td">
+              <UiTr key={user.id} onClick={() => setSelectedUserIdForDetails(user.id)} selected={selectedUserIds.has(user.id)}>
+                <UiCheckboxTd checked={selectedUserIds.has(user.id)} onChange={() => toggleUserSelection(user.id)} onClick={(e) => e.stopPropagation()} />
+                <UiTd>
                   <div className="sails-user-manager__identity">
                     <div className="sails-user-manager__avatar">
                       {user.avatar ? (
-                        <img 
-                          src={user.avatar} 
-                          alt={user.name} 
-                          style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
+                        <img
+                          src={user.avatar}
+                          alt={user.name}
+                          style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
                         />
                       ) : (
                         user.name.charAt(0)
@@ -437,122 +402,58 @@ const UserManager: React.FC = () => {
                       <span className="sails-user-manager__email">{user.email}</span>
                     </div>
                   </div>
-                </td>
-                <td className="sails-user-manager__td">
+                </UiTd>
+                <UiTd>
                   <div className="sails-user-manager__role-tag">
                     <Shield size={14} />
                     <span>{user.role}</span>
                   </div>
-                </td>
-                <td className="sails-user-manager__td">
+                </UiTd>
+                <UiTd>
                   <div className={`sails-status-badge sails-status-badge--${user.status.toLowerCase()}`}>
                     <Circle size={8} fill="currentColor" />
                     <span>{user.status}</span>
                   </div>
-                </td>
-                <td className="sails-user-manager__td">
+                </UiTd>
+                <UiTd>
                   <span className="sails-user-manager__last-login">{user.lastLogin}</span>
-                </td>
-                <td className="sails-user-manager__td sails-user-manager__td--actions">
-                  <div className="sails-user-manager__action-wrapper" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className={`sails-user-manager__action-btn ${activeMenuUserId === user.id ? 'active' : ''}`}
-                      onClick={() => setActiveMenuUserId(activeMenuUserId === user.id ? null : user.id)}
-                    >
-                      <MoreHorizontal size={18} />
-                    </button>
-
-                    {activeMenuUserId === user.id && (
-                      <div className="sails-user-manager__context-menu">
-                        <button className="sails-context-item" onClick={() => handleAction('edit', user)}>
-                          <Edit2 size={14} />
-                          <span>Edit Details</span>
-                        </button>
-                        <button
-                          className="sails-context-item"
-                          onClick={() => handleAction(user.status === 'Active' ? 'deactivate' : 'activate', user)}
-                        >
-                          {user.status === 'Active' ? (
-                            <><UserX size={14} /><span>Deactivate User</span></>
-                          ) : (
-                            <><UserCheck size={14} /><span>Activate User</span></>
-                          )}
-                        </button>
-                        <button className="sails-context-item" onClick={() => handleAction('reset_password', user)}>
-                          <Key size={14} />
-                          <span>Reset Password</span>
-                        </button>
-                        <div className="sails-context-divider"></div>
-                        <button className="sails-context-item" onClick={() => handleAction('copy_id', user)}>
-                          <Copy size={14} />
-                          <span>Copy User ID</span>
-                        </button>
-                        <button className="sails-context-item sails-context-item--danger" onClick={() => handleAction('remove', user)}>
-                          <Trash2 size={14} />
-                          <span>Remove User</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </td>
-              </tr>
+                </UiTd>
+                <UiTd align="right" onClick={(e) => e.stopPropagation()}>
+                  <UiActionsMenu open={activeMenuUserId === user.id} onToggle={() => setActiveMenuUserId(activeMenuUserId === user.id ? null : user.id)}>
+                    <UiActionsItem onClick={() => handleAction('edit', user)}>
+                      <Edit2 size={14} /> Edit Details
+                    </UiActionsItem>
+                    <UiActionsItem onClick={() => handleAction(user.status === 'Active' ? 'deactivate' : 'activate', user)}>
+                      {user.status === 'Active' ? (<><UserX size={14} /> Deactivate User</>) : (<><UserCheck size={14} /> Activate User</>)}
+                    </UiActionsItem>
+                    <UiActionsItem onClick={() => handleAction('reset_password', user)}>
+                      <Key size={14} /> Reset Password
+                    </UiActionsItem>
+                    <UiActionsDivider />
+                    <UiActionsItem onClick={() => handleAction('copy_id', user)}>
+                      <Copy size={14} /> Copy User ID
+                    </UiActionsItem>
+                    <UiActionsItem danger onClick={() => handleAction('remove', user)}>
+                      <Trash2 size={14} /> Remove User
+                    </UiActionsItem>
+                  </UiActionsMenu>
+                </UiTd>
+              </UiTr>
             ))}
           </tbody>
-        </table>
+        </UiTable>
 
-        {/* 3. Pagination Footer */}
-        <div className="sails-user-manager__pagination">
-          <div className="sails-user-manager__pagination-info">
-            <span className="sails-user-manager__pagination-range">
-              Showing <strong>{startRange}</strong> to <strong>{endRange}</strong> of <strong>{totalCount}</strong> users
-            </span>
-            <div className="sails-user-manager__page-size">
-              <span className="sails-user-manager__page-size-label">Records per page:</span>
-              <CustomSelect
-                size="sm"
-                value={pageSize === totalCount ? 'all' : pageSize}
-                options={[
-                  { value: 10, label: '10' },
-                  { value: 25, label: '25' },
-                  { value: 50, label: '50' },
-                  { value: 'all', label: 'ALL' }
-                ]}
-                onChange={(val) => {
-                  setPageSize(val === 'all' ? (totalCount || 1000) : Number(val));
-                  setCurrentPage(1);
-                }}
-              />
-            </div>
-          </div>
-          <div className="sails-user-manager__pagination-controls">
-            <button
-              className="sails-pagination-btn"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <div className="sails-pagination-pages">
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i + 1}
-                  className={`sails-pagination-page ${currentPage === i + 1 ? 'sails-pagination-page--active' : ''}`}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-            <button
-              className="sails-pagination-btn"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages || totalPages === 0}
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
+        <UiPagination
+          page={currentPage}
+          totalPages={totalPages || 1}
+          total={totalCount}
+          pageSize={pageSize === totalCount ? 50 : pageSize}
+          label="users"
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(n) => { setPageSize(n); setCurrentPage(1); }}
+          pageSizeOptions={[10, 25, 50]}
+        />
+      </UiTableCard>
       {/* 4. Add/Edit User Ghost Glass Modal */}
       {showAddUserDrawer && createPortal(
         <div className="sails-modal-overlay">

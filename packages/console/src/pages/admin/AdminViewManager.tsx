@@ -6,6 +6,7 @@ import { CustomSelect } from '../../components/common/CustomSelect';
 import { useConsole } from '../../contexts/ConsoleContext';
 import { fetchCached } from '../../api/client';
 import { TableLayout, LayoutType, ViewType, LayoutStatus, toSnakeCase } from '@sails/shared';
+import { UiTableCard, UiTable, UiTh, UiTr, UiTd, UiNameCell, UiBadge, UiDateCell, UiActionsMenu, UiActionsItem, UiActionsDivider, UiPagination, UiConfirmDialog, UiToast } from '../../components/ui';
 import './AdminViewManager.css';
 
 interface LayoutRow extends TableLayout {
@@ -246,53 +247,18 @@ const AdminViewManager: React.FC = () => {
         </div>
       ) : (
         <>
-          <div className="om-table-card">
-            <table className="om-list-table">
+          <UiTableCard>
+            <UiTable>
               <thead>
                 <tr>
-                  <th className="lav-th-sortable" onClick={() => handleSort('name')}>
-                    <div className="lav-th-content">
-                      <span>Name</span>
-                      {getSortIcon('name')}
-                    </div>
-                  </th>
-                  <th className="lav-th-sortable" onClick={() => handleSort('description')}>
-                    <div className="lav-th-content">
-                      <span>Description</span>
-                      {getSortIcon('description')}
-                    </div>
-                  </th>
-                  <th className="lav-th-sortable" onClick={() => handleSort('tableName')}>
-                    <div className="lav-th-content">
-                      <span>Model</span>
-                      {getSortIcon('tableName')}
-                    </div>
-                  </th>
-                  <th className="lav-th-sortable" onClick={() => handleSort('viewType')}>
-                    <div className="lav-th-content">
-                      <span>View Type</span>
-                      {getSortIcon('viewType')}
-                    </div>
-                  </th>
-                  <th className="lav-th-sortable" onClick={() => handleSort('status')}>
-                    <div className="lav-th-content">
-                      <span>Status</span>
-                      {getSortIcon('status')}
-                    </div>
-                  </th>
-                  <th className="lav-th-sortable" onClick={() => handleSort('createdAt')}>
-                    <div className="lav-th-content">
-                      <span>Created At</span>
-                      {getSortIcon('createdAt')}
-                    </div>
-                  </th>
-                  <th className="lav-th-sortable" onClick={() => handleSort('updatedAt')}>
-                    <div className="lav-th-content">
-                      <span>Last Modified</span>
-                      {getSortIcon('updatedAt')}
-                    </div>
-                  </th>
-                  <th style={{ textAlign: 'right' }}></th>
+                  <UiTh sortable sortState={sortConfig?.key === 'name' ? sortConfig.direction : 'idle'} onSort={() => handleSort('name')}>Name</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'description' ? sortConfig.direction : 'idle'} onSort={() => handleSort('description')}>Description</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'tableName' ? sortConfig.direction : 'idle'} onSort={() => handleSort('tableName')}>Model</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'viewType' ? sortConfig.direction : 'idle'} onSort={() => handleSort('viewType')}>View Type</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'status' ? sortConfig.direction : 'idle'} onSort={() => handleSort('status')}>Status</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'createdAt' ? sortConfig.direction : 'idle'} onSort={() => handleSort('createdAt')}>Created At</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'updatedAt' ? sortConfig.direction : 'idle'} onSort={() => handleSort('updatedAt')}>Last Modified</UiTh>
+                  <th style={{ textAlign: 'right', width: 48 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -301,189 +267,90 @@ const AdminViewManager: React.FC = () => {
                   const ViewIcon = viewTypeInfo.icon;
 
                   return (
-                    <tr key={row.id} className="lav-clickable-row" onClick={() => handleOpenLayoutStudio(row)}>
-                      <td>
-                        <div className="lav-cell-name">
-                          <div className="lav-icon-wrapper">
-                            <ViewIcon size={16} />
-                          </div>
-                          <div className="lav-cell-name__text">
-                            <span className="lav-name-primary">{renderHighlightedText(row.name, search)}</span>
-                            <code className="lav-system-name">/{renderHighlightedText(row.systemName, search)}</code>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="lav-desc-text">
+                    <UiTr key={row.id} onClick={() => handleOpenLayoutStudio(row)}>
+                      <UiTd>
+                        <UiNameCell
+                          icon={<ViewIcon size={16} />}
+                          primary={renderHighlightedText(row.name, search)}
+                          secondary={renderHighlightedText(row.systemName, search)}
+                          secondaryAsCode
+                        />
+                      </UiTd>
+                      <UiTd>
+                        <span className="ui-desc-text">
                           {row.description
                             ? renderHighlightedText(row.description, search)
-                            : <span className="lav-text-muted">—</span>}
+                            : <span className="ui-text-muted">—</span>}
                         </span>
-                      </td>
-                      <td>
+                      </UiTd>
+                      <UiTd>
                         {row.table ? (
-                          <span className="lav-model-cell">
-                            <span className="lav-model-link">
-                              <Database size={12} />
-                              {renderHighlightedText(row.table.name, search)}
-                            </span>
-                            {row.isDefault && (
-                              <span className="sails-layout-card__badge sails-layout-card__badge--default">Default</span>
-                            )}
+                          <span className="ui-name-cell" style={{ gap: 8 }}>
+                            <Database size={12} />
+                            {renderHighlightedText(row.table.name, search)}
+                            {row.isDefault && <UiBadge tone="default">Default</UiBadge>}
                           </span>
                         ) : (
-                          <span className="sails-layout-card__badge sails-layout-card__badge--custom">Custom</span>
+                          <UiBadge tone="neutral">Custom</UiBadge>
                         )}
-                      </td>
-                      <td>
-                        <span className={`sails-layout-card__badge ${viewTypeInfo.className}`}>
+                      </UiTd>
+                      <UiTd>
+                        <UiBadge tone="info">
                           <ViewIcon size={11} />
                           {viewTypeInfo.label}
-                        </span>
-                      </td>
-                      <td>
+                        </UiBadge>
+                      </UiTd>
+                      <UiTd>
                         {row.status === 'active' ? (
-                          <span className="sails-layout-card__badge sails-layout-card__badge--active">
-                            <CheckCircle2 size={11} />
-                            Active
-                          </span>
+                          <UiBadge tone="success"><CheckCircle2 size={11} /> Active</UiBadge>
                         ) : (
-                          <span className="sails-layout-card__badge sails-layout-card__badge--draft">
-                            <Clock size={11} />
-                            Draft
-                          </span>
+                          <UiBadge tone="warning"><Clock size={11} /> Draft</UiBadge>
                         )}
-                      </td>
-                      <td>
-                        <span className="lav-date-cell">
-                          <Calendar size={13} style={{ marginRight: '4px' }} />
-                          {new Date(row.createdAt).toLocaleDateString()}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="lav-date-cell">
-                          <Calendar size={13} style={{ marginRight: '4px' }} />
-                          {new Date(row.updatedAt).toLocaleDateString()}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                        <div className="lav-action-wrapper">
-                          <button
-                            className={`sails-btn sails-btn--ghost ${activeMenuId === row.id ? 'active' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMenuId(activeMenuId === row.id ? null : row.id);
-                            }}
-                            title="Options"
-                            aria-label="Options"
-                          >
-                            <MoreHorizontal size={18} />
-                          </button>
+                      </UiTd>
+                      <UiTd>
+                        <UiDateCell><Calendar size={13} />{new Date(row.createdAt).toLocaleDateString()}</UiDateCell>
+                      </UiTd>
+                      <UiTd>
+                        <UiDateCell><Calendar size={13} />{new Date(row.updatedAt).toLocaleDateString()}</UiDateCell>
+                      </UiTd>
+                      <UiTd align="right" onClick={e => e.stopPropagation()}>
+                        <UiActionsMenu open={activeMenuId === row.id} onToggle={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}>
+                          <UiActionsItem onClick={() => { setActiveMenuId(null); handleOpenLayoutStudio(row); }}>
+                            <LayoutTemplate size={14} /> Design in Layout Studio
+                          </UiActionsItem>
 
-                          {activeMenuId === row.id && (
-                            <div className="lav-context-menu" onClick={e => e.stopPropagation()}>
-                              <button
-                                className="lav-context-item"
-                                onClick={() => {
-                                  setActiveMenuId(null);
-                                  handleOpenLayoutStudio(row);
-                                }}
-                              >
-                                <LayoutTemplate size={14} />
-                                <span>Design in Layout Studio</span>
-                              </button>
-
-                              {row.status === 'draft' && (
-                                <>
-                                  <div className="lav-context-divider"></div>
-                                  <button
-                                    className="lav-context-item"
-                                    onClick={() => {
-                                      setActiveMenuId(null);
-                                      handleActivate(row.id);
-                                    }}
-                                    disabled={activating === row.id}
-                                  >
-                                    <Zap size={14} />
-                                    <span>{activating === row.id ? 'Activating...' : 'Activate'}</span>
-                                  </button>
-                                </>
-                              )}
-
-                              <div className="lav-context-divider"></div>
-
-                              <button
-                                className="lav-context-item lav-context-item--danger"
-                                onClick={() => {
-                                  setActiveMenuId(null);
-                                  handleDelete(row.id);
-                                }}
-                                disabled={deleting === row.id}
-                              >
-                                <Trash2 size={14} />
-                                <span>Delete</span>
-                              </button>
-                            </div>
+                          {row.status === 'draft' && (
+                            <>
+                              <UiActionsDivider />
+                              <UiActionsItem onClick={() => { setActiveMenuId(null); handleActivate(row.id); }} disabled={activating === row.id}>
+                                <Zap size={14} /> {activating === row.id ? 'Activating...' : 'Activate'}
+                              </UiActionsItem>
+                            </>
                           )}
-                        </div>
-                      </td>
-                    </tr>
+
+                          <UiActionsDivider />
+
+                          <UiActionsItem danger onClick={() => { setActiveMenuId(null); handleDelete(row.id); }} disabled={deleting === row.id}>
+                            <Trash2 size={14} /> Delete
+                          </UiActionsItem>
+                        </UiActionsMenu>
+                      </UiTd>
+                    </UiTr>
                   );
                 })}
               </tbody>
-            </table>
+            </UiTable>
 
-            <div className="sails-user-manager__pagination" style={{ borderTop: '1px solid var(--sails-border-color)' }}>
-              <div className="sails-user-manager__pagination-info">
-                <span className="sails-user-manager__pagination-range">
-                  Showing <strong>{startRecord}</strong> to <strong>{endRecord}</strong> of <strong>{total}</strong> layouts
-                </span>
-                <div className="sails-user-manager__page-size">
-                  <span className="sails-user-manager__page-size-label">Records per page:</span>
-                  <CustomSelect
-                    size="sm"
-                    value={pageSize}
-                    options={[
-                      { value: 10, label: '10' },
-                      { value: 25, label: '25' },
-                      { value: 50, label: '50' },
-                    ]}
-                    onChange={(val) => {
-                      setPageSize(Number(val));
-                      setPage(1);
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="sails-user-manager__pagination-controls">
-                <button
-                  className="sails-pagination-btn"
-                  onClick={() => setPage(prev => Math.max(1, prev - 1))}
-                  disabled={page <= 1}
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <div className="sails-pagination-pages">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                    <button
-                      key={p}
-                      className={`sails-pagination-page ${page === p ? 'sails-pagination-page--active' : ''}`}
-                      onClick={() => setPage(p)}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="sails-pagination-btn"
-                  onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={page >= totalPages || totalPages === 0}
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
+            <UiPagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              pageSize={pageSize}
+              label="layouts"
+              onPageChange={setPage}
+              onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
+            />
+          </UiTableCard>
         </>
       )}
 
@@ -500,63 +367,32 @@ const AdminViewManager: React.FC = () => {
         />
       )}
 
-      {deleteConfirmId && deleteTargetRow && createPortal(
-        <div className="sails-modal-overlay" onClick={() => setDeleteConfirmId(null)}>
-          <div className="sails-confirm-modal" onClick={e => e.stopPropagation()}>
-            <div className="sails-confirm-modal__header">
-              <AlertTriangle size={20} style={{ color: 'var(--sails-danger, #ef4444)' }} />
-              <span>Delete Layout</span>
-            </div>
-            <div className="sails-confirm-modal__body">
-              Are you sure you want to delete <strong>{deleteTargetRow.name}</strong>? This cannot be undone.
-              {deleteError && <div className="sails-confirm-modal__error">{deleteError}</div>}
-            </div>
-            <div className="sails-confirm-modal__footer">
-              <button className="sails-btn sails-btn--ghost" onClick={() => setDeleteConfirmId(null)}>Cancel</button>
-              <button
-                className="sails-btn sails-btn--danger"
-                onClick={doDelete}
-                disabled={deleting === deleteConfirmId}
-              >
-                {deleting === deleteConfirmId ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      <UiConfirmDialog
+        open={!!deleteConfirmId && !!deleteTargetRow}
+        title="Delete Layout"
+        icon={<AlertTriangle size={20} style={{ color: 'var(--sails-danger, #ef4444)' }} />}
+        body={<>Are you sure you want to delete <strong>{deleteTargetRow?.name}</strong>? This cannot be undone.</>}
+        error={deleteError}
+        confirmLabel={deleting ? 'Deleting...' : 'Delete'}
+        loading={!!deleting}
+        onConfirm={doDelete}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
 
-      {activateConfirmId && activateTargetRow && createPortal(
-        <div className="sails-modal-overlay" onClick={() => setActivateConfirmId(null)}>
-          <div className="sails-confirm-modal" onClick={e => e.stopPropagation()}>
-            <div className="sails-confirm-modal__header">
-              <Zap size={20} style={{ color: 'var(--sails-primary, #3b82f6)' }} />
-              <span>Activate Layout</span>
-            </div>
-            <div className="sails-confirm-modal__body">
-              This will activate <strong>{activateTargetRow.name}</strong> as the current layout. The published version will be overwritten with the current draft configuration. Continue?
-              {activateError && <div className="sails-confirm-modal__error">{activateError}</div>}
-            </div>
-            <div className="sails-confirm-modal__footer">
-              <button className="sails-btn sails-btn--ghost" onClick={() => setActivateConfirmId(null)}>Cancel</button>
-              <button
-                className="sails-btn sails-btn--primary"
-                onClick={doActivate}
-                disabled={activating === activateConfirmId}
-              >
-                {activating === activateConfirmId ? 'Activating...' : 'Activate'}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      <UiConfirmDialog
+        open={!!activateConfirmId && !!activateTargetRow}
+        title="Activate Layout"
+        icon={<Zap size={20} style={{ color: 'var(--sails-primary, #3b82f6)' }} />}
+        body={<>This will activate <strong>{activateTargetRow?.name}</strong> as the current layout. The published version will be overwritten with the current draft configuration. Continue?</>}
+        error={activateError}
+        confirmLabel={activating ? 'Activating...' : 'Activate'}
+        tone="primary"
+        loading={!!activating}
+        onConfirm={doActivate}
+        onCancel={() => setActivateConfirmId(null)}
+      />
 
-      {deletedSuccessMsg && (
-        <div className="sails-layout-studio__toast sails-layout-studio__toast--success">
-          <span>{deletedSuccessMsg}</span>
-        </div>
-      )}
+      <UiToast message={deletedSuccessMsg} />
     </div>
   );
 };

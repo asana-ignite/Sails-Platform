@@ -1,0 +1,231 @@
+/**
+ * Workflow Studio Styles — Three-panel workflow builder
+ *
+ * Layout mirrors Layout Studio:
+ *   Left  = Palette (stages, events, variables)
+ *   Center = Canvas (DAG with SVG edges)
+ *   Right = Properties (contextual: stage/event/branch/workflow)
+ */
+/* ─── Root ──────────────────────────────────────────────────── */
+.ws-root{display:flex;flex-direction:column;height:100vh;background:var(--sails-bg-body,#f4f7f9);overflow:hidden}
+/* ─── Toolbar ───────────────────────────────────────────────── */
+.ws-toolbar{display:flex;align-items:center;gap:10px;padding:0 16px;height:44px;background:var(--sails-bg-card,#fff);border-bottom:1px solid var(--sails-border,#e2e8f0);flex-shrink:0}
+.ws-toolbar__brand{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--sails-text-primary,#1e293b);white-space:nowrap}
+.ws-toolbar__name{border:1px solid transparent;padding:3px 8px;border-radius:4px;font-size:13px;font-weight:600;color:var(--sails-text-primary,#1e293b);background:transparent;max-width:260px}
+.ws-toolbar__name:focus{outline:none;border-color:var(--sails-primary,#9dcee0);background:var(--sails-bg-card,#fff)}
+.ws-toolbar__table{font-size:11px;padding:2px 8px;border-radius:4px;background:rgba(157,206,224,.12);color:var(--sails-primary,#9dcee0);white-space:nowrap}
+.ws-toolbar__actions{display:flex;align-items:center;gap:6px;margin-left:auto}
+.ws-toolbar__status{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px}
+.ws-toolbar__status--draft{background:rgba(245,158,11,.12);color:#d97706}
+.ws-toolbar__status--active{background:rgba(16,185,129,.12);color:#059669}
+.ws-toolbar__status--deactivated{background:rgba(100,116,139,.12);color:#64748b}
+/* ─── Mode toggle ───────────────────────────────────────────── */
+.ws-mode-toggle{display:flex;border:1px solid var(--sails-border,#e2e8f0);border-radius:6px;overflow:hidden}
+.ws-mode-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;font-size:11px;font-weight:600;border:none;background:var(--sails-bg-card,#fff);color:var(--sails-text-muted,#94a3b8);cursor:pointer;transition:all .12s}
+.ws-mode-btn+.ws-mode-btn{border-left:1px solid var(--sails-border,#e2e8f0)}
+.ws-mode-btn--active{background:var(--sails-primary,#9dcee0);color:#fff}
+/* ─── Body (three-panel grid) ───────────────────────────────── */
+.ws-body{display:grid;flex:1;overflow:hidden;position:relative}
+/* ─── LEFT: Palette ─────────────────────────────────────────── */
+.ws-palette-outer{position:relative;overflow:hidden;display:flex;flex-direction:column;height:100%}
+.ws-palette-outer--open{overflow-y:auto;overflow-x:hidden}
+.ws-palette-outer--floating{position:absolute;left:0;top:0;bottom:0;z-index:10;box-shadow:4px 0 16px rgba(0,0,0,.1);border-radius:0 6px 6px 0}
+.ws-palette-outer--floating .ws-palette{border-right:none}
+.ws-palette{display:flex;flex-direction:column;flex:1;background:var(--sails-bg-secondary,#f8fafc);border-right:1px solid var(--sails-border,#e2e8f0);overflow:hidden}
+.ws-palette__header{display:flex;align-items:center;justify-content:space-between;padding:10px 10px 4px;flex-shrink:0}
+.ws-palette__content{overflow-y:auto;flex:1;padding:0 10px 12px;display:flex;flex-direction:column;gap:4px}
+.ws-palette-resize{position:absolute;right:0;top:0;bottom:0;width:8px;cursor:col-resize;z-index:10;background:transparent;transition:background .12s}
+.ws-palette-resize:hover{background:var(--sails-primary,#9dcee0);opacity:.5}
+.ws-palette-resize:active{background:var(--sails-primary,#9dcee0);opacity:.7}
+.ws-palette-tab{display:flex;align-items:center;justify-content:center;padding-top:16px;cursor:pointer;color:var(--sails-text-muted,#94a3b8)}
+.ws-palette-tab:hover{color:var(--sails-primary,#9dcee0)}
+/* ─── Palette items ─────────────────────────────────────────── */
+.ws-palette-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--sails-bg-card,#fff);border:1px solid var(--sails-border,#e2e8f0);border-radius:6px;cursor:grab;transition:border-color .12s,box-shadow .12s;font-size:12px;color:var(--sails-text-primary,#1e293b)}
+.ws-palette-item:hover{border-color:var(--sails-primary,#9dcee0);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.ws-palette-item:active{cursor:grabbing}
+.ws-palette-icon{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;flex-shrink:0}
+.ws-palette-item--stage .ws-palette-icon{background:rgba(59,130,246,.1);color:#3b82f6}
+.ws-palette-info{display:flex;flex-direction:column;gap:1px}
+.ws-palette-name{font-weight:600;font-size:12px}
+.ws-palette-desc{font-size:10px;color:var(--sails-text-muted,#94a3b8)}
+.ws-palette-drop-hint{font-size:10px;color:var(--sails-text-muted,#94a3b8);text-align:center;padding:2px 0 4px}
+.ws-panel-title{display:flex;align-items:center;gap:5px;margin:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--sails-text-secondary,#64748b);padding:12px 10px 6px}
+.ws-panel-title--rule{border-top:1px solid var(--sails-border,#e2e8f0);margin-top:2px}
+.ws-palette-help{font-size:10px;color:var(--sails-text-muted,#94a3b8);padding:8px 4px 0;line-height:1.5}
+.ws-palette-help p{margin:0 0 4px}
+/* ─── Palette variable row ──────────────────────────────────── */
+.ws-var-row{display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--sails-bg-card,#fff);border:1px solid var(--sails-border,#e2e8f0);border-radius:5px;font-size:11px}
+.ws-var-row__name{flex:1;font-weight:600;color:var(--sails-text-primary,#1e293b)}
+.ws-var-row__type{font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(157,206,224,.12);color:var(--sails-primary,#9dcee0)}
+.ws-var-row__remove{opacity:0;transition:opacity .12s;cursor:pointer;background:none;border:none;color:var(--sails-danger,#ef4444);padding:0}
+.ws-var-row:hover .ws-var-row__remove{opacity:1}
+.ws-palette-add-row{display:flex;align-items:center;gap:6px;padding:4px 8px}
+/* ─── CENTER: Canvas ────────────────────────────────────────── */
+.ws-canvas{overflow:auto;background:linear-gradient(rgba(148,163,184,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.08) 1px,transparent 1px);background-size:24px 24px;height:100%;position:relative}
+.ws-world{position:relative}
+.ws-world{position:relative}
+.ws-edges{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+.ws-edges *{pointer-events:auto}
+/* ─── Stage card ────────────────────────────────────────────── */
+.ws-stage{position:absolute;background:var(--sails-bg-card,#fff);border:1.5px solid var(--sails-border,#cbd5e1);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:border-color .15s,box-shadow .15s;display:flex;flex-direction:column;user-select:none}
+.ws-stage--selected{border-color:var(--sails-primary,#9dcee0);box-shadow:0 0 0 3px rgba(157,206,224,.22)}
+.ws-stage--canvas{cursor:move}
+.ws-stage--connectable{cursor:crosshair}
+.ws-stage--connectable:hover{border-color:var(--sails-primary,#9dcee0)}
+.ws-stage__top{display:flex;align-items:center;gap:6px;padding:6px 8px 4px}
+.ws-stage__num{width:20px;height:20px;border-radius:50%;background:var(--sails-primary,#9dcee0);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ws-stage__name{font-size:13px;font-weight:700;color:var(--sails-text-primary,#1e293b);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.ws-stage__name:hover{color:var(--sails-primary,#9dcee0)}
+.ws-stage__name-input{border:1px solid var(--sails-primary,#9dcee0);border-radius:4px;padding:1px 4px;font-size:13px;font-weight:700;flex:1;min-width:0}
+.ws-stage__actions{display:flex;align-items:center;gap:2px;opacity:0;transition:opacity .12s}
+.ws-stage:hover .ws-stage__actions,.ws-stage--selected .ws-stage__actions{opacity:1}
+.ws-stage__badges{display:flex;flex-wrap:wrap;gap:3px;padding:0 8px 4px}
+.ws-stage__events{padding:0 8px 4px;display:flex;flex-wrap:wrap;gap:3px}
+.ws-stage__events-empty{font-size:10px;color:var(--sails-text-muted,#94a3b8);font-style:italic;padding:2px 0}
+.ws-stage__events-more{font-size:10px;color:var(--sails-text-muted,#94a3b8);align-self:center}
+.ws-stage__branchbar{display:flex;align-items:center;gap:5px;padding:4px 8px;border-top:1px solid var(--sails-border,#e2e8f0);background:var(--sails-bg-secondary,#f8fafc);font-size:11px;color:var(--sails-text-secondary,#64748b)}
+.ws-stage__branch-empty{font-style:italic;font-size:10px}
+.ws-stage__branch-count{font-weight:600;font-size:10px}
+.ws-stage__add-branch{margin-left:auto;display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;border:1px dashed var(--sails-border,#cbd5e1);background:transparent;font-size:10px;color:var(--sails-primary,#9dcee0);cursor:pointer;transition:all .12s}
+.ws-stage__add-branch:hover{border-style:solid;border-color:var(--sails-primary,#9dcee0);background:rgba(157,206,224,.06)}
+/* ─── Badges ────────────────────────────────────────────────── */
+.ws-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:600;border:1px solid var(--sails-border,#e2e8f0);color:var(--sails-text-secondary,#64748b)}
+.ws-badge--router{background:rgba(59,130,246,.07);border-color:rgba(59,130,246,.25);color:#3b82f6}
+.ws-badge--cond{background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.25);color:#d97706}
+.ws-badge--timeout{background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.2);color:#ef4444}
+.ws-badge--events{background:rgba(16,185,129,.07);border-color:rgba(16,185,129,.25);color:#059669}
+/* ─── Event chips ───────────────────────────────────────────── */
+.ws-event-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:3px;font-size:9px;font-weight:600;border:1px solid;cursor:pointer;transition:opacity .12s;background:var(--sails-bg-card,#fff);white-space:nowrap}
+.ws-event-chip:hover{opacity:.8}
+.ws-event-chip--selected{outline:2px solid var(--sails-primary,#9dcee0);outline-offset:1px}
+/* ─── Ports ─────────────────────────────────────────────────── */
+.ws-port{position:absolute;width:15px;height:15px;border-radius:50%;background:#3b82f6;border:2px solid var(--sails-bg-card,#fff);box-shadow:0 0 0 1px rgba(59,130,246,.5);z-index:5;cursor:crosshair;opacity:0;transition:opacity .12s,transform .12s,box-shadow .12s;pointer-events:auto;box-sizing:border-box;transform:translate(var(--rx,0),var(--ry,0))}
+.ws-port--top,.ws-port--bottom{--rx:-50%;--ry:0}
+.ws-port--left,.ws-port--right{--rx:0;--ry:-50%}
+.ws-stage:hover .ws-port,.ws-start:hover .ws-port,.ws-stage--selected .ws-port,.ws-start--selected .ws-port,.ws-port--active{opacity:1}
+.ws-port:hover{transform:scale(1.35) translate(var(--rx,0),var(--ry,0));box-shadow:0 0 0 3px rgba(59,130,246,.25)}
+/* ─── Start node ────────────────────────────────────────────── */
+.ws-start{position:absolute;display:flex;flex-direction:column;background:var(--sails-bg-card,#fff);border:1.5px solid #10b981;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:move;user-select:none;transition:border-color .15s,box-shadow .15s}
+.ws-start--canvas{cursor:move}
+.ws-start--selected{border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.22)}
+.ws-start__head{display:flex;align-items:center;gap:8px;padding:0 14px;flex:1;min-height:0}
+.ws-start__icon{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,.12);color:#10b981;flex-shrink:0}
+.ws-start__label{font-size:13px;font-weight:700;color:var(--sails-text-primary,#1e293b)}
+.ws-start__events{display:flex;flex-wrap:wrap;gap:3px;padding:0 12px 8px;border-top:1px solid var(--sails-border,#e2e8f0);background:var(--sails-bg-secondary,#f8fafc)}
+/* ─── RIGHT: Properties ─────────────────────────────────────── */
+.ws-props-outer{position:relative;overflow:hidden;display:flex;flex-direction:column;height:100%}
+.ws-props-outer--floating{position:absolute;right:0;top:0;bottom:0;z-index:10;box-shadow:-4px 0 16px rgba(0,0,0,.1);border-radius:6px 0 0 6px}
+.ws-properties{display:flex;flex-direction:column;flex:1;background:var(--sails-bg-card,#fff);border-left:1px solid var(--sails-border,#e2e8f0);overflow-y:auto}
+.ws-props-resize{position:absolute;left:0;top:0;bottom:0;width:8px;cursor:col-resize;z-index:10;background:transparent;transition:background .12s}
+.ws-props-resize:hover{background:var(--sails-primary,#9dcee0);opacity:.5}
+.ws-props-resize:active{background:var(--sails-primary,#9dcee0);opacity:.7}
+.ws-props-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 6px}
+.ws-props-header__float{background:none;border:none;color:var(--sails-text-muted,#94a3b8);cursor:pointer;padding:2px 6px;border-radius:4px;font-size:11px}
+.ws-props-header__float:hover{background:var(--sails-bg-secondary,#f8fafc);color:var(--sails-text-primary,#1e293b)}
+.ws-props-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--sails-text-secondary,#64748b);padding:10px 12px 4px;display:flex;align-items:center;gap:4px}
+.ws-props-group{padding:4px 12px}
+.ws-props-label{display:block;font-size:11px;font-weight:600;color:var(--sails-text-secondary,#64748b);margin-bottom:3px}
+.ws-props-row{display:flex;gap:4px;align-items:center}
+.ws-props-hint{font-size:10px;color:var(--sails-text-muted,#94a3b8);padding:0 12px 8px;margin:0}
+.ws-props-check-row{display:flex;gap:8px;align-items:center;padding:4px 0}
+.ws-props-check-row label{font-size:11px;display:flex;align-items:center;gap:3px;color:var(--sails-text-secondary,#64748b);cursor:pointer}
+.ws-props-input{width:100%;border:1px solid var(--sails-border,#e2e8f0);border-radius:5px;padding:6px 8px;font-size:12px;color:var(--sails-text-primary,#1e293b);background:var(--sails-bg-card,#fff)}
+.ws-props-input:focus{outline:none;border-color:var(--sails-primary,#9dcee0);box-shadow:0 0 0 2px rgba(157,206,224,.15)}
+.ws-props-textarea{resize:vertical;min-height:50px}
+.ws-props-delete-btn{margin:8px 12px}
+/* ─── Version history ───────────────────────────────────────── */
+.ws-version-list{padding:0 12px 8px}
+.ws-version-item{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border:1px solid var(--sails-border,#e2e8f0);border-radius:5px;margin-bottom:3px;font-size:11px;cursor:pointer;transition:background .12s}
+.ws-version-item:hover{background:var(--sails-bg-secondary,#f8fafc)}
+.ws-version-item--current{background:rgba(157,206,224,.08)}
+.ws-version-item__num{font-weight:700;color:var(--sails-primary,#9dcee0)}
+.ws-version-item__info{flex:1;margin-left:8px;color:var(--sails-text-primary,#1e293b)}
+.ws-version-item__date{font-size:10px;color:var(--sails-text-muted,#94a3b8)}
+/* ─── Branch form (inline in props) ─────────────────────────── */
+.ws-branch-row{padding:4px 12px;display:flex;flex-direction:column;gap:4px}
+.ws-branch-row__head{display:flex;align-items:center;justify-content:space-between}
+.ws-branch-row__label{font-size:11px;font-weight:600;color:var(--sails-text-secondary,#64748b)}
+/* ─── Modal (Expression / Transform editor) ──────────────────── */
+.ws-modal-overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center}
+.ws-modal{background:var(--sails-bg-card,#fff);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.18);width:980px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+.ws-modal__header{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--sails-border,#e2e8f0)}
+.ws-modal__icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px}
+.ws-modal__titles{display:flex;flex-direction:column;gap:1px;flex:1}
+.ws-modal__title{font-size:14px;font-weight:600;color:var(--sails-text-primary,#1e293b)}
+.ws-modal__sub{font-size:11px;color:var(--sails-text-muted,#94a3b8)}
+.ws-modal__body{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.ws-modal__footer{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:10px 16px;border-top:1px solid var(--sails-border,#e2e8f0)}
+/* ─── Toast / Banner ────────────────────────────────────────── */
+.ws-toast{position:fixed;top:12px;right:16px;z-index:60;background:#059669;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.ws-banner{padding:6px 16px;background:rgba(245,158,11,.08);border-bottom:1px solid rgba(245,158,11,.2);font-size:11px;color:#d97706;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.ws-banner--readonly{background:rgba(59,130,246,.06);border-bottom:1px solid rgba(59,130,246,.15);color:#2563eb}
+/* ─── Edge SVG ──────────────────────────────────────────────── */
+.ws-edge{cursor:default}
+.ws-edge-path--clickable{pointer-events:stroke;cursor:pointer}
+.ws-edge--selected path{filter:drop-shadow(0 0 4px rgba(59,130,246,.5))}
+.ws-edge-handle{fill:#fff;stroke:#3b82f6;stroke-width:2.5;cursor:grab;pointer-events:all}
+.ws-edge-handle:hover{fill:#3b82f6}
+.ws-connect-temp{pointer-events:none}
+/* ─── Buttons etc (shared) ──────────────────────────────────── */
+.ws-icon-btn{display:inline-flex;align-items:center;justify-content:center;padding:2px;border-radius:4px;border:none;background:transparent;color:var(--sails-text-muted,#94a3b8);cursor:pointer;transition:all .12s}
+.ws-icon-btn:hover{color:var(--sails-text-primary,#1e293b);background:var(--sails-bg-secondary,#f8fafc)}
+.ws-icon-btn--danger:hover{color:var(--sails-danger,#ef4444)}
+.sails-input{border:1px solid var(--sails-border,#e2e8f0);border-radius:5px;padding:6px 8px;font-size:12px;color:var(--sails-text-primary,#1e293b);background:var(--sails-bg-card,#fff)}.sails-input:focus{outline:none;border-color:var(--sails-primary,#9dcee0);box-shadow:0 0 0 2px rgba(157,206,224,.15)}
+
+/* ─── Simple-mode stage drag-reorder affordance ─────────────── */
+.ws-stage{cursor:grab}
+.ws-stage:active{cursor:grabbing}
+.ws-stage--canvas{cursor:default}
+.ws-stage--canvas:active{cursor:default}
+
+/* Dragged stage in Simple mode — lifted, gliding with the pointer */
+.ws-stage--dragging{opacity:0.94;box-shadow:0 10px 28px rgba(15,23,42,0.28);transition:none}
+
+/* ─── Start Condition wizard ─────────────────────────────────── */
+
+.ws-wizard-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:4px 0 8px}
+.ws-wizard-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px 12px;border:1px solid var(--sails-border,#e2e8f0);border-radius:10px;background:var(--sails-bg-card,#fff);cursor:pointer;text-align:left;transition:border-color .12s,box-shadow .12s}
+.ws-wizard-card:hover{border-color:#3b82f6}
+.ws-wizard-card--selected{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.18)}
+.ws-wizard-card__icon{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;background:rgba(59,130,246,.1);color:#3b82f6}
+.ws-wizard-card__title{font-size:13px;font-weight:600;color:var(--sails-text-primary,#1e293b)}
+.ws-wizard-card__desc{font-size:11px;line-height:1.45;color:var(--sails-text-muted,#94a3b8)}
+.ws-wizard-card__check{position:absolute;top:10px;right:10px;color:#3b82f6}
+
+
+/* ─── Canvas tools (auto / zoom / size) ─────────────────────── */
+.ws-canvas__tools{position:absolute;top:12px;right:27px;z-index:20;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.ws-canvas__tool-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;font-size:11px;font-weight:600;border:1px solid var(--sails-border,#cbd5e1);border-radius:6px;background:var(--sails-bg-card,#fff);color:var(--sails-text-muted,#64748b);cursor:pointer;box-shadow:0 2px 8px rgba(15,23,42,.08);transition:all .12s}
+.ws-canvas__tool-btn:hover{color:var(--sails-primary,#9dcee0);border-color:var(--sails-primary,#9dcee0)}
+.ws-canvas__zoom{display:inline-flex;align-items:center;gap:2px;background:var(--sails-bg-card,#fff);border:1px solid var(--sails-border,#cbd5e1);border-radius:6px;box-shadow:0 2px 8px rgba(15,23,42,.08);overflow:hidden}
+.ws-canvas__zoom .ws-canvas__tool-btn{border:none;box-shadow:none;border-radius:0;padding:5px 8px}
+.ws-canvas__zoom-val{min-width:44px;text-align:center;font-size:11px;font-weight:600;color:var(--sails-text-muted,#64748b);cursor:pointer;user-select:none}
+.ws-canvas__zoom-val:hover{color:var(--sails-primary,#9dcee0)}
+
+.ws-canvas__size-pop{position:absolute;top:calc(100% + 6px);right:0;display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--sails-bg-card,#fff);border:1px solid var(--sails-border,#cbd5e1);border-radius:8px;box-shadow:0 6px 20px rgba(15,23,42,.14);z-index:30}
+.ws-canvas__size-row{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sails-text-muted,#64748b)}
+.ws-canvas__size-row input{width:76px;border:1px solid var(--sails-border,#cbd5e1);border-radius:4px;padding:4px 6px;font-size:11px;color:var(--sails-text-primary,#1e293b);background:var(--sails-bg-card,#fff)}
+.ws-canvas__size-actions{display:flex;gap:6px;justify-content:flex-end}
+
+/* ─── Canvas pan (drag background) ──────────────────────────── */
+.ws-canvas--canvas{cursor:grab}
+.ws-canvas--canvas:active{cursor:grabbing}
+.ws-canvas--panning{cursor:grabbing}
+.ws-world-holder{position:relative}
+
+/* ─── Canvas wrapper — tools stay fixed above the scroll container ── */
+.ws-canvas-wrap{position:relative;flex:1 1 auto;min-width:0;display:flex}
+.ws-canvas-wrap .ws-canvas{flex:1 1 auto;min-width:0;height:auto}
+
+/* ─── Record Trigger step ────────────────────────────────────── */
+
+.ws-trigger-op-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ws-trigger-op{display:flex;flex-direction:column;gap:2px;padding:9px 10px;border:1px solid var(--sails-border,#e2e8f0);border-radius:8px;background:var(--sails-bg-card,#fff);cursor:pointer;text-align:left;transition:border-color .12s,box-shadow .12s}
+.ws-trigger-op:hover{border-color:#3b82f6}
+.ws-trigger-op--selected{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.18)}
+.ws-trigger-op__label{font-size:12.5px;font-weight:600;color:var(--sails-text-primary,#1e293b)}
+.ws-trigger-op__desc{font-size:10.5px;line-height:1.4;color:var(--sails-text-muted,#94a3b8)}
+.ws-condition-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 0}
+.ws-condition-summary{font-size:12px;color:var(--sails-text-muted,#94a3b8)}
+
+.ws-qstudio-modal{width:760px}

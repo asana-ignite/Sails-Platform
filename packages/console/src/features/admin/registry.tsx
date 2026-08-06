@@ -22,6 +22,7 @@ export const AdminPluginRegistry: Record<string, any> = {
   AdminWorkflowManager: lazy(() => import('../../pages/admin/AdminWorkflowManager')),
   AdminAppManager: lazy(() => import('../../pages/admin/AdminAppManager')),
   LayoutStudio: lazy(() => import('../../pages/custom/LayoutStudio')),
+  WorkflowStudio: lazy(() => import('../../pages/custom/WorkflowStudio')),
 
   // Identity & Security
   AdminSSOConfig: lazy(() => import('../../pages/admin/AdminSSOConfig')),
@@ -34,6 +35,9 @@ export const AdminPluginRegistry: Record<string, any> = {
 
   // Governance
   AdminAuditLog: lazy(() => import('../../pages/admin/AdminAuditLog')),
+
+  // Reporting
+  ReportDesigner: lazy(() => import('../../pages/custom/ReportDesigner')),
 
   // Fallbacks & Tests
   AdminPlaceholder: lazy(() => import('../../pages/admin/AdminPlaceholder')),

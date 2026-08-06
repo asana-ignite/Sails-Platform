@@ -24,6 +24,8 @@ model Tenant {
   users           User[]
   positions       Position[]
   companyProfile  CompanyProfile?
+  workflowDefinitions WorkflowDefinition[]
+  recordScripts   RecordScript[]
 
   @@index([createdAt])
   @@map("tenants")
@@ -43,6 +45,7 @@ model TableDefinition {
   tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rules       ValidationRule[]
   layouts     TableLayout[]
+  workflows   WorkflowDefinition[]
   menus       ConsoleMenu[]
 
   @@unique([tenantId, tableName])
@@ -64,14 +67,32 @@ model TableLayout {
   publishedConfig  Json?            @map("published_config")
   status           String           @default("draft") @map("status")
   recordTitleField String?          @map("record_title_field")
+  currentVersion   Int              @default(1)
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at")
   table            TableDefinition? @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  versions         LayoutVersion[]
 
   @@unique([tableId, viewType, name])
   @@unique([systemName])
   @@index([tableId])
   @@map("table_layouts")
+  @@schema("core")
+}
+
+model LayoutVersion {
+  id          String      @id @default(cuid())
+  layoutId    String      @map("layout_id")
+  version     Int
+  config      Json
+  notes       String?
+  publishedBy String?     @map("published_by")
+  publishedAt DateTime    @default(now()) @map("published_at")
+  layout      TableLayout @relation(fields: [layoutId], references: [id], onDelete: Cascade)
+
+  @@unique([layoutId, version])
+  @@index([layoutId])
+  @@map("layout_versions")
   @@schema("core")
 }
 
@@ -535,5 +556,84 @@ model CompanyProfile {
 
   @@index([tenantId])
   @@map("company_profiles")
+  @@schema("core")
+}
+
+// ─── Workflow Definition & Versioning ──────────────────────────
+//
+// Versioned approval-workflow definitions.
+//   - status: draft | active | deactivated
+//   - config: current DRAFT DAG (stages/branches/events/variables)
+//   - publishedConfig: current PUBLISHED DAG (active)
+//   - WorkflowVersion rows are immutable snapshots published on Activate.
+//     Running instances pin `version_id` to a snapshot so they never change
+//     mid-flight. Deactivation is the soft-delete; versions are Restrict-guarded
+//     because in-flight instances reference them.
+
+model WorkflowDefinition {
+  id              String             @id @default(cuid())
+  tenantId        String             @map("tenant_id")
+  name            String
+  systemName      String             @unique @map("system_name")
+  description     String?
+  tableId         String?            @map("table_id")
+  status          String             @default("draft") // draft | active | deactivated
+  currentVersion  Int                @default(1)
+  config          Json
+  publishedConfig Json?              @map("published_config")
+  isDefault       Boolean            @default(false)
+  isSystem        Boolean            @default(false)
+  deactivatedAt   DateTime?          @map("deactivated_at")
+  deactivatedBy   String?            @map("deactivated_by")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @default(now()) @updatedAt @map("updated_at")
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  table           TableDefinition?   @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  versions        WorkflowVersion[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, tableId])
+  @@map("workflow_definitions")
+  @@schema("core")
+}
+
+model WorkflowVersion {
+  id          String             @id @default(cuid())
+  defId       String             @map("def_id")
+  version     Int
+  config      Json
+  notes       String?
+  publishedBy String?            @map("published_by")
+  publishedAt DateTime           @default(now()) @map("published_at")
+  definition  WorkflowDefinition @relation(fields: [defId], references: [id], onDelete: Restrict)
+
+  @@unique([defId, version])
+  @@index([defId])
+  @@map("workflow_versions")
+  @@schema("core")
+}
+
+// ─── BYOC Scripts ──────────────────────────────────────────────
+//
+// Tenant-authored JavaScript executed by the ScriptEventPlugin inside the
+// workflow sandbox. Scripts are CONFIGURATIONS of the built-in 'script'
+// workflow event type (Option A) — the event type registry itself stays
+// compile-time. isActive=false is the soft delete: inactive scripts are
+// never loaded by the sandbox.
+
+model RecordScript {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  name        String
+  description String?
+  scriptCode  String   @map("script_code")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, isActive])
+  @@map("record_scripts")
   @@schema("core")
 }

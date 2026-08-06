@@ -12,7 +12,8 @@ export async function GET(req: Request) {
       const layout = await db.tableLayout.findFirst({
         where: { OR: [{ id }, { systemName: id }] },
         include: {
-          table: { select: { id: true, name: true, tableName: true } }
+          table: { select: { id: true, name: true, tableName: true } },
+          versions: { orderBy: { version: 'desc' } },
         }
       });
       if (!layout) {
@@ -163,10 +164,10 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   let submittedSystemName: string | undefined;
   try {
-    const { tenantId } = await requireSession();
+    const { tenantId, userId } = await requireSession();
 
     const body = await req.json();
-    const { id, action, tableId, layoutType, viewType, name, systemName, description, isDefault, recordTitleField, config } = body;
+    const { id, action, tableId, layoutType, viewType, name, systemName, description, isDefault, recordTitleField, config, notes, targetVersion } = body;
     submittedSystemName = systemName;
 
     if (!id) {
@@ -212,17 +213,55 @@ export async function PATCH(req: Request) {
 
     if (action === 'activate') {
       const activeConfig = config !== undefined ? config : (existing.config || existing.publishedConfig);
+      const updated = await db.$transaction(async (tx) => {
+        // Next version = max(currentVersion, max existing version + 1) — robust
+        // against backfilled snapshots that predate the counter.
+        const latest = await tx.layoutVersion.findFirst({
+          where: { layoutId: id },
+          orderBy: { version: 'desc' },
+          select: { version: true },
+        });
+        const nextVersion = Math.max(existing.currentVersion, (latest?.version || 0) + 1);
+        const layout = await tx.tableLayout.update({
+          where: { id },
+          data: {
+            config: activeConfig as any,
+            publishedConfig: activeConfig as any,
+            status: 'active',
+            currentVersion: nextVersion + 1,
+            ...(recordTitleField !== undefined ? { recordTitleField: recordTitleField || null } : {}),
+          },
+          include: {
+            table: { select: { id: true, name: true, tableName: true } }
+          }
+        });
+        await tx.layoutVersion.create({
+          data: {
+            layoutId: id,
+            version: nextVersion,
+            config: activeConfig as any,
+            notes: notes || null,
+            publishedBy: userId || null,
+          },
+        });
+        return layout;
+      });
+      return NextResponse.json({ success: true, data: updated });
+    }
+
+    if (action === 'rollback') {
+      if (!targetVersion) {
+        return NextResponse.json({ success: false, error: 'targetVersion is required for rollback' }, { status: 400 });
+      }
+      const target = await db.layoutVersion.findUnique({
+        where: { layoutId_version: { layoutId: id, version: Number(targetVersion) } },
+      });
+      if (!target) {
+        return NextResponse.json({ success: false, error: `Version ${targetVersion} not found` }, { status: 404 });
+      }
       const updated = await db.tableLayout.update({
         where: { id },
-        data: {
-          config: activeConfig as any,
-          publishedConfig: activeConfig as any,
-          status: 'active',
-          ...(recordTitleField !== undefined ? { recordTitleField: recordTitleField || null } : {}),
-        },
-        include: {
-          table: { select: { id: true, name: true, tableName: true } }
-        }
+        data: { config: target.config as any, status: 'draft' },
       });
       return NextResponse.json({ success: true, data: updated });
     }

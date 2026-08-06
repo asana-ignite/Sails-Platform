@@ -1,0 +1,905 @@
+/* ──────────────────────────────────────────────────
+   Report Designer — sails-rd (Report Designer)
+   Ghost Glass Design System · BEM Methodology
+   ────────────────────────────────────────────────── */
+
+/* ── Main Container ─────────────────────────── */
+
+.sails-rd {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--sails-spacing-unit) * 2);
+  height: 100%;
+  min-height: 0;
+}
+
+/* ── Toolbar ────────────────────────────────── */
+
+.sails-rd__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--sails-spacing-unit) * 2);
+  padding: calc(var(--sails-spacing-unit) * 1.5) calc(var(--sails-spacing-unit) * 2);
+  background: var(--sails-bg-card);
+  border-radius: var(--sails-radius-md);
+  box-shadow: var(--sails-shadow-sm);
+  border: 1px solid var(--sails-border-color);
+  flex-shrink: 0;
+}
+
+.sails-rd__toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sails-spacing-unit) * 1.5);
+  min-width: 0;
+}
+
+.sails-rd__toolbar-center {
+  display: flex;
+  align-items: center;
+}
+
+.sails-rd__toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sails-spacing-unit));
+  flex-shrink: 0;
+}
+
+.sails-rd__reports-select {
+  min-width: 180px;
+  max-width: 260px;
+  padding: 6px 32px 6px 10px;
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-sm);
+  background: var(--sails-bg-body);
+  color: var(--sails-text-main);
+  font-family: var(--sails-font-family);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--sails-transition);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.sails-rd__reports-select:focus {
+  border-color: var(--sails-primary);
+  box-shadow: 0 0 0 2px var(--sails-primary-light);
+}
+
+.sails-rd__reports-select-new {
+  color: var(--sails-primary);
+  font-weight: 700;
+}
+
+.sails-rd__report-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--sails-radius-sm);
+  border: 1px solid transparent;
+  transition: var(--sails-transition);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.sails-rd__report-name:hover {
+  border-color: var(--sails-border-color);
+  background: var(--sails-bg-body);
+}
+
+.sails-rd__report-name-input {
+  font-family: var(--sails-font-family);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+  border: 1px solid var(--sails-primary);
+  border-radius: var(--sails-radius-sm);
+  padding: 4px 8px;
+  background: var(--sails-bg-card);
+  outline: none;
+  max-width: 220px;
+}
+
+/* ── View Mode Toggle ──────────────────────── */
+
+.sails-rd__view-toggle {
+  display: flex;
+  background: var(--sails-bg-body);
+  border-radius: var(--sails-radius-sm);
+  padding: 2px;
+  gap: 1px;
+}
+
+.sails-rd__view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border-radius: 3px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--sails-text-muted);
+  transition: var(--sails-transition);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: var(--sails-font-family);
+}
+
+.sails-rd__view-toggle-btn:hover {
+  color: var(--sails-text-main);
+}
+
+.sails-rd__view-toggle-btn--active {
+  background: var(--sails-bg-card);
+  color: var(--sails-text-main);
+  box-shadow: var(--sails-shadow-sm);
+}
+
+/* ── Builder Layout ────────────────────────── */
+
+.sails-rd__builder {
+  display: flex;
+  gap: calc(var(--sails-spacing-unit) * 2);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Field Palette (Left Sidebar) ──────────── */
+
+.sails-rd__palette {
+  width: 260px;
+  min-width: 260px;
+  background: var(--sails-bg-card);
+  border-radius: var(--sails-radius-md);
+  box-shadow: var(--sails-shadow-sm);
+  border: 1px solid var(--sails-border-color);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+}
+
+.sails-rd__palette-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: calc(var(--sails-spacing-unit) * 1.5) calc(var(--sails-spacing-unit) * 2);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--sails-border-color);
+  flex-shrink: 0;
+}
+
+.sails-rd__palette-section {
+  border-bottom: 1px solid var(--sails-border-color);
+}
+
+.sails-rd__palette-section--formulas {
+  border-bottom: none;
+}
+
+.sails-rd__palette-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: calc(var(--sails-spacing-unit)) calc(var(--sails-spacing-unit) * 2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--sails-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--sails-font-family);
+  transition: var(--sails-transition);
+  text-align: left;
+}
+
+.sails-rd__palette-section-header:hover {
+  color: var(--sails-text-main);
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.05);
+}
+
+.sails-rd__palette-section-header--formulas {
+  cursor: default;
+}
+
+.sails-rd__palette-section-header--formulas:hover {
+  background: none;
+  color: var(--sails-text-muted);
+}
+
+.sails-rd__palette-count {
+  margin-left: auto;
+  font-size: 0.65rem;
+  color: var(--sails-text-muted);
+  background: var(--sails-bg-body);
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.sails-rd__palette-section-body {
+  padding: 2px 0;
+}
+
+.sails-rd__palette-empty {
+  padding: calc(var(--sails-spacing-unit) * 2);
+  font-size: 0.75rem;
+  color: var(--sails-text-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+/* ── Field Item (Palette Draggable) ────────── */
+
+.sails-rd__field-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px calc(var(--sails-spacing-unit) * 2) 5px calc(var(--sails-spacing-unit) * 3);
+  cursor: grab;
+  transition: var(--sails-transition);
+  position: relative;
+  user-select: none;
+}
+
+.sails-rd__field-item:hover {
+  background: var(--sails-primary-light);
+}
+
+.sails-rd__field-item:active {
+  cursor: grabbing;
+  opacity: 0.7;
+}
+
+.sails-rd__field-item--formula {
+  border-left: 2px solid var(--sails-primary);
+}
+
+.sails-rd__field-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  background: var(--sails-bg-body);
+  flex-shrink: 0;
+}
+
+.sails-rd__field-item-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--sails-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sails-rd__field-item-type {
+  margin-left: auto;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--sails-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: var(--sails-bg-body);
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.sails-rd__field-item-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  color: var(--sails-text-muted);
+  opacity: 0;
+  transition: var(--sails-transition);
+  flex-shrink: 0;
+}
+
+.sails-rd__field-item:hover .sails-rd__field-item-delete {
+  opacity: 1;
+}
+
+.sails-rd__field-item-delete:hover {
+  color: var(--sails-danger);
+  background: var(--sails-danger-light);
+}
+
+.sails-rd__add-formula-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  color: var(--sails-primary);
+  margin-left: auto;
+  transition: var(--sails-transition);
+}
+
+.sails-rd__add-formula-btn:hover {
+  background: var(--sails-primary-light);
+}
+
+/* ── Workspace (Right Area) ────────────────── */
+
+.sails-rd__workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--sails-spacing-unit) * 1.5);
+  min-width: 0;
+  overflow-y: auto;
+}
+
+/* ── Drop Zones ────────────────────────────── */
+
+.sails-rd__dropzone {
+  background: var(--sails-bg-card);
+  border-radius: var(--sails-radius-md);
+  border: 2px dashed var(--sails-border-color);
+  transition: var(--sails-transition);
+  flex-shrink: 0;
+}
+
+.sails-rd__dropzone--active {
+  border-color: var(--sails-primary);
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.04);
+  box-shadow: 0 0 0 4px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.08);
+}
+
+.sails-rd__dropzone-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: calc(var(--sails-spacing-unit) * 1.2) calc(var(--sails-spacing-unit) * 1.5);
+  border-bottom: 1px solid var(--sails-border-color);
+}
+
+.sails-rd__dropzone-icon {
+  display: flex;
+  align-items: center;
+  color: var(--sails-text-muted);
+}
+
+.sails-rd__dropzone-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--sails-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.sails-rd__dropzone-count {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--sails-primary);
+  background: var(--sails-primary-light);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.sails-rd__dropzone-body {
+  padding: calc(var(--sails-spacing-unit) * 0.75);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 42px;
+  align-items: center;
+}
+
+.sails-rd__dropzone-placeholder {
+  width: 100%;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--sails-text-muted);
+  font-style: italic;
+  padding: calc(var(--sails-spacing-unit)) 0;
+}
+
+.sails-rd__dropzones-row {
+  display: flex;
+  gap: calc(var(--sails-spacing-unit) * 1.5);
+}
+
+.sails-rd__dropzones-row .sails-rd__dropzone {
+  flex: 1;
+}
+
+/* ── Field Chip (in Drop Zone) ─────────────── */
+
+.sails-rd__field-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 4px;
+  background: var(--sails-bg-body);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-sm);
+  font-size: 0.72rem;
+  cursor: grab;
+  transition: var(--sails-transition);
+  user-select: none;
+}
+
+.sails-rd__field-chip:hover {
+  border-color: var(--sails-primary);
+  box-shadow: 0 0 0 2px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
+}
+
+.sails-rd__field-chip:active {
+  cursor: grabbing;
+}
+
+.sails-rd__field-chip--dragging {
+  opacity: 0.4;
+}
+
+.sails-rd__field-chip-grip {
+  display: flex;
+  align-items: center;
+  color: var(--sails-text-muted);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.sails-rd__field-chip-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sails-rd__field-chip-label {
+  font-weight: 600;
+  color: var(--sails-text-main);
+  white-space: nowrap;
+}
+
+.sails-rd__field-chip-table {
+  font-weight: 400;
+  color: var(--sails-text-muted);
+  font-size: 0.65rem;
+}
+
+.sails-rd__field-chip-agg {
+  font-family: var(--sails-font-family);
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 4px;
+  border: 1px solid var(--sails-border-color);
+  border-radius: 2px;
+  background: var(--sails-bg-card);
+  color: var(--sails-info);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%237588de' stroke-width='3'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 2px center;
+  padding-right: 16px;
+}
+
+.sails-rd__field-chip-sort {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  font-size: 0.6rem;
+  color: var(--sails-text-muted);
+  transition: var(--sails-transition);
+  font-family: var(--sails-font-family);
+}
+
+.sails-rd__field-chip-sort:hover {
+  background: var(--sails-primary-light);
+  color: var(--sails-primary);
+}
+
+.sails-rd__field-chip-sort--active {
+  color: var(--sails-primary);
+  background: var(--sails-primary-light);
+  font-weight: 700;
+}
+
+.sails-rd__field-chip-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  color: var(--sails-text-muted);
+  transition: var(--sails-transition);
+  flex-shrink: 0;
+}
+
+.sails-rd__field-chip-remove:hover {
+  color: var(--sails-danger);
+  background: var(--sails-danger-light);
+}
+
+/* ── Filters Panel ─────────────────────────── */
+
+.sails-rd__filters-panel {
+  border-style: solid;
+  border-color: var(--sails-border-color);
+}
+
+.sails-rd__filters-body {
+  padding: calc(var(--sails-spacing-unit) * 0.75);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sails-rd__filter-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  color: var(--sails-primary);
+  margin-left: auto;
+  transition: var(--sails-transition);
+}
+
+.sails-rd__filter-add-btn:hover {
+  background: var(--sails-primary-light);
+}
+
+.sails-rd__filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: var(--sails-bg-body);
+  border-radius: var(--sails-radius-sm);
+  border: 1px solid var(--sails-border-color);
+}
+
+.sails-rd__filter-field,
+.sails-rd__filter-operator {
+  font-family: var(--sails-font-family);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 5px 8px;
+  border: 1px solid var(--sails-border-color);
+  border-radius: 3px;
+  background: var(--sails-bg-card);
+  color: var(--sails-text-main);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='3'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  padding-right: 22px;
+}
+
+.sails-rd__filter-field {
+  min-width: 140px;
+  max-width: 200px;
+}
+
+.sails-rd__filter-operator {
+  min-width: 80px;
+}
+
+.sails-rd__filter-value {
+  font-family: var(--sails-font-family);
+  font-size: 0.72rem;
+  padding: 5px 8px;
+  border: 1px solid var(--sails-border-color);
+  border-radius: 3px;
+  background: var(--sails-bg-card);
+  color: var(--sails-text-main);
+  min-width: 100px;
+  max-width: 160px;
+  transition: var(--sails-transition);
+}
+
+.sails-rd__filter-value:focus {
+  border-color: var(--sails-primary);
+  box-shadow: 0 0 0 2px rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.1);
+}
+
+.sails-rd__filter-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  color: var(--sails-text-muted);
+  flex-shrink: 0;
+  transition: var(--sails-transition);
+}
+
+.sails-rd__filter-remove:hover {
+  color: var(--sails-danger);
+  background: var(--sails-danger-light);
+}
+
+/* ── Preview Area ──────────────────────────── */
+
+.sails-rd__preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 300px;
+  overflow: hidden;
+}
+
+.sails-rd__preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: calc(var(--sails-spacing-unit) * 1.5);
+  flex-shrink: 0;
+}
+
+.sails-rd__preview-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+}
+
+.sails-rd__preview-count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--sails-text-muted);
+  background: var(--sails-bg-body);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.sails-rd__preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--sails-spacing-unit) * 6) 0;
+  color: var(--sails-text-muted);
+  text-align: center;
+  gap: calc(var(--sails-spacing-unit) * 1.5);
+}
+
+.sails-rd__preview-empty h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+}
+
+.sails-rd__preview-empty p {
+  font-size: 0.78rem;
+  max-width: 340px;
+  line-height: 1.5;
+}
+
+.sails-rd__preview-table-wrapper {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-sm);
+}
+
+.sails-rd__preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.sails-rd__preview-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.sails-rd__preview-table th {
+  background: var(--sails-bg-body);
+  color: var(--sails-text-muted);
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 2px solid var(--sails-border-color);
+}
+
+.sails-rd__preview-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--sails-border-color);
+  color: var(--sails-text-main);
+  white-space: nowrap;
+}
+
+.sails-rd__preview-table tbody tr:hover td {
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.03);
+}
+
+.sails-rd__preview-row-num {
+  width: 40px;
+  text-align: center !important;
+  color: var(--sails-text-muted) !important;
+  font-size: 0.68rem !important;
+  background: var(--sails-bg-body) !important;
+}
+
+.sails-rd__preview-formula-col {
+  background: rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.08) !important;
+  color: var(--sails-primary-dark) !important;
+}
+
+.sails-rd__sort-indicator {
+  font-size: 0.65rem;
+  margin-left: 2px;
+}
+
+.sails-rd__preview-table--pivot th {
+  font-size: 0.68rem;
+}
+
+.sails-rd__pivot-row-header {
+  font-weight: 600;
+  background: var(--sails-bg-body);
+  color: var(--sails-text-main);
+  border-right: 1px solid var(--sails-border-color);
+}
+
+.sails-rd__pivot-row-header--0 {
+  padding-left: 8px;
+}
+
+.sails-rd__preview-empty-cell {
+  text-align: center;
+  color: var(--sails-text-muted);
+  padding: 30px !important;
+  font-style: italic;
+}
+
+/* ── Formula Editor Modal ──────────────────── */
+
+.sails-rd__formula-modal {
+  max-width: 620px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.sails-rd__formula-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--sails-bg-body);
+  border-radius: var(--sails-radius-sm);
+  border: 1px solid var(--sails-border-color);
+}
+
+.sails-rd__formula-preview-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--sails-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.sails-rd__formula-preview code {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.78rem;
+  color: var(--sails-primary-dark);
+  font-weight: 600;
+}
+
+.sails-rd__formula-helpers {
+  margin-bottom: calc(var(--sails-spacing-unit) * 2);
+}
+
+.sails-rd__formula-helpers-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--sails-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 6px;
+}
+
+.sails-rd__formula-helpers-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sails-rd__formula-helpers-grid--fn {
+  gap: 4px;
+}
+
+.sails-rd__formula-helper-btn {
+  font-family: var(--sails-font-family);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-sm);
+  background: var(--sails-bg-card);
+  color: var(--sails-text-main);
+  cursor: pointer;
+  transition: var(--sails-transition);
+}
+
+.sails-rd__formula-helper-btn:hover {
+  border-color: var(--sails-primary);
+  background: var(--sails-primary-light);
+  color: var(--sails-primary-dark);
+}
+
+.sails-rd__formula-helper-btn--fn {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  color: var(--sails-info);
+  font-weight: 700;
+}
+
+.sails-rd__formula-helper-btn--fn:hover {
+  color: var(--sails-info);
+  border-color: var(--sails-info);
+  background: var(--sails-info-light);
+}
+
+/* ── Scrollbar styling ─────────────────────── */
+
+.sails-rd__palette::-webkit-scrollbar,
+.sails-rd__workspace::-webkit-scrollbar,
+.sails-rd__preview-table-wrapper::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.sails-rd__palette::-webkit-scrollbar-track,
+.sails-rd__workspace::-webkit-scrollbar-track,
+.sails-rd__preview-table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sails-rd__palette::-webkit-scrollbar-thumb,
+.sails-rd__workspace::-webkit-scrollbar-thumb,
+.sails-rd__preview-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--sails-border-color);
+  border-radius: 10px;
+}
+
+.sails-rd__palette::-webkit-scrollbar-thumb:hover,
+.sails-rd__workspace::-webkit-scrollbar-thumb:hover,
+.sails-rd__preview-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--sails-text-muted);
+}

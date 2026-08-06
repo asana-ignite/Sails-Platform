@@ -51,6 +51,7 @@ import { TableLayout, LayoutType, ViewType, FIELD_TYPE_REGISTRY, FilterGroup } f
 import { CustomSelect, SelectOption } from '../../components/common/CustomSelect';
 import { DynamicIcon } from '../../components/common/DynamicIcon';
 import { FilterBuilder } from '../../components/common/FilterBuilder';
+import { UiTableCard, UiTable, UiTh, UiTr, UiTd, UiNameCell, UiBadge, UiDateCell, UiActionsMenu, UiActionsItem, UiActionsDivider, UiPagination, UiConfirmDialog } from '../../components/ui';
 import './ObjectManager.css';
 
 const SortIcon: React.FC<{ active: boolean; direction?: 'asc' | 'desc' }> = ({ active, direction }) => {
@@ -1038,47 +1039,17 @@ const ObjectManager: React.FC = () => {
           </div>
 
           {/* Master Table Grid */}
-          <div className="sails-card om-table-card">
-            <table className="om-list-table">
+          <UiTableCard>
+            <UiTable>
               <thead>
                 <tr>
-                  <th className="om-th-sortable" onClick={() => handleTableSort('name')}>
-                    <div className="om-th-content">
-                      <span>Model</span>
-                      {getTableSortIcon('name')}
-                    </div>
-                  </th>
-                  <th className="om-th-sortable" onClick={() => handleTableSort('description')}>
-                    <div className="om-th-content">
-                      <span>Description</span>
-                      {getTableSortIcon('description')}
-                    </div>
-                  </th>
-                  <th className="om-th-sortable" onClick={() => handleTableSort('isSystem')}>
-                    <div className="om-th-content">
-                      <span>Model Type</span>
-                      {getTableSortIcon('isSystem')}
-                    </div>
-                  </th>
-                  <th className="om-th-sortable" onClick={() => handleTableSort('fields')}>
-                    <div className="om-th-content">
-                      <span>Fields</span>
-                      {getTableSortIcon('fields')}
-                    </div>
-                  </th>
-                  <th className="om-th-sortable" onClick={() => handleTableSort('createdAt')}>
-                    <div className="om-th-content">
-                      <span>Created At</span>
-                      {getTableSortIcon('createdAt')}
-                    </div>
-                  </th>
-                  <th className="om-th-sortable" onClick={() => handleTableSort('updatedAt')}>
-                    <div className="om-th-content">
-                      <span>Last Modified</span>
-                      {getTableSortIcon('updatedAt')}
-                    </div>
-                  </th>
-                  <th style={{ textAlign: 'right' }}></th>
+                  <UiTh sortable sortState={tableSortConfig?.key === 'name' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('name')}>Model</UiTh>
+                  <UiTh sortable sortState={tableSortConfig?.key === 'description' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('description')}>Description</UiTh>
+                  <UiTh sortable sortState={tableSortConfig?.key === 'isSystem' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('isSystem')}>Model Type</UiTh>
+                  <UiTh sortable sortState={tableSortConfig?.key === 'fields' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('fields')}>Fields</UiTh>
+                  <UiTh sortable sortState={tableSortConfig?.key === 'createdAt' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('createdAt')}>Created At</UiTh>
+                  <UiTh sortable sortState={tableSortConfig?.key === 'updatedAt' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('updatedAt')}>Last Modified</UiTh>
+                  <th style={{ textAlign: 'right', width: 48 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -1089,109 +1060,61 @@ const ObjectManager: React.FC = () => {
                   const updatedDateText = table.updatedAt ? new Date(table.updatedAt).toLocaleString() : (table.createdAt ? new Date(table.createdAt).toLocaleString() : 'N/A');
 
                   return (
-                    <tr key={table.id} className="om-clickable-row" onClick={() => selectRow(table)}>
-                      <td>
-                        <div className="om-table-cell-name">
-                          <div className="om-table-icon-wrapper">
-                            <Layers size={18} />
-                          </div>
-                          <div>
-                            <div className="om-name-primary">
-                              {renderHighlightedText(table.name, searchTerm)}
-                            </div>
-                            <div className="om-name-secondary"><code>{renderHighlightedText(table.tableName, searchTerm)}</code></div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="om-desc-text">
+                    <UiTr key={table.id} onClick={() => selectRow(table)}>
+                      <UiTd>
+                        <UiNameCell
+                          icon={<Layers size={18} />}
+                          primary={renderHighlightedText(table.name, searchTerm)}
+                          secondary={renderHighlightedText(table.tableName, searchTerm)}
+                          secondaryAsCode
+                        />
+                      </UiTd>
+                      <UiTd>
+                        <span className="ui-desc-text">
                           {table.description ? renderHighlightedText(table.description, searchTerm) : 'No description provided.'}
                         </span>
-                      </td>
-                      <td>
+                      </UiTd>
+                      <UiTd>
                         {table.isSystem ? (
-                          <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.15)', color: 'var(--sails-primary)', border: '1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.3)' }}>
-                            System Model
-                          </span>
+                          <UiBadge tone="info">System Model</UiBadge>
                         ) : (
-                          <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--sails-text-main)', border: '1px solid var(--sails-border-color)' }}>
-                            Custom Model
-                          </span>
+                          <UiBadge tone="neutral">Custom Model</UiBadge>
                         )}
-                      </td>
-                      <td>
-                        <span className="om-badge">{renderHighlightedText(fieldsText, searchTerm)}</span>
-                      </td>
-                      <td>
-                        <span className="om-date-cell">
-                          <Calendar size={14} style={{ marginRight: '4px' }} />
+                      </UiTd>
+                      <UiTd>
+                        <UiBadge tone="neutral">{renderHighlightedText(fieldsText, searchTerm)}</UiBadge>
+                      </UiTd>
+                      <UiTd>
+                        <UiDateCell>
+                          <Calendar size={14} />
                           {renderHighlightedText(dateText, searchTerm)}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="om-date-cell">
-                          <Calendar size={14} style={{ marginRight: '4px' }} />
+                        </UiDateCell>
+                      </UiTd>
+                      <UiTd>
+                        <UiDateCell>
+                          <Calendar size={14} />
                           {renderHighlightedText(updatedDateText, searchTerm)}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                        <div className="om-action-wrapper">
-                          <button 
-                            className={`sails-btn sails-btn--ghost ${activeMenuTableId === table.id ? 'active' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMenuTableId(activeMenuTableId === table.id ? null : table.id);
-                            }} 
-                            title="Options" 
-                            aria-label="Options"
-                          >
-                            <MoreHorizontal size={18} />
-                          </button>
-
-                          {activeMenuTableId === table.id && (
-                            <div className="om-context-menu" onClick={e => e.stopPropagation()}>
-                              <button 
-                                className="om-context-item" 
-                                onClick={() => {
-                                  setActiveMenuTableId(null);
-                                  selectRow(table, 'general');
-                                }}
-                              >
-                                <Edit2 size={14} />
-                                <span>Edit Details</span>
-                              </button>
-
-                              <button 
-                                className="om-context-item" 
-                                onClick={() => {
-                                  setActiveMenuTableId(null);
-                                  selectRow(table, 'fields');
-                                }}
-                              >
-                                <Layers size={14} />
-                                <span>Manage Fields</span>
-                              </button>
-
-                              {!table.isSystem && (
-                                <>
-                                  <div className="om-context-divider"></div>
-                                  <button 
-                                    className="om-context-item om-context-item--danger" 
-                                    onClick={() => {
-                                      setActiveMenuTableId(null);
-                                      triggerDeleteTable(table);
-                                    }}
-                                  >
-                                    <Trash2 size={14} />
-                                    <span>Remove</span>
-                                  </button>
-                                </>
-                              )}
-                            </div>
+                        </UiDateCell>
+                      </UiTd>
+                      <UiTd align="right" onClick={(e) => e.stopPropagation()}>
+                        <UiActionsMenu open={activeMenuTableId === table.id} onToggle={() => setActiveMenuTableId(activeMenuTableId === table.id ? null : table.id)}>
+                          <UiActionsItem onClick={() => { setActiveMenuTableId(null); selectRow(table, 'general'); }}>
+                            <Edit2 size={14} /> Edit Details
+                          </UiActionsItem>
+                          <UiActionsItem onClick={() => { setActiveMenuTableId(null); selectRow(table, 'fields'); }}>
+                            <Layers size={14} /> Manage Fields
+                          </UiActionsItem>
+                          {!table.isSystem && (
+                            <>
+                              <UiActionsDivider />
+                              <UiActionsItem danger onClick={() => { setActiveMenuTableId(null); triggerDeleteTable(table); }}>
+                                <Trash2 size={14} /> Remove
+                              </UiActionsItem>
+                            </>
                           )}
-                        </div>
-                      </td>
-                    </tr>
+                        </UiActionsMenu>
+                      </UiTd>
+                    </UiTr>
                   );
                 })}
                 {filteredTables.length === 0 && (
@@ -1204,61 +1127,19 @@ const ObjectManager: React.FC = () => {
                   </tr>
                 )}
               </tbody>
-            </table>
+            </UiTable>
 
-            {/* Pagination Footer */}
-            <div className="sails-user-manager__pagination" style={{ borderTop: '1px solid var(--sails-border-color)' }}>
-              <div className="sails-user-manager__pagination-info">
-                <span className="sails-user-manager__pagination-range">
-                  Showing <strong>{startRange}</strong> to <strong>{endRange}</strong> of <strong>{totalCount}</strong> data models
-                </span>
-                <div className="sails-user-manager__page-size">
-                  <span className="sails-user-manager__page-size-label">Records per page:</span>
-                  <CustomSelect
-                    size="sm"
-                    value={pageSize === totalCount ? 'all' : pageSize}
-                    options={[
-                      { value: 10, label: '10' },
-                      { value: 25, label: '25' },
-                      { value: 50, label: '50' },
-                      { value: 'all', label: 'ALL' }
-                    ]}
-                    onChange={(val) => {
-                      setPageSize(val === 'all' ? (totalCount || 1000) : Number(val));
-                      setCurrentPage(1);
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="sails-user-manager__pagination-controls">
-                <button
-                  className="sails-pagination-btn"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <div className="sails-pagination-pages">
-                  {[...Array(totalPages)].map((_, i) => (
-                    <button
-                      key={i + 1}
-                      className={`sails-pagination-page ${currentPage === i + 1 ? 'sails-pagination-page--active' : ''}`}
-                      onClick={() => setCurrentPage(i + 1)}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="sails-pagination-btn"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages || totalPages === 0}
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
+            <UiPagination
+              page={currentPage}
+              totalPages={totalPages}
+              total={totalCount}
+              pageSize={pageSize === totalCount ? 50 : pageSize}
+              label="data models"
+              onPageChange={(p) => setCurrentPage(p)}
+              onPageSizeChange={(n) => { setPageSize(n); setCurrentPage(1); }}
+              pageSizeOptions={[10, 25, 50]}
+            />
+          </UiTableCard>
         </div>
       ) : (
         selectedTable && (

@@ -256,14 +256,14 @@ const AdminAuditLog: React.FC = () => {
 
       <div className="sails-audit__spacer" />
 
-      <div className="sails-card sails-audit__table-wrapper">
+      <div className="ui-card ui-table-card">
         {loading ? (
           <div className="sails-audit__loading"><Spinner size={32} label="Loading audit logs..." /></div>
         ) : error ? (
           <div className="sails-audit__error">{error}</div>
         ) : (
           <>
-            <table className="sails-audit__table">
+            <table className="ui-table sails-audit__table">
               <thead>
                 <tr>
                   <SortableTh field="createdAt" label="Timestamp" />
@@ -286,23 +286,23 @@ const AdminAuditLog: React.FC = () => {
                 )}
               </tbody>
             </table>
-            <div className="sails-audit__pagination">
-              <div className="sails-audit__pagination-info">
+            <div className="ui-pagination">
+              <span className="ui-pagination__range">
                 Showing <strong>{startRecord}</strong> to <strong>{endRecord}</strong> of <strong>{total}</strong> records
-              </div>
-              <div className="sails-audit__pagination-controls">
+              </span>
+              <div className="ui-pagination__controls">
                 <button
-                  className="sails-pagination-btn"
+                  className="ui-pagination__btn"
                   onClick={() => setPage(prev => Math.max(1, prev - 1))}
                   disabled={page <= 1}
                 >
                   <ChevronLeft size={16} />
                 </button>
-                <div className="sails-pagination-pages">
+                <div className="ui-pagination__pages">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                     <button
                       key={p}
-                      className={`sails-pagination-page ${page === p ? 'sails-pagination-page--active' : ''}`}
+                      className={`ui-pagination__page ${page === p ? 'ui-pagination__page--active' : ''}`}
                       onClick={() => setPage(p)}
                     >
                       {p}
@@ -310,15 +310,15 @@ const AdminAuditLog: React.FC = () => {
                   ))}
                 </div>
                 <button
-                  className="sails-pagination-btn"
+                  className="ui-pagination__btn"
                   onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={page >= totalPages || totalPages === 0}
                 >
                   <ChevronRight size={16} />
                 </button>
               </div>
-              <div className="sails-audit__page-size">
-                <span>Per page:</span>
+              <div className="ui-pagination__page-size">
+                <span className="ui-pagination__page-size-label">Per page:</span>
                 <CustomSelect
                   size="sm"
                   value={pageSize}

@@ -12,10 +12,11 @@
     "platform:reset": "bun scripts/reset-platform.ts"
   },
   "dependencies": {
-    "@sails/shared": "workspace:*",
     "@auth/prisma-adapter": "^2.11.2",
     "@prisma/client": "^6.19.3",
+    "@sails/shared": "workspace:*",
     "bcryptjs": "^3.0.3",
+    "jsonata": "^2.2.2",
     "next": "^14.0.0",
     "next-auth": "^4.24.14",
     "pg": "^8.11.3",

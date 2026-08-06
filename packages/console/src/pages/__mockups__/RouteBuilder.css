@@ -1,10 +1,6 @@
-/**
- * Route Builder — Visual Routing Process Editor
- */
+/** Route Builder v2 — Stage canvas, workflow events, branching */
 
-/* ─── Root ──────────────────────────────────────────────────── */
-
-.rb-root {
+.rb2-root {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -14,606 +10,104 @@
 
 /* ─── Toolbar ───────────────────────────────────────────────── */
 
-.rb-toolbar {
+.rb2-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   padding: 0 16px;
-  height: 44px;
+  height: 46px;
   background: var(--sails-bg-card, #ffffff);
-  border-bottom: 1px solid var(--sails-border, #e2e8f0);
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
   flex-shrink: 0;
 }
 
-.rb-toolbar__brand {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--sails-text-primary, #1e293b);
-}
-
-.rb-toolbar__actions {
+.rb2-toolbar__brand {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-/* ─── Body Layout ───────────────────────────────────────────── */
-
-.rb-body {
-  display: grid;
-  grid-template-columns: 1fr 260px;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* ─── Canvas ────────────────────────────────────────────────── */
-
-.rb-canvas {
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-}
-
-.rb-canvas__scroll {
-  width: 100%;
-  max-width: 760px;
-  overflow-y: auto;
-  padding: 24px 24px 80px;
-}
-
-/* ─── Process Header ────────────────────────────────────────── */
-
-.rb-process-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 20px;
-  background: var(--sails-bg-card, #ffffff);
-  border: 1px solid var(--sails-border, #e2e8f0);
-  border-radius: 10px;
-  margin-bottom: 8px;
-}
-
-.rb-process-header__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: rgba(157, 206, 224, 0.12);
+  font-size: 13px;
+  font-weight: 600;
   color: var(--sails-primary, #9dcee0);
-  border-radius: 8px;
-  flex-shrink: 0;
+  white-space: nowrap;
 }
 
-.rb-process-header__info {
+.rb2-toolbar__name {
   flex: 1;
-}
-
-.rb-process-name {
-  font-size: 16px;
-  font-weight: 700;
+  max-width: 300px;
   border: 1px solid transparent;
-  padding: 2px 6px;
-  margin: -2px -6px;
+  padding: 3px 8px;
   border-radius: 4px;
-  color: var(--sails-text-primary, #1e293b);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
   background: transparent;
-  width: 100%;
 }
 
-.rb-process-name:focus {
+.rb2-toolbar__name:focus {
   outline: none;
   border-color: var(--sails-primary, #9dcee0);
   background: var(--sails-bg-card, #ffffff);
 }
 
-.rb-process-name:hover {
-  background: rgba(0,0,0,0.02);
-}
-
-.rb-process-desc {
-  width: 100%;
-}
-
-.rb-badge {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 10px;
-  background: rgba(157, 206, 224, 0.12);
-  color: var(--sails-primary, #9dcee0);
-  white-space: nowrap;
-}
-
-/* ─── Chain ─────────────────────────────────────────────────── */
-
-.rb-chain {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.rb-chain__empty {
-  padding: 40px;
-  text-align: center;
-  border: 2px dashed var(--sails-border, #e2e8f0);
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--sails-text-muted, #94a3b8);
-  background: var(--sails-bg-card, #ffffff);
-}
-
-/* ─── Drop Zone ─────────────────────────────────────────────── */
-
-.rb-drop-zone {
-  height: 4px;
-  transition: height 0.15s, background 0.15s;
-  border-radius: 2px;
-  margin: 4px 0;
-}
-
-.rb-drop-zone--active {
-  height: 12px;
-  background: rgba(157, 206, 224, 0.2);
-}
-
-/* ─── Connector (arrow between stages) ──────────────────────── */
-
-.rb-connector {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.rb-connector__line {
-  width: 2px;
-  height: 16px;
-  background: var(--sails-border, #e2e8f0);
-}
-
-.rb-connector__arrow {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--sails-bg-card, #ffffff);
-  border: 1px solid var(--sails-border, #e2e8f0);
-  color: var(--sails-text-muted, #94a3b8);
-}
-
-/* ─── Stage Card ────────────────────────────────────────────── */
-
-.rb-stage {
-  background: var(--sails-bg-card, #ffffff);
-  border: 2px solid var(--sails-border, #e2e8f0);
-  border-radius: 10px;
-  overflow: hidden;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.rb-stage:hover {
-  border-color: var(--sails-primary, #9dcee0);
-}
-
-.rb-stage--selected {
-  border-color: var(--sails-primary, #9dcee0) !important;
-  box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.12);
-}
-
-.rb-stage--expanded {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-}
-
-/* ─── Stage Header ──────────────────────────────────────────── */
-
-.rb-stage__header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: background 0.1s;
-}
-
-.rb-stage__header:hover {
-  background: var(--sails-bg-secondary, #f8fafc);
-}
-
-.rb-stage__order {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.rb-stage__number {
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--sails-primary, #9dcee0);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.rb-stage__drag {
-  display: flex;
-  align-items: center;
-  border: none;
-  background: none;
-  color: var(--sails-text-muted, #94a3b8);
-  cursor: grab;
-  padding: 0;
-  flex-shrink: 0;
-}
-
-.rb-stage__drag:active {
-  cursor: grabbing;
-}
-
-.rb-stage__main-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.rb-stage__name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--sails-text-primary, #1e293b);
-  display: block;
-}
-
-.rb-stage__meta {
+.rb2-toolbar__actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 2px;
-  flex-wrap: wrap;
+  margin-left: auto;
 }
 
-.rb-stage__router {
+.rb2-mode-toggle {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--sails-text-secondary, #64748b);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 6px;
+  overflow: hidden;
 }
 
-.rb-stage__cond-badge {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
-}
-
-.rb-stage__action-badge {
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: rgba(99, 102, 241, 0.1);
-  color: #6366f1;
-}
-
-.rb-stage__timeout-badge {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: rgba(239, 68, 68, 0.08);
-  color: #ef4444;
-}
-
-/* Stage header actions */
-.rb-stage__header-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  opacity: 0;
-  transition: opacity 0.12s;
-}
-
-.rb-stage__header:hover .rb-stage__header-actions {
-  opacity: 1;
-}
-
-.rb-stage__expand-icon {
-  transition: transform 0.2s;
-  color: var(--sails-text-muted, #94a3b8);
-}
-
-.rb-stage__expand-icon--open {
-  transform: rotate(180deg);
-}
-
-.rb-icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--sails-text-muted, #94a3b8);
-  cursor: pointer;
-}
-
-.rb-icon-btn:hover {
-  background: rgba(0,0,0,0.05);
-  color: var(--sails-text-primary, #1e293b);
-}
-
-.rb-icon-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.rb-icon-btn--danger:hover {
-  color: var(--sails-danger, #ef4444);
-}
-
-/* ─── Stage Body (expandable) ───────────────────────────────── */
-
-.rb-stage__body {
-  padding: 16px 20px 20px;
-  border-top: 1px solid var(--sails-border, #e2e8f0);
-  animation: rbSlideDown 0.15s ease-out;
-}
-
-@keyframes rbSlideDown {
-  from { opacity: 0; max-height: 0; }
-  to { opacity: 1; max-height: 2000px; }
-}
-
-.rb-stage__form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.rb-form-group--half { }
-.rb-form-group--full { grid-column: 1 / -1; }
-
-.rb-form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.rb-form-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: var(--sails-text-secondary, #64748b);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.rb-form-hint {
-  font-size: 10px;
-  color: var(--sails-text-muted, #94a3b8);
-  font-style: italic;
-}
-
-.rb-code-input {
-  font-family: 'SF Mono', 'Fira Code', monospace !important;
-  font-size: 11px !important;
-}
-
-/* ─── Capabilities ──────────────────────────────────────────── */
-
-.rb-capabilities { }
-
-.rb-capabilities__grid {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.rb-cap {
-  display: flex;
+.rb2-mode-btn {
+  display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 10px;
-  border: 1px solid var(--sails-border, #e2e8f0);
-  border-radius: 6px;
-  font-size: 11px;
-  cursor: pointer;
-  color: var(--sails-text-muted, #94a3b8);
-  transition: all 0.12s;
-  user-select: none;
-}
-
-.rb-cap:hover {
-  border-color: var(--sails-primary, #9dcee0);
-}
-
-.rb-cap--active {
-  background: rgba(157, 206, 224, 0.08);
-  border-color: var(--sails-primary, #9dcee0);
-  color: var(--sails-primary, #9dcee0);
-}
-
-.rb-cap input {
-  display: none;
-}
-
-/* ─── Actions Section ───────────────────────────────────────── */
-
-.rb-actions-section {
-  border-top: 1px solid var(--sails-border, #e2e8f0);
-  padding-top: 12px;
-}
-
-.rb-actions__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.rb-actions__grid:has(:nth-child(3)) {
-  grid-template-columns: 1fr 1fr 1fr;
-}
-
-/* ─── Action Block ──────────────────────────────────────────── */
-
-.rb-action-block {
-  border: 1px solid;
-  border-radius: 8px;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.rb-action-block__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.rb-action-block__add-menu {
-  display: flex;
-  gap: 2px;
-}
-
-.rb-action-add-btn {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px 7px;
-  border: 1px solid var(--sails-border, #e2e8f0);
-  border-radius: 4px;
-  background: var(--sails-bg-card, #ffffff);
-  font-size: 10px;
-  cursor: pointer;
-  color: var(--sails-text-secondary, #64748b);
-  white-space: nowrap;
-  transition: border-color 0.1s;
-}
-
-.rb-action-add-btn:hover {
-  border-color: var(--sails-primary, #9dcee0);
-}
-
-.rb-action-empty {
-  font-size: 10px;
-  color: var(--sails-text-muted, #94a3b8);
-  font-style: italic;
-  margin: 0;
-  text-align: center;
-  padding: 6px;
-}
-
-.rb-action-list {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.rb-action-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 8px;
-  background: var(--sails-bg-card, #ffffff);
-  border-radius: 4px;
-  font-size: 11px;
-}
-
-.rb-action-item__type {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--sails-text-primary, #1e293b);
-}
-
-/* ─── Add Stage Button ──────────────────────────────────────── */
-
-.rb-add-stage-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  padding: 10px;
-  margin-top: 8px;
-  border: 2px dashed var(--sails-border, #e2e8f0);
-  border-radius: 8px;
-  background: var(--sails-bg-card, #ffffff);
-  color: var(--sails-text-muted, #94a3b8);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 0.12s, color 0.12s;
-}
-
-.rb-add-stage-btn:hover {
-  border-color: var(--sails-primary, #9dcee0);
-  color: var(--sails-primary, #9dcee0);
-}
-
-/* ─── End Node ──────────────────────────────────────────────── */
-
-.rb-end-node {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 0;
-}
-
-.rb-end-node__icon {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-  border: 2px solid rgba(16, 185, 129, 0.3);
-}
-
-.rb-end-node__label {
+  padding: 4px 10px;
   font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #10b981;
+  border: none;
+  background: var(--sails-bg-card, #ffffff);
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  transition: all 0.12s;
 }
 
-/* ─── RIGHT: Context Panel ──────────────────────────────────── */
+.rb2-mode-btn + .rb2-mode-btn {
+  border-left: 1px solid var(--sails-border-color, #e2e8f0);
+}
 
-.rb-context {
-  padding: 12px;
-  background: var(--sails-bg-secondary, #f8fafc);
-  border-left: 1px solid var(--sails-border, #e2e8f0);
+.rb2-mode-btn--active {
+  background: rgba(157, 206, 224, 0.15);
+  color: var(--sails-primary, #9dcee0);
+}
+
+/* ─── Body: palette | canvas | side ─────────────────────────── */
+
+.rb2-body {
+  display: grid;
+  grid-template-columns: 200px 1fr 340px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ─── Palette ───────────────────────────────────────────────── */
+
+.rb2-palette {
+  padding: 12px 10px;
+  background: var(--sails-bg-body, #f8fafc);
+  border-right: 1px solid var(--sails-border-color, #e2e8f0);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
   overflow-y: auto;
 }
 
-.rb-panel-title {
+.rb2-panel-title {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -622,79 +116,1015 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: var(--sails-text-secondary, #64748b);
+  color: var(--sails-text-muted, #64748b);
 }
 
-.rb-context__card {
+.rb2-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
   background: var(--sails-bg-card, #ffffff);
-  border: 1px solid var(--sails-border, #e2e8f0);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 8px;
+  cursor: grab;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.rb2-palette-item:hover {
+  border-color: var(--sails-primary, #9dcee0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.rb2-palette-item--stage {
+  border-style: dashed;
+  border-color: var(--sails-primary, #9dcee0);
+  background: rgba(157, 206, 224, 0.05);
+}
+
+.rb2-palette-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.rb2-palette-icon--stage {
+  background: rgba(157, 206, 224, 0.15);
+  color: var(--sails-primary, #9dcee0);
+}
+
+.rb2-palette-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rb2-palette-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.rb2-palette-desc {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rb2-palette-drop-hint {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  font-style: italic;
+  margin-top: -2px;
+}
+
+.rb2-palette-help {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  line-height: 1.5;
+  padding-top: 10px;
+  border-top: 1px solid var(--sails-border-color, #e2e8f0);
+}
+
+.rb2-palette-help p {
+  margin: 0;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+/* ─── Canvas ────────────────────────────────────────────────── */
+
+.rb2-canvas {
+  overflow: auto;
+  background:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.rb2-world {
+  position: relative;
+}
+
+.rb2-edges {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* Only interactive elements inside the svg receive pointer events */
+.rb2-edge-path--clickable {
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.rb2-edge-handle {
+  pointer-events: all;
+  cursor: grab;
+}
+
+/* ─── Stage card ────────────────────────────────────────────── */
+
+.rb2-stage {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--sails-bg-card, #ffffff);
+  border: 2px solid var(--sails-border-color, #cbd5e1);
+  border-radius: 10px;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.12s, box-shadow 0.12s;
+  cursor: pointer;
+  user-select: none;
+}
+
+.rb2-stage:hover {
+  border-color: var(--sails-primary, #9dcee0);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.rb2-stage--selected {
+  border-color: var(--sails-primary, #9dcee0) !important;
+  box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.18);
+}
+
+.rb2-stage--canvas {
+  cursor: grab;
+  touch-action: none;
+}
+
+.rb2-stage--canvas:active {
+  cursor: grabbing;
+}
+
+.rb2-stage__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 4px;
+}
+
+.rb2-stage__num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--sails-primary, #9dcee0);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.rb2-stage__name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.rb2-stage__name-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+  border: 1px solid var(--sails-primary, #9dcee0);
+  border-radius: 4px;
+  padding: 2px 6px;
+  background: var(--sails-bg-card, #ffffff);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(157, 206, 224, 0.2);
+}
+
+.rb2-stage__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.rb2-stage:hover .rb2-stage__actions {
+  opacity: 1;
+}
+
+.rb2-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.rb2-icon-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--sails-text-main, #1e293b);
+}
+
+.rb2-icon-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.rb2-icon-btn--danger:hover {
+  color: var(--sails-danger, #ef4444);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.rb2-stage__badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  flex-wrap: wrap;
+  min-height: 18px;
+}
+
+.rb2-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.rb2-badge--router { background: rgba(157, 206, 224, 0.12); color: var(--sails-primary, #9dcee0); }
+.rb2-badge--cond { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.rb2-badge--timeout { background: rgba(239, 68, 68, 0.08); color: #ef4444; }
+.rb2-badge--events { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+
+.rb2-stage__events {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 0;
+  min-height: 26px;
+  overflow: hidden;
+}
+
+.rb2-stage__events-empty {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.rb2-event-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 500;
+  background: var(--sails-bg-card, #ffffff);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: box-shadow 0.12s;
+}
+
+.rb2-event-chip:hover {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.rb2-event-chip--selected {
+  box-shadow: 0 0 0 2px currentColor;
+  background: var(--sails-bg-body, #f8fafc);
+}
+
+.rb2-stage__events-more {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+.rb2-stage__branchbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding: 4px 10px;
+  border-top: 1px solid var(--sails-border-color, #e2e8f0);
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+.rb2-stage__branch-empty {
+  font-style: italic;
+}
+
+.rb2-stage__branch-count {
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.rb2-stage__add-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  padding: 2px 7px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 4px;
+  background: var(--sails-bg-card, #ffffff);
+  color: var(--sails-text-muted, #64748b);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.rb2-stage__add-branch:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+/* ─── Ports (4 connection points per node) ──────────────────── */
+
+.rb2-port {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 2px solid var(--sails-bg-card, #ffffff);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5);
+  z-index: 5;
+  cursor: crosshair;
+  opacity: 0;
+  transition: opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.rb2-stage:hover .rb2-port,
+.rb2-port--active {
+  opacity: 1;
+}
+
+.rb2-port:hover {
+  transform: scale(1.35) translate(var(--rx, 0), var(--ry, 0));
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.rb2-port--top,
+.rb2-port--bottom {
+  --rx: -50%;
+  --ry: 0;
+}
+
+.rb2-port--left,
+.rb2-port--right {
+  --rx: 0;
+  --ry: -50%;
+}
+
+.rb2-port--end {
+  background: #10b981;
+  border-color: var(--sails-bg-card, #ffffff);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.5);
+  pointer-events: none;
+}
+
+.rb2-stage--connectable {
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+/* ─── Edge interaction ──────────────────────────────────────── */
+
+.rb2-edge-path--clickable {
+  cursor: pointer;
+}
+
+.rb2-edge--selected path {
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.5));
+}
+
+.rb2-edge-handle {
+  fill: #ffffff;
+  stroke: #3b82f6;
+  stroke-width: 2.5;
+  cursor: grab;
+}
+
+.rb2-edge-handle:hover {
+  fill: #3b82f6;
+}
+
+.rb2-connect-temp {
+  pointer-events: none;
+}
+
+/* ─── End node ──────────────────────────────────────────────── */
+
+.rb2-end {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 2px dashed #10b981;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.05);
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.rb2-end--canvas {
+  cursor: grab;
+  touch-action: none;
+}
+
+.rb2-end__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.rb2-end__label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #10b981;
+}
+
+/* ─── Right side ────────────────────────────────────────────── */
+
+.rb2-side {
+  background: var(--sails-bg-body, #f8fafc);
+  border-left: 1px solid var(--sails-border-color, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.rb2-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+  background: var(--sails-bg-card, #ffffff);
+  flex-shrink: 0;
+}
+
+.rb2-tab {
+  flex: 1;
+  padding: 9px 0;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.12s;
+}
+
+.rb2-tab--active {
+  color: var(--sails-primary, #9dcee0);
+  border-bottom-color: var(--sails-primary, #9dcee0);
+}
+
+.rb2-tab:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rb2-side__scroll {
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rb2-section {
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
   border-radius: 8px;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
-.rb-context__row {
+.rb2-section-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.rb-context__key {
-  font-size: 11px;
-  color: var(--sails-text-muted, #94a3b8);
-}
-
-.rb-context__value {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--sails-text-primary, #1e293b);
-}
-
-.rb-context__help {
-  font-size: 11px;
-  color: var(--sails-text-secondary, #64748b);
-  line-height: 1.5;
-}
-
-.rb-context__help p {
-  margin: 0 0 8px;
-}
-
-.rb-context__help-title {
-  font-size: 11px;
+.rb2-section-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: var(--sails-text-primary, #1e293b);
-  margin: 0 0 6px;
+  letter-spacing: 0.5px;
+  color: var(--sails-primary, #9dcee0);
 }
 
-.rb-context__help-list {
-  margin: 0;
-  padding-left: 14px;
+.rb2-form {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px 10px;
+  background: var(--sails-bg-body, #f8fafc);
+  border-radius: 6px;
+}
+
+.rb2-form-row {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
-.rb-context__preview {
-  margin-top: auto;
+.rb2-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--sails-text-muted, #64748b);
 }
 
-.rb-context__json {
+.rb2-check-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.rb2-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--sails-text-main, #1e293b);
+  cursor: pointer;
+}
+
+.rb2-check input {
+  accent-color: var(--sails-primary, #6366f1);
+}
+
+.rb2-textarea {
+  min-height: 54px;
+  resize: vertical;
+  font-size: 12px;
+}
+
+.rb2-code {
+  font-family: 'SF Mono', 'Fira Code', monospace !important;
+  font-size: 11px !important;
+}
+
+.rb2-hint {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  font-style: italic;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.rb2-side .sails-input {
+  width: 100%;
+  height: 30px;
+  padding: 4px 8px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+/* Add button */
+.rb2-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 5px;
+  background: var(--sails-bg-card, #ffffff);
+  color: var(--sails-primary, #9dcee0);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.rb2-add-btn:hover {
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+/* ─── Branch rows ───────────────────────────────────────────── */
+
+.rb2-branch-row {
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: rgba(59, 130, 246, 0.03);
+}
+
+.rb2-branch-row__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rb2-branch-seq {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.rb2-branch-label-inline {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.rb2-branch-row__cond {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+/* ─── Events list ───────────────────────────────────────────── */
+
+.rb2-event-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.rb2-event-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid;
+  border-radius: 5px;
+  background: var(--sails-bg-card, #ffffff);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.rb2-event-add:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.rb2-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rb2-event-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.rb2-event-item:hover {
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+.rb2-event-item--selected {
+  border-color: var(--sails-primary, #9dcee0);
+  background: rgba(157, 206, 224, 0.06);
+}
+
+.rb2-event-item__icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.rb2-event-item__label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--sails-text-main, #1e293b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.rb2-event-config {
+  margin-top: 4px;
+}
+
+/* ─── Variables ─────────────────────────────────────────────── */
+
+.rb2-var-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 5px;
+  align-items: center;
+}
+
+.rb2-var-name { font-weight: 600; }
+.rb2-var-type { font-size: 11px !important; }
+.rb2-var-default { font-size: 11px !important; }
+
+/* ─── Stats / validity / JSON ───────────────────────────────── */
+
+.rb2-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--sails-text-muted, #64748b);
+}
+
+.rb2-stat strong {
+  color: var(--sails-text-main, #1e293b);
+  font-size: 12px;
+}
+
+.rb2-validity {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.rb2-json {
   font-size: 10px;
   font-family: 'SF Mono', 'Fira Code', monospace;
   padding: 8px;
-  background: var(--sails-bg-card, #ffffff);
-  border: 1px solid var(--sails-border, #e2e8f0);
+  background: var(--sails-bg-body, #f8fafc);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
   border-radius: 6px;
-  max-height: 300px;
+  max-height: 240px;
   overflow: auto;
   margin: 0;
   line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
-  color: var(--sails-text-primary, #1e293b);
+  color: var(--sails-text-main, #1e293b);
+}
+
+/* ─── Expression reference (details/summary) ────────────────── */
+
+.rb2-ref {
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 6px;
+  background: rgba(168, 85, 247, 0.03);
+  padding: 6px 8px;
+  font-size: 10.5px;
+  color: var(--sails-text-muted, #64748b);
+}
+
+.rb2-ref summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #a855f7;
+  user-select: none;
+}
+
+.rb2-ref ul {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.4;
+}
+
+.rb2-ref code {
+  background: rgba(168, 85, 247, 0.08);
+  color: #7c3aed;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 9.5px;
+}
+
+/* ─── Compact expression button (properties panel) ──────────── */
+
+.rb2-expr-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 8px;
+  background: var(--sails-bg-body, #f8fafc);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
+}
+
+.rb2-expr-btn:hover {
+  border-color: var(--sails-primary, #9dcee0);
+  background: rgba(157, 206, 224, 0.05);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.rb2-expr-btn__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.rb2-expr-btn__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.rb2-expr-btn__title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.rb2-expr-btn__preview {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rb2-expr-btn__preview code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--sails-text-muted, #64748b);
+}
+
+.rb2-expr-btn__preview em {
+  font-style: italic;
+}
+
+.rb2-expr-btn__chevron {
+  font-size: 16px;
+  color: var(--sails-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+/* ─── Large Expression / Transform modal ────────────────────── */
+
+.rb2-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.rb2-modal {
+  width: 980px;
+  max-width: 96vw;
+  max-height: 92vh;
+  background: var(--sails-bg-card, #ffffff);
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.rb2-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+  background: var(--sails-bg-body, #f8fafc);
+  flex-shrink: 0;
+}
+
+.rb2-modal__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.rb2-modal__titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.rb2-modal__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.rb2-modal__sub {
+  font-size: 11px;
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+.rb2-modal__body {
+  padding: 16px 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.rb2-modal__body .ex-editor__input,
+.rb2-modal__body .ex-editor__hl {
+  min-height: 160px;
+  font-size: 12.5px;
+  padding: 12px 14px;
+}
+
+.rb2-modal__body .ex-editor__snippets {
+  max-height: 480px;
+}
+
+.rb2-modal__assign {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rb2-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--sails-border-color, #e2e8f0);
+  background: var(--sails-bg-body, #f8fafc);
+  flex-shrink: 0;
 }

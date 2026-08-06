@@ -21,7 +21,9 @@ const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized'));
 const LayoutDemo = lazy(() => import('./pages/__mockups__/LayoutDemo'));
 const RouteBuilder = lazy(() => import('./pages/__mockups__/RouteBuilder'));
+const BpmnBuilder = lazy(() => import('./pages/__mockups__/BpmnBuilder'));
 const LayoutStudio = lazy(() => import('./pages/custom/LayoutStudio'));
+const WorkflowStudio = lazy(() => import('./pages/custom/WorkflowStudio'));
 const TableBuilder = lazy(() => import('./pages/__mockups__/TableBuilder'));
 /**
  * ProtectedRoute
@@ -159,11 +161,19 @@ function App() {
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/layout-demo" element={<LayoutDemo />} />
             <Route path="/route-builder" element={<RouteBuilder />} />
+            <Route path="/bpmn-builder" element={<BpmnBuilder />} />
             <Route path="/table-builder" element={<TableBuilder />} />
             <Route path="/layout-studio/:tableId/:layoutId" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingScreen />}>
                   <LayoutStudio />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/workflow-studio/:workflowId" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingScreen />}>
+                  <WorkflowStudio />
                 </Suspense>
               </ProtectedRoute>
             } />

@@ -1,585 +1,574 @@
 /**
- * MOCK UP — Routing Process Builder
+ * MOCK UP — Routing Process Builder v2
  *
- * Separate from the Form/Layout Builder.
- * Visual stage chain with drag-and-drop reordering.
- * Defines who routes what and what happens at each stage.
+ * Orchestrator: owns all state + interaction handlers and composes the
+ * workflow module's components (palette, canvas, properties panel, expression
+ * modal). Stage/event/branch logic lives in ./workflow — see:
+ *   - workflow/types.ts, constants.ts, helpers.ts, geometry.ts
+ *   - workflow/components/* (EventPalette, WorkflowCanvas, StageCard,
+ *     EventConfigForm, PropertiesPanel, ExpressionModal)
  */
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import { ChevronsUpDown, Layers, Workflow } from 'lucide-react';
 import {
-  Plus, X, GripVertical, MoveUp, MoveDown, Trash2,
-  ArrowRight, GitBranch, User, Users, Briefcase, Shield,
-  Hash, Clock, Zap, MessageSquare, Webhook, Settings,
-  ChevronDown, ChevronRight, Filter, Target,
-} from 'lucide-react';
+  ALL_PORTS, CANVAS_W, CHAIN_SPACING, CHAIN_X, EVENT_DEFS, NODE_H, NODE_W,
+} from './workflow/constants';
+import { defaultPorts, endPortPos, portPos } from './workflow/geometry';
+import {
+  analyzeExpressions, buildSample, newBranch, newEvent, newStage, newVariable,
+} from './workflow/helpers';
+import type {
+  BranchCondition, LayoutMode, Port, Pt, RouteStage, RoutingProcess, WorkflowEdge, WorkflowEvent,
+  WorkflowVariable,
+} from './workflow/types';
+import { EventPalette } from './workflow/components/EventPalette';
+import { WorkflowCanvas } from './workflow/components/WorkflowCanvas';
+import { PropertiesPanel } from './workflow/components/PropertiesPanel';
+import { ExpressionModal } from './workflow/components/ExpressionModal';
 import './RouteBuilder.css';
 
-// ─── Types ────────────────────────────────────────────────────
-
-type RouterType = 'user' | 'team' | 'position' | 'role' | 'field';
-type ActionTrigger = 'on_approve' | 'on_reject' | 'on_timeout';
-
-interface RouteAction {
-  id: string;
-  type: 'update_field' | 'send_notification' | 'call_webhook' | 'create_task';
-  label: string;
-  config: Record<string, string>;
-}
-
-interface RouteStage {
-  id: string;
-  name: string;
-  description: string;
-  routerType: RouterType;
-  routerValue: string;
-  routerLabel: string;
-  canApprove: boolean;
-  canReject: boolean;
-  canComment: boolean;
-  canReassign: boolean;
-  timeoutHours: number | null;
-  entryCondition: string;
-  onApprove: RouteAction[];
-  onReject: RouteAction[];
-  onTimeout: RouteAction[];
-}
-
-interface RoutingProcess {
-  name: string;
-  description: string;
-  tableId: string;
-  stages: RouteStage[];
-}
-
-// ─── Router type definitions ──────────────────────────────────
-
-const ROUTER_TYPES: { type: RouterType; label: string; icon: React.ReactNode; desc: string }[] = [
-  { type: 'user',     label: 'Specific User',   icon: <User size={14} />,     desc: 'Route to a named user' },
-  { type: 'team',     label: 'Team',            icon: <Users size={14} />,    desc: 'All members of a team' },
-  { type: 'position', label: 'Position',        icon: <Briefcase size={14} />, desc: 'Anyone holding a position' },
-  { type: 'role',     label: 'Role',            icon: <Shield size={14} />,   desc: 'Anyone with a specific role' },
-  { type: 'field',    label: 'Record Field',    icon: <Hash size={14} />,     desc: 'Dynamic — user in a record field' },
-];
-
-const ACTION_TYPES = [
-  { type: 'update_field' as const,   label: 'Update Field',     icon: <Target size={12} /> },
-  { type: 'send_notification' as const, label: 'Send Notification', icon: <MessageSquare size={12} /> },
-  { type: 'call_webhook' as const,   label: 'Call Webhook',     icon: <Webhook size={12} /> },
-  { type: 'create_task' as const,    label: 'Create Task',      icon: <Zap size={12} /> },
-];
-
-// ─── Helpers ──────────────────────────────────────────────────
-
-function newStage(): RouteStage {
-  return {
-    id: `stage_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    name: 'New Stage',
-    description: '',
-    routerType: 'user',
-    routerValue: '',
-    routerLabel: '',
-    canApprove: true,
-    canReject: true,
-    canComment: true,
-    canReassign: false,
-    timeoutHours: null,
-    entryCondition: '',
-    onApprove: [],
-    onReject: [],
-    onTimeout: [],
-  };
-}
-
-function newAction(trigger: ActionTrigger, type: RouteAction['type']): RouteAction {
-  return {
-    id: `act_${Date.now()}_${Math.random().toString(36).slice(2, 4)}`,
-    type,
-    label: type === 'update_field' ? 'Update Field' : type === 'send_notification' ? 'Notify' : type === 'call_webhook' ? 'Webhook' : 'Create Task',
-    config: {},
-  };
-}
-
-// ─── Main Component ───────────────────────────────────────────
-
 export const RouteBuilder: React.FC = () => {
-  const [process, setProcess] = useState<RoutingProcess>({
-    name: 'Contract Review',
-    description: 'Route contracts through Legal → Finance sign-off',
-    tableId: 't_contracts',
-    stages: [],
-  });
-  const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
+  const [process, setProcess] = useState<RoutingProcess>(buildSample);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>('chain');
+  const [activeTab, setActiveTab] = useState<'workflow' | 'stage'>('workflow');
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
-  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [editingLabelStageId, setEditingLabelStageId] = useState<string | null>(null);
+  const [endPos, setEndPos] = useState<Pt>({ x: 320, y: 740 });
+  const [dragging, setDragging] = useState<{ id: string; kind: 'stage' | 'end'; dx: number; dy: number } | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [draggingEdgePort, setDraggingEdgePort] = useState<{ branchId: string; side: 'from' | 'to' } | null>(null);
+  const [connectFrom, setConnectFrom] = useState<{ stageId: string; port: Port } | null>(null);
+  const [connectPos, setConnectPos] = useState<Pt | null>(null);
+  const [exprModalEventId, setExprModalEventId] = useState<string | null>(null);
+  const worldRef = useRef<HTMLDivElement>(null);
 
-  const toggleExpand = (stageId: string) => {
-    setExpandedStages((prev) => {
-      const next = new Set(prev);
-      next.has(stageId) ? next.delete(stageId) : next.add(stageId);
-      return next;
+  const selectedStage = process.stages.find((s) => s.id === selectedStageId) || null;
+  const selectedEvent = selectedStage ? selectedStage.events.find((e) => e.id === selectedEventId) || null : null;
+  const exprModalEvent = selectedStage && exprModalEventId
+    ? selectedStage.events.find((e) => e.id === exprModalEventId) || null
+    : null;
+
+  const stagePos = (idx: number, s: RouteStage): Pt =>
+    layoutMode === 'chain' ? { x: CHAIN_X, y: 40 + idx * CHAIN_SPACING } : { x: s.x, y: s.y };
+
+  const endNodePos: Pt = layoutMode === 'chain'
+    ? { x: CHAIN_X, y: 40 + process.stages.length * CHAIN_SPACING + 20 }
+    : endPos;
+
+  const worldHeight = layoutMode === 'chain'
+    ? 40 + process.stages.length * CHAIN_SPACING + 200
+    : Math.max(820, ...process.stages.map((s) => s.y + NODE_H + 160));
+
+  // ── Edges: branches + implicit next line ──
+  const edges = useMemo<WorkflowEdge[]>(() => {
+    const out: WorkflowEdge[] = [];
+    process.stages.forEach((s, idx) => {
+      const a = stagePos(idx, s);
+      const explicit = s.branches.length > 0;
+      if (explicit) {
+        s.branches.forEach((br) => {
+          if (br.targetType === 'completed') {
+            const dp = defaultPorts(a, endNodePos);
+            out.push({
+              id: br.id, a, b: endNodePos, label: br.label, kind: 'branch',
+              fromPort: br.fromPort || dp.fromPort, toPort: br.toPort || dp.toPort,
+              branchId: br.id, sourceStageId: s.id, isEndTarget: true,
+            });
+          } else {
+            const tIdx = process.stages.findIndex((st) => st.id === br.targetStageId);
+            if (tIdx === -1) return;
+            const tb = stagePos(tIdx, process.stages[tIdx]);
+            const dp = defaultPorts(a, tb);
+            out.push({
+              id: br.id, a, b: tb, label: br.label, kind: 'branch',
+              fromPort: br.fromPort || dp.fromPort, toPort: br.toPort || dp.toPort,
+              branchId: br.id, sourceStageId: s.id, isEndTarget: false,
+            });
+          }
+        });
+      } else if (idx < process.stages.length - 1) {
+        const nxt = stagePos(idx + 1, process.stages[idx + 1]);
+        const dp = defaultPorts(a, nxt);
+        out.push({ id: `imp_${s.id}`, a, b: nxt, label: '', kind: 'implicit', fromPort: dp.fromPort, toPort: dp.toPort, isEndTarget: false });
+      } else {
+        const dp = defaultPorts(a, endNodePos);
+        out.push({ id: `imp_${s.id}`, a, b: endNodePos, label: '', kind: 'implicit', fromPort: dp.fromPort, toPort: dp.toPort, isEndTarget: true });
+      }
     });
-    setSelectedStageId(stageId);
-  };
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [process, layoutMode, endNodePos]);
 
-  const addStage = () => {
-    setProcess((p) => ({ ...p, stages: [...p.stages, newStage()] }));
-  };
-
-  const removeStage = (stageId: string) => {
-    setProcess((p) => ({ ...p, stages: p.stages.filter((s) => s.id !== stageId) }));
-    if (selectedStageId === stageId) setSelectedStageId(null);
-  };
-
+  // ── Stage ops ──
   const updateStage = (stageId: string, patch: Partial<RouteStage>) => {
-    setProcess((p) => ({
-      ...p,
-      stages: p.stages.map((s) => (s.id === stageId ? { ...s, ...patch } : s)),
-    }));
+    setProcess((p) => ({ ...p, stages: p.stages.map((s) => (s.id === stageId ? { ...s, ...patch } : s)) }));
   };
 
   const moveStage = (stageId: string, direction: 'up' | 'down') => {
     setProcess((p) => {
       const stages = [...p.stages];
       const idx = stages.findIndex((s) => s.id === stageId);
-      if (idx === -1) return p;
-      const otherIdx = direction === 'up' ? idx - 1 : idx + 1;
-      if (otherIdx < 0 || otherIdx >= stages.length) return p;
-      [stages[idx], stages[otherIdx]] = [stages[otherIdx], stages[idx]];
+      const other = direction === 'up' ? idx - 1 : idx + 1;
+      if (idx === -1 || other < 0 || other >= stages.length) return p;
+      [stages[idx], stages[other]] = [stages[other], stages[idx]];
       return { ...p, stages };
     });
   };
 
-  const addAction = (stageId: string, trigger: ActionTrigger, type: RouteAction['type']) => {
+  const removeStage = (stageId: string) => {
+    setProcess((p) => ({
+      ...p,
+      stages: p.stages.filter((s) => s.id !== stageId).map((s) => ({
+        ...s,
+        branches: s.branches.filter((br) => br.targetStageId !== stageId),
+      })),
+    }));
+    if (selectedStageId === stageId) { setSelectedStageId(null); setSelectedEventId(null); }
+  };
+
+  const addStageAt = (x: number, y: number) => {
+    const st = newStage(`Stage ${process.stages.length + 1}`, x, y);
+    setProcess((p) => ({ ...p, stages: [...p.stages, st] }));
+    setSelectedStageId(st.id);
+    setActiveTab('stage');
+  };
+
+  // ── Events ──
+  const addEventToStage = (stageId: string, type: WorkflowEvent['type']) => {
+    const ev = newEvent(type);
+    setProcess((p) => ({
+      ...p,
+      stages: p.stages.map((s) => (s.id === stageId ? { ...s, events: [...s.events, ev] } : s)),
+    }));
+    setSelectedStageId(stageId);
+    setSelectedEventId(ev.id);
+    setActiveTab('stage');
+  };
+
+  const updateEventConfig = (stageId: string, eventId: string, patch: Record<string, any>) => {
+    setProcess((p) => ({
+      ...p,
+      stages: p.stages.map((s) => (s.id === stageId
+        ? { ...s, events: s.events.map((e) => (e.id === eventId ? { ...e, config: { ...e.config, ...patch } } : e)) }
+        : s)),
+    }));
+  };
+
+  const updateEventLabel = (stageId: string, eventId: string, label: string) => {
+    setProcess((p) => ({
+      ...p,
+      stages: p.stages.map((s) => (s.id === stageId
+        ? { ...s, events: s.events.map((e) => (e.id === eventId ? { ...e, label } : e)) }
+        : s)),
+    }));
+  };
+
+  const moveEvent = (stageId: string, eventId: string, direction: 'up' | 'down') => {
     setProcess((p) => ({
       ...p,
       stages: p.stages.map((s) => {
         if (s.id !== stageId) return s;
-        const key = trigger as string;
-        return { ...s, [key]: [...(s[key as keyof Pick<RouteStage, 'onApprove' | 'onReject' | 'onTimeout'>] as RouteAction[]), newAction(trigger, type)] };
+        const events = [...s.events];
+        const idx = events.findIndex((e) => e.id === eventId);
+        const other = direction === 'up' ? idx - 1 : idx + 1;
+        if (idx === -1 || other < 0 || other >= events.length) return s;
+        [events[idx], events[other]] = [events[other], events[idx]];
+        return { ...s, events };
       }),
     }));
   };
 
-  const removeAction = (stageId: string, trigger: ActionTrigger, actionId: string) => {
+  const removeEvent = (stageId: string, eventId: string) => {
     setProcess((p) => ({
       ...p,
-      stages: p.stages.map((s) => {
-        if (s.id !== stageId) return s;
-        const key = trigger as string;
-        return { ...s, [key]: ((s[key as keyof Pick<RouteStage, 'onApprove' | 'onReject' | 'onTimeout'>] as RouteAction[]) || []).filter((a: RouteAction) => a.id !== actionId) };
-      }),
+      stages: p.stages.map((s) => (s.id === stageId ? { ...s, events: s.events.filter((e) => e.id !== eventId) } : s)),
     }));
+    if (selectedEventId === eventId) setSelectedEventId(null);
   };
 
-  const updateAction = (stageId: string, trigger: ActionTrigger, actionId: string, patch: Partial<RouteAction>) => {
+  // ── Branches ──
+  const addBranch = (stageId: string) => {
+    const br = newBranch();
+    br.targetType = 'completed';
     setProcess((p) => ({
       ...p,
-      stages: p.stages.map((s) => {
-        if (s.id !== stageId) return s;
-        const key = trigger as string;
-        return { ...s, [key]: ((s[key as keyof Pick<RouteStage, 'onApprove' | 'onReject' | 'onTimeout'>] as RouteAction[]) || []).map((a: RouteAction) => a.id === actionId ? { ...a, ...patch } : a) };
-      }),
+      stages: p.stages.map((s) => (s.id === stageId ? { ...s, branches: [...s.branches, br] } : s)),
     }));
   };
 
-  // Drag & drop stages
-  const handleStageDragStart = (e: React.DragEvent, stageId: string) => {
-    e.dataTransfer.setData('application/json', JSON.stringify({ stageId, type: 'stage' }));
-    e.dataTransfer.effectAllowed = 'move';
+  const addBranchWithPorts = (fromStageId: string, fromPort: Port, toStageId: string, toPort: Port) => {
+    const br = newBranch();
+    br.label = 'New branch';
+    br.targetType = 'stage';
+    br.targetStageId = toStageId;
+    br.fromPort = fromPort;
+    br.toPort = toPort;
+    setProcess((p) => ({
+      ...p,
+      stages: p.stages.map((s) => (s.id === fromStageId ? { ...s, branches: [...s.branches, br] } : s)),
+    }));
+    setSelectedStageId(fromStageId);
+    setActiveTab('stage');
   };
 
-  const handleStageDrop = (e: React.DragEvent, targetIdx: number) => {
+  const updateBranch = (stageId: string, branchId: string, patch: Partial<BranchCondition>) => {
+    setProcess((p) => ({
+      ...p,
+      stages: p.stages.map((s) => (s.id === stageId
+        ? { ...s, branches: s.branches.map((br) => (br.id === branchId ? { ...br, ...patch } : br)) }
+        : s)),
+    }));
+  };
+
+  const removeBranch = (stageId: string, branchId: string) => {
+    setProcess((p) => ({
+      ...p,
+      stages: p.stages.map((s) => (s.id === stageId ? { ...s, branches: s.branches.filter((br) => br.id !== branchId) } : s)),
+    }));
+  };
+
+  // ── Variables ──
+  const addVariable = () => {
+    const v = newVariable();
+    setProcess((p) => ({ ...p, variables: [...p.variables, v] }));
+  };
+
+  const updateVariable = (varId: string, patch: Partial<WorkflowVariable>) => {
+    setProcess((p) => ({
+      ...p,
+      variables: p.variables.map((v) => (v.id === varId ? { ...v, ...patch } : v)),
+    }));
+  };
+
+  const removeVariable = (varId: string) => {
+    setProcess((p) => ({ ...p, variables: p.variables.filter((v) => v.id !== varId) }));
+  };
+
+  // ── Keyboard: Delete / Backspace removes the selected element ──
+  const deleteSelection = () => {
+    if (selectedEdgeId) {
+      const owner = process.stages.find((st) => st.branches.some((b) => b.id === selectedEdgeId));
+      if (owner) {
+        removeBranch(owner.id, selectedEdgeId);
+        setSelectedEdgeId(null);
+      }
+      return;
+    }
+    if (selectedEventId && selectedStageId) {
+      removeEvent(selectedStageId, selectedEventId);
+      return;
+    }
+    if (selectedStageId) {
+      removeStage(selectedStageId);
+    }
+  };
+
+  React.useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      const t = e.target as HTMLElement;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      if (editingLabelStageId) return;
+      e.preventDefault();
+      deleteSelection();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStageId, selectedEventId, selectedEdgeId, editingLabelStageId, process]);
+
+  /** Commit an inline-renamed stage label (Enter / blur). */
+  const commitStageLabel = (stageId: string, value: string) => {
+    setEditingLabelStageId(null);
+    const name = value.trim();
+    if (name) updateStage(stageId, { name });
+  };
+
+  // ── Canvas pointer interaction ──
+  const getWorldPos = (e: React.PointerEvent | React.MouseEvent): Pt => {
+    const rect = worldRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const nearestPort = (nodePos: Pt, pos: Pt, isEnd = false): Port => {
+    let best: Port = 'top';
+    let bestD = Infinity;
+    ALL_PORTS.forEach((p) => {
+      const pp = isEnd ? endPortPos(nodePos, p) : portPos(nodePos, p);
+      const d = (pp.x - pos.x) ** 2 + (pp.y - pos.y) ** 2;
+      if (d < bestD) { bestD = d; best = p; }
+    });
+    return best;
+  };
+
+  const handleNodePointerDown = (e: React.PointerEvent, stageId: string) => {
+    if (connectFrom) return; // already connecting from a port
+    if (layoutMode !== 'canvas' || e.button !== 0) return;
     e.preventDefault();
-    setDragOverIdx(null);
-    try {
-      const { stageId } = JSON.parse(e.dataTransfer.getData('application/json'));
-      setProcess((p) => {
-        const stages = [...p.stages];
-        const sourceIdx = stages.findIndex((s) => s.id === stageId);
-        if (sourceIdx === -1 || sourceIdx === targetIdx) return p;
-        const [removed] = stages.splice(sourceIdx, 1);
-        stages.splice(targetIdx, 0, removed);
-        return { ...p, stages };
-      });
-    } catch {}
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setDragging({ id: stageId, kind: 'stage', dx: e.clientX - rect.left, dy: e.clientY - rect.top });
   };
 
-  const selectedStage = process.stages.find((s) => s.id === selectedStageId) || null;
+  const handleEndPointerDown = (e: React.PointerEvent) => {
+    if (connectFrom) return;
+    if (layoutMode !== 'canvas' || e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setDragging({ id: '__end__', kind: 'end', dx: e.clientX - rect.left, dy: e.clientY - rect.top });
+  };
 
-  // ─── Render ─────────────────────────────────────────────────
+  /** Start a new connection by dragging from a stage port. */
+  const handlePortPointerDown = (e: React.PointerEvent, stageId: string, port: Port) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const idx = process.stages.findIndex((st) => st.id === stageId);
+    if (idx === -1) return;
+    const a = stagePos(idx, process.stages[idx]);
+    setConnectFrom({ stageId, port });
+    setConnectPos(portPos(a, port));
+    setSelectedEdgeId(null);
+    setSelectedStageId(stageId);
+    setActiveTab('stage');
+  };
+
+  /** Drop a new connection onto a stage — snaps to the nearest port. */
+  const handleNodePointerUp = (e: React.PointerEvent, stageId: string) => {
+    if (!connectFrom || connectFrom.stageId === stageId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const idx = process.stages.findIndex((st) => st.id === stageId);
+    if (idx === -1) return;
+    const b = stagePos(idx, process.stages[idx]);
+    const toPort = nearestPort(b, getWorldPos(e));
+    addBranchWithPorts(connectFrom.stageId, connectFrom.port, stageId, toPort);
+    setConnectFrom(null);
+    setConnectPos(null);
+  };
+
+  /** Drop a new connection onto the Completed end node. */
+  const handleEndPointerUp = (e: React.PointerEvent) => {
+    if (!connectFrom) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const toPort = nearestPort(endNodePos, getWorldPos(e), true);
+    const br = newBranch();
+    br.label = 'Complete';
+    br.targetType = 'completed';
+    br.fromPort = connectFrom.port;
+    br.toPort = toPort;
+    setProcess((p) => ({
+      ...p,
+      stages: p.stages.map((st) => (st.id === connectFrom.stageId ? { ...st, branches: [...st.branches, br] } : st)),
+    }));
+    setSelectedStageId(connectFrom.stageId);
+    setActiveTab('stage');
+    setConnectFrom(null);
+    setConnectPos(null);
+  };
+
+  /** Drag the head/tail endpoint of an existing edge to re-attach it to another port. */
+  const handleEdgePortPointerDown = (e: React.PointerEvent, branchId: string, side: 'from' | 'to') => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingEdgePort({ branchId, side });
+  };
+
+  const handleWorldPointerMove = (e: React.PointerEvent) => {
+    // Edge endpoint re-attach (drag handle on a selected edge)
+    if (draggingEdgePort) {
+      const { branchId, side } = draggingEdgePort;
+      const source = process.stages.find((st) => st.branches.some((b) => b.id === branchId));
+      if (!source) return;
+      const br = source.branches.find((b) => b.id === branchId);
+      if (!br) return;
+      const pos = getWorldPos(e);
+      const srcIdx = process.stages.findIndex((st) => st.id === source.id);
+      const srcPos = stagePos(srcIdx, source);
+      if (side === 'from') {
+        const port = nearestPort(srcPos, pos);
+        updateBranch(source.id, branchId, { fromPort: port });
+      } else if (br.targetType === 'completed') {
+        const port = nearestPort(endNodePos, pos, true);
+        updateBranch(source.id, branchId, { toPort: port });
+      } else {
+        const tIdx = process.stages.findIndex((st) => st.id === br.targetStageId);
+        if (tIdx === -1) return;
+        const tPos = stagePos(tIdx, process.stages[tIdx]);
+        const port = nearestPort(tPos, pos);
+        updateBranch(source.id, branchId, { toPort: port });
+      }
+      return;
+    }
+    // Live connect line from a port
+    if (connectFrom && worldRef.current) {
+      setConnectPos(getWorldPos(e));
+      return;
+    }
+    if (!dragging || !worldRef.current) return;
+    const rect = worldRef.current.getBoundingClientRect();
+    const nx = Math.max(0, Math.min(CANVAS_W - NODE_W, e.clientX - rect.left - dragging.dx));
+    const ny = Math.max(0, e.clientY - rect.top - dragging.dy);
+    if (dragging.kind === 'end') {
+      setEndPos({ x: nx, y: ny });
+    } else {
+      updateStage(dragging.id, { x: nx, y: ny });
+    }
+  };
+
+  const handleWorldPointerUp = () => {
+    setDragging(null);
+    setDraggingEdgePort(null);
+    setConnectFrom(null);
+    setConnectPos(null);
+  };
+
+  const handleWorldDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const payload = e.dataTransfer.getData('application/json');
+    if (!payload) return;
+    try {
+      const parsed = JSON.parse(payload);
+      if (parsed.type === 'stage') {
+        const rect = worldRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        addStageAt(
+          Math.max(0, Math.min(CANVAS_W - NODE_W, e.clientX - rect.left - NODE_W / 2)),
+          Math.max(0, e.clientY - rect.top - 30),
+        );
+      }
+    } catch { /* ignore */ }
+  };
+
+  const handleStageDrop = (e: React.DragEvent, stageId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const payload = e.dataTransfer.getData('application/json');
+    if (!payload) return;
+    try {
+      const parsed = JSON.parse(payload);
+      if (parsed.type === 'event') addEventToStage(stageId, parsed.eventType);
+    } catch { /* ignore */ }
+  };
+
+  const totalEvents = process.stages.reduce((n, s) => n + s.events.length, 0);
+  const totalBranches = process.stages.reduce((n, s) => n + s.branches.length, 0);
+
+  // Expression validity is memoized — only re-validates when the process changes.
+  const { invalidBranches, hasFallback } = useMemo(() => analyzeExpressions(process), [process]);
+  const jsonPreview = useMemo(() => JSON.stringify(process, null, 2), [process]);
 
   return (
-    <div className="rb-root">
-      {/* ── Toolbar ── */}
-      <div className="rb-toolbar">
-        <span className="rb-toolbar__brand">Routing Process Builder</span>
-        <div className="rb-toolbar__actions">
+    <div className="rb2-root">
+      {/* Toolbar */}
+      <div className="rb2-toolbar">
+        <span className="rb2-toolbar__brand"><Workflow size={15} /> Routing Process Builder</span>
+
+        <div className="rb2-mode-toggle" title="Layout mode">
+          <button className={`rb2-mode-btn ${layoutMode === 'chain' ? 'rb2-mode-btn--active' : ''}`}
+            onClick={() => setLayoutMode('chain')}>
+            <ChevronsUpDown size={13} /> Chain
+          </button>
+          <button className={`rb2-mode-btn ${layoutMode === 'canvas' ? 'rb2-mode-btn--active' : ''}`}
+            onClick={() => setLayoutMode('canvas')}>
+            <Layers size={13} /> Canvas
+          </button>
+        </div>
+
+        <input className="rb2-toolbar__name" value={process.name}
+          onChange={(e) => setProcess((p) => ({ ...p, name: e.target.value }))} placeholder="Process name" />
+
+        <div className="rb2-toolbar__actions">
           <button className="sails-btn sails-btn--ghost sails-btn--sm">Cancel</button>
           <button className="sails-btn sails-btn--primary sails-btn--sm">Save Process</button>
         </div>
       </div>
 
-      <div className="rb-body">
-        {/* ── CENTER: Stage Chain ── */}
-        <div className="rb-canvas">
-          <div className="rb-canvas__scroll">
-            {/* Process Settings */}
-            <div className="rb-process-header">
-              <div className="rb-process-header__icon">
-                <GitBranch size={20} />
-              </div>
-              <div className="rb-process-header__info">
-                <input
-                  className="rb-process-name"
-                  value={process.name}
-                  onChange={(e) => setProcess((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Process Name"
-                />
-                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                  <span className="rb-badge">Table: Contracts</span>
-                  <input
-                    className="rb-process-desc"
-                    value={process.description}
-                    onChange={(e) => setProcess((p) => ({ ...p, description: e.target.value }))}
-                    placeholder="Description..."
-                    style={{ border: 'none', background: 'none', fontSize: 12, color: 'var(--sails-text-muted)', flex: 1 }}
-                  />
-                </div>
-              </div>
-            </div>
+      <div className="rb2-body">
+        {/* LEFT: Palette */}
+        <EventPalette />
 
-            {/* Stage list */}
-            <div className="rb-chain">
-              {process.stages.length === 0 ? (
-                <div className="rb-chain__empty">
-                  <p>No stages defined yet. Click <strong>+ Add Stage</strong> to build your routing flow.</p>
-                </div>
-              ) : (
-                process.stages.map((stage, idx) => {
-                  const isExpanded = expandedStages.has(stage.id);
-                  const isSelected = selectedStageId === stage.id;
-                  const isLast = idx === process.stages.length - 1;
-                  const routerInfo = ROUTER_TYPES.find((r) => r.type === stage.routerType);
-                  const totalActions = stage.onApprove.length + stage.onReject.length + (stage.timeoutHours ? stage.onTimeout.length : 0);
+        {/* CENTER: Canvas */}
+        <WorkflowCanvas
+          worldRef={worldRef}
+          worldHeight={worldHeight}
+          edges={edges}
+          layoutMode={layoutMode}
+          endNodePos={endNodePos}
+          selectedEdgeId={selectedEdgeId}
+          connectFrom={connectFrom}
+          connectPos={connectPos}
+          stages={process.stages}
+          selectedStageId={selectedStageId}
+          selectedEventId={selectedEventId}
+          editingLabelStageId={editingLabelStageId}
+          stagePos={stagePos}
+          onWorldPointerMove={handleWorldPointerMove}
+          onWorldPointerUp={handleWorldPointerUp}
+          onWorldDrop={handleWorldDrop}
+          onWorldClick={() => { setSelectedStageId(null); setSelectedEventId(null); setSelectedEdgeId(null); setActiveTab('workflow'); }}
+          onStageSelect={(id) => { setSelectedStageId(id); setSelectedEventId(null); setActiveTab('stage'); }}
+          onStagePointerDown={handleNodePointerDown}
+          onStagePointerUp={handleNodePointerUp}
+          onStageDrop={handleStageDrop}
+          onStageMove={moveStage}
+          onStageRemove={removeStage}
+          onStageStartRename={(id) => { setSelectedStageId(id); setActiveTab('stage'); setEditingLabelStageId(id); }}
+          onStageCommitRename={commitStageLabel}
+          onSelectEvent={(id) => setSelectedEventId(id)}
+          onAddBranch={addBranch}
+          onPortPointerDown={handlePortPointerDown}
+          onEdgeSelect={(branchId, sourceStageId) => {
+            setSelectedEdgeId(branchId);
+            if (sourceStageId) { setSelectedStageId(sourceStageId); setActiveTab('stage'); }
+          }}
+          onEdgePortPointerDown={handleEdgePortPointerDown}
+          onEndPointerDown={handleEndPointerDown}
+          onEndPointerUp={handleEndPointerUp}
+        />
 
-                  return (
-                    <React.Fragment key={stage.id}>
-                      {/* Drop zone before stage */}
-                      <div
-                        className={`rb-drop-zone ${dragOverIdx === idx ? 'rb-drop-zone--active' : ''}`}
-                        onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
-                        onDragLeave={() => setDragOverIdx(null)}
-                        onDrop={(e) => handleStageDrop(e, idx)}
-                      />
-
-                      {/* Stage card */}
-                      <div
-                        className={`rb-stage ${isSelected ? 'rb-stage--selected' : ''} ${isExpanded ? 'rb-stage--expanded' : ''}`}
-                        draggable
-                        onDragStart={(e) => handleStageDragStart(e, stage.id)}
-                      >
-                        {/* Stage header (always visible) */}
-                        <div className="rb-stage__header" onClick={() => toggleExpand(stage.id)}>
-                          <div className="rb-stage__order">
-                            <span className="rb-stage__number">{idx + 1}</span>
-                          </div>
-                          <button className="rb-stage__drag" onClick={(e) => e.stopPropagation()}>
-                            <GripVertical size={14} />
-                          </button>
-                          <div className="rb-stage__main-info">
-                            <span className="rb-stage__name">{stage.name}</span>
-                            <div className="rb-stage__meta">
-                              {routerInfo && (
-                                <span className="rb-stage__router">
-                                  {routerInfo.icon}
-                                  <span>{stage.routerLabel || routerInfo.label}</span>
-                                </span>
-                              )}
-                              {stage.entryCondition && (
-                                <span className="rb-stage__cond-badge" title={stage.entryCondition}>
-                                  <Filter size={10} /> conditional
-                                </span>
-                              )}
-                              {totalActions > 0 && (
-                                <span className="rb-stage__action-badge">{totalActions} actions</span>
-                              )}
-                              {stage.timeoutHours && (
-                                <span className="rb-stage__timeout-badge" title={`${stage.timeoutHours}h timeout`}>
-                                  <Clock size={10} /> {stage.timeoutHours}h
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="rb-stage__header-actions">
-                            <button className="rb-icon-btn" onClick={(e) => { e.stopPropagation(); moveStage(stage.id, 'up'); }} disabled={idx === 0} title="Move up">
-                              <MoveUp size={13} />
-                            </button>
-                            <button className="rb-icon-btn" onClick={(e) => { e.stopPropagation(); moveStage(stage.id, 'down'); }} disabled={isLast} title="Move down">
-                              <MoveDown size={13} />
-                            </button>
-                            <button className="rb-icon-btn rb-icon-btn--danger" onClick={(e) => { e.stopPropagation(); removeStage(stage.id); }} title="Delete stage">
-                              <Trash2 size={13} />
-                            </button>
-                            <div className={`rb-stage__expand-icon ${isExpanded ? 'rb-stage__expand-icon--open' : ''}`}>
-                              <ChevronDown size={14} />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Stage body (expandable) */}
-                        {isExpanded && (
-                          <div className="rb-stage__body">
-                            <div className="rb-stage__form-grid">
-                              {/* Name */}
-                              <div className="rb-form-group rb-form-group--half">
-                                <label className="rb-form-label">Stage Name</label>
-                                <input className="sails-input" value={stage.name} onChange={(e) => updateStage(stage.id, { name: e.target.value })} />
-                              </div>
-
-                              {/* Router Type */}
-                              <div className="rb-form-group rb-form-group--half">
-                                <label className="rb-form-label">Router Type</label>
-                                <select className="sails-input" value={stage.routerType} onChange={(e) => updateStage(stage.id, { routerType: e.target.value as RouterType })}>
-                                  {ROUTER_TYPES.map((r) => (
-                                    <option key={r.type} value={r.type}>{r.label} — {r.desc}</option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              {/* Router Value */}
-                              <div className="rb-form-group rb-form-group--half">
-                                <label className="rb-form-label">
-                                  {stage.routerType === 'field' ? 'Field Name (dynamic)' : 'Router Value'}
-                                </label>
-                                <input className="sails-input" value={stage.routerValue}
-                                  placeholder={stage.routerType === 'user' ? 'e.g. user@somsak' : stage.routerType === 'team' ? 'e.g. Legal Team' : stage.routerType === 'field' ? 'e.g. manager_id' : ''}
-                                  onChange={(e) => updateStage(stage.id, { routerValue: e.target.value })} />
-                              </div>
-
-                              {/* Display Label */}
-                              <div className="rb-form-group rb-form-group--half">
-                                <label className="rb-form-label">Display Label</label>
-                                <input className="sails-input" value={stage.routerLabel} placeholder="e.g. Legal Counsel" onChange={(e) => updateStage(stage.id, { routerLabel: e.target.value })} />
-                              </div>
-
-                              {/* Entry Condition */}
-                              <div className="rb-form-group rb-form-group--full">
-                                <label className="rb-form-label">
-                                  <Filter size={11} /> Entry Condition (expression)
-                                </label>
-                                <input className="sails-input rb-code-input" value={stage.entryCondition}
-                                  placeholder='e.g. record.amount > 50000 && record.type === "enterprise"'
-                                  onChange={(e) => updateStage(stage.id, { entryCondition: e.target.value })} />
-                                <span className="rb-form-hint">Leave empty to always enter this stage. Uses record context variables.</span>
-                              </div>
-
-                              {/* Capabilities */}
-                              <div className="rb-form-group rb-form-group--full rb-capabilities">
-                                <label className="rb-form-label">Stage Capabilities</label>
-                                <div className="rb-capabilities__grid">
-                                  {([
-                                    { key: 'canApprove' as const, label: 'Approve', icon: <ChevronDown size={12} /> },
-                                    { key: 'canReject' as const, label: 'Reject', icon: <ChevronRight size={12} /> },
-                                    { key: 'canComment' as const, label: 'Comment', icon: <MessageSquare size={12} /> },
-                                    { key: 'canReassign' as const, label: 'Reassign', icon: <ArrowRight size={12} /> },
-                                  ]).map((cap) => (
-                                    <label key={cap.key} className={`rb-cap ${stage[cap.key] ? 'rb-cap--active' : ''}`}>
-                                      <input type="checkbox" checked={stage[cap.key]}
-                                        onChange={(e) => updateStage(stage.id, { [cap.key]: e.target.checked })} />
-                                      {cap.icon} {cap.label}
-                                    </label>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* Timeout */}
-                              <div className="rb-form-group rb-form-group--half">
-                                <label className="rb-form-label">
-                                  <Clock size={11} /> Timeout (hours)
-                                </label>
-                                <input className="sails-input" type="number" value={stage.timeoutHours ?? ''}
-                                  placeholder="No timeout"
-                                  onChange={(e) => updateStage(stage.id, { timeoutHours: e.target.value ? Number(e.target.value) : null })} />
-                              </div>
-                            </div>
-
-                            {/* Actions section */}
-                            <div className="rb-actions-section">
-                              <div className="rb-actions__grid">
-                                {/* On Approve */}
-                                <ActionBlock
-                                  label="On Approve"
-                                  color="green"
-                                  trigger="on_approve"
-                                  actions={stage.onApprove}
-                                  onAdd={(type) => addAction(stage.id, 'on_approve', type)}
-                                  onRemove={(actionId) => removeAction(stage.id, 'on_approve', actionId)}
-                                  onUpdate={(actionId, patch) => updateAction(stage.id, 'on_approve', actionId, patch)}
-                                />
-
-                                {/* On Reject */}
-                                <ActionBlock
-                                  label="On Reject"
-                                  color="red"
-                                  trigger="on_reject"
-                                  actions={stage.onReject}
-                                  onAdd={(type) => addAction(stage.id, 'on_reject', type)}
-                                  onRemove={(actionId) => removeAction(stage.id, 'on_reject', actionId)}
-                                  onUpdate={(actionId, patch) => updateAction(stage.id, 'on_reject', actionId, patch)}
-                                />
-
-                                {/* On Timeout */}
-                                {stage.timeoutHours && stage.timeoutHours > 0 && (
-                                  <ActionBlock
-                                    label="On Timeout"
-                                    color="orange"
-                                    trigger="on_timeout"
-                                    actions={stage.onTimeout}
-                                    onAdd={(type) => addAction(stage.id, 'on_timeout', type)}
-                                    onRemove={(actionId) => removeAction(stage.id, 'on_timeout', actionId)}
-                                    onUpdate={(actionId, patch) => updateAction(stage.id, 'on_timeout', actionId, patch)}
-                                  />
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Arrow connector */}
-                      {!isLast && (
-                        <div className="rb-connector">
-                          <div className="rb-connector__line" />
-                          <div className="rb-connector__arrow">
-                            <ChevronDown size={14} />
-                          </div>
-                        </div>
-                      )}
-                    </React.Fragment>
-                  );
-                })
-              )}
-
-              {/* Drop zone at end */}
-              {process.stages.length > 0 && (
-                <div
-                  className={`rb-drop-zone ${dragOverIdx === process.stages.length ? 'rb-drop-zone--active' : ''}`}
-                  onDragOver={(e) => { e.preventDefault(); setDragOverIdx(process.stages.length); }}
-                  onDragLeave={() => setDragOverIdx(null)}
-                  onDrop={(e) => handleStageDrop(e, process.stages.length)}
-                />
-              )}
-
-              {/* Add stage button */}
-              <button className="rb-add-stage-btn" onClick={addStage}>
-                <Plus size={16} /> Add Stage
-              </button>
-            </div>
-
-            {/* Process end */}
-            <div className="rb-end-node">
-              <div className="rb-end-node__icon">
-                <Target size={18} />
-              </div>
-              <span className="rb-end-node__label">Completed</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── RIGHT: Context Help ── */}
-        <div className="rb-context">
-          <h3 className="rb-panel-title"><Settings size={13} /> Process Info</h3>
-
-          <div className="rb-context__card">
-            <div className="rb-context__row">
-              <span className="rb-context__key">Stages</span>
-              <span className="rb-context__value">{process.stages.length}</span>
-            </div>
-            <div className="rb-context__row">
-              <span className="rb-context__key">Table</span>
-              <span className="rb-context__value">Contracts</span>
-            </div>
-            <div className="rb-context__row">
-              <span className="rb-context__key">Total Actions</span>
-              <span className="rb-context__value">
-                {process.stages.reduce((sum, s) => sum + s.onApprove.length + s.onReject.length + s.onTimeout.length, 0)}
-              </span>
-            </div>
-          </div>
-
-          <div className="rb-context__help">
-            <h4 className="rb-context__help-title">How Routing Works</h4>
-            <p>When a record enters this process, it moves through stages sequentially. At each stage, the designated router must approve or reject.</p>
-            <ul className="rb-context__help-list">
-              <li><strong>Router</strong> — who decides at this stage</li>
-              <li><strong>Entry Condition</strong> — skip this stage unless condition is met</li>
-              <li><strong>Actions</strong> — automatic side effects (update fields, notify, webhooks)</li>
-              <li><strong>Timeout</strong> — auto-escalation if no response within N hours</li>
-            </ul>
-          </div>
-
-          {selectedStage && (
-            <div className="rb-context__preview">
-              <h4 className="rb-context__help-title">JSON Preview</h4>
-              <pre className="rb-context__json">
-                {JSON.stringify(selectedStage, null, 2)}
-              </pre>
-            </div>
-          )}
-        </div>
+        {/* RIGHT: Properties */}
+        <PropertiesPanel
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          process={process}
+          setProcess={setProcess}
+          selectedStage={selectedStage}
+          selectedEventId={selectedEventId}
+          setSelectedEventId={setSelectedEventId}
+          totalEvents={totalEvents}
+          totalBranches={totalBranches}
+          invalidBranches={invalidBranches}
+          hasFallback={hasFallback}
+          jsonPreview={jsonPreview}
+          onUpdateStage={updateStage}
+          onAddBranch={addBranch}
+          onUpdateBranch={updateBranch}
+          onRemoveBranch={removeBranch}
+          onAddEvent={(stageId, type) => addEventToStage(stageId, type as WorkflowEvent['type'])}
+          onMoveEvent={moveEvent}
+          onRemoveEvent={removeEvent}
+          onUpdateEventLabel={updateEventLabel}
+          onUpdateEventConfig={updateEventConfig}
+          onAddVariable={addVariable}
+          onUpdateVariable={updateVariable}
+          onRemoveVariable={removeVariable}
+          onOpenExpressionModal={setExprModalEventId}
+        />
       </div>
-    </div>
-  );
-};
 
-// ─── Sub-component: Action Block ──────────────────────────────
-
-interface ActionBlockProps {
-  label: string;
-  color: 'green' | 'red' | 'orange';
-  trigger: ActionTrigger;
-  actions: RouteAction[];
-  onAdd: (type: RouteAction['type']) => void;
-  onRemove: (actionId: string) => void;
-  onUpdate: (actionId: string, patch: Partial<RouteAction>) => void;
-}
-
-const ACTION_COLORS = {
-  green:  { bg: 'rgba(16, 185, 129, 0.06)', border: '#10b981', text: '#10b981' },
-  red:    { bg: 'rgba(239, 68, 68, 0.06)',  border: '#ef4444', text: '#ef4444' },
-  orange: { bg: 'rgba(245, 158, 11, 0.06)', border: '#f59e0b', text: '#f59e0b' },
-};
-
-const ActionBlock: React.FC<ActionBlockProps> = ({ label, color, actions, onAdd, onRemove, onUpdate }) => {
-  const c = ACTION_COLORS[color];
-  return (
-    <div className="rb-action-block" style={{ background: c.bg, borderColor: c.border }}>
-      <div className="rb-action-block__header">
-        <span style={{ fontWeight: 600, fontSize: 12, color: c.text }}>{label}</span>
-        <div className="rb-action-block__add-menu">
-          {ACTION_TYPES.map((at) => (
-            <button key={at.type} className="rb-action-add-btn" onClick={() => onAdd(at.type)} title={`Add ${at.label}`}>
-              {at.icon} <span>{at.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-      {actions.length === 0 ? (
-        <p className="rb-action-empty">No actions. Click an action button above to add one.</p>
-      ) : (
-        <div className="rb-action-list">
-          {actions.map((action) => (
-            <div key={action.id} className="rb-action-item">
-              <span className="rb-action-item__type">
-                {ACTION_TYPES.find((a) => a.type === action.type)?.icon}
-                <span>{action.label}</span>
-              </span>
-              <button className="rb-icon-btn rb-icon-btn--danger" onClick={() => onRemove(action.id)}>
-                <X size={11} />
-              </button>
-            </div>
-          ))}
-        </div>
+      {/* ── Large Expression / Transform modal ── */}
+      {exprModalEvent && selectedStage && (
+        <ExpressionModal
+          event={exprModalEvent}
+          stage={selectedStage}
+          variables={process.variables}
+          onUpdateConfig={(patch) => updateEventConfig(selectedStage.id, exprModalEvent.id, patch)}
+          onClose={() => setExprModalEventId(null)}
+        />
       )}
     </div>
   );

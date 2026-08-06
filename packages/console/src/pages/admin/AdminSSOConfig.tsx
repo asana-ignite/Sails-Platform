@@ -23,6 +23,7 @@ import {
   Plus
 } from 'lucide-react';
 import { CustomSelect, SelectOption } from '../../components/common/CustomSelect';
+import { UiTableCard, UiTable, UiTh } from '../../components/ui';
 import './AdminSSOConfig.css';
 
 interface ProviderConfig {
@@ -673,14 +674,15 @@ const AdminSSOConfig: React.FC = () => {
 
           {/* Verified Domains Table */}
           <div style={{ marginTop: '10px' }}>
-            <table className="sails-user-manager__table" style={{ width: '100%' }}>
+            <UiTableCard>
+            <table className="ui-table" style={{ width: '100%' }}>
               <thead>
                 <tr>
-                  <th className="sails-user-manager__th">Corporate Domain</th>
-                  <th className="sails-user-manager__th">Verification Status</th>
-                  <th className="sails-user-manager__th">Required DNS TXT Record</th>
-                  <th className="sails-user-manager__th">Added On</th>
-                  <th className="sails-user-manager__th sails-user-manager__th--actions"></th>
+                  <UiTh>Corporate Domain</UiTh>
+                  <UiTh>Verification Status</UiTh>
+                  <UiTh>Required DNS TXT Record</UiTh>
+                  <UiTh>Added On</UiTh>
+                  <th style={{ textAlign: 'right', width: 48 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -714,6 +716,7 @@ const AdminSSOConfig: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            </UiTableCard>
           </div>
         </div>
       )}

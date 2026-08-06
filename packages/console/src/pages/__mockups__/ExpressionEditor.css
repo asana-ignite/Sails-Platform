@@ -1,0 +1,518 @@
+/** ExpressionEditor — JSONata builder with snippets, fill-blanks, highlight */
+
+.ex-editor {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.ex-editor__main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Snippet library panel ─────────────────────────────────── */
+
+.ex-editor__snippets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 250px;
+  flex-shrink: 0;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 8px;
+  background: var(--sails-bg-body, #f8fafc);
+  max-height: 480px;
+  overflow: hidden;
+}
+
+.ex-editor__snippets-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--sails-primary, #9dcee0);
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+  background: var(--sails-bg-card, #ffffff);
+}
+
+.ex-editor__snippets-search {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+}
+
+.ex-editor__snippets-search-input {
+  flex: 1;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 5px;
+  padding: 4px 7px;
+  font-size: 11px;
+  background: var(--sails-bg-card, #ffffff);
+  color: var(--sails-text-main, #1e293b);
+  outline: none;
+}
+
+.ex-editor__snippets-search-input:focus {
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+.ex-editor__snippets-list {
+  overflow-y: auto;
+  padding: 4px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ex-editor__snippets-empty {
+  font-size: 11px;
+  color: var(--sails-text-muted, #94a3b8);
+  font-style: italic;
+  margin: 0;
+  padding: 8px 4px;
+}
+
+.ex-editor__snippet-cat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ex-editor__snippet-cat-head {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--sails-text-muted, #94a3b8);
+  padding: 2px 4px;
+}
+
+.ex-editor__snippet {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 8px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 6px;
+  background: var(--sails-bg-card, #ffffff);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.ex-editor__snippet:hover {
+  border-color: var(--sails-primary, #9dcee0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.ex-editor__snippet-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.ex-editor__snippet-desc {
+  font-size: 9.5px;
+  color: var(--sails-text-muted, #94a3b8);
+  line-height: 1.35;
+}
+
+/* ─── Editor area (highlight overlay + textarea) ────────────── */
+
+.ex-editor__area {
+  position: relative;
+}
+
+.ex-editor__hl {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 6px;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--sails-text-main, #1e293b);
+  background: rgba(17, 24, 39, 0.03);
+  box-sizing: border-box;
+  tab-size: 2;
+}
+
+.ex-editor__input {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: transparent;
+  caret-color: var(--sails-text-main, #1e293b);
+  background: transparent;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 6px;
+  padding: 8px 10px;
+  resize: vertical;
+  min-height: 56px;
+  tab-size: 2;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  z-index: 2;
+}
+
+.ex-editor__input:focus {
+  border-color: var(--sails-primary, #9dcee0);
+  box-shadow: 0 0 0 2px rgba(157, 206, 224, 0.18);
+  background: transparent;
+}
+
+.ex-editor__input::placeholder {
+  color: var(--sails-field-placeholder, #d9d9d9);
+}
+
+.ex-editor__input::selection {
+  background: rgba(157, 206, 224, 0.35);
+}
+
+/* Highlight token colors */
+.ex-hl--string { color: #16a34a; }
+.ex-hl--number { color: #ea580c; }
+.ex-hl--func   { color: #7c3aed; font-weight: 600; }
+.ex-hl--var    { color: #2563eb; }
+.ex-hl--op     { color: #64748b; }
+
+.ex-editor--jsonata .ex-editor__hl {
+  background: rgba(124, 58, 237, 0.03);
+}
+
+/* ─── Footer / status ───────────────────────────────────────── */
+
+.ex-editor__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-height: 18px;
+}
+
+.ex-editor__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.ex-editor__status--ok {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.ex-editor__status--err {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.ex-editor__refs {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.ex-editor__refs code {
+  background: rgba(157, 206, 224, 0.12);
+  color: var(--sails-primary, #9dcee0);
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 9.5px;
+}
+
+.ex-editor__test {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ex-editor__test-result {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  max-width: 260px;
+}
+
+.ex-editor__test-result code {
+  font-size: 10px;
+  background: rgba(17, 24, 39, 0.05);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--sails-text-main, #1e293b);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 64px;
+  overflow: auto;
+}
+
+.ex-editor__test-badge {
+  font-weight: 700;
+  font-size: 10px;
+}
+
+.ex-editor__test-badge--ok { color: #10b981; }
+.ex-editor__test-badge--err { color: #dc2626; }
+
+.ex-editor__test-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 1px;
+  border-radius: 3px;
+}
+
+.ex-editor__test-clear:hover {
+  color: #dc2626;
+}
+
+/* ─── Fill-the-blanks bar ───────────────────────────────────── */
+
+.ex-editor__fills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  border: 1px dashed rgba(59, 130, 246, 0.4);
+  border-radius: 6px;
+  background: rgba(59, 130, 246, 0.03);
+}
+
+.ex-editor__fills-title {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #3b82f6;
+}
+
+.ex-editor__fill-wrap {
+  position: relative;
+}
+
+.ex-editor__fill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  border-radius: 999px;
+  background: var(--sails-bg-card, #ffffff);
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: box-shadow 0.12s;
+}
+
+.ex-editor__fill-chip:hover {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.ex-editor__fill-chip--active {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+}
+
+.ex-editor__fill-chev {
+  font-size: 8px;
+  opacity: 0.7;
+}
+
+.ex-editor__fill-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  min-width: 230px;
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.ex-editor__fill-hint {
+  margin: 0;
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  font-style: italic;
+  padding: 4px;
+}
+
+.ex-editor__fill-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ex-editor__fill-opt:hover {
+  background: rgba(157, 206, 224, 0.14);
+}
+
+.ex-editor__fill-opt-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.ex-editor__fill-opt-type {
+  font-size: 9px;
+  color: var(--sails-text-muted, #94a3b8);
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.ex-editor__fill-custom {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border-top: 1px solid var(--sails-border-color, #e2e8f0);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.ex-editor__fill-custom .sails-input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+/* ─── Intellisense popup (flyover, portal to body) ──────────── */
+
+.ex-editor__suggest {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  z-index: 2000;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+.ex-editor__suggest--flyover {
+  position: fixed;
+  min-width: 260px;
+}
+
+.ex-editor__suggest-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--sails-text-muted, #94a3b8);
+  padding: 3px 6px 5px;
+}
+
+.ex-editor__suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.ex-editor__suggest-item--active {
+  background: rgba(157, 206, 224, 0.14);
+}
+
+.ex-editor__suggest-kind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ex-editor__suggest-kind--function {
+  background: rgba(124, 58, 237, 0.12);
+  color: #7c3aed;
+}
+
+.ex-editor__suggest-kind--variable {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.ex-editor__suggest-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ex-editor__suggest-detail {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
