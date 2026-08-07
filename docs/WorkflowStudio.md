@@ -187,8 +187,8 @@ Parameter type catalog:
 | Tab | Parameters | Behavior |
 |---|---|---|
 | Event | name, description | always present — every event type |
-| Model & Action | `model`*, `operation`, `filterGroups`, `targetType`, `targetValue` | model picker, operation select, QueryStudio filter for read/list/update/delete; **Target Record (ID)** group appears below for read/update/delete only — which record the operation targets: triggering record / by variable / by literal id (*`targetValue` required when not `trigger`*) |
-| Output & Mapping | `storeToVariable`, `fieldMapping` | read/list auto-create a **collection** workflow variable named after the event label (columns snapshotted from the model); create/update show the port-based field mapping panel |
+| Model & Action | `model`*, `operation`, `filterGroups`, `targetType`, `targetValue` | model picker, operation select (**Create, Update, Upsert, Delete, Read, List**), QueryStudio filter for read/list/update/delete; **Target Record (ID)** group appears below for read/update/upsert/delete — which record the operation targets: triggering record / by variable / by literal id (*`targetValue` required when not `trigger`*; for upsert it selects the row to update when the id already exists) |
+| Output & Mapping | `storeToVariable`, `fieldMapping` | read/list auto-create a **collection** workflow variable named after the event label (columns snapshotted from the model); create/update/upsert show the port-based field mapping panel |
 
 \* `required: true` — completion is validated on Done.
 
@@ -204,6 +204,7 @@ enforced identically to the platform APIs:
 | `list` | `listRecords(limit: 25, filterGroups: config.filterGroups)` | filter serialized via `serializeFilterGroups`, then enriched by `preprocessFilterGroups` (drill chains, record sources, macros) |
 | `create` | `insertRecord(payload from fieldMapping)` | payload built from `{ sourceVar → targetCol }` mapping, values read from `ctx.variables` |
 | `update` | `updateRecord(data from fieldMapping, targetId)` | target id resolved from `config.targetType`/`targetValue` |
+| `upsert` | `upsertRecord(id, data from fieldMapping)` | `INSERT … ON CONFLICT (id) DO UPDATE` (PG 9.5+). Conflict id = a variable mapped onto the `id` column → else the Target Record selector → else generated (pure insert). Requires both create **and** update permissions; audit logs `CREATE` or `UPDATE`. `created_by`/`owner_id` are never overwritten on the update path |
 | `delete` | `deleteRecord(targetId)` | same target resolution |
 
 A `SessionContext` is built per-execution (role fetched from `core.users`).

@@ -217,6 +217,21 @@ const recordEventPlugin: WorkflowEventPlugin = {
         stored = await QueryLayer.updateRecord(pool, schema, model, targetId, data, ses);
       }
 
+      // ── Upsert (insert, or update the row with the matching id) ──
+      else if (operation === 'upsert') {
+        const mapping: { sourceVar: string; targetCol: string }[] = eventConfig.fieldMapping || [];
+        // Conflict key: a variable mapped onto the id column wins; otherwise
+        // fall back to the Target Record selector; otherwise pure insert.
+        const mappedId = mapping.find((m) => m.targetCol === 'id')?.sourceVar;
+        const idValue = mappedId ? (ctx.variables[mappedId] as string) ?? null : resolveTargetId(ctx, eventConfig);
+        const payload: Record<string, any> = {};
+        for (const m of mapping) {
+          if (m.targetCol === 'id') continue;
+          payload[m.targetCol] = ctx.variables[m.sourceVar];
+        }
+        stored = await QueryLayer.upsertRecord(pool, schema, model, idValue, payload, ses);
+      }
+
       // ── Delete ──
       else if (operation === 'delete') {
         const targetId = resolveTargetId(ctx, eventConfig);
@@ -262,9 +277,9 @@ const recordEventPlugin: WorkflowEventPlugin = {
 };
 
 /**
- * Resolve the target record id for update/delete operations from the event
- * config: 'trigger' uses ctx.recordId, 'variable' reads from the named
- * workflow variable, 'literal' uses the literal value.
+ * Resolve the target record id for read/update/upsert/delete operations from
+ * the event config: 'trigger' uses ctx.recordId, 'variable' reads from the
+ * named workflow variable, 'literal' uses the literal value.
  */
 function resolveTargetId(ctx: WorkflowEventContext, config: Record<string, any>): string | null {
   const targetType = (config.targetType as string) || 'trigger';

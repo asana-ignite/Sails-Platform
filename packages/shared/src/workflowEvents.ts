@@ -42,9 +42,10 @@ export interface WorkflowEventConfigStep {
 
 const OPERATIONS = [
   { label: 'Create (Insert)', value: 'create' },
-  { label: 'Read (one record)', value: 'read' },
   { label: 'Update', value: 'update' },
+  { label: 'Upsert (insert or update)', value: 'upsert' },
   { label: 'Delete', value: 'delete' },
+  { label: 'Read (one record)', value: 'read' },
   { label: 'List (many records)', value: 'list' },
 ];
 
@@ -63,14 +64,14 @@ export const WORKFLOW_EVENT_CONFIGS: Record<WorkflowEventType, WorkflowEventConf
         { name: 'operation', label: 'Operation', type: 'operation_select', defaultValue: 'read' },
         { name: 'filterGroups', label: 'Record Filter', type: 'filter_builder', description: 'QueryStudio filter for read / list / update / delete.' },
         { name: 'targetType', label: 'Target Record (ID)', type: 'select', defaultValue: 'trigger', options: TARGET_RECORD_OPTIONS },
-        { name: 'targetValue', label: 'Target Value', type: 'variable_select', placeholder: 'Variable name or record ID', description: 'Used when Target Record is "By Variable" (dropdown) or "By Literal ID" (text).' },
+        { name: 'targetValue', label: 'Target Value', type: 'variable_select', placeholder: 'Variable name or record ID', description: 'Used when Target Record is "By Variable" (dropdown) or "By Literal ID" (text). For upsert it selects the record to update when the id already exists.' },
       ],
     },
     {
       label: 'Output & Mapping',
       parameters: [
         { name: 'storeToVariable', label: 'Result Variable', type: 'variable_auto_create', description: 'Auto-creates a collection variable for read/list results.' },
-        { name: 'fieldMapping', label: 'Field Mapping', type: 'field_mapping', description: 'Drag workflow variables onto model columns for create/update.' },
+        { name: 'fieldMapping', label: 'Field Mapping', type: 'field_mapping', description: 'Drag workflow variables onto model columns for create/update/upsert.' },
       ],
     },
   ],

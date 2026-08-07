@@ -9,6 +9,7 @@ import { WORKFLOW_EVENT_CONFIGS } from '@sails/shared';
 import { CustomSelect } from '../common/CustomSelect';
 import type { SailsTableDefinition } from '@sails/shared';
 import { HtmlNotificationEditor } from './HtmlNotificationEditor';
+import { UiToast } from '../ui';
 
 export interface WizardVariable {
   id: string;
@@ -62,8 +63,19 @@ function isCompatibleType(src: string, tgt: string): boolean {
 }
 
 const OPERATION_LABELS: Record<string, string> = {
-  create: 'Create (Insert)', read: 'Read (one record)', update: 'Update',
-  delete: 'Delete', list: 'List (many records)',
+  create: 'Create (Insert)', update: 'Update', upsert: 'Upsert (insert or update)',
+  delete: 'Delete', read: 'Read (one record)', list: 'List (many records)',
+};
+
+/** Human labels for variable fieldTypes and model column logicalTypes. */
+const FIELD_TYPE_LABELS: Record<string, string> = {
+  text: 'Text', short_text: 'Short Text', long_text: 'Long Text', rich_text: 'Rich Text',
+  email: 'Email', phone: 'Phone', url: 'URL', select: 'Select',
+  number: 'Number', decimal: 'Decimal', currency: 'Currency', percentage: 'Percentage', auto_number: 'Auto Number',
+  boolean: 'Boolean',
+  date: 'Date', datetime: 'Date & Time', time: 'Time',
+  user: 'User', relation: 'Relation', address: 'Address', lat_lng: 'Lat / Lng', attachment: 'Attachment',
+  record: 'Record', collection: 'Collection',
 };
 
 function isEmptyValue(v: any): boolean {
@@ -89,6 +101,19 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
   const [varSort, setVarSort] = useState<'asc' | 'desc' | null>(null);
   const [colSort, setColSort] = useState<'asc' | 'desc' | null>(null);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
+  const [mapToast, setMapToast] = useState<string | null>(null);
+  const mapToastTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notifyMapping = (msg: string | null) => {
+    if (mapToastTimer.current) clearTimeout(mapToastTimer.current);
+    setMapToast(msg);
+    if (msg) {
+      mapToastTimer.current = setTimeout(() => {
+        setMapToast(null);
+        setDropFeedback(null);
+      }, 3200);
+    }
+  };
+  React.useEffect(() => () => { if (mapToastTimer.current) clearTimeout(mapToastTimer.current); }, []);
 
   // The event config is LIVE (write-through) — no local draft. `config` is
   // refreshed by the parent on every onConfigChange.
@@ -99,7 +124,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
   const tabs = [{ label: 'Event' }, ...schema.map((s) => ({ label: s.label }))];
   const currentTab = Math.min(activeTab, tabs.length - 1);
   const isReadList = op === 'read' || op === 'list';
-  const isTargetable = eventType === 'record' && (op === 'read' || op === 'update' || op === 'delete');
+  const isTargetable = eventType === 'record' && (op === 'read' || op === 'update' || op === 'upsert' || op === 'delete');
   const modelTable = tables.find((t) => t.tableName === config.model);
   const modelFields: any[] = modelTable?.fields || [];
   const stepIndex = currentTab - 1;
@@ -214,6 +239,8 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
       case 'field_mapping': {
         const ROW_H = 34;
         const LABEL_H = 26;
+        const ROW_GAP = 8;
+        const ROW_PITCH = ROW_H + ROW_GAP;
         const LEFT_W = 230;
         const GAP_W = 56;
         const PORT_R = 6;
@@ -236,6 +263,8 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
         };
         const typeColor = (t: string) => TYPE_COLOR[t] || '#64748b';
         const typeIcon = (t: string) => TYPE_ICONS[t] || Type;
+        // Human label for the type badge (mirrors the Workflow Properties Variables list).
+        const typeLabel = (t: string) => FIELD_TYPE_LABELS[t] || t;
 
         const sortRows = (rows: any[], dir: 'asc' | 'desc' | null) => {
           if (!dir) return rows;
@@ -259,10 +288,14 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
             const compat = isCompatibleType(p.fieldType || '', col.logicalType || col.physicalType || 'text');
             setDropFeedback({ col: col.fieldName || col.name, ok: compat });
             if (compat) {
+              notifyMapping(null);
               const targetCol = col.fieldName || col.name;
               onConfigChange('fieldMapping', fieldMapping.some((m) => m.targetCol === targetCol)
                 ? fieldMapping.filter((m) => m.targetCol !== targetCol)
                 : [...fieldMapping, { sourceVar: p.varName, targetCol }]);
+            } else {
+              const colType = col.logicalType || col.physicalType || 'text';
+              notifyMapping(`Can't map '${p.varName}' (${typeLabel(p.fieldType || '')}) → ${col.name || col.fieldName} (${typeLabel(colType)}) — field types are not compatible.`);
             }
           } catch { /* ignore */ }
         };
@@ -271,26 +304,40 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
         const autoMap = () => {
           const norm = (s: string) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
           const next = [...fieldMapping];
+          const skipped: string[] = [];
           for (const v of mapVars) {
             const col = displayCols.find((c: any) => {
               const cn = norm(c.fieldName || c.name);
               return cn === norm(v.name) && !next.some((m) => m.targetCol === (c.fieldName || c.name));
             });
-            if (!col) continue;
+            if (!col) continue; // no matching column, or already mapped
             if (isCompatibleType(v.fieldType, col.logicalType || col.physicalType || 'text')) {
               next.push({ sourceVar: v.name, targetCol: col.fieldName || col.name });
+            } else {
+              skipped.push(v.name);
             }
           }
+          const added = next.length - fieldMapping.length;
           onConfigChange('fieldMapping', next);
+          if (mapVars.length === 0) {
+            notifyMapping(null);
+          } else if (added === 0 && skipped.length === 0) {
+            notifyMapping('Auto Map: no matching columns found for any variable.');
+          } else if (skipped.length > 0) {
+            notifyMapping(`Auto Map: ${added > 0 ? `${added} mapped · ` : ''}skipped ${skipped.join(', ')} (type mismatch).`);
+          } else {
+            notifyMapping(null);
+          }
         };
 
         if (!config.model) {
           return <p className="ws-props-hint">Select a model in the Model & Action tab first.</p>;
         }
 
-        // Row geometry: both panels share LABEL_H header + uniform ROW_H rows, so
-        // connection lines computed from row indices align exactly with the ports.
-        const yAt = (rowIndex: number) => LABEL_H + rowIndex * ROW_H + ROW_H / 2;
+        // Row geometry: both panels share LABEL_H header + uniform ROW_H rows,
+        // pitched ROW_PITCH apart (ROW_GAP gap), so connection lines computed
+        // from row indices align exactly with the ports.
+        const yAt = (rowIndex: number) => LABEL_H + rowIndex * ROW_PITCH + ROW_H / 2;
         const connPath = (x1: number, y1: number, x2: number, y2: number) =>
           `M ${x1} ${y1} C ${x1 + (x2 - x1) * 0.35} ${y1}, ${x1 + (x2 - x1) * 0.65} ${y2}, ${x2} ${y2}`;
 
@@ -332,19 +379,17 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                 {displayVars.map((v, i) => (
                   <div
                     key={v.id}
-                    className="ws-event-chip"
+                    className="ws-event-chip ws-event-chip--list"
                     style={{
-                      position: 'relative', height: ROW_H, marginBottom: 0, display: 'flex', alignItems: 'center', boxSizing: 'border-box',
-                      borderRadius: 999, background: `${typeColor(v.fieldType)}14`, borderColor: `${typeColor(v.fieldType)}55`,
+                      position: 'relative', height: ROW_H, marginBottom: ROW_GAP, boxSizing: 'border-box', width: '100%',
+                      display: 'flex', alignItems: 'center', borderColor: typeColor(v.fieldType), color: typeColor(v.fieldType),
+                      background: 'var(--sails-bg-card)',
                     }}
-                    title={`Type: ${v.fieldType} — drag the ● port to a column port`}
+                    title={`Type: ${typeLabel(v.fieldType)} — drag the ● port to a column port`}
                   >
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: typeColor(v.fieldType), flexShrink: 0 }} />
-                    <span style={{ width: 12, height: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: 3, color: typeColor(v.fieldType), flexShrink: 0 }}>
-                      {(() => { const I = typeIcon(v.fieldType); return <I size={12} />; })()}
-                    </span>
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingLeft: 4 }}>{v.name}</span>
-                    <code style={{ fontSize: 9, marginLeft: 3, color: 'var(--sails-text-muted)', flexShrink: 0 }}>{v.fieldType}</code>
+                    {(() => { const I = typeIcon(v.fieldType); return <I size={11} />; })()}
+                    <span className="ws-var-row__name">{v.name}</span>
+                    <span className="ws-var-row__type">{typeLabel(v.fieldType)}</span>
                     {/* Right port — drag start */}
                     <span
                       className="ws-map-port"
@@ -404,12 +449,14 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                   const mapped = fieldMapping.some((m) => m.targetCol === (col.fieldName || col.name));
                   const feedback = dropFeedback !== null && dropFeedback.col === (col.fieldName || col.name);
                   const feedbackOk = feedback && dropFeedback.ok;
+                  const colType = col.logicalType || col.physicalType || 'text';
                   return (
-                    <div key={col.fieldName || col.name} className="ws-event-chip"
+                    <div key={col.fieldName || col.name} className="ws-event-chip ws-event-chip--list"
                       style={{
-                        position: 'relative', height: ROW_H, marginBottom: 0, display: 'flex', alignItems: 'center', boxSizing: 'border-box',
+                        position: 'relative', height: ROW_H, marginBottom: ROW_GAP, boxSizing: 'border-box', width: '100%',
+                        display: 'flex', alignItems: 'center', color: typeColor(colType),
                         background: mapped ? 'rgba(59,130,246,.08)' : (feedback ? (feedbackOk ? 'rgba(16,185,129,.12)' : 'rgba(239,68,68,.12)') : 'var(--sails-bg-card)'),
-                        borderColor: feedback && !feedbackOk ? '#ef4444' : undefined,
+                        borderColor: feedback && !feedbackOk ? '#ef4444' : typeColor(colType),
                       }}
                     >
                       {/* Left port — drop target */}
@@ -422,18 +469,16 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                           e.dataTransfer.dropEffect = 'copy';
                           const ok = isCompatibleType(
                             (() => { try { return JSON.parse(e.dataTransfer.getData('application/json')).fieldType || ''; } catch { return ''; } })(),
-                            col.logicalType || col.physicalType || 'text',
+                            colType,
                           );
                           setDragPreview((prev) => (prev ? { ...prev, tgtIndex: ci, ok } : prev));
                         }}
                         onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragPreview((prev) => (prev ? { ...prev, tgtIndex: -1 } : prev)); }}
                         onDrop={(e) => handlePortDrop(e, col)}
                       />
-                      <span style={{ width: 12, height: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginRight: 3, color: typeColor(col.logicalType || col.physicalType || 'text'), flexShrink: 0 }}>
-                        {(() => { const I = typeIcon(col.logicalType || col.physicalType || 'text'); return <I size={12} />; })()}
-                      </span>
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{col.name || col.fieldName}</span>
-                      <code style={{ fontSize: 9, marginLeft: 3, color: 'var(--sails-text-muted)', flexShrink: 0 }}>{col.logicalType || col.physicalType}</code>
+                      {(() => { const I = typeIcon(colType); return <I size={11} />; })()}
+                      <span className="ws-var-row__name">{col.name || col.fieldName}</span>
+                      <span className="ws-var-row__type">{typeLabel(colType)}</span>
                     </div>
                   );
                 })}
@@ -638,10 +683,10 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                         <button
                           type="button"
                           className="ws-props-input"
-                          disabled={!isReadList}
-                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: isReadList ? 'pointer' : 'not-allowed', opacity: isReadList ? 1 : 0.55, whiteSpace: 'nowrap' }}
-                          onClick={() => isReadList && onOpenFilterBuilder(eventId)}
-                          title={isReadList ? 'Build a filter with QueryStudio' : 'Available for Read / List operations'}
+                          disabled={!isReadList || !config.model}
+                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: isReadList && config.model ? 'pointer' : 'not-allowed', opacity: isReadList && config.model ? 1 : 0.55, whiteSpace: 'nowrap' }}
+                          onClick={() => isReadList && config.model && onOpenFilterBuilder(eventId)}
+                          title={!config.model ? 'Select a target model to build a filter' : isReadList ? 'Build a filter with QueryStudio' : 'Available for Read / List operations'}
                         >
                           <Filter size={12} />
                           {(() => {
@@ -659,7 +704,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                         {renderParam(targetTypeParam)}
                         {targetValueParam && renderParam(targetValueParam)}
                       </div>
-                      <p className="ws-props-hint" style={{ padding: '2px 0 0' }}>Which record this operation targets. Hidden for create/list — those operate on the triggering record itself.</p>
+                      <p className="ws-props-hint" style={{ padding: '2px 0 0' }}>Which record this operation targets. For upsert it selects the record to update when the id already exists. Hidden for create/list — those operate on the triggering record itself.</p>
                     </div>
                   )}
                 </>
@@ -692,6 +737,8 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
           </button>
         </div>
       </div>
+
+      <UiToast message={mapToast} tone="error" />
     </div>
   );
 };

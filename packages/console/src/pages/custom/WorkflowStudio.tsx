@@ -21,12 +21,14 @@ import { CustomSelect } from '../../components/common/CustomSelect';
 import { FilterBuilder } from '../../components/common/FilterBuilder';
 import { DynamicIcon } from '../../components/common/DynamicIcon';
 import type { FilterGroup, SailsTableDefinition } from '@sails/shared';
+import { collectionValueSchema, validateCollectionValue } from '@sails/shared';
 import { fetchCached } from '../../api/client';
 import jsonata from 'jsonata';
 import { useAuth } from '../../contexts/AuthContext';
 import Unauthorized from '../Unauthorized';
 import LoadingScreen from '../../components/common/LoadingScreen';
 import { WorkflowEventWizard } from '../../components/workflow/WorkflowEventWizard';
+import { VariableEditor } from '../../components/workflow/VariableEditor';
 import type { WorkflowEventType as SharedWorkflowEventType } from '@sails/shared';
 import './WorkflowStudio.css';
 
@@ -63,7 +65,7 @@ interface WorkflowVariable {
   /** itemType === 'record' (or fieldType 'record') — the model the rows came from (physical table name). */
   targetModel?: string;
   /** Record schema snapshot (field name / label / type). */
-  columns?: { fieldName: string; label: string; logicalType: string; targetModel?: string }[];
+  columns?: { fieldName: string; label?: string; logicalType?: string; targetModel?: string }[];
   /** The Record Event whose result populates this variable (structure owner). */
   boundEventId?: string;
   defaultValue?: any;
@@ -281,7 +283,7 @@ function newEvent(type: WorkflowEventType): WorkflowEvent {
   const id = genId('ev');
   const base = { id, type, description: '' };
   switch (type) {
-    case 'record': return { ...base, label: 'Record Event', config: { model: 'Contracts', operation: 'read', storeToVariable: '' } };
+    case 'record': return { ...base, label: 'Record Event', config: { model: '', operation: 'read', storeToVariable: '' } };
     case 'notification': return { ...base, label: 'Notification', config: { channel: 'bell', recipients: '', subject: '', message: '' } };
     case 'approval': return { ...base, label: 'Task Approval', config: { routerType: 'role', routerValue: '', routerLabel: 'Approver', canApprove: true, canReject: true, timeoutHours: null } };
     case 'expression': return { ...base, label: 'Expression', config: { expression: '', assignToVariable: '' } };
@@ -702,6 +704,7 @@ export const WorkflowStudio: React.FC = () => {
     setRenameVarId(null);
   };
   const [selectedVarId, setSelectedVarId] = useState<string | null>(null);
+  const [varEditorOpen, setVarEditorOpen] = useState(false);
   const [varModels, setVarModels] = useState<{ id: string; name: string; tableName: string; fields: any[] }[]>([]);
   const [confirmUpgradeVar, setConfirmUpgradeVar] = useState<{ eventId: string; varId: string; modelName: string } | null>(null);
   const [startConditionOpen, setStartConditionOpen] = useState(false);
@@ -1276,7 +1279,8 @@ export const WorkflowStudio: React.FC = () => {
     if (selectedVarId === varId) setSelectedVarId(null);
   };
 
-  const columnsFromModel = (model: { id: string; name: string; tableName: string; fields: any[] }): NonNullable<WorkflowVariable['columns']> =>
+  type StrictColumn = { fieldName: string; label: string; logicalType: string; targetModel?: string };
+  const columnsFromModel = (model: { id: string; name: string; tableName: string; fields: any[] }): StrictColumn[] =>
     (model.fields || []).map((f) => ({
       fieldName: f.fieldName ?? f.columnName ?? f.id,
       label: f.name ?? f.label ?? f.fieldName,
@@ -1307,7 +1311,13 @@ export const WorkflowStudio: React.FC = () => {
   /** Suggestion payload for the expression editors (schema included for records). */
   const varSuggestProps = process.variables.map((v) => ({
     id: v.id, name: v.name, fieldType: v.fieldType,
-    targetModel: v.targetModel, columns: v.columns,
+    targetModel: v.targetModel,
+    columns: (v.columns || []).map((c) => ({
+      fieldName: c.fieldName,
+      label: c.label || c.fieldName,
+      logicalType: c.logicalType || 'text',
+      ...(c.targetModel ? { targetModel: c.targetModel } : {}),
+    })),
   }));
 
   /** Model tableName → columns map for multi-level record drill-down. */
@@ -1322,14 +1332,14 @@ export const WorkflowStudio: React.FC = () => {
     if (v.fieldType === 'collection') {
       if (v.itemType === 'record' && v.columns?.length) {
         const row: Record<string, any> = {};
-        for (const c of v.columns) row[c.fieldName] = sampleForType(c.logicalType);
+        for (const c of v.columns) row[c.fieldName] = sampleForType(c.logicalType || 'text');
         return [row];
       }
       return [];
     }
     if (v.fieldType === 'record') {
       const rec: Record<string, any> = {};
-      for (const c of v.columns || []) rec[c.fieldName] = sampleForType(c.logicalType);
+      for (const c of v.columns || []) rec[c.fieldName] = sampleForType(c.logicalType || 'text');
       return rec;
     }
     if (v.fieldType === 'number' || v.fieldType === 'decimal') return v.defaultValue ?? 0;
@@ -1877,7 +1887,8 @@ export const WorkflowStudio: React.FC = () => {
             <div key={v.id} className={`ws-event-chip ws-event-chip--list ${isSel ? 'ws-event-chip--selected' : ''}`}
               style={{ borderColor: color, color, margin: '2px 12px', cursor: 'pointer' }}
               onClick={() => setSelectedVarId(isSel ? null : v.id)}
-              title="Click to select · double-click the name to rename"
+              onDoubleClick={(e) => { e.stopPropagation(); setSelectedVarId(v.id); setVarEditorOpen(true); }}
+              title="Click to select · double-click to edit"
             >
               <DynamicIcon name={VAR_TYPE_ICON_NAMES[v.fieldType] || 'Hash'} size={10} />
               {isRenaming ? (
@@ -1904,7 +1915,6 @@ export const WorkflowStudio: React.FC = () => {
             </div>
           );
         })}
-
 
         {versions.length > 0 && (
           <>
@@ -2335,6 +2345,7 @@ export const WorkflowStudio: React.FC = () => {
   const isActive = def?.status === 'active';
   const isDraft = def?.status === 'draft';
   const isNew = !def;
+  const isReadonly = isActive;
 
   // Tools cluster offset from the canvas right edge: when the properties panel
   // is undocked it overlays the canvas, so the buttons automatically shift left
@@ -2702,6 +2713,40 @@ export const WorkflowStudio: React.FC = () => {
         );
       })()}
 
+      {/* Variable editor popup (double-click a variable chip) */}
+      {varEditorOpen && selectedVarId && (() => {
+        const v = process.variables.find((x) => x.id === selectedVarId);
+        if (!v) return null;
+        return (
+          <div className="ws-modal-overlay" onClick={() => setVarEditorOpen(false)}>
+            <div className="ws-modal" style={{ width: 560 }} onClick={(e) => e.stopPropagation()}>
+              <div className="ws-modal__header">
+                <span className="ws-modal__icon" style={{ background: 'rgba(236,72,153,.12)', color: '#ec4899' }}><Database size={16} /></span>
+                <div className="ws-modal__titles">
+                  <span className="ws-modal__title">Variable — {v.name || 'unnamed'}</span>
+                  <span className="ws-modal__sub">{varTypeLabel(v)}</span>
+                </div>
+                <button className="ws-icon-btn" onClick={() => setVarEditorOpen(false)}><X size={15} /></button>
+              </div>
+              <div className="ws-modal__body" style={{ padding: 0 }}>
+                <VariableEditor
+                  variable={v}
+                  models={varModels}
+                  isReadonly={isReadonly}
+                  onChange={(patch) => updateVariable(v.id, patch)}
+                  onReloadModels={loadVarModels}
+                />
+              </div>
+              <div className="ws-modal__footer">
+                <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => setVarEditorOpen(false)}>
+                  <CheckCircle2 size={14} /> Done
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Variable upgrade confirm (Record Event → non-collection variable) */}
       {confirmUpgradeVar && (() => {
         const target = process.variables.find((v) => v.id === confirmUpgradeVar.varId);
@@ -2971,6 +3016,10 @@ export const WorkflowStudio: React.FC = () => {
               <div className="ws-modal__body">
                 {!modelName ? (
                   <p className="ws-props-hint" style={{ padding: 12 }}>Select a target model first to build a filter.</p>
+                ) : !modelTable ? (
+                  <p className="ws-props-hint" style={{ padding: 12, color: '#ef4444' }}>
+                    Target model &lsquo;{modelName}&rsquo; was not found — re-select it in the event configuration.
+                  </p>
                 ) : (
                   <FilterBuilder
                     fields={modelTable?.fields || []}

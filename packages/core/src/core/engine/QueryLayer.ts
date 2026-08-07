@@ -448,6 +448,104 @@ export class QueryLayer {
   }
 
   /**
+   * Upserts a record securely: inserts it, or updates the row with the given
+   * id when one already exists (INSERT ... ON CONFLICT (id) DO UPDATE).
+   * Requires BOTH create and update permissions (RLS also enforces both on
+   * the ON CONFLICT update path). Logs 'CREATE' or 'UPDATE' to the Audit Log.
+   * Pass idValue = null to force a pure insert (generates a new id).
+   */
+  static async upsertRecord(
+    pool: Pool,
+    schemaName: string,
+    tableName: string,
+    idValue: string | null,
+    payload: Record<string, any>,
+    ctx?: SessionContext
+  ): Promise<any> {
+    const resolvedCtx = ctx ?? await resolveSessionContext();
+
+    await AccessGuard.checkPermission(tableName, 'create', {
+      userId: resolvedCtx.userId,
+      jwtRole: resolvedCtx.role,
+    });
+    await AccessGuard.checkPermission(tableName, 'update', {
+      userId: resolvedCtx.userId,
+      jwtRole: resolvedCtx.role,
+    });
+
+    const result = await TransactionContext.executeWithUserContext(
+      pool,
+      async (client) => {
+        // 1. Capture the existing row first (drives the audit action)
+        let oldRecord: any = null;
+        if (idValue) {
+          const oldResult = await client.query(format('SELECT * FROM %I.%I WHERE id = %L', schemaName, tableName, idValue));
+          oldRecord = oldResult.rows[0] || null;
+        }
+
+        // 2. Build the payload with audit columns. On the update path we only
+        //    overwrite mutable columns — created_by/owner_id survive via the
+        //    INSERT branch being skipped for existing rows.
+        const generatedId = idValue || generateTimeOrderedId();
+        const cleanPayload = stripProtectedColumns(payload);
+        const dataToInsert = {
+          id: generatedId,
+          ...cleanPayload,
+          owner_id: resolvedCtx.userId,
+          owner_team_id: resolvedCtx.activeTeamId,
+          created_by: resolvedCtx.userId,
+          updated_by: resolvedCtx.userId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        const columns = Object.keys(dataToInsert);
+        const values = Object.values(dataToInsert);
+        const updateCols = Object.keys(cleanPayload).concat(['updated_by', 'updated_at']);
+
+        // 3. Execute dynamic UPSERT
+        const upsertSql = format(
+          'INSERT INTO %I.%I (%I) VALUES (%L) ON CONFLICT (id) DO UPDATE SET %s RETURNING *',
+          schemaName,
+          tableName,
+          columns,
+          values,
+          updateCols.map((key) => format('%I = EXCLUDED.%I', key, key)).join(', ')
+        );
+        const upsertResult = await client.query(upsertSql);
+        const newRecord = upsertResult.rows[0];
+
+        // 4. Prepare Audit Log (executed outside of transaction)
+        const action = oldRecord ? 'UPDATE' : 'CREATE';
+        const auditSql = format(
+          `INSERT INTO core.data_audit_logs (id, tenant_id, user_id, action, object_name, record_id, old_values, new_values) 
+            VALUES (%L, %L, %L, %L, %L, %L, %L, %L)`,
+          generateTimeOrderedId(),
+          resolvedCtx.tenantId,
+          resolvedCtx.userId,
+          action,
+          tableName,
+          newRecord.id,
+          oldRecord ? JSON.stringify(oldRecord) : null,
+          JSON.stringify(newRecord)
+        );
+
+        return { newRecord, auditSql };
+      },
+      {
+        userId: resolvedCtx.userId,
+        tenantId: resolvedCtx.tenantId,
+        role: resolvedCtx.role === 'SUPER_ADMIN' ? undefined : 'rls_user',
+        activeTeamId: resolvedCtx.activeTeamId
+      }
+    );
+
+    // 5. Dispatch Audit Log Asynchronously (Fire and forget)
+    pool.query(result.auditSql).catch(err => console.error('[AuditLog] Failed to write audit log:', err));
+
+    return result.newRecord;
+  }
+
+  /**
    * Deletes a record securely. Automatically resolves session context.
    * Captures the deleted state in the Audit Log within the same atomic transaction.
    */
