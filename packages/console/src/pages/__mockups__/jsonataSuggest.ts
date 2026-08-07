@@ -7,8 +7,20 @@ export interface Suggestion {
   label: string;
   detail: string;
   insert: string;
-  kind: 'function' | 'variable' | 'keyword';
+  kind: 'function' | 'variable' | 'keyword' | 'field';
 }
+
+/** A workflow variable as seen by the editors (schema included for records). */
+export interface SuggestionVariable {
+  id: string;
+  name: string;
+  fieldType: string;
+  targetModel?: string;
+  columns?: { fieldName: string; label: string; logicalType: string; targetModel?: string }[];
+}
+
+/** Model tableName → column schema map, used to resolve multi-level record drills. */
+export type RecordSchemaMap = Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
 
 export const JSONATA_FUNCTIONS: { name: string; signature: string; desc: string }[] = [
   { name: '$sum', signature: '$sum(array)', desc: 'Sum of an array of numbers' },
@@ -44,9 +56,52 @@ export const JSONATA_FUNCTIONS: { name: string; signature: string; desc: string 
   { name: '$exists', signature: '$exists(value)', desc: 'True if value exists' },
 ];
 
-export function buildJsonataSuggestions(variables: { id: string; name: string; fieldType: string }[], query: string): Suggestion[] {
+/**
+ * Build intellisense suggestions.
+ *
+ * `context` is the source text before the word being typed. When it ends with
+ * `<recordVar>.<seg>.` (drill-down), the record's columns are suggested
+ * instead; a field carrying a `targetModel` resolves one more level through
+ * `recordSchemas`, so `currentRecord.address.country` keeps suggesting.
+ */
+export function buildJsonataSuggestions(
+  variables: SuggestionVariable[],
+  query: string,
+  context = '',
+  recordSchemas?: RecordSchemaMap,
+): Suggestion[] {
   const q = query.toLowerCase();
   const out: Suggestion[] = [];
+
+  // Record drill-down: context like `currentRecord.address.` or `currentRecord.`
+  const drill = context.match(/([A-Za-z_][A-Za-z0-9_]*)((?:\.[A-Za-z_][A-Za-z0-9_]*)*)\.$/);
+  if (drill) {
+    const varName = drill[1];
+    const segs = drill[2].split('.').filter(Boolean);
+    const v = variables.find((x) => x.name === varName);
+    let fields = v?.columns;
+    let valid = !!fields;
+    if (valid) {
+      for (const seg of segs) {
+        const col = (fields || []).find((f) => f.fieldName === seg || f.label === seg);
+        if (!col || !col.targetModel || !recordSchemas) { valid = false; break; }
+        fields = recordSchemas[col.targetModel];
+        if (!fields) { valid = false; break; }
+      }
+    }
+    if (valid && fields) {
+      for (const f of fields) {
+        if (q && !f.fieldName.toLowerCase().includes(q) && !(f.label || '').toLowerCase().includes(q)) continue;
+        out.push({
+          label: f.label || f.fieldName,
+          detail: `field · ${f.logicalType}${f.targetModel ? ` → ${f.targetModel}` : ''}`,
+          insert: f.fieldName,
+          kind: 'field',
+        });
+      }
+      return out.slice(0, 40);
+    }
+  }
 
   for (const v of variables) {
     if (!v.name) continue;

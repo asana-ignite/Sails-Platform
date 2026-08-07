@@ -14,7 +14,7 @@ import { pool } from '@/lib/knex';
 import { db } from '@/lib/db';
 import { workflowEventRegistry } from '@/core/registry/WorkflowEventRegistry';
 import { WorkflowEventContext } from '@/core/registry/WorkflowEventPlugin';
-import { genId, logWfAction, quoteIdent, resolveTenantSchema } from './WorkflowHelpers';
+import { evaluateJsonata, genId, logWfAction, quoteIdent, resolveTenantSchema } from './WorkflowHelpers';
 
 export interface WorkflowInstanceInput {
   defId: string;
@@ -76,6 +76,19 @@ async function ensureRuntimeTables(schema: string): Promise<void> {
     CREATE INDEX IF NOT EXISTS wf_task_instance_idx ON ${wf}.wf_task (instance_id);
     CREATE INDEX IF NOT EXISTS wf_task_status_idx ON ${wf}.wf_task (status);
     CREATE INDEX IF NOT EXISTS wf_action_log_instance_idx ON ${wf}.wf_action_log (instance_id);
+    CREATE TABLE IF NOT EXISTS ${wf}.wf_notification (
+      id          text PRIMARY KEY,
+      instance_id text,
+      user_id     text NOT NULL,
+      source      text NOT NULL DEFAULT 'workflow',
+      subject     text,
+      body        text,
+      status      text NOT NULL DEFAULT 'delivered',
+      created_at  timestamptz NOT NULL DEFAULT now(),
+      read_at     timestamptz
+    );
+    CREATE INDEX IF NOT EXISTS wf_notification_user_idx ON ${wf}.wf_notification (user_id, status);
+    CREATE INDEX IF NOT EXISTS wf_notification_instance_idx ON ${wf}.wf_notification (instance_id);
   `);
 }
 
@@ -140,6 +153,7 @@ export async function fireStageEvents(
         : null,
       operation: recordInfo?.operation || null,
       variables: currentVars,
+      variableDefs: dag?.variables || [],
       session: { userId: actorId || '', teamId: null },
       timing,
       eventConfig: event.config || {},
@@ -147,6 +161,23 @@ export async function fireStageEvents(
     try {
       const result = await plugin.execute(ctx);
       if (result.output) currentVars = { ...currentVars, ...result.output };
+      // Output Mapping: transform the event's stored result into workflow
+      // variables with JSONata (e.g. "$[0].name" over a collection result).
+      const outputMapping = event.config?.outputMapping as
+        | { sourcePath?: string; targetVariable?: string; defaultValue?: any }[]
+        | undefined;
+      if (Array.isArray(outputMapping) && outputMapping.length > 0) {
+        const source = currentVars[event.config?.storeToVariable as string];
+        for (const m of outputMapping) {
+          if (!m?.sourcePath || !m?.targetVariable) continue;
+          const r = await evaluateJsonata(m.sourcePath, source);
+          let value = r.ok ? r.value : undefined;
+          if ((value === undefined || value === null || value === '') && m.defaultValue !== undefined) {
+            value = m.defaultValue;
+          }
+          if (r.ok || m.defaultValue !== undefined) currentVars[m.targetVariable] = value;
+        }
+      }
       if (!result.success) {
         await logEventFailure(event, result.error || 'unknown error');
         if (timing === 'stage_enter') {

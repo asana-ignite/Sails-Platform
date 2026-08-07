@@ -497,16 +497,7 @@
 }
 
 /* Query Studio modal (reuses the FilterBuilder used by the List View overlay) */
-.om-qstudio-overlay {
-    z-index: 10000;
-}
-
 .om-qstudio-modal {
-    width: 1080px;
-    max-width: 95vw;
-    height: 92vh;
-    max-height: 95vh;
-    min-height: 560px;
     display: flex;
     flex-direction: column;
     overflow: hidden;

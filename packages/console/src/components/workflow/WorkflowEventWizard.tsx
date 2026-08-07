@@ -1,0 +1,699 @@
+import React, { useState } from 'react';
+import { AlertTriangle, AlignLeft, ArrowDown, ArrowUp, Calendar, CheckCircle2, Clock, Database, DollarSign, FileText, Filter, Hash, Link2, List, Mail, MapPin, Paperclip, Percent, Phone, Plus, ToggleLeft, Trash2, Type, User, X, type LucideIcon } from 'lucide-react';
+import type {
+  WorkflowEventType,
+  WorkflowEventConfigStep,
+  WorkflowEventConfigParameter,
+} from '@sails/shared';
+import { WORKFLOW_EVENT_CONFIGS } from '@sails/shared';
+import { CustomSelect } from '../common/CustomSelect';
+import type { SailsTableDefinition } from '@sails/shared';
+import { HtmlNotificationEditor } from './HtmlNotificationEditor';
+
+export interface WizardVariable {
+  id: string;
+  name: string;
+  fieldType: string;
+}
+
+export interface WorkflowEventWizardProps {
+  eventId: string;
+  eventType: WorkflowEventType;
+  /** Current event config (seeds the wizard draft). */
+  config: Record<string, any>;
+  /** Current event label (editable in the Event tab). */
+  label: string;
+  onLabelChange: (label: string) => void;
+  /** Current event description (editable in the Event tab). */
+  description: string;
+  onDescriptionChange: (description: string) => void;
+  variables: WizardVariable[];
+  tables: SailsTableDefinition[];
+  /** Create a collection workflow variable for read/list results; returns its id. */
+  onCreateCollectionVariable: (name: string, modelTableName: string) => string;
+  onBindVariableToEvent: (varId: string, eventId: string, modelName: string) => void;
+  onOpenExpressionEditor: (eventId: string) => void;
+  onOpenFilterBuilder: (eventId: string) => void;
+  columnsFromModel: (model: any) => { fieldName: string; label: string; logicalType: string }[];
+  /**
+   * Write-through: every parameter edit lands directly in the live event
+   * config (no local draft), so QueryStudio and other consumers always see
+   * the current values. The console snapshots config on open and restores it
+   * when the wizard is closed without Done.
+   */
+  onConfigChange: (name: string, value: any) => void;
+  /** Done — the config is already committed via onConfigChange; just close. */
+  onDone: () => void;
+  /** Remove the event entirely (closes the wizard). */
+  onRemove: (eventId: string) => void;
+  onClose: () => void;
+}
+
+const STR = new Set(['short_text', 'long_text', 'rich_text', 'email', 'phone', 'url', 'select', 'user', 'text', 'varchar', 'char', 'relation']);
+const NUM = new Set(['number', 'decimal', 'currency', 'percentage', 'auto_number', 'integer', 'numeric']);
+const DTM = new Set(['date', 'datetime', 'timestamp', 'time']);
+
+function isCompatibleType(src: string, tgt: string): boolean {
+  if (STR.has(src) && STR.has(tgt)) return true;
+  if (NUM.has(src) && NUM.has(tgt)) return true;
+  if (DTM.has(src) && DTM.has(tgt)) return true;
+  if (src === 'boolean' && tgt === 'boolean') return true;
+  return false;
+}
+
+const OPERATION_LABELS: Record<string, string> = {
+  create: 'Create (Insert)', read: 'Read (one record)', update: 'Update',
+  delete: 'Delete', list: 'List (many records)',
+};
+
+function isEmptyValue(v: any): boolean {
+  return v === undefined || v === null || (typeof v === 'string' && !v.trim());
+}
+
+/**
+ * Platform-standard Workflow Event configuration — TABBED interface.
+ * Tab 1 is always "Event" (name + description); each further tab renders one
+ * schema step from WORKFLOW_EVENT_CONFIGS. Done validates completion and
+ * blocks with inline errors + red dots on offending tabs.
+ */
+export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
+  eventId, eventType, config, label, onLabelChange, description, onDescriptionChange,
+  variables, tables,
+  onCreateCollectionVariable, onBindVariableToEvent,
+  onOpenExpressionEditor, onOpenFilterBuilder, columnsFromModel,
+  onConfigChange, onDone, onRemove, onClose,
+}) => {
+  const [activeTab, setActiveTab] = useState(0);
+  const [dropFeedback, setDropFeedback] = useState<{ col: string; ok: boolean } | null>(null);
+  const [dragPreview, setDragPreview] = useState<{ srcIndex: number; tgtIndex: number; ok: boolean; cx: number; cy: number } | null>(null);
+  const [varSort, setVarSort] = useState<'asc' | 'desc' | null>(null);
+  const [colSort, setColSort] = useState<'asc' | 'desc' | null>(null);
+  const [errorBanner, setErrorBanner] = useState<string | null>(null);
+
+  // The event config is LIVE (write-through) — no local draft. `config` is
+  // refreshed by the parent on every onConfigChange.
+  const fieldMapping: { sourceVar: string; targetCol: string }[] = config.fieldMapping || [];
+
+  const schema: WorkflowEventConfigStep[] = WORKFLOW_EVENT_CONFIGS[eventType] || [];
+  const op = String(config.operation || 'read');
+  const tabs = [{ label: 'Event' }, ...schema.map((s) => ({ label: s.label }))];
+  const currentTab = Math.min(activeTab, tabs.length - 1);
+  const isReadList = op === 'read' || op === 'list';
+  const isTargetable = eventType === 'record' && (op === 'read' || op === 'update' || op === 'delete');
+  const modelTable = tables.find((t) => t.tableName === config.model);
+  const modelFields: any[] = modelTable?.fields || [];
+  const stepIndex = currentTab - 1;
+  const activeStep = stepIndex >= 0 ? schema[stepIndex] : null;
+  const stepParams: WorkflowEventConfigParameter[] = activeStep?.parameters || [];
+
+  const setParam = (name: string, value: any) => {
+    onConfigChange(name, value);
+    // Dependent state resets when the model/operation changes.
+    if (name === 'model' || name === 'operation') {
+      onConfigChange('filterGroups', []);
+      onConfigChange('fieldMapping', []);
+    }
+  };
+
+  /** Completion check — returns per-tab issues (tab 0 = Event tab). */
+  const validateConfig = (): { tab: number; message: string }[] => {
+    const issues: { tab: number; message: string }[] = [];
+    if (!label.trim()) issues.push({ tab: 0, message: 'Event name is required.' });
+    schema.forEach((step, i) => {
+      for (const p of step.parameters) {
+        if (!p.required) continue;
+        if (isEmptyValue(config[p.name])) {
+          issues.push({ tab: i + 1, message: `${p.label} is required.` });
+        }
+      }
+    });
+    if (isTargetable) {
+      const targetType = String(config.targetType || 'trigger');
+      if (targetType !== 'trigger' && isEmptyValue(config.targetValue)) {
+        const tab = schema.findIndex((s) => s.parameters.some((p) => p.name === 'targetValue')) + 1;
+        issues.push({ tab: Math.max(tab, 1), message: 'Target value is required when not using the triggering record.' });
+      }
+    }
+    return issues;
+  };
+
+  const issues = validateConfig();
+  const issueForTab = (tab: number) => issues.filter((i) => i.tab === tab);
+
+  const finish = () => {
+    const found = validateConfig();
+    if (found.length > 0) {
+      setErrorBanner(found[0].message);
+      setActiveTab(found[0].tab);
+      return;
+    }
+    setErrorBanner(null);
+    // Auto-create a collection variable for read/list results.
+    if (eventType === 'record' && isReadList && config.model) {
+      const name = config.storeToVariable || `${op}_${config.model}`;
+      if (!config.storeToVariable) onConfigChange('storeToVariable', name);
+      const varId = onCreateCollectionVariable(name, config.model);
+      if (varId) onBindVariableToEvent(varId, eventId, config.model);
+    }
+    onDone();
+  };
+
+  const renderParam = (p: WorkflowEventConfigParameter) => {
+    const value = config[p.name];
+    switch (p.type) {
+      case 'model_select':
+        return (
+          <CustomSelect
+            size="md" searchable
+            value={value || ''}
+            options={tables.map((t) => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
+            onChange={(v) => setParam(p.name, String(v))}
+            placeholder="Select target model..."
+          />
+        );
+      case 'operation_select':
+        return (
+          <CustomSelect
+            size="md"
+            value={value || 'read'}
+            options={Object.entries(OPERATION_LABELS).map(([v, l]) => ({ value: v, label: l }))}
+            onChange={(v) => setParam(p.name, String(v))}
+            placeholder="Select operation..."
+          />
+        );
+      case 'filter_builder': {
+        const n = (config.filterGroups || []).reduce((acc: number, g: any) => acc + (g.rules?.length || 0), 0);
+        return (
+          <button type="button" className="ws-props-input" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}
+            onClick={() => onOpenFilterBuilder(eventId)}>
+            <Filter size={12} /> {n > 0 ? `${n} rule${n > 1 ? 's' : ''}` : 'Build filters…'}
+          </button>
+        );
+      }
+      case 'variable_auto_create':
+        return (
+          <>
+            <input className="ws-props-input" value={config.storeToVariable || ''}
+              onChange={(e) => onConfigChange('storeToVariable', e.target.value)}
+              placeholder={isReadList ? `${op}_${config.model || 'model'}` : 'Result variable'}
+              disabled={!isReadList} />
+            {isReadList && config.model && modelFields.length > 0 && (
+              <div style={{ marginTop: 6, fontSize: 10, color: 'var(--sails-text-secondary)', maxHeight: 120, overflow: 'auto', border: '1px solid var(--sails-border)', borderRadius: 4, padding: 6, background: 'var(--sails-bg-secondary)' }}>
+                {modelFields.map((f: any) => (
+                  <span key={f.fieldName || f.name} style={{ display: 'inline-block', margin: '1px 4px' }}>
+                    {f.name || f.fieldName}<code style={{ fontSize: 9, marginLeft: 3 }}>{f.logicalType || f.physicalType}</code>
+                  </span>
+                ))}
+              </div>
+            )}
+            {!config.model && isReadList && (
+              <p className="ws-props-hint" style={{ padding: '2px 0 0' }}>Select a model in the Model & Action tab first.</p>
+            )}
+          </>
+        );
+      case 'field_mapping': {
+        const ROW_H = 34;
+        const LABEL_H = 26;
+        const LEFT_W = 230;
+        const GAP_W = 56;
+        const PORT_R = 6;
+        const mapVars = variables.filter((v) => v.name && v.fieldType !== 'collection');
+
+        // Chip tint + icon per field type (mirrors the event-chip styling).
+        const TYPE_COLOR: Record<string, string> = {
+          short_text: '#64748b', long_text: '#64748b', rich_text: '#64748b', email: '#64748b', phone: '#64748b', url: '#64748b', select: '#64748b',
+          number: '#3b82f6', decimal: '#3b82f6', currency: '#3b82f6', percentage: '#3b82f6', auto_number: '#3b82f6',
+          boolean: '#10b981',
+          date: '#f59e0b', datetime: '#f59e0b', time: '#f59e0b',
+          user: '#8b5cf6', relation: '#8b5cf6',
+        };
+        const TYPE_ICONS: Record<string, LucideIcon> = {
+          short_text: Type, long_text: AlignLeft, rich_text: FileText, email: Mail, phone: Phone, url: Link2, select: List,
+          number: Hash, decimal: Hash, currency: DollarSign, percentage: Percent, auto_number: Hash,
+          boolean: ToggleLeft,
+          date: Calendar, datetime: Calendar, time: Clock,
+          user: User, relation: Link2, address: MapPin, lat_lng: MapPin, attachment: Paperclip,
+        };
+        const typeColor = (t: string) => TYPE_COLOR[t] || '#64748b';
+        const typeIcon = (t: string) => TYPE_ICONS[t] || Type;
+
+        const sortRows = (rows: any[], dir: 'asc' | 'desc' | null) => {
+          if (!dir) return rows;
+          const sorted = [...rows].sort((a, b) =>
+            String(a.name || a.fieldName || '').localeCompare(String(b.name || b.fieldName || ''))
+          );
+          return dir === 'desc' ? sorted.reverse() : sorted;
+        };
+        const cycleSort = (cur: 'asc' | 'desc' | null): 'asc' | 'desc' | null =>
+          cur === 'asc' ? 'desc' : cur === 'desc' ? null : 'asc';
+
+        const displayVars = sortRows(mapVars, varSort);
+        const displayCols = sortRows(modelFields, colSort);
+
+        const handlePortDrop = (e: React.DragEvent, col: any) => {
+          e.preventDefault(); e.stopPropagation();
+          setDragPreview(null);
+          try {
+            const p = JSON.parse(e.dataTransfer.getData('application/json'));
+            if (p.type !== 'wiz-map') return;
+            const compat = isCompatibleType(p.fieldType || '', col.logicalType || col.physicalType || 'text');
+            setDropFeedback({ col: col.fieldName || col.name, ok: compat });
+            if (compat) {
+              const targetCol = col.fieldName || col.name;
+              onConfigChange('fieldMapping', fieldMapping.some((m) => m.targetCol === targetCol)
+                ? fieldMapping.filter((m) => m.targetCol !== targetCol)
+                : [...fieldMapping, { sourceVar: p.varName, targetCol }]);
+            }
+          } catch { /* ignore */ }
+        };
+
+        /** Auto-map variables to columns by normalized name (skip already-mapped columns). */
+        const autoMap = () => {
+          const norm = (s: string) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const next = [...fieldMapping];
+          for (const v of mapVars) {
+            const col = displayCols.find((c: any) => {
+              const cn = norm(c.fieldName || c.name);
+              return cn === norm(v.name) && !next.some((m) => m.targetCol === (c.fieldName || c.name));
+            });
+            if (!col) continue;
+            if (isCompatibleType(v.fieldType, col.logicalType || col.physicalType || 'text')) {
+              next.push({ sourceVar: v.name, targetCol: col.fieldName || col.name });
+            }
+          }
+          onConfigChange('fieldMapping', next);
+        };
+
+        if (!config.model) {
+          return <p className="ws-props-hint">Select a model in the Model & Action tab first.</p>;
+        }
+
+        // Row geometry: both panels share LABEL_H header + uniform ROW_H rows, so
+        // connection lines computed from row indices align exactly with the ports.
+        const yAt = (rowIndex: number) => LABEL_H + rowIndex * ROW_H + ROW_H / 2;
+        const connPath = (x1: number, y1: number, x2: number, y2: number) =>
+          `M ${x1} ${y1} C ${x1 + (x2 - x1) * 0.35} ${y1}, ${x1 + (x2 - x1) * 0.65} ${y2}, ${x2} ${y2}`;
+
+        const portStyle: React.CSSProperties = {
+          position: 'absolute', width: PORT_R * 2, height: PORT_R * 2, borderRadius: '50%',
+          background: 'var(--sails-primary,#9dcee0)', border: '2px solid var(--sails-bg-card)',
+          boxShadow: '0 0 0 1px rgba(157,206,224,.5)', cursor: 'crosshair', zIndex: 3,
+        };
+
+        return (
+          <>
+            {/* Toolbar */}
+            <div className="ws-props-row" style={{ gap: 8, marginBottom: 8 }}>
+              <button type="button" className="sails-btn sails-btn--ghost sails-btn--sm" onClick={autoMap} title="Map variables to columns with the same name (compatible types only)">
+                <Plus size={12} /> Auto Map by Name
+              </button>
+              <button type="button" className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => onConfigChange('fieldMapping', [])} disabled={fieldMapping.length === 0} title="Clear all mappings">
+                <Trash2 size={12} /> Clear All
+              </button>
+              <span className="ws-props-hint" style={{ padding: 0 }}>{fieldMapping.length} mapped</span>
+            </div>
+
+            <div
+              style={{ display: 'flex', position: 'relative', maxHeight: 300, overflowY: 'auto', padding: 4 }}
+              onDragOver={(e) => {
+                // Track the cursor so the live connector follows the pointer.
+                const rect = e.currentTarget.getBoundingClientRect();
+                setDragPreview((prev) => (prev ? { ...prev, cx: e.clientX - rect.left, cy: e.clientY - rect.top } : prev));
+              }}
+            >
+              {/* Left — Variables (ports on the right edge) */}
+              <div style={{ width: LEFT_W, flexShrink: 0 }}>
+                <div style={{ height: LABEL_H, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <label className="ws-props-label" style={{ margin: 0 }}>Variables</label>
+                  <button type="button" className="ws-icon-btn" title={varSort === 'asc' ? 'Sorting A→Z — click for Z→A' : varSort === 'desc' ? 'Sorting Z→A — click to reset' : 'Click to sort A→Z'} onClick={() => setVarSort(cycleSort(varSort))}>
+                    {varSort === 'asc' ? <ArrowUp size={11} /> : varSort === 'desc' ? <ArrowDown size={11} /> : <ArrowUp size={11} style={{ opacity: 0.4 }} />}
+                  </button>
+                </div>
+                {displayVars.map((v, i) => (
+                  <div
+                    key={v.id}
+                    className="ws-event-chip"
+                    style={{
+                      position: 'relative', height: ROW_H, marginBottom: 0, display: 'flex', alignItems: 'center', boxSizing: 'border-box',
+                      borderRadius: 999, background: `${typeColor(v.fieldType)}14`, borderColor: `${typeColor(v.fieldType)}55`,
+                    }}
+                    title={`Type: ${v.fieldType} — drag the ● port to a column port`}
+                  >
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: typeColor(v.fieldType), flexShrink: 0 }} />
+                    <span style={{ width: 12, height: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: 3, color: typeColor(v.fieldType), flexShrink: 0 }}>
+                      {(() => { const I = typeIcon(v.fieldType); return <I size={12} />; })()}
+                    </span>
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingLeft: 4 }}>{v.name}</span>
+                    <code style={{ fontSize: 9, marginLeft: 3, color: 'var(--sails-text-muted)', flexShrink: 0 }}>{v.fieldType}</code>
+                    {/* Right port — drag start */}
+                    <span
+                      className="ws-map-port"
+                      style={{ ...portStyle, right: -PORT_R - 1, top: '50%', transform: 'translateY(-50%)' }}
+                      draggable
+                      onDragStart={(e) => {
+                        e.stopPropagation();
+                        e.dataTransfer.setData('application/json', JSON.stringify({ type: 'wiz-map', varName: v.name, fieldType: v.fieldType, rowIndex: i }));
+                        e.dataTransfer.effectAllowed = 'copy';
+                        setDragPreview({ srcIndex: i, tgtIndex: -1, ok: false, cx: 0, cy: 0 });
+                      }}
+                      onDragEnd={() => setDragPreview(null)}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Middle — connection lines */}
+              <svg style={{ position: 'absolute', left: LEFT_W, top: 0, bottom: 0, width: GAP_W, pointerEvents: 'none', zIndex: 2 }} overflow="visible">
+                {fieldMapping.map((m, mi) => {
+                  const si = displayVars.findIndex((v) => v.name === m.sourceVar);
+                  const ti = displayCols.findIndex((c: any) => (c.fieldName || c.name) === m.targetCol);
+                  if (si < 0 || ti < 0) return null;
+                  return (
+                    <g key={mi}>
+                      <path d={connPath(0, yAt(si), GAP_W, yAt(ti))} stroke="var(--sails-primary,#9dcee0)" strokeWidth={2} fill="none" strokeLinecap="round" />
+                      <circle cx={GAP_W} cy={yAt(ti)} r={3.5} fill="var(--sails-primary,#9dcee0)" />
+                    </g>
+                  );
+                })}
+                {dragPreview && (
+                  <path
+                    d={
+                      dragPreview.tgtIndex >= 0
+                        ? connPath(0, yAt(dragPreview.srcIndex), GAP_W, yAt(dragPreview.tgtIndex))
+                        : connPath(0, yAt(dragPreview.srcIndex), Math.min(Math.max(dragPreview.cx - LEFT_W, 0), GAP_W), dragPreview.cy)
+                    }
+                    stroke={dragPreview.tgtIndex >= 0 ? (dragPreview.ok ? '#10b981' : '#ef4444') : 'var(--sails-primary,#9dcee0)'}
+                    strokeWidth={2}
+                    strokeDasharray="5 3"
+                    fill="none"
+                    strokeLinecap="round"
+                    opacity={0.9}
+                  />
+                )}
+              </svg>
+
+              {/* Right — Columns (ports on the left edge) */}
+              <div style={{ flex: 1, minWidth: 0, paddingLeft: GAP_W }}>
+                <div style={{ height: LABEL_H, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <label className="ws-props-label" style={{ margin: 0 }}>Columns ({modelTable?.name || ''})</label>
+                  <button type="button" className="ws-icon-btn" title={colSort === 'asc' ? 'Sorting A→Z — click for Z→A' : colSort === 'desc' ? 'Sorting Z→A — click to reset' : 'Click to sort A→Z'} onClick={() => setColSort(cycleSort(colSort))}>
+                    {colSort === 'asc' ? <ArrowUp size={11} /> : colSort === 'desc' ? <ArrowDown size={11} /> : <ArrowUp size={11} style={{ opacity: 0.4 }} />}
+                  </button>
+                </div>
+                {displayCols.map((col: any, ci: number) => {
+                  const mapped = fieldMapping.some((m) => m.targetCol === (col.fieldName || col.name));
+                  const feedback = dropFeedback !== null && dropFeedback.col === (col.fieldName || col.name);
+                  const feedbackOk = feedback && dropFeedback.ok;
+                  return (
+                    <div key={col.fieldName || col.name} className="ws-event-chip"
+                      style={{
+                        position: 'relative', height: ROW_H, marginBottom: 0, display: 'flex', alignItems: 'center', boxSizing: 'border-box',
+                        background: mapped ? 'rgba(59,130,246,.08)' : (feedback ? (feedbackOk ? 'rgba(16,185,129,.12)' : 'rgba(239,68,68,.12)') : 'var(--sails-bg-card)'),
+                        borderColor: feedback && !feedbackOk ? '#ef4444' : undefined,
+                      }}
+                    >
+                      {/* Left port — drop target */}
+                      <span
+                        className="ws-map-port"
+                        style={{ ...portStyle, left: -PORT_R - 1, top: '50%', transform: 'translateY(-50%)' }}
+                        title={mapped ? 'Drop to unmap' : `Drop to map a variable → ${col.name || col.fieldName}`}
+                        onDragOver={(e) => {
+                          e.preventDefault(); e.stopPropagation();
+                          e.dataTransfer.dropEffect = 'copy';
+                          const ok = isCompatibleType(
+                            (() => { try { return JSON.parse(e.dataTransfer.getData('application/json')).fieldType || ''; } catch { return ''; } })(),
+                            col.logicalType || col.physicalType || 'text',
+                          );
+                          setDragPreview((prev) => (prev ? { ...prev, tgtIndex: ci, ok } : prev));
+                        }}
+                        onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragPreview((prev) => (prev ? { ...prev, tgtIndex: -1 } : prev)); }}
+                        onDrop={(e) => handlePortDrop(e, col)}
+                      />
+                      <span style={{ width: 12, height: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginRight: 3, color: typeColor(col.logicalType || col.physicalType || 'text'), flexShrink: 0 }}>
+                        {(() => { const I = typeIcon(col.logicalType || col.physicalType || 'text'); return <I size={12} />; })()}
+                      </span>
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{col.name || col.fieldName}</span>
+                      <code style={{ fontSize: 9, marginLeft: 3, color: 'var(--sails-text-muted)', flexShrink: 0 }}>{col.logicalType || col.physicalType}</code>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        );
+      }
+
+      case 'target_record':
+        return (
+          <select className="ws-props-input" value={value || 'trigger'} onChange={(e) => setParam(p.name, e.target.value)}>
+            {(p.options || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        );
+      case 'variable_select':
+        // Context-aware: when the sibling `targetType` is 'variable', offer a
+        // dropdown of workflow variables; otherwise (literal id) a text input.
+        if (config.targetType === 'variable') {
+          return (
+            <select className="ws-props-input" value={value || ''} onChange={(e) => setParam(p.name, e.target.value)}>
+              <option value="">Select…</option>
+              {variables.filter((v) => v.name && v.fieldType !== 'collection').map((v) => <option key={v.id} value={v.name}>{v.name}</option>)}
+            </select>
+          );
+        }
+        return <input className="ws-props-input" value={value ?? ''} placeholder={p.placeholder} onChange={(e) => setParam(p.name, e.target.value)} />;
+      case 'expression_editor':
+        return (
+          <button className="ws-props-input" style={{ display: 'block', textAlign: 'left', cursor: 'pointer', color: 'var(--sails-primary)' }}
+            onClick={() => onOpenExpressionEditor(eventId)}>
+            {value ? <code style={{ fontSize: 11 }}>{value}</code> : <em style={{ color: 'var(--sails-text-muted)' }}>Click to edit expression...</em>}
+          </button>
+        );
+      case 'select':
+        return (
+          <select className="ws-props-input" value={value ?? p.defaultValue ?? ''} onChange={(e) => setParam(p.name, e.target.value)}>
+            {(p.options || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        );
+      case 'boolean':
+        return (
+          <label className="ws-props-check" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, cursor: 'pointer' }}>
+            <input type="checkbox" checked={!!(value ?? p.defaultValue)} onChange={(e) => setParam(p.name, e.target.checked)} /> {p.label}
+          </label>
+        );
+      case 'number':
+        return <input className="ws-props-input" type="number" value={value ?? p.defaultValue ?? ''} placeholder={p.placeholder} onChange={(e) => setParam(p.name, e.target.value ? Number(e.target.value) : null)} />;
+      case 'textarea':
+        return <textarea className="ws-props-input ws-props-textarea" value={value ?? ''} placeholder={p.placeholder} onChange={(e) => setParam(p.name, e.target.value)} rows={3} />;
+      case 'html_editor':
+        return (
+          <HtmlNotificationEditor
+            value={value ?? ''}
+            variables={variables}
+            onChange={(v: string) => setParam(p.name, v)}
+          />
+        );
+      case 'attachment_list': {
+        const items: any[] = Array.isArray(value) ? value : [];
+        const addItem = () => setParam(p.name, [...items, { source: 'record_field', fieldName: '', filename: '' }]);
+        const updateItem = (idx: number, patch: any) => {
+          const next = [...items];
+          next[idx] = { ...next[idx], ...patch };
+          setParam(p.name, next);
+        };
+        const removeItem = (idx: number) => setParam(p.name, items.filter((_, i) => i !== idx));
+        return (
+          <div>
+            {items.length === 0 ? (
+              <p className="ws-props-hint">No attachments configured. Attach files from record fields, workflow variables, or URLs.</p>
+            ) : (
+              items.map((a, i) => (
+                <div key={i} style={{ border: '1px solid var(--sails-border,#e2e8f0)', borderRadius: 6, padding: 8, marginBottom: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+                    <select className="ws-props-input" style={{ width: 120 }} value={a.source || 'record_field'}
+                      onChange={(e) => updateItem(i, { source: e.target.value, fieldName: '', variableName: '', url: '' })}>
+                      <option value="record_field">Record Field</option>
+                      <option value="variable">Variable</option>
+                      <option value="url">URL</option>
+                    </select>
+                    {a.source === 'record_field' && (
+                      <input className="ws-props-input" placeholder="Field name (attachment type)" value={a.fieldName || ''}
+                        onChange={(e) => updateItem(i, { fieldName: e.target.value })} />
+                    )}
+                    {a.source === 'variable' && (
+                      <input className="ws-props-input" placeholder="Variable name (or var.col)" value={a.variableName || ''}
+                        onChange={(e) => { const [vn, fk] = e.target.value.split('.'); updateItem(i, { variableName: vn, fieldKey: fk || '' }); }} />
+                    )}
+                    {a.source === 'url' && (
+                      <input className="ws-props-input" placeholder="https://..." value={a.url || ''}
+                        onChange={(e) => updateItem(i, { url: e.target.value })} />
+                    )}
+                    <button className="ws-icon-btn ws-icon-btn--danger" title="Remove" onClick={() => removeItem(i)}><Trash2 size={12} /></button>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input className="ws-props-input" placeholder="Display filename (optional)" value={a.filename || ''} style={{ flex: 1 }}
+                      onChange={(e) => updateItem(i, { filename: e.target.value })} />
+                    {a.cid !== undefined ? (
+                      <input className="ws-props-input" placeholder="Content-ID" value={a.cid || ''} style={{ width: 100 }}
+                        onChange={(e) => updateItem(i, { cid: e.target.value })} />
+                    ) : null}
+                  </div>
+                </div>
+              ))
+            )}
+            <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={addItem}>
+              <Paperclip size={11} /> Add Attachment
+            </button>
+          </div>
+        );
+      }
+      default:
+        return <input className="ws-props-input" value={value ?? ''} placeholder={p.placeholder} onChange={(e) => setParam(p.name, e.target.value)} />;
+    }
+  };
+
+  const showMappingReview =
+    activeStep !== null &&
+    activeStep.parameters.some((p) => p.type === 'field_mapping') &&
+    fieldMapping.length > 0;
+
+  return (
+    <div className="ws-modal-overlay" onClick={onClose}>
+      <div className="ws-modal ws-qstudio-modal" onClick={(e) => e.stopPropagation()} style={{ width: 760, height: 'min(640px, 90vh)' }}>
+        <div className="ws-modal__header">
+          <span className="ws-modal__icon" style={{ background: 'rgba(59,130,246,.12)', color: '#3b82f6' }}><Database size={16} /></span>
+          <div className="ws-modal__titles">
+            <span className="ws-modal__title">{OPERATION_LABELS[op] || 'Workflow Event'} Configuration</span>
+            <span className="ws-modal__sub">{tabs.length} tab{tabs.length > 1 ? 's' : ''} · {config.model || 'No model selected'}</span>
+          </div>
+          <button className="ws-icon-btn" onClick={onClose}><X size={15} /></button>
+        </div>
+
+        <div className="ws-modal__body">
+          {/* Tab bar — standard platform tabs (admin-common .sails-tab-btn) */}
+          <div style={{ display: 'flex', gap: 4, padding: '0 12px', borderBottom: '1px solid var(--sails-border)', flexWrap: 'wrap' }}>
+            {tabs.map((t, i) => {
+              const tabIssues = issueForTab(i);
+              return (
+                <button
+                  key={t.label}
+                  type="button"
+                  className={`sails-tab-btn${currentTab === i ? ' sails-tab-btn--active' : ''}`}
+                  onClick={() => { setActiveTab(i); setErrorBanner(null); }}
+                >
+                  {t.label}
+                  {tabIssues.length > 0 && (
+                    <span
+                      style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', display: 'inline-block', flexShrink: 0 }}
+                      title={tabIssues[0].message}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {errorBanner && (
+            <div className="ws-banner" style={{ margin: '10px 12px 0', display: 'flex', alignItems: 'center', gap: 6, color: '#ef4444', fontSize: 11 }}>
+              <AlertTriangle size={12} /> {errorBanner}
+            </div>
+          )}
+
+          <div style={{ padding: 12 }}>
+            {/* Tab 0 — Event (name + description) */}
+            {currentTab === 0 && (
+              <>
+                <div className="ws-props-group" style={{ paddingTop: 0 }}>
+                  <label className="ws-props-label">Name</label>
+                  <input className="ws-props-input" value={label} onChange={(e) => { onLabelChange(e.target.value); setErrorBanner(null); }} placeholder="Event name" />
+                  {!label.trim() && <p className="ws-props-hint" style={{ padding: '2px 0 0', color: '#ef4444' }}>Event name is required.</p>}
+                </div>
+                <div className="ws-props-group">
+                  <label className="ws-props-label">Description</label>
+                  <textarea className="ws-props-input ws-props-textarea" value={description} onChange={(e) => onDescriptionChange(e.target.value)} placeholder="What does this event do?" rows={3} />
+                </div>
+              </>
+            )}
+
+            {/* Schema step tabs */}
+            {currentTab > 0 && (() => {
+              const opParam = stepParams.find((p) => p.type === 'operation_select');
+              const filterParam = stepParams.find((p) => p.type === 'filter_builder');
+              const targetTypeParam = stepParams.find((p) => p.name === 'targetType');
+              const targetValueParam = stepParams.find((p) => p.name === 'targetValue');
+              const others = stepParams.filter((p) => p !== opParam && p !== filterParam && p !== targetTypeParam && p !== targetValueParam);
+              return (
+                <>
+                  {others.map((p) => (
+                    <div key={p.name} className="ws-props-group">
+                      <label className="ws-props-label">{p.label}{p.required ? ' *' : ''}</label>
+                      {renderParam(p)}
+                      {p.description && <p className="ws-props-hint" style={{ padding: '2px 0 0' }}>{p.description}</p>}
+                    </div>
+                  ))}
+                  {opParam && filterParam && (
+                    <div className="ws-props-group">
+                      <label className="ws-props-label">{opParam.label}</label>
+                      <div className="ws-props-row" style={{ gap: 8 }}>
+                        <div style={{ flex: 1 }}>{renderParam(opParam)}</div>
+                        <button
+                          type="button"
+                          className="ws-props-input"
+                          disabled={!isReadList}
+                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: isReadList ? 'pointer' : 'not-allowed', opacity: isReadList ? 1 : 0.55, whiteSpace: 'nowrap' }}
+                          onClick={() => isReadList && onOpenFilterBuilder(eventId)}
+                          title={isReadList ? 'Build a filter with QueryStudio' : 'Available for Read / List operations'}
+                        >
+                          <Filter size={12} />
+                          {(() => {
+                            const n = (config.filterGroups || []).reduce((acc: number, g: any) => acc + (g.rules?.length || 0), 0);
+                            return n > 0 ? `${n} rule${n > 1 ? 's' : ''}` : 'Filter';
+                          })()}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {isTargetable && targetTypeParam && (
+                    <div className="ws-props-group" style={{ borderTop: '1px solid var(--sails-border)', paddingTop: 10, marginTop: 2 }}>
+                      <label className="ws-props-label">{targetTypeParam.label}</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {renderParam(targetTypeParam)}
+                        {targetValueParam && renderParam(targetValueParam)}
+                      </div>
+                      <p className="ws-props-hint" style={{ padding: '2px 0 0' }}>Which record this operation targets. Hidden for create/list — those operate on the triggering record itself.</p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            {showMappingReview && (
+              <div style={{ padding: '0 0 8px' }}>
+                <label className="ws-props-label" style={{ marginBottom: 4 }}>Mappings ({fieldMapping.length})</label>
+                {fieldMapping.map((m, i) => (
+                  <div key={i} className="ws-props-row" style={{ gap: 6, marginBottom: 3 }}>
+                    <code style={{ fontSize: 10, minWidth: 80 }}>{m.sourceVar}</code>
+                    <span style={{ fontSize: 10, color: 'var(--sails-text-muted)' }}>→</span>
+                    <code style={{ fontSize: 10, minWidth: 80 }}>{m.targetCol}</code>
+                    <button className="ws-icon-btn" onClick={() => onConfigChange('fieldMapping', fieldMapping.filter((_, j) => j !== i))}><X size={10} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="ws-modal__footer">
+          <button className="sails-btn sails-btn--danger sails-btn--sm ws-props-delete-btn" style={{ marginRight: 'auto' }} onClick={() => onRemove(eventId)}>
+            <Trash2 size={12} /> Remove Event
+          </button>
+          <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={onClose}>Cancel</button>
+          <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={finish}>
+            <CheckCircle2 size={14} /> Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default WorkflowEventWizard;

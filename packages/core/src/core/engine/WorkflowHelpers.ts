@@ -9,6 +9,35 @@ import { pool } from '@/lib/knex';
 /** Max size of a tenant BYOC script, in bytes (sandbox + API validation). */
 export const MAX_SCRIPT_BYTES = 64 * 1024;
 
+// JSONata is loaded once at module level (module cache after the first call);
+// the lazy guard keeps the engine functional if the dependency is missing.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const jsonataLib: ((expr: string) => any) | null = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require('jsonata') as (expr: string) => any;
+  } catch {
+    return null;
+  }
+})();
+
+/** Evaluate a JSONata expression against an input. */
+export async function evaluateJsonata(
+  expression: string,
+  input: any,
+): Promise<{ ok: boolean; value?: any; error?: string }> {
+  if (!jsonataLib) {
+    return { ok: false, error: 'JSONata engine is not available — add the jsonata dependency to sails-core' };
+  }
+  try {
+    const expressionFn = jsonataLib(expression);
+    const value = await expressionFn.evaluate(input);
+    return { ok: true, value };
+  } catch (error: any) {
+    return { ok: false, error: error?.message || String(error) };
+  }
+}
+
 /** Quote a Postgres identifier (table/schema/column) safely. */
 export function quoteIdent(name: string): string {
   return '"' + String(name).replace(/"/g, '""') + '"';

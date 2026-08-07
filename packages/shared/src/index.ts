@@ -33,6 +33,19 @@ export {
   clampDecimalInput,
   DEFAULT_DECIMAL_PLACES,
 } from './numbers';
+export { logicalTypeToJsonSchema, collectionValueSchema, validateCollectionValue, validateRecordValue } from './workflowSchema';
+export type { CollectionColumn, CollectionVarShape } from './workflowSchema';
+
+export {
+  WORKFLOW_EVENT_CONFIGS,
+  WORKFLOW_OPERATIONS,
+} from './workflowEvents';
+export type {
+  WorkflowEventType,
+  WorkflowEventConfigParameter,
+  WorkflowEventConfigParameterType,
+  WorkflowEventConfigStep,
+} from './workflowEvents';
 
 // ─── Core Models ──────────────────────────────────────────────
 

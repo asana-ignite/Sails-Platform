@@ -42,6 +42,23 @@
   gap: 6px;
 }
 
+/* Undo / Redo group divider + disabled state (editor-only; runtime
+   pages never render .ls-toolbar so these cannot leak). */
+.ls-toolbar__divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--sails-border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.ls-toolbar__actions .sails-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* ─── Body (three-column grid) ──────────────────────────────── */
 
 .ls-body {

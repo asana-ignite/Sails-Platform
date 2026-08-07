@@ -176,6 +176,53 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setShowAddUserDrawer(false);
   }, [location.pathname]);
 
+  // Dynamic browser tab title: "Sails - <Page Label>"
+  useEffect(() => {
+    const allMenus: ConsoleMenu[] = [];
+    const collect = (items: ConsoleMenu[]) => {
+      for (const item of items) {
+        allMenus.push(item);
+        if (item.children) collect(item.children);
+      }
+    };
+    const normalizePath = (p: string | null | undefined) => (p ? p.replace(/\/+$/, '').toLowerCase() : '');
+
+    const findMenu = (menus: ConsoleMenu[]): ConsoleMenu | null => {
+      const target = normalizePath(location.pathname);
+      collect(menus);
+      const exact = allMenus.find(m => normalizePath(m.path) === target);
+      if (exact) return exact;
+      const prefixMatches = allMenus
+        .map(m => ({ menu: m, path: normalizePath(m.path) }))
+        .filter(x => x.path && target.startsWith(x.path + '/'))
+        .sort((a, b) => b.path.length - a.path.length);
+      return prefixMatches[0]?.menu || null;
+    };
+
+    let label: string | null = null;
+    let menu: ConsoleMenu | null = null;
+    for (const source of [navigationItems, ...apps.map(a => a.menus || [])]) {
+      const found = findMenu(source);
+      if (found) { menu = found; break; }
+    }
+
+    if (pageTitle) {
+      label = pageTitle;
+    } else if (menu) {
+      const isPlatformStudioMenu = navigationItems.some(m => {
+        const isDescendant = (item: ConsoleMenu): boolean => item.children?.some(c => c.id === menu!.id || isDescendant(c)) ?? false;
+        return m.label === 'Platform Studio' && isDescendant(m);
+      });
+      label = isPlatformStudioMenu ? `${menu.label} Studio` : menu.label;
+    } else if (activeApp) {
+      label = activeApp.name;
+    } else if (normalizePath(location.pathname) === '/dashboard') {
+      label = 'Dashboard';
+    }
+
+    document.title = label ? `Sails - ${label}` : 'Sails';
+  }, [location.pathname, pageTitle, apps, navigationItems, activeApp]);
+
   return (
     <ConsoleContext.Provider value={{ 
       apps, 

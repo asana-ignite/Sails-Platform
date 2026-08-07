@@ -1,26 +1,30 @@
 import { db } from '@/lib/db';
 import type { SessionContext } from '@/lib/auth/session';
 import { FilterGroupRule } from './QueryLayer';
-import { resolveContextMacro } from './contextMacros';
+import { resolveContextMacro, WorkflowMacroCtx } from './contextMacros';
 
 /**
  * Validates and enriches a payload of Query Studio filter groups before SQL
  * generation. Shared by `GET /api/dynamic/[tableName]` (record lists) and
- * `GET /api/dynamic/[tableName]/options` (distinct dropdown values).
+ * `GET /api/dynamic/[tableName]/options` (distinct dropdown values), plus the
+ * Record Event workflow execution path (which supplies `workflowCtx`).
  *
  * Mutates the rules in place:
  *  - drops rules whose LHS/refField columns are not real fields of the model
  *  - resolves LHS/RHS drill chains into per-hop table names (`chainTables`/`refChainTables`)
  *  - resolves the record-source subquery table (`targetTable`) from the relation field config
  *  - expands session context macros (`@me`, `@today`, `@last_n_days`, …) into concrete values
+ *  - expands workflow macros (`@wf.requestor`, `@wf.request_date`, `@var.<name>`, …)
+ *    when `workflowCtx` is provided (Record Event filters)
  */
 export async function preprocessFilterGroups(params: {
   session: SessionContext;
   tableName: string;
   tableFields: any[];
   filterGroups: { groupLogic: 'and' | 'or'; rules: FilterGroupRule[] }[];
+  workflowCtx?: WorkflowMacroCtx;
 }): Promise<void> {
-  const { session, tableName, tableFields, filterGroups } = params;
+  const { session, tableName, tableFields, filterGroups, workflowCtx } = params;
   if (!Array.isArray(filterGroups) || filterGroups.length === 0) return;
 
   const validFields = new Set<string>(tableFields.map((f: any) => f.fieldName));
@@ -107,7 +111,7 @@ export async function preprocessFilterGroups(params: {
           userId: session.userId,
           teams: session.teams,
           role: session.role,
-        });
+        }, workflowCtx);
       }
     }
   }

@@ -221,7 +221,7 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
       {/* Query Studio modal — reuses the same FilterBuilder component as the List View */}
       {showFilterBuilder && createPortal(
         <div className="om-modal-overlay om-qstudio-overlay" onClick={() => setShowFilterBuilder(false)}>
-          <div className="om-modal om-qstudio-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="om-modal om-qstudio-modal sails-qstudio-modal" onClick={(e) => e.stopPropagation()}>
             <div className="om-qstudio-modal__header">
               <h3 className="om-qstudio-modal__title">
                 <Filter size={14} /> Filter Dropdown Values

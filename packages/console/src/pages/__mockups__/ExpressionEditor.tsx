@@ -6,12 +6,16 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, Lightbulb, Play, X, Search, Hash, Type, Sigma, CornerUpLeft } from 'lucide-react';
-import { buildJsonataSuggestions, type Suggestion } from './jsonataSuggest';
+import { buildJsonataSuggestions, type Suggestion, type SuggestionVariable, type RecordSchemaMap } from './jsonataSuggest';
 import { JSONATA_SNIPPETS, fieldTypeMatches, type Snippet, type SnippetPlaceholderKind } from './jsonataSnippets';
+import { describeJsonata } from './jsonataExplain';
+import { friendlyToJsonata, jsonataToFriendly, buildPlainSuggestions } from './jsonataFriendly';
 import './ExpressionEditor.css';
 
 interface ExpressionEditorProps {
-  variables: { id: string; name: string; fieldType: string }[];
+  variables: SuggestionVariable[];
+  /** Model tableName → columns; enables multi-level record drill-down suggestions. */
+  recordSchemas?: RecordSchemaMap;
   value: string;
   onChange: (v: string) => void;
   /** Build a sample record to run the Test button. */
@@ -107,6 +111,7 @@ export function detectAssignment(value: string): AssignmentInfo {
 
 export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   variables,
+  recordSchemas,
   value,
   onChange,
   sample,
@@ -124,6 +129,8 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   const [activeFillToken, setActiveFillToken] = useState<string | null>(null);
   const [fillTextDraft, setFillTextDraft] = useState('');
   const [snippetSearch, setSnippetSearch] = useState('');
+  const [mode, setMode] = useState<'plain' | 'jsonata'>('plain');
+  const [plainDraft, setPlainDraft] = useState(value);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const hlRef = useRef<HTMLPreElement | null>(null);
 
@@ -141,8 +148,38 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
     return seen;
   }, [filteredSnippets]);
 
-  const tokens = useMemo(() => tokenizeHighlight(value), [value]);
-  const assignment = useMemo(() => detectAssignment(value), [value]);
+  const transpile = useMemo(() => friendlyToJsonata(plainDraft), [plainDraft]);
+  /** The JSONata that is actually stored/executed. */
+  const effectiveValue = mode === 'plain' ? (transpile.ok ? transpile.jsonata : value) : value;
+  const displayedValue = mode === 'plain' ? plainDraft : value;
+
+  /** Commit friendly draft: update the draft and push valid JSONata to the parent. */
+  const commitPlain = (text: string) => {
+    setPlainDraft(text);
+    const r = friendlyToJsonata(text);
+    if (r.ok) onChange(r.jsonata);
+  };
+
+  const switchMode = (next: 'plain' | 'jsonata') => {
+    if (next === mode) return;
+    if (next === 'plain') setPlainDraft(jsonataToFriendly(value));
+    setMode(next);
+  };
+
+  // Keep the plain draft in sync when the stored value changes externally
+  // (e.g. modal opened with an existing expression). The round-trip check
+  // prevents resetting the draft while the user is typing in plain mode.
+  React.useEffect(() => {
+    if (mode !== 'plain') return;
+    const back = friendlyToJsonata(plainDraft);
+    if (back.ok && back.jsonata === value) return;
+    setPlainDraft(jsonataToFriendly(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, mode]);
+
+  const tokens = useMemo(() => tokenizeHighlight(displayedValue), [displayedValue]);
+  const assignment = useMemo(() => detectAssignment(effectiveValue), [effectiveValue]);
+  const plainText = useMemo(() => describeJsonata(effectiveValue), [effectiveValue]);
 
   const [jsonataLib, setJsonataLib] = useState<any>(null);
   const [jsonataLoadError, setJsonataLoadError] = useState<string | null>(null);
@@ -158,7 +195,7 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   }, []);
 
   const jsonataParseError = useMemo(() => {
-    if (!value.trim()) return null;
+    if (!effectiveValue.trim()) return null;
     if (jsonataLoadError) return jsonataLoadError;
     if (!jsonataLib) return null;
     try {
@@ -167,9 +204,9 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
     } catch (err: any) {
       return err?.message || 'Invalid JSONata expression';
     }
-  }, [value, assignment.evalExpr, jsonataLib, jsonataLoadError]);
+  }, [effectiveValue, assignment.evalExpr, jsonataLib, jsonataLoadError]);
 
-  const validation = { ok: !jsonataParseError, message: jsonataParseError || (value.trim() ? 'Expression OK' : '') };
+  const validation = { ok: !jsonataParseError, message: jsonataParseError || (effectiveValue.trim() ? 'Expression OK' : '') };
 
   /** Measure the textarea and anchor the flyover popup to it (viewport coords). */
   const measurePopup = () => {
@@ -196,7 +233,9 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
 
   // ── Snippet insert + fill-the-blanks ──
   const insertSnippet = (s: Snippet) => {
-    onChange(s.template);
+    const tpl = mode === 'plain' ? (s.friendly ?? s.template) : s.template;
+    if (mode === 'plain') commitPlain(tpl);
+    else onChange(tpl);
     setPendingFills([...s.placeholders]);
     setActiveFillToken(null);
     setTestResult(null);
@@ -208,8 +247,9 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
     const marker = `??${token}??`;
     const text = raw.trim();
     // Replace all occurrences of the marker.
-    const next = value.split(marker).join(text);
-    onChange(next);
+    const next = (mode === 'plain' ? plainDraft : value).split(marker).join(text);
+    if (mode === 'plain') commitPlain(next);
+    else onChange(next);
     setPendingFills((prev) => prev.filter((p) => p.token !== token));
     setActiveFillToken(null);
     requestAnimationFrame(() => taRef.current?.focus());
@@ -222,26 +262,40 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
 
   // ── Intellisense ──
   const openSuggestions = () => {
+    if (mode === 'plain') {
+      const base = plainDraft;
+      const word = (base.match(/[A-Za-z_][A-Za-z0-9_]*$/) || [''])[0];
+      const context = base.slice(0, base.length - word.length);
+      const list = buildPlainSuggestions(variables, word, context, recordSchemas);
+      if (list.length > 0) { setSuggestions(list); setSuggestIndex(0); }
+      else setSuggestions(null);
+      return;
+    }
     if (!value.trim()) {
-      setSuggestions(buildJsonataSuggestions(variables, ''));
+      setSuggestions(buildJsonataSuggestions(variables, '', '', recordSchemas));
       setSuggestIndex(0);
       return;
     }
     const word = (value.match(/[A-Za-z_$][A-Za-z0-9_$]*$/) || [''])[0];
-    setSuggestions(buildJsonataSuggestions(variables, word.replace(/^\$/, '')));
+    const context = value.slice(0, value.length - word.length);
+    setSuggestions(buildJsonataSuggestions(variables, word.replace(/^\$/, ''), context, recordSchemas));
     setSuggestIndex(0);
   };
 
   const applySuggestion = (s: Suggestion) => {
     if (!taRef.current) return;
     const el = taRef.current;
-    const start = el.selectionStart ?? value.length;
-    const end = el.selectionEnd ?? value.length;
-    const before = value.slice(0, start);
+    const base = mode === 'plain' ? plainDraft : value;
+    const start = el.selectionStart ?? base.length;
+    const end = el.selectionEnd ?? base.length;
+    const before = base.slice(0, start);
     const wordMatch = before.match(/([A-Za-z0-9_$]*)$/);
     const wordStart = wordMatch ? start - wordMatch[1].length : start;
-    const next = value.slice(0, wordStart) + s.insert + value.slice(end);
-    onChange(next);
+    const opensParen = s.insert.endsWith('(');
+    const suffix = opensParen ? ')' : '';
+    const next = base.slice(0, wordStart) + s.insert + suffix + base.slice(end);
+    if (mode === 'plain') commitPlain(next);
+    else onChange(next);
     requestAnimationFrame(() => {
       el.focus();
       const caret = wordStart + s.insert.length;
@@ -266,6 +320,24 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
     if (e.key === 'Enter' && e.metaKey) { e.preventDefault(); setSuggestions(null); return; }
   };
 
+  const handlePlainChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    commitPlain(e.target.value);
+    setTestResult(null);
+    if (hlRef.current) {
+      hlRef.current.scrollTop = e.currentTarget.scrollTop;
+      hlRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+    const word = (e.target.value.match(/[A-Za-z_][A-Za-z0-9_]*$/) || [''])[0];
+    if (word.length >= 1) {
+      const context = e.target.value.slice(0, e.target.value.length - word.length);
+      const list = buildPlainSuggestions(variables, word, context, recordSchemas);
+      if (list.length > 0) { setSuggestions(list); setSuggestIndex(0); }
+      else setSuggestions(null);
+    } else {
+      setSuggestions(null);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange(e.target.value);
     setTestResult(null);
@@ -276,7 +348,8 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
     }
     const word = (e.target.value.match(/[A-Za-z_$][A-Za-z0-9_$]*$/) || [''])[0];
     if (word.length >= 1) {
-      const list = buildJsonataSuggestions(variables, word.replace(/^\$/, ''));
+      const context = e.target.value.slice(0, e.target.value.length - word.length);
+      const list = buildJsonataSuggestions(variables, word.replace(/^\$/, ''), context, recordSchemas);
       if (list.length > 0) { setSuggestions(list); setSuggestIndex(0); }
       else setSuggestions(null);
     } else {
@@ -285,7 +358,7 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   };
 
   const runTest = async () => {
-    if (!value.trim()) return;
+    if (!effectiveValue.trim()) return;
     if (!jsonataLib) { setRunError('JSONata engine not loaded yet — try again in a moment.'); return; }
     setRunning(true);
     setTestResult(null);
@@ -343,6 +416,10 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
       )}
 
       <div className="ex-editor__main">
+        <div className="ex-editor__mode">
+          <button type="button" className={`ex-editor__mode-btn ${mode === 'plain' ? 'is-active' : ''}`} onClick={() => switchMode('plain')} title="Type in plain English-style syntax">Plain</button>
+          <button type="button" className={`ex-editor__mode-btn ${mode === 'jsonata' ? 'is-active' : ''}`} onClick={() => switchMode('jsonata')} title="Type raw JSONata">JSONata</button>
+        </div>
         <div className="ex-editor__area">
           <pre ref={hlRef} className="ex-editor__hl" aria-hidden>
             {tokens.map((t, i) => (t.cls ? <span key={i} className={t.cls}>{t.text}</span> : t.text))}
@@ -350,10 +427,10 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
           <textarea
             ref={taRef}
             className="ex-editor__input"
-            value={value}
-            placeholder={placeholder || 'e.g. $sum(amount) + 1000'}
+            value={displayedValue}
+            placeholder={mode === 'plain' ? "e.g. amount = 5 · amount == 5 and status = 'open' · if(amount > 50000) then 'High' else 'Low' · Sum(items) > 1000" : (placeholder || 'e.g. $sum(amount) + 1000')}
             spellCheck={false}
-            onChange={handleChange}
+            onChange={mode === 'plain' ? handlePlainChange : handleChange}
             onKeyDown={handleKeyDown}
             onBlur={() => { setSuggestions(null); }}
             onFocus={openSuggestions}
@@ -458,10 +535,35 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
           </div>
         )}
 
+        {mode === 'plain' && value.trim() && (
+          <div className="ex-editor__preview">
+            <span className="ex-editor__preview-label">JSONata:</span>{' '}
+            {transpile.ok ? (
+              <code>{transpile.jsonata}</code>
+            ) : (
+              <span className="ex-editor__preview-warn">Can't translate yet — fix the syntax above</span>
+            )}
+          </div>
+        )}
+
+        {value.trim() && (
+          <div className="ex-editor__explain">
+            <Lightbulb size={11} className="ex-editor__explain-icon" />
+            <span className="ex-editor__explain-text">
+              <strong>In plain words:</strong>{' '}
+              {plainText ?? (
+                <span className="ex-editor__explain--fallback">
+                  No description — <code>{value}</code>
+                </span>
+              )}
+            </span>
+          </div>
+        )}
+
         <div className="ex-editor__footer">
           <span className={`ex-editor__status ${validation.ok ? 'ex-editor__status--ok' : 'ex-editor__status--err'}`}>
             {validation.ok ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
-            <span>{validation.message || (value.trim() ? 'Expression OK' : 'Empty expression')}</span>
+            <span>{validation.message || (effectiveValue.trim() ? 'Expression OK' : 'Empty expression')}</span>
           </span>
 
           {assignment.isAssignment && (
@@ -471,7 +573,7 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
           )}
 
           <div className="ex-editor__test">
-            <button type="button" className="sails-btn sails-btn--ghost sails-btn--sm" onClick={runTest} disabled={running || !value.trim()}>
+            <button type="button" className="sails-btn sails-btn--ghost sails-btn--sm" onClick={runTest} disabled={running || !effectiveValue.trim()}>
               <Play size={11} /> {running ? 'Running…' : 'Test'}
             </button>
             {testResult && (

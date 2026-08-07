@@ -1,15 +1,48 @@
 import { isNPeriodMacro } from '@sails/shared';
 
 /**
+ * Requestor profile resolved once per workflow execution (lazily, only when a
+ * rule references @wf.requestor.*). `teamId`/`positionId` are first-match,
+ * mirroring the @my_team semantics.
+ */
+export interface WorkflowMacroCtx {
+  variables: Record<string, any>;
+  /** Instance starter (wf_instance.created_by) — the "Requestor". */
+  requestor: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    role?: string | null;
+    title?: string | null;
+    teamId?: string | null;
+    positionId?: string | null;
+  } | null;
+  /** Instance start date (wf_instance.created_at) — the "Request Date". */
+  requestDate: string | null;
+}
+
+/**
  * Resolves Query Studio context macros into concrete scalar values.
  * Multi-value macros (@my_team, @my_subordinates) resolve to their first
  * value initially; date macros return ISO YYYY-MM-DD strings; N-period
  * macros use the rule's N parameter (default 30).
+ *
+ * Workflow macros (workflowCtx provided only by the Workflow Engine):
+ *  - @wf.requestor          → instance starter user id
+ *  - @wf.requestor.name     → starter's name
+ *  - @wf.requestor.email    → starter's email
+ *  - @wf.requestor.role     → starter's role
+ *  - @wf.requestor.title    → starter's title (position text)
+ *  - @wf.requestor.team     → starter's first team id
+ *  - @wf.requestor.position → starter's first position id
+ *  - @wf.request_date       → instance start date (ISO)
+ *  - @var.<name>            → workflow variable value (scalars only)
  */
 export function resolveContextMacro(
   macro: string,
   n: number | undefined,
-  ctx: { userId: string; teams: { teamId: string }[]; role: string }
+  ctx: { userId: string; teams: { teamId: string }[]; role: string },
+  workflowCtx?: WorkflowMacroCtx,
 ): string {
   const today = new Date();
   const iso = (d: Date) => {
@@ -28,6 +61,34 @@ export function resolveContextMacro(
     return `${today.getFullYear()}-${String(q * 3 + 1).padStart(2, '0')}-01`;
   };
   const startOfYear = () => `${today.getFullYear()}-01-01`;
+
+  // ── Workflow namespace (only resolvable inside a workflow execution) ──
+  if (macro.startsWith('@wf.') || macro.startsWith('@var.')) {
+    if (!workflowCtx) return macro;
+    if (macro === '@wf.requestor') return workflowCtx.requestor?.id || '';
+    if (macro === '@wf.request_date') return workflowCtx.requestDate || iso(new Date());
+    if (macro.startsWith('@wf.requestor.')) {
+      const attr = macro.slice('@wf.requestor.'.length);
+      const r = workflowCtx.requestor;
+      switch (attr) {
+        case 'name': return r?.name || '';
+        case 'email': return r?.email || '';
+        case 'role': return r?.role || '';
+        case 'title': return r?.title || '';
+        case 'team': return r?.teamId || '';
+        case 'position': return r?.positionId || '';
+        default: return '';
+      }
+    }
+    if (macro.startsWith('@var.')) {
+      const name = macro.slice('@var.'.length);
+      const v = workflowCtx.variables?.[name];
+      if (v === undefined || v === null) return '';
+      if (typeof v === 'object') return ''; // collections / records are not scalar
+      return String(v);
+    }
+    return '';
+  }
 
   const N = n && n > 0 ? n : 30;
 

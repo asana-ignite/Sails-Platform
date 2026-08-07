@@ -10,41 +10,121 @@
  */
 import { db } from '@/lib/db';
 import { pool } from '@/lib/knex';
+import { QueryLayer } from './QueryLayer';
 import { WorkflowEventContext, WorkflowEventPlugin, WorkflowEventResult } from '@/core/registry/WorkflowEventPlugin';
 import { executeScript, SandboxContext } from './ScriptSandbox';
-import { genId, logWfAction, quoteIdent, resolveTenantSchema } from './WorkflowHelpers';
-
-// JSONata is loaded once at module level (module cache after the first call);
-// the lazy guard keeps the engine functional if the dependency is missing.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const jsonataLib: ((expr: string) => any) | null = (() => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return require('jsonata') as (expr: string) => any;
-  } catch {
-    return null;
-  }
-})();
+import { evaluateJsonata, genId, logWfAction, quoteIdent, resolveTenantSchema } from './WorkflowHelpers';
+import { normalizeFilters, serializeFilterGroups, validateCollectionValue, validateRecordValue, WORKFLOW_EVENT_CONFIGS } from '@sails/shared';
+import type { SessionContext } from '@/lib/auth/session';
+import { MailService } from '@/services/MailService';
+import { resolveRecipients, renderTemplate, insertBellNotification, resolveAttachments } from './notifications';
+import { preprocessFilterGroups } from './filterPreprocess';
+import type { WorkflowMacroCtx } from './contextMacros';
 
 function fail(ctx: WorkflowEventContext, error: string): WorkflowEventResult {
   return { success: false, error };
 }
 
-/** Evaluate a JSONata expression against an input. */
-async function evaluateJsonata(
-  expression: string,
-  input: any,
-): Promise<{ ok: boolean; value?: any; error?: string }> {
-  if (!jsonataLib) {
-    return { ok: false, error: 'JSONata engine is not available — add the jsonata dependency to sails-core' };
-  }
+/** Build a minimal SessionContext from the workflow event context (role fetched from DB). */
+async function buildSession(ctx: WorkflowEventContext): Promise<SessionContext> {
+  let role = 'rls_user';
   try {
-    const expressionFn = jsonataLib(expression);
-    const value = await expressionFn.evaluate(input);
-    return { ok: true, value };
-  } catch (error: any) {
-    return { ok: false, error: error?.message || String(error) };
+    const u = await db.user.findUnique({
+      where: { id: ctx.session.userId },
+      select: { role: true },
+    });
+    if (u?.role) role = u.role;
+  } catch { /* keep default */ }
+  return {
+    userId: ctx.session.userId,
+    tenantId: ctx.tenantId,
+    role,
+    email: '',
+    teams: [],
+    activeTeamId: ctx.session.teamId || undefined,
+  };
+}
+
+/** Fetch table metadata needed by QueryLayer.listRecords. */
+async function resolveTableMeta(tenantId: string, tableName: string) {
+  const table = await db.tableDefinition.findFirst({
+    where: { tenantId, tableName },
+    include: { fields: true },
+  });
+  if (!table) return null;
+  const validFields = new Set<string>(table.fields.map((f) => f.fieldName));
+  const textTypes = new Set(['text','varchar','string','char','email','phone','url','description']);
+  const textFields = table.fields
+    .filter((f) => textTypes.has((f.physicalType || '').toLowerCase()))
+    .map((f) => f.fieldName);
+  const jsonbFields = new Set<string>(
+    table.fields
+      .filter((f) => (f.physicalType || '').toLowerCase() === 'jsonb')
+      .map((f) => f.fieldName),
+  );
+  return { table, validFields, textFields, jsonbFields };
+}
+
+/** Serialize Record Event filterGroups into QueryLayer-compatible filter rules. */
+function serializeRecordFilters(groups: any[], fields: any[]): any[] {
+  if (!groups || !groups.length) return [];
+  const findField = (idOrName: string) =>
+    (fields || []).find((f: any) => f.id === idOrName || f.fieldName === idOrName);
+  const normalized = normalizeFilters(groups);
+  return serializeFilterGroups(normalized, (fieldId) => findField(fieldId)?.fieldName || null);
+}
+
+/**
+ * Builds the workflow macro context lazily — only when a serialized rule
+ * references the workflow namespace (@wf.requestor*, @wf.request_date,
+ * @var.<name>). Resolves the instance starter (wf_instance.created_by) and
+ * start date in one query each.
+ */
+async function buildWorkflowCtx(
+  ctx: WorkflowEventContext,
+  schema: string,
+  filterGroups: any[],
+): Promise<WorkflowMacroCtx | null> {
+  const needsWorkflowCtx = filterGroups.some((g) =>
+    g?.rules?.some((r: any) =>
+      typeof r.value === 'string' && (r.value.startsWith('@wf.') || r.value.startsWith('@var.'))
+    )
+  );
+  if (!needsWorkflowCtx) return null;
+
+  const inst = await pool.query(
+    `SELECT created_by, created_at FROM ${quoteIdent(schema)}.wf_instance WHERE id = $1`,
+    [ctx.instanceId],
+  );
+  const requestorId = (inst.rows[0]?.created_by as string) || ctx.session.userId || '';
+  const createdAt = inst.rows[0]?.created_at as Date | undefined;
+
+  let requestor: WorkflowMacroCtx['requestor'] = null;
+  if (requestorId) {
+    const u = await db.user.findUnique({
+      where: { id: requestorId },
+      include: { teams: true, positionSlots: true },
+    });
+    if (u) {
+      requestor = {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        title: u.title,
+        teamId: u.teams?.[0]?.teamId || null,
+        positionId: u.positionSlots?.[0]?.positionId || null,
+      };
+    }
   }
+
+  let requestDate: string | null = null;
+  if (createdAt) {
+    const d = new Date(createdAt);
+    requestDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  return { variables: ctx.variables || {}, requestor, requestDate };
 }
 
 // ─── Record Event ─────────────────────────────────────────────
@@ -52,7 +132,8 @@ async function evaluateJsonata(
 const recordEventPlugin: WorkflowEventPlugin = {
   type: 'record',
   label: 'Record Event',
-  description: 'Read a record from a model and store it to a workflow variable',
+  description: 'CRUD on a model via QueryLayer (RLS-enforced)',
+  parametersSchema: WORKFLOW_EVENT_CONFIGS.record,
   async execute(ctx) {
     const { eventConfig } = ctx;
     const model = eventConfig.model as string | undefined;
@@ -60,56 +141,222 @@ const recordEventPlugin: WorkflowEventPlugin = {
     const storeToVariable = eventConfig.storeToVariable as string | undefined;
 
     if (!model) return fail(ctx, 'Record Event requires config.model');
-    if (operation !== 'read') {
-      return fail(ctx, `Record Event operation '${operation}' is not supported yet — only 'read' is available in v1`);
-    }
-    if (!storeToVariable) return { success: true };
+    if (!/^[a-z][a-z0-9_]*$/.test(model)) return fail(ctx, `Invalid model name '${model}'`);
 
     const schema = await resolveTenantSchema(ctx.tenantId);
     if (!schema) return fail(ctx, 'Tenant schema not found');
-    if (!/^[a-z][a-z0-9_]*$/.test(model)) return fail(ctx, `Invalid model name '${model}'`);
 
     try {
-      const t = quoteIdent(model);
-      const res = await pool.query(
-        `SELECT * FROM ${quoteIdent(schema)}.${t} WHERE "tenant_id" = $1 LIMIT 25`,
-        [ctx.tenantId],
-      );
-      const rows = res.rows.map((r: any) => ({ ...r }));
-      return { success: true, output: { [storeToVariable]: rows } };
+      const meta = await resolveTableMeta(ctx.tenantId, model);
+      if (!meta) return fail(ctx, `Model '${model}' not found`);
+      const filterGroups = serializeRecordFilters(eventConfig.filterGroups, meta.table.fields);
+      const ses = await buildSession(ctx);
+      if (filterGroups.length > 0) {
+        // Resolve drill chains, record sources and context/workflow macros
+        // (@today, @me, @wf.requestor, @var.<name>, …) before SQL generation.
+        const workflowCtx = await buildWorkflowCtx(ctx, schema, filterGroups);
+        await preprocessFilterGroups({
+          session: ses,
+          tableName: model,
+          tableFields: meta.table.fields,
+          filterGroups,
+          workflowCtx: workflowCtx || undefined,
+        });
+      }
+
+      let stored: any = null;
+
+      // ── Read (single record) ──
+      if (operation === 'read') {
+        const filters: Record<string, string> = {};
+        // Honor the configured target record (trigger default = ctx.recordId).
+        const targetId = resolveTargetId(ctx, eventConfig);
+        if (targetId) filters['id:eq'] = targetId;
+        const result = await QueryLayer.listRecords(pool, schema, model, {
+          filters,
+          filterGroups,
+          limit: 1, page: 1,
+          validFields: meta.validFields,
+          textFields: meta.textFields,
+          jsonbFields: meta.jsonbFields,
+        });
+        stored = result.rows[0] || null;
+      }
+
+      // ── List (many records) ──
+      else if (operation === 'list') {
+        const result = await QueryLayer.listRecords(pool, schema, model, {
+          filterGroups,
+          limit: 25, page: 1,
+          validFields: meta.validFields,
+          textFields: meta.textFields,
+          jsonbFields: meta.jsonbFields,
+        });
+        stored = result.rows;
+      }
+
+      // ── Create ──
+      else if (operation === 'create') {
+        const payload: Record<string, any> = {};
+        const mapping: { sourceVar: string; targetCol: string }[] = eventConfig.fieldMapping || [];
+        for (const m of mapping) {
+          payload[m.targetCol] = ctx.variables[m.sourceVar];
+        }
+        stored = await QueryLayer.insertRecord(pool, schema, model, payload, ses);
+      }
+
+      // ── Update ──
+      else if (operation === 'update') {
+        const targetId = resolveTargetId(ctx, eventConfig);
+        if (!targetId) return fail(ctx, 'Record Event update requires a target record id');
+        const data: Record<string, any> = {};
+        const mapping: { sourceVar: string; targetCol: string }[] = eventConfig.fieldMapping || [];
+        for (const m of mapping) {
+          data[m.targetCol] = ctx.variables[m.sourceVar];
+        }
+        stored = await QueryLayer.updateRecord(pool, schema, model, targetId, data, ses);
+      }
+
+      // ── Delete ──
+      else if (operation === 'delete') {
+        const targetId = resolveTargetId(ctx, eventConfig);
+        if (!targetId) return fail(ctx, 'Record Event delete requires a target record id');
+        stored = await QueryLayer.deleteRecord(pool, schema, model, targetId, ses);
+      }
+
+      else {
+        return fail(ctx, `Operation '${operation}' is not supported`);
+      }
+
+      // Validate the stored value against the bound variable's declared structure.
+      if (storeToVariable && stored !== null && stored !== undefined) {
+        const varDef = (ctx.variableDefs || []).find((v: any) => v.name === storeToVariable);
+        if (varDef) {
+          if (varDef.fieldType === 'record') {
+            const row = Array.isArray(stored) ? stored[0] : stored;
+            const check = validateRecordValue(row, varDef.columns || []);
+            if (!check.ok) {
+              return fail(ctx, `Record Event result does not match variable '${storeToVariable}' structure: ${check.errors.slice(0, 3).join('; ')}`);
+            }
+          } else {
+            const shape = {
+              itemType: varDef.itemType || (varDef.fieldType === 'collection' ? 'any' : undefined),
+              columns: varDef.columns || [],
+            };
+            if (varDef.fieldType === 'collection' || shape.itemType) {
+              const toValidate = Array.isArray(stored) ? stored : [stored];
+              const result = validateCollectionValue(toValidate, shape);
+              if (!result.ok) {
+                return fail(ctx, `Record Event result does not match variable '${storeToVariable}' structure: ${result.errors.slice(0, 3).join('; ')}`);
+              }
+            }
+          }
+        }
+      }
+
+      return { success: true, output: storeToVariable ? { [storeToVariable]: stored } : {} };
     } catch (error: any) {
       return fail(ctx, `Record Event failed: ${error?.message || error}`);
     }
   },
 };
 
+/**
+ * Resolve the target record id for update/delete operations from the event
+ * config: 'trigger' uses ctx.recordId, 'variable' reads from the named
+ * workflow variable, 'literal' uses the literal value.
+ */
+function resolveTargetId(ctx: WorkflowEventContext, config: Record<string, any>): string | null {
+  const targetType = (config.targetType as string) || 'trigger';
+  if (targetType === 'trigger') return ctx.recordId || null;
+  if (targetType === 'variable') {
+    const v = config.targetValue as string | undefined;
+    return v ? (ctx.variables[v] as string) ?? null : null;
+  }
+  // literal
+  return (config.targetValue as string) || null;
+}
+
 // ─── Notification Event ───────────────────────────────────────
 
 const notificationEventPlugin: WorkflowEventPlugin = {
   type: 'notification',
   label: 'Notification',
-  description: 'Record a bell/email notification for a recipient',
+  description: 'Send bell / email notifications to resolved recipients',
+  parametersSchema: WORKFLOW_EVENT_CONFIGS.notification,
   async execute(ctx) {
     const { eventConfig } = ctx;
     const channel = (eventConfig.channel as string) || 'bell';
-    const recipients = eventConfig.recipients as string | undefined;
-    const subject = eventConfig.subject as string | undefined;
-    const message = eventConfig.message as string | undefined;
+    const recipientsRaw = (eventConfig.recipients as string) || '';
+    const subjectTpl = (eventConfig.subject as string) || '';
+    const bodyTpl = (eventConfig.message as string) || '';
 
     const schema = await resolveTenantSchema(ctx.tenantId);
     if (!schema) return fail(ctx, 'Tenant schema not found');
 
-    try {
-      await logWfAction(schema, ctx.instanceId, ctx.stageId, 'notify', ctx.session.userId, {
+    if (!recipientsRaw) {
+      return fail(ctx, 'Notification Event requires recipients');
+    }
+
+    const recordValues = ctx.record?.values?.id ? ctx.record.values : (ctx.variables ?? {});
+    const recipients = await resolveRecipients(ctx.tenantId, recipientsRaw, ctx.variables);
+    if (recipients.length === 0) {
+      // No concrete recipients — warn but don't error (template may resolve later).
+      await logWfAction(schema, ctx.instanceId, ctx.stageId, 'notify:no_recipients', ctx.session.userId, {
         channel,
-        recipients: recipients || null,
-        subject: subject || null,
-        message: message || null,
+        recipientsRaw: recipientsRaw || null,
       });
       return { success: true };
-    } catch (error: any) {
-      return fail(ctx, `Notification Event failed: ${error?.message || error}`);
     }
+
+    const subject = renderTemplate(subjectTpl, ctx.variables, ctx.record);
+    const body = renderTemplate(bodyTpl, ctx.variables, ctx.record);
+
+    const emailRecipients = recipients
+      .filter((r) => r.email)
+      .map((r) => r.email)
+      .filter((v, i, a) => a.indexOf(v) === i); // dedupe emails
+
+    let bellCount = 0;
+    let emailResult: any = null;
+
+    // ── Bell ──
+    if (channel === 'bell' || channel === 'both') {
+      bellCount = await insertBellNotification(schema, ctx.instanceId, recipients, subject, body);
+      await logWfAction(schema, ctx.instanceId, ctx.stageId, 'notify:bell', ctx.session.userId, {
+        channel,
+        recipients: recipients.map((r) => r.userId || r.email).join(', '),
+        count: bellCount,
+      });
+    }
+
+    // ── Email ──
+    if ((channel === 'email' || channel === 'both') && emailRecipients.length > 0) {
+      emailResult = await MailService.send({
+        to: emailRecipients,
+        subject: subject || ctx.variables['workflow_name'] || 'Workflow notification',
+        html: body || subject || '',
+        tenantId: ctx.tenantId,
+        connectionId: eventConfig.emailConnectionId as string | undefined,
+        attachments: resolveAttachments(
+          eventConfig.attachments as any[] | undefined,
+          ctx.record,
+          ctx.variables,
+        ),
+      });
+      await logWfAction(schema, ctx.instanceId, ctx.stageId,
+        emailResult.ok ? 'notify:email' : 'notify:email:error', ctx.session.userId, {
+          to: emailRecipients,
+          subject,
+          status: emailResult.ok ? 'sent' : 'failed',
+          error: emailResult.error || null,
+        });
+      if (!emailResult.ok) {
+        return fail(ctx, `Email delivery failed: ${emailResult.error}`);
+      }
+    }
+
+    return { success: true, output: { notified: bellCount + emailRecipients.length } };
   },
 };
 
@@ -119,6 +366,7 @@ const approvalEventPlugin: WorkflowEventPlugin = {
   type: 'approval',
   label: 'Task Approval',
   description: 'Create an approval task assigned to a router (user/team/position/role/field)',
+  parametersSchema: WORKFLOW_EVENT_CONFIGS.approval,
   async execute(ctx) {
     const { eventConfig } = ctx;
     const routerType = (eventConfig.routerType as string) || 'role';
@@ -167,6 +415,7 @@ function makeJsonataEvent(type: 'expression' | 'transform', label: string, descr
     type,
     label,
     description,
+    parametersSchema: WORKFLOW_EVENT_CONFIGS[type],
     async execute(ctx) {
       const { eventConfig } = ctx;
       const expression = eventConfig.expression as string | undefined;
@@ -202,6 +451,7 @@ const scriptEventPlugin: WorkflowEventPlugin = {
   type: 'script',
   label: 'Script Event',
   description: 'Execute a tenant BYOC script in the sandbox',
+  parametersSchema: WORKFLOW_EVENT_CONFIGS.script,
   async execute(ctx) {
     const { eventConfig } = ctx;
     const scriptId = eventConfig.scriptId as string | undefined;
@@ -252,7 +502,33 @@ const scriptEventPlugin: WorkflowEventPlugin = {
     if (!result.ok) {
       return { success: false, output: result.recordValues || undefined, error: result.error };
     }
-    return { success: true, output: { ...result.variables, ...(result.recordValues || {}) } };
+
+    // Validate the script's variable mutations against the declared structures.
+    const merged = { ...result.variables, ...(result.recordValues || {}) };
+    for (const v of ctx.variableDefs || []) {
+      if (merged[v.name] === undefined) continue;
+      if (v.fieldType === 'record') {
+        const check = validateRecordValue(merged[v.name], v.columns || []);
+        if (!check.ok) {
+          return {
+            success: false,
+            error: `Script result for variable '${v.name}' does not match its structure: ${check.errors.slice(0, 3).join('; ')}`,
+          };
+        }
+        continue;
+      }
+      if (v.fieldType !== 'collection' && !v.itemType) continue;
+      const shape = { itemType: v.itemType || 'any', columns: v.columns || [] };
+      const check = validateCollectionValue(merged[v.name], shape);
+      if (!check.ok) {
+        return {
+          success: false,
+          error: `Script result for variable '${v.name}' does not match its structure: ${check.errors.slice(0, 3).join('; ')}`,
+        };
+      }
+    }
+
+    return { success: true, output: merged };
   },
 };
 

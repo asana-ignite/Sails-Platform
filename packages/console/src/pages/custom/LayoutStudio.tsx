@@ -7,7 +7,7 @@
  * Permission: requires SUPER_ADMIN or TENANT_ADMIN role.
  * TODO: refine when RBAC capability system supports 'layouts.design'
  */
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   GripVertical, Plus, X, Eye, EyeOff, Trash2, MoveUp, MoveDown,
@@ -16,7 +16,7 @@ import {
   ArrowLeft, Loader2, Play, Pause, Minimize2, Maximize2, CheckCircle2,
   Layers, Search, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown,
   RotateCcw, AlignLeft, AlignCenter, AlignRight,
-  Edit3, Zap, Undo2, AlertTriangle, Database, ExternalLink,
+  Edit3, Zap, Undo2, Redo2, AlertTriangle, Database, ExternalLink,
   MousePointerClick, Smartphone, List, PanelRight, History,
 } from 'lucide-react';
 import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction, MobileViewMode } from '@sails/shared';
@@ -439,6 +439,19 @@ function listOperatorLabel(op: string): string {
 
 const MAX_SORT_RULES = 3;
 
+// ─── Undo / Redo history ─────────────────────────────────────
+
+/** Deep-cloneable snapshot of one view's editor config. */
+interface LsSnapshot {
+  viewType: ViewType;
+  config: any;
+}
+
+const HISTORY_MAX_ENTRIES = 50;
+/** Rapid successive changes (typing, quick clicks) coalesce into one entry. */
+const HISTORY_COALESCE_MS = 500;
+const HISTORY_VIEWS: ViewType[] = ['LIST', 'DETAIL', 'FORM'];
+
 // ─── Main Component ───────────────────────────────────────────
 
 const LayoutStudio: React.FC = () => {
@@ -536,6 +549,20 @@ const LayoutStudio: React.FC = () => {
   const [listSelectedActionId, setListSelectedActionId] = useState<string | null>(null);
   const [listMobileViewMode, setListMobileViewMode] = useState<MobileViewMode>('table');
 
+  // ── Undo / Redo history (per-view stacks) ──
+  const [undoStack, setUndoStack] = useState<Record<string, LsSnapshot[]>>(
+    Object.fromEntries(HISTORY_VIEWS.map((v) => [v, []])) as Record<string, LsSnapshot[]>
+  );
+  const [redoStack, setRedoStack] = useState<Record<string, LsSnapshot[]>>(
+    Object.fromEntries(HISTORY_VIEWS.map((v) => [v, []])) as Record<string, LsSnapshot[]>
+  );
+  const baselineRef = useRef<Record<string, LsSnapshot | null>>({ LIST: null, DETAIL: null, FORM: null });
+  const historyReadyRef = useRef(false);      // arming after the initial layout fetch
+  const justLoadedRef = useRef(false);        // one-shot: sync baseline without recording
+  const suppressHistoryRef = useRef(false);   // one-shot: undo/redo applies themselves
+  const gestureActiveRef = useRef(false);     // sticky: live resize gestures (column / block width)
+  const lastPushTimeRef = useRef(0);          // coalescing window anchor
+
   useEffect(() => {
     if (!tableId) { setFetchError('No table ID provided'); setFetchLoading(false); return; }
     if (tableId === '_custom') {
@@ -621,6 +648,10 @@ const LayoutStudio: React.FC = () => {
       } catch (err: any) {
         console.error('Failed to load layout config:', err);
       }
+      // Arm undo/redo only after the config has been fanned out, so the
+      // initial fetch never records a phantom "empty layout" entry.
+      historyReadyRef.current = true;
+      justLoadedRef.current = true;
     };
     loadLayout();
   }, [layoutId]);
@@ -827,7 +858,10 @@ const LayoutStudio: React.FC = () => {
       const newSpan = Math.max(1, Math.min(12, resizing.startSpan + colDelta));
       updateBlock(resizing.blockId, { width: newSpan });
     };
-    const onUp = () => setResizing(null);
+    const onUp = () => {
+      setResizing(null);
+      gestureActiveRef.current = false;
+    };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
     return () => {
@@ -885,7 +919,10 @@ const LayoutStudio: React.FC = () => {
         })
       );
     };
-    const onUp = () => setListColResizing(null);
+    const onUp = () => {
+      setListColResizing(null);
+      gestureActiveRef.current = false;
+    };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
     return () => {
@@ -963,6 +1000,105 @@ const LayoutStudio: React.FC = () => {
     return { sections, blocks };
   };
 
+  // ── Undo / Redo engine ──
+
+  const makeSnapshot = (): LsSnapshot => ({
+    viewType,
+    config: JSON.parse(JSON.stringify(serializeLayout())),
+  });
+
+  /** Restore a snapshot's config into the editor state (mirrors the load effect fan-out). */
+  const applySnapshot = (snap: LsSnapshot) => {
+    const c = snap.config || {};
+    if (snap.viewType === 'LIST') {
+      setListColumns(Array.isArray(c.columns) ? c.columns : []);
+      setListFilters(normalizeFilters(Array.isArray(c.filters) ? c.filters : []));
+      setListSortBy(Array.isArray(c.sortBy) ? c.sortBy : []);
+      setListSummaryFields(Array.isArray(c.summaryFields) ? c.summaryFields : []);
+      setListActions(Array.isArray(c.actions) ? c.actions : []);
+      setListAllowMultiSelect(!!c.allowMultiSelect);
+      setListAllowPaging(!!c.allowPaging);
+      setListRecordsPerPage(typeof c.recordsPerPage === 'number' ? c.recordsPerPage : 25);
+      setListPagingMode((c.pagingMode as 'fixed' | 'dynamic') || 'fixed');
+      setListAllowInlineEdit(!!c.allowInlineEdit);
+      setListAllowInlineCreate(!!c.allowInlineCreate);
+      setListAllowInlineDelete(!!c.allowInlineDelete);
+      setListMobileViewMode((c.mobileViewMode as MobileViewMode) || 'table');
+      setListSelectedColId(null);
+      setListSelectedFiltId(null);
+      setListSelectedActionId(null);
+    } else {
+      setSections(Array.isArray(c.sections) && c.sections.length > 0 ? c.sections : [newSection()]);
+      setBlocks(Array.isArray(c.blocks) ? c.blocks : []);
+      setSelectedBlockId(null);
+      setSelectedSectionId(null);
+    }
+  };
+
+  /** Record the current state as a discrete gesture (one undo step for the whole drag). */
+  const pushGestureSnapshot = () => {
+    const v = viewType;
+    const snap = makeSnapshot();
+    setUndoStack((s) => ({ ...s, [v]: [...s[v], snap].slice(-HISTORY_MAX_ENTRIES) }));
+    setRedoStack((s) => ({ ...s, [v]: [] }));
+    gestureActiveRef.current = true;
+  };
+
+  // Watch effect: runs after every render, cheap JSON diff against the
+  // per-view baseline. Pushes a history entry only when the current view's
+  // config actually changed. One-shot flags prevent the load / undo / redo
+  // applications themselves from being recorded.
+  useEffect(() => {
+    const snap = makeSnapshot();
+    const v = snap.viewType;
+    if (!historyReadyRef.current || justLoadedRef.current || suppressHistoryRef.current || gestureActiveRef.current) {
+      if (justLoadedRef.current) justLoadedRef.current = false;
+      if (suppressHistoryRef.current) suppressHistoryRef.current = false;
+      baselineRef.current[v] = snap;
+      return;
+    }
+    const prev = baselineRef.current[v];
+    if (prev && JSON.stringify(prev.config) !== JSON.stringify(snap.config)) {
+      const now = Date.now();
+      const coalescing = now - lastPushTimeRef.current < HISTORY_COALESCE_MS;
+      setUndoStack((s) => {
+        const stack = s[v] || [];
+        const next = coalescing && stack.length > 0
+          ? [...stack.slice(0, -1), prev]
+          : [...stack, prev];
+        lastPushTimeRef.current = now;
+        return { ...s, [v]: next.slice(-HISTORY_MAX_ENTRIES) };
+      });
+      setRedoStack((s) => ({ ...s, [v]: [] }));
+    }
+    baselineRef.current[v] = snap;
+  });
+
+  const handleUndo = () => {
+    const v = viewType;
+    const past = undoStack[v] || [];
+    if (past.length === 0 || !isEditing || previewMode) return;
+    const prev = past[past.length - 1];
+    setUndoStack((s) => ({ ...s, [v]: s[v].slice(0, -1) }));
+    setRedoStack((s) => ({ ...s, [v]: [...s[v], makeSnapshot()] }));
+    suppressHistoryRef.current = true;
+    applySnapshot(prev);
+  };
+
+  const handleRedo = () => {
+    const v = viewType;
+    const future = redoStack[v] || [];
+    if (future.length === 0 || !isEditing || previewMode) return;
+    const next = future[future.length - 1];
+    setRedoStack((s) => ({ ...s, [v]: s[v].slice(0, -1) }));
+    setUndoStack((s) => ({ ...s, [v]: [...s[v], makeSnapshot()] }));
+    suppressHistoryRef.current = true;
+    applySnapshot(next);
+  };
+
+  const canUndo = (undoStack[viewType] || []).length > 0;
+  const canRedo = (redoStack[viewType] || []).length > 0;
+
   // ── Action Registry Helpers ──
   const availableListActionPlugins = useMemo(() => actionRegistry.getActionsByCategory('list'), []);
 
@@ -1006,6 +1142,24 @@ const LayoutStudio: React.FC = () => {
         return;
       }
 
+      // Undo / Redo: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl/Cmd+Y.
+      // Skipped while typing so the browser handles native text undo.
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && !isInput && isEditing && !previewMode) {
+        const k = e.key.toLowerCase();
+        if (k === 'z') {
+          e.preventDefault();
+          if (e.shiftKey) handleRedo();
+          else handleUndo();
+          return;
+        }
+        if (k === 'y') {
+          e.preventDefault();
+          handleRedo();
+          return;
+        }
+      }
+
       if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
         if (listSelectedActionId) {
           const act = listActions.find((a) => a.id === listSelectedActionId);
@@ -1021,7 +1175,7 @@ const LayoutStudio: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [listSelectedActionId, listSelectedColId, listActions]);
+  }, [listSelectedActionId, listSelectedColId, listActions, undoStack, redoStack, viewType, isEditing, previewMode]);
 
   const handleSaveClick = () => {
     setSaveError(null);
@@ -1896,6 +2050,7 @@ const LayoutStudio: React.FC = () => {
     e.stopPropagation();
     if (isReadOnly) return;
     const grid = (e.currentTarget as HTMLElement).closest('.ls-section__grid') as HTMLElement;
+    pushGestureSnapshot();
     setResizing({ blockId, startX: e.clientX, startSpan: currentSpan, sectionElement: grid });
   };
 
@@ -1946,6 +2101,25 @@ const LayoutStudio: React.FC = () => {
             </>
           ) : (
             <>
+              <button
+                className="sails-btn sails-btn--ghost sails-btn--sm"
+                onClick={handleUndo}
+                disabled={!canUndo}
+                title="Undo (Ctrl+Z)"
+                aria-label="Undo"
+              >
+                <Undo2 size={14} />
+              </button>
+              <button
+                className="sails-btn sails-btn--ghost sails-btn--sm"
+                onClick={handleRedo}
+                disabled={!canRedo}
+                title="Redo (Ctrl+Shift+Z)"
+                aria-label="Redo"
+              >
+                <Redo2 size={14} />
+              </button>
+              <span className="ls-toolbar__divider" />
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setPreviewMode(true)}>
                 <Play size={14} /> Preview
               </button>
@@ -2449,7 +2623,7 @@ const LayoutStudio: React.FC = () => {
                                       <button className="ls-th__action ls-th__action--remove" onClick={(e) => { e.stopPropagation(); removeListColumn(col.id); }} title="Remove column"><X size={11} /></button>
                                     </div>
                                   </div>
-                                  <div className="ls-th__resize" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); const th = (e.currentTarget as HTMLElement).closest('th') as HTMLElement; setListColResizing({ columnId: col.id, startX: e.clientX, startWidth: th.offsetWidth, widthUnit: col.widthUnit || '%' }); }} />
+                                  <div className="ls-th__resize" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); const th = (e.currentTarget as HTMLElement).closest('th') as HTMLElement; pushGestureSnapshot(); setListColResizing({ columnId: col.id, startX: e.clientX, startWidth: th.offsetWidth, widthUnit: col.widthUnit || '%' }); }} />
                                 </th>
                               );
                             })}
@@ -3690,10 +3864,9 @@ const LayoutStudio: React.FC = () => {
 
       {/* ── Floating Overlay for Sort/Filter Editing ── */}
       {listOverlayMode && (
-        <div className="ls-overlay" onClick={closeListOverlay}>
+        <div className={`ls-overlay ${listOverlayMode === 'edit-filter' ? 'sails-qstudio-overlay' : ''}`} onClick={closeListOverlay}>
           <div
-            className="ls-overlay-card"
-            style={listOverlayMode === 'edit-filter' ? { width: 1080, maxWidth: '95vw', height: '92vh', maxHeight: '95vh', minHeight: 560 } : undefined}
+            className={`ls-overlay-card ${listOverlayMode === 'edit-filter' ? 'sails-qstudio-modal' : ''}`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="ls-overlay-card__header">

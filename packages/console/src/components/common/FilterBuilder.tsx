@@ -6,6 +6,10 @@ import FieldPathPicker from './FieldPathPicker';
 import type { FieldDefinition as PickerField } from './FieldPathPicker';
 import type { FilterGroup, FilterRule, SailsFieldDefinition, FilterValueSource } from '@sails/shared';
 import { CONTEXT_FLAT_OPTIONS, isNPeriodMacro } from '@sails/shared';
+import { useDateTimePrefs, resolveControlDisplayText } from '../../utils/systemDateTime';
+import { SailsDatePicker } from '../../features/controls/plugins/DateControl';
+import { SailsDateTimePicker } from '../../features/controls/plugins/DateTimeControl';
+import { SailsTimePicker } from '../../features/controls/plugins/TimeControl';
 import './FilterBuilder.css';
 
 export const FILTER_OPERATOR_OPTIONS = [
@@ -114,6 +118,13 @@ interface FilterBuilderProps {
   onCancel?: () => void;
   showHeader?: boolean;
   title?: string;
+  /**
+   * Extra options appended to the Context source dropdown (category headers
+   * must use the `cat_` prefix and disabled: true, like CONTEXT_FLAT_OPTIONS).
+   * Used by Workflow Studio to expose workflow context macros and workflow
+   * variables; other QueryStudio hosts leave this unset.
+   */
+  extraContextOptions?: { value: string; label: string; disabled?: boolean }[];
 }
 
 export const FilterBuilder: React.FC<FilterBuilderProps> = ({
@@ -124,8 +135,13 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
   onCancel,
   showHeader = true,
   title = 'Edit View Filters',
+  extraContextOptions,
 }) => {
+  const dateTimePrefs = useDateTimePrefs();
   const modelSchemas = useModelSchemas(fields, rootTableName);
+  const contextOptions = extraContextOptions && extraContextOptions.length > 0
+    ? [...CONTEXT_FLAT_OPTIONS, ...extraContextOptions]
+    : CONTEXT_FLAT_OPTIONS;
   const [groups, setGroups] = useState<FilterGroup[]>(
     initialGroups.length > 0 ? initialGroups : [emptyGroup(fields, '1')]
   );
@@ -237,10 +253,42 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
         />
       );
     }
-    const dateLike = lt === 'date' || lt === 'datetime' || lt === 'timestamp' || lt === 'time';
+    // Date-like fields reuse the same themed pickers as the record detail
+    // form (SailsDatePicker / SailsDateTimePicker / SailsTimePicker) instead
+    // of the browser-native calendar, which cannot be themed.
+    if (lt === 'date') {
+      return (
+        <SailsDatePicker
+          value={rule.value || ''}
+          displayText={resolveControlDisplayText(undefined, rule.value, dateTimePrefs, 'date')}
+          onChange={(v) => updateRule(rule.id, { value: v })}
+          placeholder="Select date..."
+        />
+      );
+    }
+    if (lt === 'datetime' || lt === 'timestamp') {
+      return (
+        <SailsDateTimePicker
+          value={rule.value || ''}
+          displayText={resolveControlDisplayText(undefined, rule.value, dateTimePrefs, 'datetime')}
+          onChange={(v) => updateRule(rule.id, { value: v })}
+          placeholder="Select date & time..."
+        />
+      );
+    }
+    if (lt === 'time') {
+      return (
+        <SailsTimePicker
+          value={rule.value || ''}
+          displayText={resolveControlDisplayText(undefined, rule.value, dateTimePrefs, 'time')}
+          onChange={(v) => updateRule(rule.id, { value: v })}
+          placeholder="Select time..."
+        />
+      );
+    }
     return (
       <input
-        type={dateLike ? 'date' : 'text'}
+        type="text"
         className="sails-input fb-value-input"
         value={rule.value || ''}
         onChange={(e) => updateRule(rule.id, { value: e.target.value })}
@@ -305,7 +353,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
         <div className="fb-context-wrap">
           <CustomSelect
             value={rule.contextMacro || '@me'}
-            options={CONTEXT_FLAT_OPTIONS}
+            options={contextOptions}
             onChange={(v) => {
               const valStr = String(v);
               if (valStr.startsWith('cat_')) return;
@@ -350,7 +398,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
     const source = rule.valueSource || 'value';
     if (source === 'context') {
       const macro = rule.contextMacro || '@me';
-      const opt = CONTEXT_FLAT_OPTIONS.find((o) => o.value === macro);
+      const opt = contextOptions.find((o) => o.value === macro);
       return isNPeriodMacro(macro) ? `${opt?.label || macro} (${rule.contextN ?? 30})` : (opt?.label || macro);
     }
     if (source === 'field') {

@@ -26,6 +26,7 @@ model Tenant {
   companyProfile  CompanyProfile?
   workflowDefinitions WorkflowDefinition[]
   recordScripts   RecordScript[]
+  emailConnections EmailConnection[]
 
   @@index([createdAt])
   @@map("tenants")
@@ -635,5 +636,53 @@ model RecordScript {
 
   @@index([tenantId, isActive])
   @@map("record_scripts")
+  @@schema("core")
+}
+
+// ─── Email Connections ────────────────────────────────────────
+//
+// Tenant SMTP / OAuth email settings.  Customer data lives in tenant
+// schemas — this table stores configuration only (SMTP credentials are
+// AES-encrypted at rest).  Google / Exchange Online OAuth fields are
+// reserved for follow-up work; the 'smtp' provider is the v1 default.
+
+model EmailConnection {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  name      String
+  provider  String   @default("smtp")   // 'smtp' | 'google' | 'exchange_online' | 'exchange_onprem'
+  isDefault Boolean  @default(false) @map("is_default")
+  isActive  Boolean  @default(true)  @map("is_active")
+
+  // SMTP transport
+  smtpHost   String? @map("smtp_host")
+  smtpPort   Int?    @map("smtp_port")
+  smtpSecure Boolean? @default(false) @map("smtp_secure")
+
+  // Authentication
+  authType   String? @map("auth_type")   // 'basic' | 'oauth2' | 'none'
+  username   String?
+  password   String?                       // encrypted (basic auth)
+
+  // OAuth2 (per-tenant — Google / Exchange Online)
+  oauthClientId     String?  @map("oauth_client_id")
+  oauthClientSecret String?  @map("oauth_client_secret")   // encrypted
+  oauthTenantId     String?  @map("oauth_tenant_id")
+  oauthRefreshToken String?  @map("oauth_refresh_token")   // encrypted
+  oauthAccessToken  String?  @map("oauth_access_token")    // encrypted
+  oauthTokenExpiry  DateTime? @map("oauth_token_expiry")
+
+  // Sender envelope
+  fromName  String  @map("from_name")
+  fromEmail String  @map("from_email")
+  replyTo   String? @map("reply_to")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt       @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, isActive])
+  @@map("email_connections")
   @@schema("core")
 }

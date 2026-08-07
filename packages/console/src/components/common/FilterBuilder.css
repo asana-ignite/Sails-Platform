@@ -235,6 +235,31 @@
   min-width: 0;
 }
 
+/* Theme-aligned date/time pickers (same components as the record detail
+   form) sized to match the compact 32px rule rows. */
+.fb-col-value .sails-picker__wrapper {
+  width: 100%;
+}
+
+.fb-col-value .sails-input.sails-date-input-container,
+.fb-col-value .sails-input.sails-datetime-input-container,
+.fb-col-value .sails-input.sails-time-input-container {
+  height: 32px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  border-radius: var(--sails-radius-sm, 6px);
+}
+
+.fb-col-value .sails-picker__text {
+  font-size: 0.8rem;
+}
+
+.fb-col-value .sails-date-popover,
+.fb-col-value .sails-datetime-popover,
+.fb-col-value .sails-time-popover {
+  font-size: 0.78rem;
+}
+
 .fb-record-wrap {
   display: flex;
   flex-direction: column;

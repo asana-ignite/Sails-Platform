@@ -10,6 +10,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@sails/shared": "workspace:*",
+        "@tiptap/core": "^3.29.2",
         "@tiptap/extension-font-family": "^3.29.2",
         "@tiptap/extension-link": "^3.29.2",
         "@tiptap/extension-table": "^3.29.2",
@@ -47,6 +48,7 @@
         "jsonata": "^2.2.2",
         "next": "^14.0.0",
         "next-auth": "^4.24.14",
+        "nodemailer": "^6.9.0",
         "pg": "^8.11.3",
         "pg-format": "^1.0.4",
         "react": "^18.2.0",
@@ -470,6 +472,8 @@
     "node-fetch-native": ["node-fetch-native@1.6.7", "", {}, "sha512-g9yhqoedzIUm0nTnTqAQvueMPVOuIY16bqgAJJC8XOOubYFNwz6IER9qs0Gq2Xd0+CecCKFjtdDTMA4u4xG06Q=="],
 
     "node-releases": ["node-releases@2.0.51", "", {}, "sha512-wRNIrw4DmVLKQlbgOMdkMx27Wrpzes2hh5Jtbi2bjPd+4wJstWIqP5A+lscnqbm0xxmT5Bpg8Lec5ItEBwx6BQ=="],
+
+    "nodemailer": ["nodemailer@6.10.1", "", {}, "sha512-Z+iLaBGVaSjbIzQ4pX6XV41HrooLsQ10ZWPUehGmuantvzWoDVBnmsdUcOIDM1t+yPor5pDhVlDESgOMEGxhHA=="],
 
     "nypm": ["nypm@0.6.8", "", { "dependencies": { "citty": "^0.2.2", "pathe": "^2.0.3", "tinyexec": "^1.2.4" }, "bin": { "nypm": "./dist/cli.mjs" } }, "sha512-Q9K4Diu6l5u6xJQogeFSs/zKtyMSgFKFtRQV+tHP4kL7KPm2grpBU0dFIwFaXwNxN0MtfKWc43VpCugAa+LPsw=="],
 

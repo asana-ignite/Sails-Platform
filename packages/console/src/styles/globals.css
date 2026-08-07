@@ -273,6 +273,20 @@ textarea {
   gap: 12px;
 }
 
+/* Query Studio modal — single standard size shared by ObjectManager,
+   LayoutStudio (List View filters) and WorkflowStudio (Start Condition) */
+.sails-qstudio-overlay {
+  z-index: 10000;
+}
+
+.sails-qstudio-modal {
+  width: 1080px !important;
+  max-width: 95vw !important;
+  height: 92vh !important;
+  max-height: 95vh !important;
+  min-height: 560px !important;
+}
+
 /* Global Form System */
 .sails-form-group {
   margin-bottom: 20px;

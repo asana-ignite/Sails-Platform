@@ -464,6 +464,29 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
     }
   };
 
+  // Browser tab title: "Sails - <primary column value>" (e.g. "Sails - INV-0001").
+  // Uses the layout's configured recordTitleField; skipped for stacked cards so
+  // the underlying page keeps its tab title. The ConsoleProvider effect re-runs
+  // after navigation and restores the menu/app title.
+  useEffect(() => {
+    if (inStack) return;
+    const titleField = layout?.recordTitleField
+      ? fields.find((f) => f.id === layout.recordTitleField)
+        || fields.find((f) => f.fieldName === layout.recordTitleField)
+        || fields.find((f) => f.name === layout.recordTitleField)
+      : null;
+    const primaryTitle = isNewMode
+      ? `New ${tableName ? tableName.charAt(0).toUpperCase() + tableName.slice(1) : 'Record'}`
+      : record
+      ? (titleField && record[titleField.fieldName] != null && record[titleField.fieldName] !== ''
+          ? record[titleField.fieldName]
+          : record.name || record.title || record.label || record.id)
+      : null;
+    if (primaryTitle) {
+      document.title = `Sails - ${primaryTitle}`;
+    }
+  }, [record, isNewMode, layout, fields, tableName, recordId, inStack]);
+
   if (loading) {
     return inStack ? (
       <div className="record-detail-card record-detail-card--loading">

@@ -14,17 +14,20 @@ import {
   Link2, Split, CheckCircle2, AlertTriangle,
   Layers, ChevronsUpDown, Braces, MousePointer2,
   CornerUpLeft, Unlink, History, RotateCcw, Maximize2, Minimize2,
-  Pencil, Save, Play, Wand2, Globe, ArrowRight,
+  Pencil, Save, Play, Wand2, Globe, ArrowRight, Undo2, Redo2, FunctionSquare,
 } from 'lucide-react';
 import ExpressionEditor from '../__mockups__/ExpressionEditor';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { FilterBuilder } from '../../components/common/FilterBuilder';
+import { DynamicIcon } from '../../components/common/DynamicIcon';
 import type { FilterGroup, SailsTableDefinition } from '@sails/shared';
 import { fetchCached } from '../../api/client';
 import jsonata from 'jsonata';
 import { useAuth } from '../../contexts/AuthContext';
 import Unauthorized from '../Unauthorized';
 import LoadingScreen from '../../components/common/LoadingScreen';
+import { WorkflowEventWizard } from '../../components/workflow/WorkflowEventWizard';
+import type { WorkflowEventType as SharedWorkflowEventType } from '@sails/shared';
 import './WorkflowStudio.css';
 
 // ─── Types ────────────────────────────────────────────────────
@@ -35,10 +38,16 @@ type LayoutMode = 'chain' | 'canvas';
 type Port = 'top' | 'right' | 'bottom' | 'left';
 type Timing = 'stage_enter' | 'stage_exit';
 
+type CondBuilderTarget =
+  | { kind: 'entry'; stageId: string }
+  | { kind: 'branch'; stageId: string; branchId: string }
+  | { kind: 'startBranch'; branchId: string };
+
 interface WorkflowEvent {
   id: string;
   type: WorkflowEventType;
   label: string;
+  description?: string;
   timing?: Timing;
   config: Record<string, any>;
 }
@@ -47,6 +56,16 @@ interface WorkflowVariable {
   id: string;
   name: string;
   fieldType: string;
+  /** Record schema source: bound tenant model or inline custom fields. */
+  schemaMode?: 'model' | 'custom';
+  /** Collection items: 'record' | 'any' | scalar types. */
+  itemType?: string;
+  /** itemType === 'record' (or fieldType 'record') — the model the rows came from (physical table name). */
+  targetModel?: string;
+  /** Record schema snapshot (field name / label / type). */
+  columns?: { fieldName: string; label: string; logicalType: string; targetModel?: string }[];
+  /** The Record Event whose result populates this variable (structure owner). */
+  boundEventId?: string;
   defaultValue?: any;
 }
 
@@ -175,11 +194,61 @@ const EVENT_DEFS: { type: WorkflowEventType; label: string; desc: string; icon: 
   { type: 'script', label: 'Script Event', desc: 'BYOC sandbox', icon: <Workflow size={13} />, color: '#8b5cf6' },
 ];
 
-const FIELD_TYPES = [
-  'short_text', 'long_text', 'rich_text', 'number', 'decimal', 'currency',
-  'percentage', 'boolean', 'date', 'datetime', 'time', 'select', 'relation',
-  'user', 'phone', 'email', 'auto_number',
+const VAR_TYPES: { value: string; label: string }[] = [
+  { value: 'text', label: 'Text' },
+  { value: 'long_text', label: 'Long Text' },
+  { value: 'number', label: 'Number' },
+  { value: 'decimal', label: 'Decimal' },
+  { value: 'date', label: 'Date' },
+  { value: 'datetime', label: 'Date & Time' },
+  { value: 'time', label: 'Time' },
+  { value: 'user', label: 'User' },
+  { value: 'boolean', label: 'Boolean' },
+  { value: 'collection', label: 'Collection' },
+  { value: 'record', label: 'Record' },
 ];
+
+const VAR_TYPE_LABELS: Record<string, string> = Object.fromEntries(VAR_TYPES.map((t) => [t.value, t.label]));
+
+/** Icon name + tint per variable type (icons from core FieldTypePlugin registry). */
+const VAR_TYPE_ICON_NAMES: Record<string, string> = {
+  text: 'Type',
+  long_text: 'AlignLeft',
+  number: 'Hash',
+  decimal: 'Hash',
+  date: 'Calendar',
+  datetime: 'CalendarDays',
+  time: 'Clock',
+  user: 'UserCheck',
+  boolean: 'ToggleLeft',
+  collection: 'Layers',
+  record: 'Database',
+};
+
+const VAR_TYPE_COLORS: Record<string, string> = {
+  text: '#3b82f6',
+  long_text: '#3b82f6',
+  number: '#8b5cf6',
+  decimal: '#8b5cf6',
+  date: '#f59e0b',
+  datetime: '#f59e0b',
+  time: '#f59e0b',
+  user: '#0ea5e5',
+  boolean: '#10b981',
+  collection: '#ec4899',
+  record: '#3b82f6',
+};
+
+/** Scalar types usable inside a custom record schema. */
+const VAR_FIELD_TYPES = VAR_TYPES.filter((t) => t.value !== 'collection' && t.value !== 'record').map((t) => t.value);
+
+/** Legacy fieldType → canonical type (saved workflows). `boolean`/`relation` pass through. */
+const LEGACY_VAR_TYPE_MAP: Record<string, string> = {
+  short_text: 'text', rich_text: 'text', email: 'text', phone: 'text', select: 'text',
+  currency: 'decimal', percentage: 'decimal', auto_number: 'number',
+};
+
+const normalizeVarType = (t: string): string => LEGACY_VAR_TYPE_MAP[t] || t;
 
 const TRIGGER_OPS: { value: string; label: string; desc: string }[] = [
   { value: 'insert', label: 'Inserted', desc: 'Starts when a new record is created.' },
@@ -210,13 +279,14 @@ function genId(prefix: string): string { _counter++; return `${prefix}_${Date.no
 
 function newEvent(type: WorkflowEventType): WorkflowEvent {
   const id = genId('ev');
+  const base = { id, type, description: '' };
   switch (type) {
-    case 'record': return { id, type, label: 'Record Event', config: { model: 'Contracts', operation: 'read', storeToVariable: '' } };
-    case 'notification': return { id, type, label: 'Notification', config: { channel: 'bell', recipients: '', subject: '', message: '' } };
-    case 'approval': return { id, type, label: 'Task Approval', config: { routerType: 'role', routerValue: '', routerLabel: 'Approver', canApprove: true, canReject: true, timeoutHours: null } };
-    case 'expression': return { id, type, label: 'Expression', config: { expression: '', assignToVariable: '' } };
-    case 'transform': return { id, type, label: 'Transform', config: { expression: '', assignToVariable: '' } };
-    case 'script': return { id, type, label: 'Script', config: { scriptId: '', scriptName: '', timeoutMs: 5000 } };
+    case 'record': return { ...base, label: 'Record Event', config: { model: 'Contracts', operation: 'read', storeToVariable: '' } };
+    case 'notification': return { ...base, label: 'Notification', config: { channel: 'bell', recipients: '', subject: '', message: '' } };
+    case 'approval': return { ...base, label: 'Task Approval', config: { routerType: 'role', routerValue: '', routerLabel: 'Approver', canApprove: true, canReject: true, timeoutHours: null } };
+    case 'expression': return { ...base, label: 'Expression', config: { expression: '', assignToVariable: '' } };
+    case 'transform': return { ...base, label: 'Transform', config: { expression: '', assignToVariable: '' } };
+    case 'script': return { ...base, label: 'Script', config: { scriptId: '', scriptName: '', timeoutMs: 5000 } };
   }
 }
 
@@ -234,7 +304,44 @@ function newBranch(): BranchCondition {
 }
 
 function newVariable(): WorkflowVariable {
-  return { id: genId('var'), name: '', fieldType: 'short_text' };
+  return { id: genId('var'), name: '', fieldType: 'text' };
+}
+
+/** Summary row + f(x) button that opens the condition builder. */
+function ConditionRow({
+  value,
+  emptyText,
+  onOpen,
+  onClear,
+  disabled,
+}: {
+  value: string;
+  emptyText: string;
+  onOpen: () => void;
+  onClear?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="ws-condition-row">
+      <span className="ws-condition-summary">
+        {value ? <code className="ws-entry-cond-code" title={value}>{value}</code> : emptyText}
+      </span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+        {value && onClear && (
+          <button className="ws-icon-btn" title="Clear condition" onClick={onClear} disabled={disabled}><X size={12} /></button>
+        )}
+        <button
+          className="sails-btn sails-btn--ghost"
+          onClick={onOpen}
+          disabled={disabled}
+          title="Open condition builder"
+          aria-label="Open condition builder"
+        >
+          <FunctionSquare size={14} />
+        </button>
+      </span>
+    </div>
+  );
 }
 
 function emptyProcess(): RoutingProcess {
@@ -245,6 +352,18 @@ function emptyProcess(): RoutingProcess {
     variables: [], startEvents: [], startBranches: [], stages: [],
   };
 }
+
+// ─── Undo / Redo history ─────────────────────────────────────
+
+/** Deep-cloneable snapshot of the editor state (process + start node position). */
+interface WorkflowSnapshot {
+  process: RoutingProcess;
+  startPos: Pt;
+}
+
+const HISTORY_MAX_ENTRIES = 50;
+/** Rapid successive changes (typing, quick clicks) coalesce into one entry. */
+const HISTORY_COALESCE_MS = 500;
 
 // ─── Geometry ─────────────────────────────────────────────────
 
@@ -304,8 +423,149 @@ function roundedOrthogonalPath(pts: Pt[]): string {
   return d;
 }
 
-function edgeMidpoint(a: Pt, b: Pt, fromPort: Port = 'bottom', toPort: Port = 'top', aW = NODE_W, aH = NODE_H, bW = NODE_W, bH = NODE_H): Pt {
-  const pts = orthogonalPoints(a, b, fromPort, toPort, aW, aH, bW, bH);
+/** Axis-aligned obstacle rectangle (a stage or the Start node). */
+interface Rect { x: number; y: number; w: number; h: number; }
+
+/** Clearance kept between a detoured edge and the obstacle it routes around. */
+const OBSTACLE_MARGIN = 20;
+
+function rectsIntersect(a: Pt, b: Pt, r: Rect): boolean {
+  const minX = Math.min(a.x, b.x), maxX = Math.max(a.x, b.x);
+  const minY = Math.min(a.y, b.y), maxY = Math.max(a.y, b.y);
+  return maxX > r.x && minX < r.x + r.w && maxY > r.y && minY < r.y + r.h;
+}
+
+function findBlocker(pts: Pt[], obstacles: Rect[]): { segIdx: number; rect: Rect } | null {
+  // The first and last segments are the short port stubs at the nodes — they
+  // legitimately touch the source/target rects, so they are never detoured.
+  for (let i = 1; i < pts.length - 2; i++) {
+    for (const r of obstacles) {
+      if (rectsIntersect(pts[i], pts[i + 1], r)) return { segIdx: i, rect: r };
+    }
+  }
+  return null;
+}
+
+function dedupePts(pts: Pt[]): Pt[] {
+  const out: Pt[] = [];
+  for (const p of pts) {
+    const last = out[out.length - 1];
+    if (!last || last.x !== p.x || last.y !== p.y) out.push(p);
+  }
+  return out;
+}
+
+/**
+ * Re-route the tail of an edge so the final approach never slices through the
+ * target node. A plain orthogonal route enters left/right ports with a
+ * horizontal leg at the port's height (the target's vertical center) — when
+ * the source is above/below the target that leg crosses the stage body. The
+ * same applies mirrored for top/bottom ports from a side source. This swings
+ * the approach out to a gutter waypoint clear of the target and into the port.
+ */
+function normalizeTargetApproach(
+  pts: Pt[],
+  b: Pt, bW: number, bH: number,
+  toPort: Port,
+): Pt[] {
+  if (pts.length < 4) return pts;
+  const n = pts.length;
+  const approach = pts[n - 3]; // bend before the entry stub
+  const stubEnd = pts[n - 2];  // e1 — just outside the port
+  const target: Rect = { x: b.x, y: b.y, w: bW, h: bH };
+  if (!rectsIntersect(approach, stubEnd, target)) return pts; // approach is already clear
+
+  const srcSide = pts[1]; // source stub end — indicates which side the source is on
+  const portY = b.y + bH / 2;
+  const portX = b.x + bW / 2;
+  let tail: Pt[];
+  if (toPort === 'left' || toPort === 'right') {
+    const gutterX = toPort === 'left' ? b.x - OBSTACLE_MARGIN : b.x + bW + OBSTACLE_MARGIN;
+    const levelY = srcSide.y <= b.y ? b.y - OBSTACLE_MARGIN : b.y + bH + OBSTACLE_MARGIN;
+    tail = [
+      { x: approach.x, y: levelY },
+      { x: gutterX, y: levelY },
+      { x: gutterX, y: portY },
+    ];
+  } else {
+    const gutterY = toPort === 'top' ? b.y - OBSTACLE_MARGIN : b.y + bH + OBSTACLE_MARGIN;
+    const levelX = srcSide.x <= b.x ? b.x - OBSTACLE_MARGIN : b.x + bW + OBSTACLE_MARGIN;
+    tail = [
+      { x: levelX, y: approach.y },
+      { x: levelX, y: gutterY },
+      { x: portX, y: gutterY },
+    ];
+  }
+  return dedupePts([...pts.slice(0, n - 3), ...tail, pts[n - 1]]);
+}
+
+/**
+ * Orthogonal route that avoids the given obstacle rectangles. Starts with the
+ * plain orthogonal path; whenever a segment passes through an obstacle, the
+ * segment is pushed to the obstacle's nearer side and the route is re-checked
+ * (up to a few passes) so the line never crosses a stage.
+ */
+function routeOrthogonal(
+  a: Pt, b: Pt, fromPort: Port, toPort: Port,
+  aW: number, aH: number, bW: number, bH: number,
+  obstacles: Rect[],
+): Pt[] {
+  let pts = orthogonalPoints(a, b, fromPort, toPort, aW, aH, bW, bH);
+  // 1. Never slice through the target — swing the approach out to a gutter.
+  pts = normalizeTargetApproach(pts, b, bW, bH, toPort);
+  // 2. Route around every stage/Start node, including the edge's own source
+  //    and target bodies (the port stubs are exempt inside findBlocker).
+  const all: Rect[] = [
+    ...obstacles,
+    { x: a.x, y: a.y, w: aW, h: aH },
+    { x: b.x, y: b.y, w: bW, h: bH },
+  ];
+  for (let pass = 0; pass < 4; pass++) {
+    const blocker = findBlocker(pts, all);
+    if (!blocker) break;
+    const { segIdx, rect } = blocker;
+    const p1 = pts[segIdx];
+    const p2 = pts[segIdx + 1];
+    const vertical = p1.x === p2.x;
+    const insert: Pt[] = vertical
+      ? [
+        { x: (p1.x - (rect.x - OBSTACLE_MARGIN)) <= ((rect.x + rect.w + OBSTACLE_MARGIN) - p1.x)
+            ? rect.x - OBSTACLE_MARGIN : rect.x + rect.w + OBSTACLE_MARGIN, y: p1.y },
+        { x: (p1.x - (rect.x - OBSTACLE_MARGIN)) <= ((rect.x + rect.w + OBSTACLE_MARGIN) - p1.x)
+            ? rect.x - OBSTACLE_MARGIN : rect.x + rect.w + OBSTACLE_MARGIN, y: p2.y },
+      ]
+      : [
+        { x: p1.x, y: (p1.y - (rect.y - OBSTACLE_MARGIN)) <= ((rect.y + rect.h + OBSTACLE_MARGIN) - p1.y)
+            ? rect.y - OBSTACLE_MARGIN : rect.y + rect.h + OBSTACLE_MARGIN },
+        { x: p2.x, y: (p1.y - (rect.y - OBSTACLE_MARGIN)) <= ((rect.y + rect.h + OBSTACLE_MARGIN) - p1.y)
+            ? rect.y - OBSTACLE_MARGIN : rect.y + rect.h + OBSTACLE_MARGIN },
+      ];
+    pts = dedupePts([...pts.slice(0, segIdx + 1), ...insert, ...pts.slice(segIdx + 1)]);
+  }
+  return pts;
+}
+
+/**
+ * Pull both ends of a polyline back from the node ports by `trim` pixels.
+ * Used as the invisible click band so ports stay grabbable while the rest of
+ * the line keeps a wide hit area.
+ */
+function trimPolyline(pts: Pt[], trim = 12): Pt[] {
+  if (pts.length <= 2) return pts;
+  const start = pts[1];
+  const dirStart = { x: Math.sign(start.x - pts[0].x) || 0, y: Math.sign(start.y - pts[0].y) || 0 };
+  const end = pts[pts.length - 2];
+  const last = pts[pts.length - 1];
+  const dirEnd = { x: Math.sign(end.x - last.x) || 0, y: Math.sign(end.y - last.y) || 0 };
+  return [
+    { x: start.x - dirStart.x * trim, y: start.y - dirStart.y * trim },
+    ...pts.slice(2, pts.length - 2),
+    { x: end.x - dirEnd.x * trim, y: end.y - dirEnd.y * trim },
+  ];
+}
+
+/** Midpoint along a polyline (for edge labels). */
+function polylineMidpoint(pts: Pt[]): Pt {
   let total = 0;
   for (let i = 0; i < pts.length - 1; i++) total += Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
   let target = total / 2;
@@ -378,6 +638,18 @@ export const WorkflowStudio: React.FC = () => {
   const [draggingEdgePort, setDraggingEdgePort] = useState<{ branchId: string; side: 'from' | 'to' } | null>(null);
   const [dragPaletteType, setDragPaletteType] = useState<WorkflowEventType | null>(null);
 
+  // ── Undo / Redo history ──
+  const [undoStack, setUndoStack] = useState<WorkflowSnapshot[]>([]);
+  const [redoStack, setRedoStack] = useState<WorkflowSnapshot[]>([]);
+  const baselineRef = useRef<WorkflowSnapshot | null>(null);
+  const historyReadyRef = useRef(false);        // arming after the initial fetch (or on new workflow)
+  const justLoadedRef = useRef(false);          // one-shot: sync baseline without recording
+  const suppressHistoryRef = useRef(false);     // one-shot: undo/redo applies themselves
+  const gestureActiveRef = useRef(false);       // sticky: live drag gestures
+  const pendingGestureRef = useRef<WorkflowSnapshot | null>(null); // pre-gesture snapshot, committed on first move
+  const lastPushTimeRef = useRef(0);            // coalescing window anchor
+  const isActiveStatus = def?.status === 'active';
+
   // Panels
   const [paletteWidth, setPaletteWidth] = useState(240);
   const [propsWidth, setPropsWidth] = useState(320);
@@ -389,6 +661,27 @@ export const WorkflowStudio: React.FC = () => {
   const [propsResizing, setPropsResizing] = useState(false);
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
 
+  /**
+   * QueryStudio Context-source options specific to workflows: requestor
+   * drill-down macros and scalar workflow variables (@var.<name>), resolved
+   * per instance at execution time by the Workflow Engine.
+   */
+  const workflowContextOptions = useMemo(() => {
+    const scalarVars = process.variables.filter((v) => v.fieldType !== 'collection' && v.fieldType !== 'record');
+    return [
+      { value: 'cat_Workflow', label: '\u2500\u2500 Workflow \u2500\u2500', disabled: true },
+      { value: '@wf.requestor', label: 'Requestor' },
+      { value: '@wf.requestor.name', label: 'Requestor \u2192 Name' },
+      { value: '@wf.requestor.email', label: 'Requestor \u2192 Email' },
+      { value: '@wf.requestor.role', label: 'Requestor \u2192 Role' },
+      { value: '@wf.requestor.title', label: 'Requestor \u2192 Job Title' },
+      { value: '@wf.requestor.team', label: 'Requestor \u2192 Team' },
+      { value: '@wf.requestor.position', label: 'Requestor \u2192 Position' },
+      { value: '@wf.request_date', label: 'Request Date' },
+      ...scalarVars.map((v) => ({ value: `@var.${v.name}`, label: `${v.name} (${VAR_TYPE_LABELS[v.fieldType] || v.fieldType})` })),
+    ];
+  }, [process.variables]);
+
   // API / UI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -397,14 +690,32 @@ export const WorkflowStudio: React.FC = () => {
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
   const [exprModalEventId, setExprModalEventId] = useState<string | null>(null);
-  const [editingNewVar, setEditingNewVar] = useState(false);
+  const [newVarOpen, setNewVarOpen] = useState(false);
   const [newVarName, setNewVarName] = useState('');
-  const [newVarType, setNewVarType] = useState('short_text');
+  const [newVarType, setNewVarType] = useState('text');
+  const [renameVarId, setRenameVarId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
+
+  const commitRename = (varId: string) => {
+    const name = renameDraft.trim();
+    if (name) updateVariable(varId, { name });
+    setRenameVarId(null);
+  };
+  const [selectedVarId, setSelectedVarId] = useState<string | null>(null);
+  const [varModels, setVarModels] = useState<{ id: string; name: string; tableName: string; fields: any[] }[]>([]);
+  const [confirmUpgradeVar, setConfirmUpgradeVar] = useState<{ eventId: string; varId: string; modelName: string } | null>(null);
   const [startConditionOpen, setStartConditionOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2>(1);
   const [conditionOpen, setConditionOpen] = useState(false);
   const [recordFilterEventId, setRecordFilterEventId] = useState<string | null>(null);
-  const [eventModalEventId, setEventModalEventId] = useState<string | null>(null);
+  /** Config snapshot taken when the event wizard opens — restored on Cancel so
+   * write-through edits don't survive an abandoned wizard session. */
+  const [wizardSnapshot, setWizardSnapshot] = useState<Record<string, any> | null>(null);
+  const [condBuilder, setCondBuilder] = useState<CondBuilderTarget | null>(null);
+  // Drag-and-drop event reordering (chip currently being dropped onto).
+  const [reorderTargetId, setReorderTargetId] = useState<string | null>(null);
+  // Generic Workflow Event configuration wizard (schema-driven).
+  const [wizardEventId, setWizardEventId] = useState<string | null>(null);
   const [tables, setTables] = useState<SailsTableDefinition[]>([]);
 
   useEffect(() => {
@@ -427,6 +738,10 @@ export const WorkflowStudio: React.FC = () => {
   // Simple-mode drag-reorder state: origin (original index + pointer world Y at
   // drag start) and the live pointer world Y — the dragged card glides with it.
   const chainDragRef = useRef<{ stageId: string; startIdx: number; startWorldY: number; grabOffsetWorld: number } | null>(null);
+  /** Suppresses the deselect-click that follows a drag/pan/connect gesture. */
+  const suppressCanvasClickRef = useRef(false);
+  /** Whether the current pan gesture actually moved (distinguishes a click from a pan). */
+  const panMovedRef = useRef(false);
   const [chainDragY, setChainDragY] = useState<number | null>(null);
 
   // Derived
@@ -482,6 +797,18 @@ export const WorkflowStudio: React.FC = () => {
     return out;
   }, [process, layoutMode, startNodePos]);
 
+  // Obstacle rects (stages + Start node) used to route lines around nodes.
+  const edgeObstacles = useMemo(() => {
+    const list: Rect[] = [];
+    process.stages.forEach((s, idx) => {
+      const p = stagePos(idx, s);
+      list.push({ x: p.x, y: p.y, w: NODE_W, h: NODE_H });
+    });
+    list.push({ x: startNodePos.x, y: startNodePos.y, w: START_W, h: startNodeH });
+    return list;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [process, layoutMode, startNodePos, startNodeH]);
+
   // ── Parse URL param ──
   useEffect(() => {
     const path = window.location.pathname;
@@ -510,7 +837,7 @@ export const WorkflowStudio: React.FC = () => {
             startMode: source.startMode || 'record',
             restConfig: { path: '', method: 'POST', headers: '', authToken: '', payloadExample: '', ...(source.restConfig || {}) },
             scheduleConfig: { preset: 'custom', cron: '', timezone: 'UTC', ...(source.scheduleConfig || {}) },
-            variables: source.variables || [],
+            variables: (source.variables || []).map((v: any) => ({ ...v, fieldType: normalizeVarType(v.fieldType) })),
             startEvents: source.startEvents || [],
             startBranches: source.startBranches || [],
             stages: source.stages || [],
@@ -518,16 +845,50 @@ export const WorkflowStudio: React.FC = () => {
         } else {
           setProcess((p) => ({ ...p, name: d.name, description: d.description || '', tableId: d.tableId || null } as any));
         }
-      }).catch((e) => setError(e.message)).finally(() => setLoading(false));
+      }).catch((e) => setError(e.message)).finally(() => {
+        setLoading(false);
+        // Arm undo/redo only after the fetched config has been fanned out, so
+        // the initial load never records a phantom "empty workflow" entry.
+        historyReadyRef.current = true;
+        justLoadedRef.current = true;
+      });
     // eslint-disable-next-line
+  }, [workflowId]);
+
+  // New (unsaved) workflow: arm history immediately so edits are tracked.
+  useEffect(() => {
+    if (!workflowId) {
+      historyReadyRef.current = true;
+      justLoadedRef.current = true;
+    }
   }, [workflowId]);
 
   // ── Keyboard ──
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
       const t = e.target as HTMLElement;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      const isTyping = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+
+      // Undo / Redo: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl/Cmd+Y.
+      // Skipped while typing so the browser handles native text undo.
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && !isTyping && !editingLabelId && !isActiveStatus) {
+        const k = e.key.toLowerCase();
+        if (k === 'z') {
+          e.preventDefault();
+          if (e.shiftKey) handleRedo();
+          else handleUndo();
+          return;
+        }
+        if (k === 'y') {
+          e.preventDefault();
+          handleRedo();
+          return;
+        }
+      }
+
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      if (isTyping) return;
       if (editingLabelId) return;
       e.preventDefault();
       if (selectedEdgeId) {
@@ -543,7 +904,7 @@ export const WorkflowStudio: React.FC = () => {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
     // eslint-disable-next-line
-  }, [selectedStageId, selectedEventId, selectedEdgeId, selectedStart, editingLabelId, process]);
+  }, [selectedStageId, selectedEventId, selectedEdgeId, selectedStart, editingLabelId, process, undoStack, redoStack, isActiveStatus]);
 
   // ── Panel resize ──
   useEffect(() => {
@@ -709,6 +1070,9 @@ export const WorkflowStudio: React.FC = () => {
   const updateEventLabel = (stageId: string, eventId: string, label: string) => {
     setProcess((p) => ({ ...p, stages: p.stages.map((s) => (s.id === stageId ? { ...s, events: s.events.map((e) => (e.id === eventId ? { ...e, label } : e)) } : s)) }));
   };
+  const updateEventDescription = (stageId: string, eventId: string, description: string) => {
+    setProcess((p) => ({ ...p, stages: p.stages.map((s) => (s.id === stageId ? { ...s, events: s.events.map((e) => (e.id === eventId ? { ...e, description } : e)) } : s)) }));
+  };
   const removeEvent = (stageId: string, eventId: string) => {
     setProcess((p) => ({ ...p, stages: p.stages.map((s) => (s.id === stageId ? { ...s, events: s.events.filter((e) => e.id !== eventId) } : s)) }));
     if (selectedEventId === eventId) setSelectedEventId(null);
@@ -725,6 +1089,9 @@ export const WorkflowStudio: React.FC = () => {
   };
   const updateStartEventLabel = (eventId: string, label: string) => {
     setProcess((p) => ({ ...p, startEvents: p.startEvents.map((e) => (e.id === eventId ? { ...e, label } : e)) }));
+  };
+  const updateStartEventDescription = (eventId: string, description: string) => {
+    setProcess((p) => ({ ...p, startEvents: p.startEvents.map((e) => (e.id === eventId ? { ...e, description } : e)) }));
   };
   const removeStartEvent = (eventId: string) => {
     setProcess((p) => ({ ...p, startEvents: p.startEvents.filter((e) => e.id !== eventId) }));
@@ -748,11 +1115,17 @@ export const WorkflowStudio: React.FC = () => {
   };
 
   /** Select the event's host and open the configuration modal. */
-  const openEventModal = (eventId: string) => {
+  /** Open the platform-standard configuration wizard directly (one click after double-click). */
+  const openEventWizard = (eventId: string) => {
     const host = resolveEventHost(eventId);
     if (!host) return;
+    // Snapshot the committed config so Cancel can roll back write-through edits.
+    const ev = host.kind === 'start'
+      ? process.startEvents.find((e) => e.id === eventId)
+      : process.stages.find((s) => s.id === host.stageId)?.events.find((e) => e.id === eventId);
+    setWizardSnapshot(ev ? JSON.parse(JSON.stringify(ev.config || {})) : null);
     setSelectedEventId(eventId);
-    setEventModalEventId(eventId);
+    setWizardEventId(eventId);
     if (host.kind === 'start') {
       setSelectedStart(true);
       setSelectedStageId(null);
@@ -761,6 +1134,79 @@ export const WorkflowStudio: React.FC = () => {
       setSelectedStart(false);
     }
     setSelectedEdgeId(null);
+  };
+
+  /** Write-through: a wizard parameter edit lands directly in the live config. */
+  const updateLiveEventConfig = (eventId: string, name: string, value: any) => {
+    const h = resolveEventHost(eventId);
+    if (!h) return;
+    if (h.kind === 'start') updateStartEventConfig(eventId, { [name]: value });
+    else updateEventConfig(h.stageId, eventId, { [name]: value });
+  };
+
+  const closeWizard = () => { setWizardSnapshot(null); setWizardEventId(null); };
+
+  /** Replace an event's config wholesale (used to roll back a canceled wizard). */
+  const replaceEventConfig = (eventId: string, config: Record<string, any>) => {
+    const host = resolveEventHost(eventId);
+    if (!host) return;
+    if (host.kind === 'start') {
+      setProcess((p) => ({ ...p, startEvents: p.startEvents.map((e) => (e.id === eventId ? { ...e, config } : e)) }));
+    } else {
+      setProcess((p) => ({ ...p, stages: p.stages.map((s) => (s.id === host.stageId ? { ...s, events: s.events.map((e) => (e.id === eventId ? { ...e, config } : e)) } : s)) }));
+    }
+  };
+
+  // ── Drag-and-drop event reordering ──
+  const handleEventDragStart = (e: React.DragEvent, eventId: string) => {
+    e.stopPropagation();
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'ev-reorder', eventId }));
+    e.dataTransfer.effectAllowed = 'move';
+    setReorderTargetId(null);
+  };
+
+  const handleEventDragOver = (e: React.DragEvent, targetEventId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    setReorderTargetId(targetEventId);
+  };
+
+  const handleEventDragLeave = (e: React.DragEvent, targetEventId: string) => {
+    if (reorderTargetId === targetEventId) setReorderTargetId(null);
+  };
+
+  /** Reorder the dragged event to the drop target's slot (same host required). */
+  const handleEventReorderDrop = (e: React.DragEvent, targetEventId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setReorderTargetId(null);
+    const payload = e.dataTransfer.getData('application/json');
+    if (!payload) return;
+    try {
+      const p = JSON.parse(payload);
+      if (p.type !== 'ev-reorder' || !p.eventId || p.eventId === targetEventId) return;
+      const fromId: string = p.eventId;
+      const host = resolveEventHost(fromId);
+      const targetHost = resolveEventHost(targetEventId);
+      if (!host || !targetHost) return;
+      if (host.kind !== targetHost.kind) return;
+      if (host.kind === 'stage' && targetHost.kind === 'stage' && host.stageId !== targetHost.stageId) return;
+
+      setProcess((proc) => {
+        const arr = host.kind === 'start'
+          ? proc.startEvents
+          : (proc.stages.find((s) => s.id === host.stageId)?.events || []);
+        const from = arr.findIndex((ev) => ev.id === fromId);
+        const to = arr.findIndex((ev) => ev.id === targetEventId);
+        if (from === -1 || to === -1 || from === to) return proc;
+        const next = [...arr];
+        const [moved] = next.splice(from, 1);
+        next.splice(from < to ? to - 1 : to, 0, moved);
+        if (host.kind === 'start') return { ...proc, startEvents: next };
+        return { ...proc, stages: proc.stages.map((s) => (s.id === host.stageId ? { ...s, events: next } : s)) };
+      });
+    } catch { /* ignore */ }
   };
 
   // ── Start branch ops ──
@@ -810,14 +1256,141 @@ export const WorkflowStudio: React.FC = () => {
   // ── Variable ops ──
   const addVariable = (name: string, fieldType: string) => {
     if (!name.trim()) return;
-    const v = { ...newVariable(), name: name.trim(), fieldType };
+    const v: WorkflowVariable = { ...newVariable(), name: name.trim(), fieldType };
+    if (fieldType === 'collection') {
+      v.itemType = 'any';
+      v.defaultValue = [];
+    } else if (fieldType === 'record') {
+      v.schemaMode = 'model';
+      v.defaultValue = {};
+    }
     setProcess((p) => ({ ...p, variables: [...p.variables, v] }));
-    setEditingNewVar(false); setNewVarName(''); setNewVarType('short_text');
+    setSelectedVarId(v.id);
+    setNewVarOpen(false); setNewVarName(''); setNewVarType('text');
   };
   const updateVariable = (varId: string, patch: Partial<WorkflowVariable>) => {
     setProcess((p) => ({ ...p, variables: p.variables.map((v) => (v.id === varId ? { ...v, ...patch } : v)) }));
   };
-  const removeVariable = (varId: string) => { setProcess((p) => ({ ...p, variables: p.variables.filter((v) => v.id !== varId) })); };
+  const removeVariable = (varId: string) => {
+    setProcess((p) => ({ ...p, variables: p.variables.filter((v) => v.id !== varId) }));
+    if (selectedVarId === varId) setSelectedVarId(null);
+  };
+
+  const columnsFromModel = (model: { id: string; name: string; tableName: string; fields: any[] }): NonNullable<WorkflowVariable['columns']> =>
+    (model.fields || []).map((f) => ({
+      fieldName: f.fieldName ?? f.columnName ?? f.id,
+      label: f.name ?? f.label ?? f.fieldName,
+      logicalType: f.logicalType ?? f.physicalType ?? 'text',
+      targetModel: (f.logicalType === 'relation' || f.logicalType === 'lookup')
+        ? (f.config?.targetTable ?? f.config?.targetModel ?? undefined)
+        : undefined,
+    }));
+
+  const loadVarModels = async () => {
+    try {
+      const res = await fetch('/api/metadata/objects');
+      const json = await res.json();
+      const rows = Array.isArray(json) ? json : (json?.data ?? []);
+      if (Array.isArray(rows)) {
+        setVarModels(rows.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          tableName: t.tableName,
+          fields: Array.isArray(t.fields) ? t.fields : [],
+        })));
+      }
+    } catch { /* model list is best-effort */ }
+  };
+
+  useEffect(() => { loadVarModels(); }, []);
+
+  /** Suggestion payload for the expression editors (schema included for records). */
+  const varSuggestProps = process.variables.map((v) => ({
+    id: v.id, name: v.name, fieldType: v.fieldType,
+    targetModel: v.targetModel, columns: v.columns,
+  }));
+
+  /** Model tableName → columns map for multi-level record drill-down. */
+  const recordSchemas: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]> = {};
+  for (const m of varModels) recordSchemas[m.tableName] = columnsFromModel(m);
+
+  const sampleForType = (t: string): any =>
+    ['number', 'decimal', 'currency', 'percentage'].includes(t) ? 0 : t === 'boolean' ? false : '';
+
+  /** Build a representative sample value for Test runs (nested records included). */
+  const sampleForVariable = (v: WorkflowVariable): any => {
+    if (v.fieldType === 'collection') {
+      if (v.itemType === 'record' && v.columns?.length) {
+        const row: Record<string, any> = {};
+        for (const c of v.columns) row[c.fieldName] = sampleForType(c.logicalType);
+        return [row];
+      }
+      return [];
+    }
+    if (v.fieldType === 'record') {
+      const rec: Record<string, any> = {};
+      for (const c of v.columns || []) rec[c.fieldName] = sampleForType(c.logicalType);
+      return rec;
+    }
+    if (v.fieldType === 'number' || v.fieldType === 'decimal') return v.defaultValue ?? 0;
+    if (v.fieldType === 'boolean') return v.defaultValue ?? false;
+    return v.defaultValue ?? '';
+  };
+
+  const varSample = Object.fromEntries(process.variables.filter((v) => v.name).map((v) => [v.name, sampleForVariable(v)]));
+
+  const varTypeLabel = (v: WorkflowVariable): string => VAR_TYPE_LABELS[v.fieldType] || v.fieldType;
+
+  // ── Record Event ⇄ variable binding ──
+  const bindVariableToEvent = (varId: string, eventId: string, modelName: string) => {
+    const model = varModels.find((m) => m.tableName === modelName || m.name === modelName || m.id === modelName);
+    updateVariable(varId, {
+      fieldType: 'collection',
+      itemType: 'record',
+      targetModel: modelName,
+      columns: model ? columnsFromModel(model) : undefined,
+      boundEventId: eventId,
+    });
+  };
+
+  const handleStoreToVariableChange = (eventId: string, varName: string, modelName: string) => {
+    if (!varName) {
+      const bound = process.variables.find((v) => v.boundEventId === eventId);
+      if (bound) updateVariable(bound.id, { boundEventId: undefined });
+      return;
+    }
+    const target = process.variables.find((v) => v.name === varName);
+    if (!target) return; // partial name while typing — nothing to bind yet
+    if (target.fieldType === 'collection') {
+      bindVariableToEvent(target.id, eventId, modelName);
+    } else {
+      setConfirmUpgradeVar({ eventId, varId: target.id, modelName });
+    }
+  };
+
+  /** Bidirectional sync: variable model change rewrites Record Events that store into it. */
+  const handleVarModelChange = (varId: string, modelName: string) => {
+    const v = process.variables.find((x) => x.id === varId);
+    const m = varModels.find((x) => x.tableName === modelName || x.name === modelName);
+    updateVariable(varId, { targetModel: modelName || undefined, columns: m ? columnsFromModel(m) : undefined });
+    if (!v || !modelName) return;
+    setProcess((p) => ({
+      ...p,
+      stages: p.stages.map((s) => ({
+        ...s,
+        events: s.events.map((ev) =>
+          ev.type === 'record' && ev.config.storeToVariable === v.name
+            ? { ...ev, config: { ...ev.config, model: modelName, filterGroups: [] } }
+            : ev,
+        ),
+      })),
+      startEvents: p.startEvents.map((ev) =>
+        ev.type === 'record' && ev.config.storeToVariable === v.name
+          ? { ...ev, config: { ...ev.config, model: modelName, filterGroups: [] } }
+          : ev,
+      ),
+    }));
+  };
 
   // ── Canvas interaction ──
   // The world is CSS-scaled by `zoom`, so pointer deltas must be divided by
@@ -830,6 +1403,7 @@ export const WorkflowStudio: React.FC = () => {
   const handleNodePointerDown = (e: React.PointerEvent, stageId: string) => {
     if (connectFrom || e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
+    beginGesture();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setDragging({ id: stageId, kind: 'stage', dx: (e.clientX - rect.left) / zoom, dy: (e.clientY - rect.top) / zoom });
     // Simple mode: remember the drag origin so vertical movement reorders stages
@@ -846,6 +1420,7 @@ export const WorkflowStudio: React.FC = () => {
   const handleStartPointerDown = (e: React.PointerEvent) => {
     if (connectFrom || layoutMode !== 'canvas' || e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
+    beginGesture();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setDragging({ id: '__start__', kind: 'start', dx: (e.clientX - rect.left) / zoom, dy: (e.clientY - rect.top) / zoom });
   };
@@ -884,12 +1459,14 @@ export const WorkflowStudio: React.FC = () => {
   const handleEdgePortPointerDown = (e: React.PointerEvent, branchId: string, side: 'from' | 'to') => {
     e.preventDefault(); e.stopPropagation();
     worldRef.current?.setPointerCapture(e.pointerId);
+    beginGesture();
     setDraggingEdgePort({ branchId, side });
   };
 
   const handleWorldPointerMove = (e: React.PointerEvent) => {
     // Background pan (Canvas mode): drag the empty canvas to scroll the viewport.
     if (panning) {
+      panMovedRef.current = true;
       const canvas = worldRef.current?.closest('.ws-canvas') as HTMLElement | null;
       if (canvas) {
         canvas.scrollLeft = panning.scrollLeft - (e.clientX - panning.startX);
@@ -897,6 +1474,9 @@ export const WorkflowStudio: React.FC = () => {
       }
       return;
     }
+    // First real movement of a drag gesture: commit the pre-gesture snapshot
+    // as a single undo step (subsequent moves are suppressed by gestureActive).
+    commitGestureIfMoved();
     if (draggingEdgePort) {
       const { branchId, side } = draggingEdgePort;
       const pos = getWorldPos(e);
@@ -963,6 +1543,7 @@ export const WorkflowStudio: React.FC = () => {
     const canvas = worldRef.current?.closest('.ws-canvas') as HTMLElement | null;
     if (!canvas) return;
     worldRef.current?.setPointerCapture(e.pointerId);
+    panMovedRef.current = false;
     setPanning({ startX: e.clientX, startY: e.clientY, scrollLeft: canvas.scrollLeft, scrollTop: canvas.scrollTop });
   };
 
@@ -970,10 +1551,18 @@ export const WorkflowStudio: React.FC = () => {
     if (e && worldRef.current?.hasPointerCapture(e.pointerId)) {
       worldRef.current.releasePointerCapture(e.pointerId);
     }
+    // A gesture just ended — the following click would otherwise retarget to the
+    // canvas and clear the selection. Consume it in the canvas onClick handler.
+    // Only a real gesture (drag/connect/pan that actually moved) suppresses the
+    // click — a plain click must still deselect so the Workflow properties show.
+    if (dragging || draggingEdgePort || connectFrom || panMovedRef.current) {
+      suppressCanvasClickRef.current = true;
+    }
     setDragging(null); setDraggingEdgePort(null); setConnectFrom(null); setConnectPos(null);
     chainDragRef.current = null;
     setChainDragY(null);
     setPanning(null);
+    endGesture();
   };
 
   const commitStageLabel = (stageId: string, value: string) => { setEditingLabelId(null); const name = value.trim(); if (name) updateStage(stageId, { name }); };
@@ -1013,6 +1602,92 @@ export const WorkflowStudio: React.FC = () => {
 
   // ── Serialize / Deserialize ──
   const serializeProcess = (): RoutingProcess => ({ ...process });
+
+  // ── Undo / Redo engine ──
+
+  const makeSnapshot = (): WorkflowSnapshot => ({
+    process: JSON.parse(JSON.stringify(process)),
+    startPos: { ...startPos },
+  });
+
+  /** Restore a snapshot into the editor state (mirrors the load fan-out). */
+  const applySnapshot = (snap: WorkflowSnapshot) => {
+    setProcess(JSON.parse(JSON.stringify(snap.process)));
+    setStartPos({ ...snap.startPos });
+    setSelectedStageId(null);
+    setSelectedEventId(null);
+    setSelectedEdgeId(null);
+    setSelectedStart(false);
+    setEditingLabelId(null);
+  };
+
+  /** Start of a live drag gesture: snapshot pre-gesture state, suppress the watch effect. */
+  const beginGesture = () => {
+    gestureActiveRef.current = true;
+    pendingGestureRef.current = makeSnapshot();
+  };
+
+  /** First actual pointer move: commit the pre-gesture snapshot as one undo step. */
+  const commitGestureIfMoved = () => {
+    if (!pendingGestureRef.current) return;
+    const snap = pendingGestureRef.current;
+    pendingGestureRef.current = null;
+    setUndoStack((s) => [...s, snap].slice(-HISTORY_MAX_ENTRIES));
+    setRedoStack([]);
+  };
+
+  /** End of a drag gesture: discard an untouched pending snapshot, re-arm the watch effect. */
+  const endGesture = () => {
+    pendingGestureRef.current = null;
+    gestureActiveRef.current = false;
+  };
+
+  // Watch effect: runs after every render, cheap JSON diff against the
+  // baseline. Pushes a history entry only when the editor state actually
+  // changed. One-shot flags prevent the load / undo / redo applications
+  // themselves from being recorded.
+  useEffect(() => {
+    const snap = makeSnapshot();
+    if (!historyReadyRef.current || justLoadedRef.current || suppressHistoryRef.current || gestureActiveRef.current) {
+      if (justLoadedRef.current) justLoadedRef.current = false;
+      if (suppressHistoryRef.current) suppressHistoryRef.current = false;
+      baselineRef.current = snap;
+      return;
+    }
+    const prev = baselineRef.current;
+    if (prev && JSON.stringify(prev) !== JSON.stringify(snap)) {
+      const now = Date.now();
+      const coalescing = now - lastPushTimeRef.current < HISTORY_COALESCE_MS;
+      setUndoStack((s) => {
+        const next = coalescing && s.length > 0 ? [...s.slice(0, -1), prev] : [...s, prev];
+        lastPushTimeRef.current = now;
+        return next.slice(-HISTORY_MAX_ENTRIES);
+      });
+      setRedoStack([]);
+    }
+    baselineRef.current = snap;
+  });
+
+  const handleUndo = () => {
+    if (isActiveStatus || undoStack.length === 0) return;
+    const prev = undoStack[undoStack.length - 1];
+    setUndoStack((s) => s.slice(0, -1));
+    setRedoStack((s) => [...s, makeSnapshot()]);
+    suppressHistoryRef.current = true;
+    applySnapshot(prev);
+  };
+
+  const handleRedo = () => {
+    if (isActiveStatus || redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack((s) => s.slice(0, -1));
+    setUndoStack((s) => [...s, makeSnapshot()]);
+    suppressHistoryRef.current = true;
+    applySnapshot(next);
+  };
+
+  const canUndo = undoStack.length > 0 && !isActiveStatus;
+  const canRedo = redoStack.length > 0 && !isActiveStatus;
 
   // ── Save ──
   const doSave = async () => {
@@ -1080,7 +1755,7 @@ export const WorkflowStudio: React.FC = () => {
       if (!json.success) throw new Error(json.error);
       setDef(json.data as WorkflowDef);
       const source = json.data.publishedConfig || json.data.config;
-      if (source?.stages) setProcess({ ...process, stages: source.stages, variables: source.variables || [], startEvents: source.startEvents || [], startBranches: source.startBranches || [], triggerOn: source.triggerOn || [], triggerCondition: source.triggerCondition || [], startMode: source.startMode || 'record', restConfig: { path: '', method: 'POST', headers: '', authToken: '', payloadExample: '', ...(source.restConfig || {}) }, scheduleConfig: { preset: 'custom', cron: '', timezone: 'UTC', ...(source.scheduleConfig || {}) } } as any);
+      if (source?.stages) setProcess({ ...process, stages: source.stages, variables: (source.variables || []).map((v: any) => ({ ...v, fieldType: normalizeVarType(v.fieldType) })), startEvents: source.startEvents || [], startBranches: source.startBranches || [], triggerOn: source.triggerOn || [], triggerCondition: source.triggerCondition || [], startMode: source.startMode || 'record', restConfig: { path: '', method: 'POST', headers: '', authToken: '', payloadExample: '', ...(source.restConfig || {}) }, scheduleConfig: { preset: 'custom', cron: '', timezone: 'UTC', ...(source.scheduleConfig || {}) } } as any);
       setSavedMsg('Draft discarded — reverted to published version');
     } catch (e: any) { setSaveError(e?.message || String(e)); }
     finally { setSaving(false); }
@@ -1090,105 +1765,6 @@ export const WorkflowStudio: React.FC = () => {
   if (!allowedRoles.includes(user?.role || '')) return <Unauthorized />;
 
   // ── Render: Properties Panel ──────────────────────────────────
-  /** Full per-event configuration form (used by the event modal). */
-  const renderEventConfigForm = (
-    ev: WorkflowEvent,
-    onUpdate: (eventId: string, patch: Record<string, any>) => void,
-    onLabel: (eventId: string, label: string) => void,
-    onRemove: (eventId: string) => void,
-    isReadonly: boolean,
-  ) => {
-    const d = EVENT_DEFS.find((x) => x.type === ev.type);
-    return (
-      <>
-        <div className="ws-props-group">
-          <label className="ws-props-label">Label</label>
-          <input className="ws-props-input" value={ev.label} onChange={(e) => onLabel(ev.id, e.target.value)} disabled={isReadonly} />
-        </div>
-
-        {ev.type === 'record' && (<>
-          <div className="ws-props-group">
-            <label className="ws-props-label">Target Model</label>
-            <CustomSelect
-              size="sm"
-              searchable
-              value={ev.config.model || ''}
-              options={tables.map((t) => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
-              onChange={(v) => onUpdate(ev.id, { model: String(v), filterGroups: [] })}
-              disabled={isReadonly}
-              placeholder="Select target model..."
-            />
-          </div>
-          <div className="ws-props-group">
-            <label className="ws-props-label">Operation</label>
-            <select className="ws-props-input" value={ev.config.operation || 'read'} onChange={(e) => onUpdate(ev.id, { operation: e.target.value })} disabled={isReadonly}>
-              <option value="create">Create</option>
-              <option value="read">Read (one record)</option>
-              <option value="update">Update</option>
-              <option value="delete">Delete</option>
-              <option value="list">List (many records)</option>
-            </select>
-          </div>
-          {(ev.config.operation === 'read' || ev.config.operation === 'list') && (
-            <div className="ws-props-group">
-              <label className="ws-props-label">Record Filter</label>
-              <button
-                type="button"
-                className="ws-props-input"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}
-                onClick={() => setRecordFilterEventId(ev.id)}
-                disabled={isReadonly}
-                title="Build a filter with QueryStudio"
-              >
-                <Filter size={12} />
-                {(() => {
-                  const n = (ev.config.filterGroups || []).reduce((acc: number, g: any) => acc + (g.rules?.length || 0), 0);
-                  return n > 0 ? `${n} rule${n > 1 ? 's' : ''}` : 'Build filters…';
-                })()}
-              </button>
-            </div>
-          )}
-          <div className="ws-props-group">
-            <label className="ws-props-label">Store result to variable</label>
-            <input className="ws-props-input" value={ev.config.storeToVariable || ''} onChange={(e) => onUpdate(ev.id, { storeToVariable: e.target.value })} disabled={isReadonly} placeholder="e.g. records" />
-          </div>
-        </>)}
-
-        {ev.type === 'notification' && (<>
-          <div className="ws-props-group"><label className="ws-props-label">Channel</label><select className="ws-props-input" value={ev.config.channel || 'bell'} onChange={(e) => onUpdate(ev.id, { channel: e.target.value })} disabled={isReadonly}>{['bell', 'email'].map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
-          <div className="ws-props-group"><label className="ws-props-label">Recipients</label><input className="ws-props-input" value={ev.config.recipients || ''} onChange={(e) => onUpdate(ev.id, { recipients: e.target.value })} disabled={isReadonly} placeholder="user@x or {{variable}}" /></div>
-          <div className="ws-props-group"><label className="ws-props-label">Subject</label><input className="ws-props-input" value={ev.config.subject || ''} onChange={(e) => onUpdate(ev.id, { subject: e.target.value })} disabled={isReadonly} /></div>
-          <div className="ws-props-group"><label className="ws-props-label">Message</label><textarea className="ws-props-input ws-props-textarea" value={ev.config.message || ''} onChange={(e) => onUpdate(ev.id, { message: e.target.value })} disabled={isReadonly} /></div>
-        </>)}
-
-        {ev.type === 'approval' && (<>
-          <div className="ws-props-group"><label className="ws-props-label">Router Type</label><select className="ws-props-input" value={ev.config.routerType || 'role'} onChange={(e) => onUpdate(ev.id, { routerType: e.target.value })} disabled={isReadonly}>{ROUTER_TYPES.map((r) => <option key={r.type} value={r.type}>{r.label}</option>)}</select></div>
-          <div className="ws-props-group"><label className="ws-props-label">Router Value</label><input className="ws-props-input" value={ev.config.routerValue || ''} onChange={(e) => onUpdate(ev.id, { routerValue: e.target.value })} disabled={isReadonly} /></div>
-          <div className="ws-props-group"><label className="ws-props-label">Display Label</label><input className="ws-props-input" value={ev.config.routerLabel || ''} onChange={(e) => onUpdate(ev.id, { routerLabel: e.target.value })} disabled={isReadonly} /></div>
-          <div className="ws-props-group ws-props-check-row"><label><input type="checkbox" checked={!!ev.config.canApprove} onChange={(e) => onUpdate(ev.id, { canApprove: e.target.checked })} disabled={isReadonly} /> Approve</label><label><input type="checkbox" checked={!!ev.config.canReject} onChange={(e) => onUpdate(ev.id, { canReject: e.target.checked })} disabled={isReadonly} /> Reject</label></div>
-          <div className="ws-props-group"><label className="ws-props-label">Timeout (hours)</label><input className="ws-props-input" type="number" min={0} value={ev.config.timeoutHours ?? ''} placeholder="No timeout" onChange={(e) => onUpdate(ev.id, { timeoutHours: e.target.value ? Number(e.target.value) : null })} disabled={isReadonly} /></div>
-        </>)}
-
-        {(ev.type === 'expression' || ev.type === 'transform') && (<>
-          <div className="ws-props-group">
-            <label className="ws-props-label">{ev.type === 'expression' ? 'JSONata Expression' : 'JSONata Transform'}</label>
-            <button className="ws-props-input" style={{ display: 'block', textAlign: 'left', cursor: 'pointer', color: d?.color }} onClick={() => setExprModalEventId(ev.id)}>
-              {ev.config.expression ? <code style={{ fontSize: 11 }}>{ev.config.expression}</code> : <em style={{ color: 'var(--sails-text-muted)' }}>Click to edit expression...</em>}
-            </button>
-          </div>
-          <div className="ws-props-group"><label className="ws-props-label">Assign result to</label><input className="ws-props-input" value={ev.config.assignToVariable || ''} onChange={(e) => onUpdate(ev.id, { assignToVariable: e.target.value })} disabled={isReadonly} placeholder="variable name" /></div>
-        </>)}
-
-        {ev.type === 'script' && (<>
-          <div className="ws-props-group"><label className="ws-props-label">BYOC Script</label><select className="ws-props-input" value={ev.config.scriptId || ''} onChange={(e) => onUpdate(ev.id, { scriptId: e.target.value })} disabled={isReadonly}><option value="">— select —</option><option value="scr_risk_score">Calculate Risk Score</option><option value="scr_erp_sync">Send to ERP</option></select></div>
-          <div className="ws-props-group"><label className="ws-props-label">Timeout (ms)</label><input className="ws-props-input" type="number" min={100} value={ev.config.timeoutMs ?? 5000} onChange={(e) => onUpdate(ev.id, { timeoutMs: e.target.value ? Number(e.target.value) : 5000 })} disabled={isReadonly} /></div>
-        </>)}
-
-        <button className="sails-btn sails-btn--danger sails-btn--sm ws-props-delete-btn" onClick={() => onRemove(ev.id)}><Trash2 size={12} /> Remove Event</button>
-      </>
-    );
-  };
-
   const renderEventConfigForms = (
     events: WorkflowEvent[],
     onUpdate: (eventId: string, patch: Record<string, any>) => void,
@@ -1205,11 +1781,17 @@ export const WorkflowStudio: React.FC = () => {
           const d = EVENT_DEFS.find((x) => x.type === ev.type);
           const isSel = selectedEventId === ev.id;
           return (
-            <div key={ev.id} className={`ws-event-chip ${isSel ? 'ws-event-chip--selected' : ''}`}
+            <div key={ev.id} className={`ws-event-chip ws-event-chip--list ${isSel ? 'ws-event-chip--selected' : ''}${reorderTargetId === ev.id ? ' ws-event-chip--drop-target' : ''}`}
               style={{ borderColor: d?.color, color: d?.color, margin: '2px 12px', cursor: 'pointer' }}
+              draggable
               onClick={() => setSelectedEventId(isSel ? null : ev.id)}
-              onDoubleClick={(e) => { e.stopPropagation(); openEventModal(ev.id); }}
-              title="Double-click to edit configuration"
+              onDoubleClick={(e) => { e.stopPropagation(); openEventWizard(ev.id); }}
+              onDragStart={(e) => handleEventDragStart(e, ev.id)}
+              onDragOver={(e) => handleEventDragOver(e, ev.id)}
+              onDragLeave={(e) => handleEventDragLeave(e, ev.id)}
+              onDrop={(e) => handleEventReorderDrop(e, ev.id)}
+              onDragEnd={() => setReorderTargetId(null)}
+              title="Drag to reorder · double-click to edit"
             >
               {d?.icon}<span>{ev.label}</span>
             </div>
@@ -1235,7 +1817,6 @@ export const WorkflowStudio: React.FC = () => {
           <span className="ws-panel-title"><Settings size={12} /> Workflow</span>
           <button className="ws-props-header__float" onClick={() => setPropsFloating(!propsFloating)} title={propsFloating ? 'Dock panel' : 'Float panel over canvas'}>{propsFloating ? <Maximize2 size={12} /> : <Minimize2 size={12} />}</button>
         </div>
-        <div className="ws-props-section-title">Metadata</div>
         <div className="ws-props-group">
           <label className="ws-props-label">Display Name</label>
           <input className="ws-props-input" value={process.name} onChange={(e) => setProcess((p) => ({ ...p, name: e.target.value }))} disabled={isReadonly} />
@@ -1244,7 +1825,7 @@ export const WorkflowStudio: React.FC = () => {
           <label className="ws-props-label">Description</label>
           <textarea className="ws-props-input ws-props-textarea" value={process.description || ''} onChange={(e) => setProcess((p) => ({ ...p, description: e.target.value }))} disabled={isReadonly} rows={2} />
         </div>
-        <div className="ws-props-section-title">Auto-start Triggers</div>
+        <div className="ws-props-section-title">Start Condition</div>
         <div className="ws-props-group">
           <p className="ws-props-hint" style={{ paddingTop: 0 }}>
             {TRIGGER_OPS.find((o) => o.value === triggerOpOf(process.triggerOn))?.label || 'Inserted Or Updated'}
@@ -1254,27 +1835,76 @@ export const WorkflowStudio: React.FC = () => {
         </div>
         <p className="ws-props-hint">Both API-triggered and model-triggered starts are supported.</p>
 
-        <div className="ws-props-section-title"><Hash size={11} /> Variables ({process.variables.length})</div>
-        {process.variables.length === 0 && <p className="ws-props-hint">Workflow variables are shared across events, branches and scripts.</p>}
-        {process.variables.map((v) => (
-          <div key={v.id} className="ws-var-row" style={{ margin: '0 12px 3px' }}>
-            <span className="ws-var-row__name">{v.name || <em>unnamed</em>}</span>
-            <span className="ws-var-row__type">{v.fieldType}</span>
-            <button className="ws-var-row__remove" onClick={() => removeVariable(v.id)}><X size={10} /></button>
-          </div>
-        ))}
-        {editingNewVar ? (
-          <div className="ws-palette-add-row" style={{ margin: '0 12px' }}>
-            <input className="ws-props-input" style={{ flex: 1 }} placeholder="Variable name" value={newVarName} onChange={(e) => setNewVarName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addVariable(newVarName, newVarType); if (e.key === 'Escape') setEditingNewVar(false); }} autoFocus />
-            <select className="ws-props-input" value={newVarType} onChange={(e) => setNewVarType(e.target.value)} style={{ width: 100 }}>{FIELD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select>
-            <button className="ws-icon-btn" onClick={() => addVariable(newVarName, newVarType)}><CheckCircle2 size={12} /></button>
-            <button className="ws-icon-btn" onClick={() => setEditingNewVar(false)}><X size={12} /></button>
-          </div>
-        ) : (
-          <button className="sails-btn sails-btn--ghost sails-btn--sm" style={{ margin: '0 12px 8px' }} onClick={() => setEditingNewVar(true)} disabled={isReadonly}>
+        <div className="ws-props-section-title ws-var-section-head">
+          <span className="ws-var-section-head__title"><Hash size={11} /> Variables ({process.variables.length})</span>
+          <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setNewVarOpen(true)} disabled={isReadonly}>
             <Plus size={12} /> Add Variable
           </button>
-        )}
+          {newVarOpen && (
+            <div className="ws-var-add-pop" onClick={(e) => e.stopPropagation()}>
+              <label className="ws-props-label">Name</label>
+              <input
+                className="ws-props-input"
+                autoFocus
+                placeholder="Variable name"
+                value={newVarName}
+                onChange={(e) => setNewVarName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && newVarName.trim()) { addVariable(newVarName, newVarType); setNewVarOpen(false); } if (e.key === 'Escape') setNewVarOpen(false); }}
+              />
+              <label className="ws-props-label" style={{ marginTop: 4 }}>Type</label>
+              <CustomSelect
+                searchable
+                value={newVarType}
+                options={VAR_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                onChange={(v) => setNewVarType(String(v))}
+              />
+              <div className="ws-var-add-pop__footer">
+                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setNewVarOpen(false)}>Cancel</button>
+                <button className="sails-btn sails-btn--primary sails-btn--sm" disabled={!newVarName.trim()}
+                  onClick={() => { addVariable(newVarName, newVarType); setNewVarOpen(false); }}>
+                  OK
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        {process.variables.length === 0 && <p className="ws-props-hint">Workflow variables are shared across events, branches and scripts.</p>}
+        {process.variables.map((v) => {
+          const isSel = selectedVarId === v.id;
+          const color = VAR_TYPE_COLORS[v.fieldType] || '#3b82f6';
+          const isRenaming = renameVarId === v.id;
+          return (
+            <div key={v.id} className={`ws-event-chip ws-event-chip--list ${isSel ? 'ws-event-chip--selected' : ''}`}
+              style={{ borderColor: color, color, margin: '2px 12px', cursor: 'pointer' }}
+              onClick={() => setSelectedVarId(isSel ? null : v.id)}
+              title="Click to select · double-click the name to rename"
+            >
+              <DynamicIcon name={VAR_TYPE_ICON_NAMES[v.fieldType] || 'Hash'} size={10} />
+              {isRenaming ? (
+                <input
+                  className="ws-props-input ws-var-rename-input"
+                  autoFocus
+                  value={renameDraft}
+                  onChange={(e) => setRenameDraft(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  onBlur={() => commitRename(v.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitRename(v.id);
+                    if (e.key === 'Escape') setRenameVarId(null);
+                  }}
+                />
+              ) : (
+                <span className="ws-var-row__name" onDoubleClick={(e) => { e.stopPropagation(); if (!isReadonly) { setRenameVarId(v.id); setRenameDraft(v.name || ''); } }}>
+                  {v.name || <em>unnamed</em>}
+                </span>
+              )}
+              <span className="ws-var-row__type">{varTypeLabel(v)}</span>
+              {v.boundEventId && <span className="ws-var-row__bound" title="Bound to a Record Event">↗ ev</span>}
+              <button className="ws-var-row__remove" title="Remove variable" onClick={(e) => { e.stopPropagation(); removeVariable(v.id); }}><X size={10} /></button>
+            </div>
+          );
+        })}
+
 
         {versions.length > 0 && (
           <>
@@ -1299,7 +1929,6 @@ export const WorkflowStudio: React.FC = () => {
     // Stage selected
     if (selectedStage && !selectedEdgeId) {
       const s = selectedStage;
-      const routerInfo = ROUTER_TYPES.find((r) => r.type === s.routerType);
       return (
         <div className="ws-properties">
           <div className="ws-props-header">
@@ -1309,25 +1938,16 @@ export const WorkflowStudio: React.FC = () => {
           <div className="ws-props-section-title">Name</div>
           <div className="ws-props-group"><input className="ws-props-input" value={s.name} onChange={(e) => updateStage(s.id, { name: e.target.value })} disabled={isReadonly} /></div>
 
-          <div className="ws-props-section-title">Router</div>
-          <div className="ws-props-group">
-            <label className="ws-props-label">Router Type</label>
-            <select className="ws-props-input" value={s.routerType} onChange={(e) => updateStage(s.id, { routerType: e.target.value as RouterType })} disabled={isReadonly}>
-              {ROUTER_TYPES.map((r) => <option key={r.type} value={r.type}>{r.label}</option>)}
-            </select>
-          </div>
-          <div className="ws-props-group">
-            <label className="ws-props-label">Router Value</label>
-            <input className="ws-props-input" value={s.routerValue} onChange={(e) => updateStage(s.id, { routerValue: e.target.value })} disabled={isReadonly} />
-          </div>
-          <div className="ws-props-group">
-            <label className="ws-props-label">Display Label</label>
-            <input className="ws-props-input" value={s.routerLabel} onChange={(e) => updateStage(s.id, { routerLabel: e.target.value })} disabled={isReadonly} />
-          </div>
-
           <div className="ws-props-section-title">Entry Condition</div>
           <div className="ws-props-group">
-            <input className="ws-props-input" value={s.entryCondition} placeholder="JSONata (optional)" onChange={(e) => updateStage(s.id, { entryCondition: e.target.value })} disabled={isReadonly} />
+            <ConditionRow
+              value={s.entryCondition}
+              emptyText="No condition — always entered"
+              onOpen={() => setCondBuilder({ kind: 'entry', stageId: s.id })}
+              onClear={() => updateStage(s.id, { entryCondition: '' })}
+              disabled={isReadonly}
+            />
+            <p className="ws-props-hint" style={{ paddingTop: 2 }}>The stage is entered only when the JSONata condition evaluates to true.</p>
           </div>
 
           <div className="ws-props-section-title">Timeout (hours)</div>
@@ -1340,8 +1960,6 @@ export const WorkflowStudio: React.FC = () => {
             (eventId, label) => updateEventLabel(s.id, eventId, label),
             (eventId) => removeEvent(s.id, eventId),
             isReadonly)}
-
-          <button className="sails-btn sails-btn--danger sails-btn--sm ws-props-delete-btn" onClick={() => removeStage(s.id)}><Trash2 size={12} /> Delete Stage</button>
         </div>
       );
     }
@@ -1401,7 +2019,13 @@ export const WorkflowStudio: React.FC = () => {
               <label className="ws-props-label">Label</label>
               <input className="ws-props-input" value={br.label} onChange={(e) => updateStartBranch(br.id, { label: e.target.value })} disabled={isReadonly} />
               <label className="ws-props-label" style={{ marginTop: 4 }}>Condition (JSONata, optional)</label>
-              <input className="ws-props-input" value={br.expression} onChange={(e) => updateStartBranch(br.id, { expression: e.target.value })} disabled={isReadonly} placeholder="e.g. amount > 50000" />
+              <ConditionRow
+                value={br.expression}
+                emptyText="No condition — always taken"
+                onOpen={() => setCondBuilder({ kind: 'startBranch', branchId: br.id })}
+                onClear={() => updateStartBranch(br.id, { expression: '' })}
+                disabled={isReadonly}
+              />
               <label className="ws-props-label" style={{ marginTop: 4 }}>Target</label>
               <select className="ws-props-input" value={br.targetStageId || ''} onChange={(e) => updateStartBranch(br.id, { targetStageId: e.target.value })} disabled={isReadonly}>
                 {process.stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -1437,7 +2061,13 @@ export const WorkflowStudio: React.FC = () => {
             <div className="ws-props-group"><input className="ws-props-input" value={startBr.label} onChange={(e) => updateStartBranch(startBr.id, { label: e.target.value })} disabled={isReadonly} /></div>
             <div className="ws-props-section-title">Condition (JSONata, optional)</div>
             <div className="ws-props-group">
-              <textarea className="ws-props-input ws-props-textarea" value={startBr.expression} onChange={(e) => updateStartBranch(startBr.id, { expression: e.target.value })} disabled={isReadonly} placeholder="e.g. amount > 50000" rows={2} />
+              <ConditionRow
+                value={startBr.expression}
+                emptyText="No condition — always taken"
+                onOpen={() => setCondBuilder({ kind: 'startBranch', branchId: startBr.id })}
+                onClear={() => updateStartBranch(startBr.id, { expression: '' })}
+                disabled={isReadonly}
+              />
             </div>
             <div className="ws-props-group">
               <label className="ws-props-label">Target</label>
@@ -1467,7 +2097,14 @@ export const WorkflowStudio: React.FC = () => {
           <div className="ws-props-group"><input className="ws-props-input" value={br.label} onChange={(e) => updateBranch(owner.id, br.id, { label: e.target.value })} disabled={isReadonly} /></div>
           <div className="ws-props-section-title">Condition (JSONata)</div>
           <div className="ws-props-group">
-            <textarea className="ws-props-input ws-props-textarea" value={br.expression} onChange={(e) => updateBranch(owner.id, br.id, { expression: e.target.value })} disabled={isReadonly} placeholder="e.g. amount > 50000" rows={2} />
+            <ConditionRow
+              value={br.expression}
+              emptyText="No condition — always taken"
+              onOpen={() => setCondBuilder({ kind: 'branch', stageId: owner.id, branchId: br.id })}
+              onClear={() => updateBranch(owner.id, br.id, { expression: '' })}
+              disabled={isReadonly}
+            />
+            <p className="ws-props-hint" style={{ paddingTop: 2 }}>Empty condition routes by default; first truthy branch wins.</p>
           </div>
           <div className="ws-props-group">
             <label className="ws-props-label">Target</label>
@@ -1535,12 +2172,12 @@ export const WorkflowStudio: React.FC = () => {
           {s.events.length > 0 && <span className="ws-badge ws-badge--events">{s.events.length} event{s.events.length > 1 ? 's' : ''}</span>}
         </div>
         <div className="ws-stage__events">
-          {s.events.length === 0 ? <span className="ws-stage__events-empty">Drop a Workflow Event here</span> : s.events.slice(0, 3).map((ev) => {
+          {s.events.length === 0 ? <span className="ws-stage__events-empty">Drop a Workflow Event here</span> : s.events.slice(0, 6).map((ev) => {
             const def = EVENT_DEFS.find((d) => d.type === ev.type);
             const isEvSel = selectedEventId === ev.id && isSel;
-            return <span key={ev.id} className={`ws-event-chip ${isEvSel ? 'ws-event-chip--selected' : ''}`} style={{ borderColor: def?.color, color: def?.color }} title={`${ev.label} — double-click to edit`} onClick={(e) => { e.stopPropagation(); setSelectedStageId(s.id); setSelectedEventId(isEvSel ? null : ev.id); }} onDoubleClick={(e) => { e.stopPropagation(); openEventModal(ev.id); }}>{def?.icon}<span>{ev.label}</span></span>;
+            return <span key={ev.id} className={`ws-event-chip ws-event-chip--icon ${isEvSel ? 'ws-event-chip--selected' : ''}${reorderTargetId === ev.id ? ' ws-event-chip--drop-target' : ''}`} style={{ borderColor: def?.color, color: def?.color }} title={`${ev.label} — drag to reorder`} draggable onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setSelectedStageId(s.id); setSelectedEventId(isEvSel ? null : ev.id); }} onDoubleClick={(e) => { e.stopPropagation(); openEventWizard(ev.id); }} onDragStart={(e) => handleEventDragStart(e, ev.id)} onDragOver={(e) => handleEventDragOver(e, ev.id)} onDragLeave={(e) => handleEventDragLeave(e, ev.id)} onDrop={(e) => handleEventReorderDrop(e, ev.id)} onDragEnd={() => setReorderTargetId(null)}>{def?.icon}</span>;
           })}
-          {s.events.length > 3 && <span className="ws-stage__events-more">+{s.events.length - 3}</span>}
+          {s.events.length > 6 && <span className="ws-stage__events-more">+{s.events.length - 6}</span>}
         </div>
         <div className="ws-stage__branchbar">
           <Link2 size={11} />
@@ -1591,11 +2228,80 @@ export const WorkflowStudio: React.FC = () => {
     </div>
   );
 
+  // ── Render: generic Workflow Event configuration wizard ──
+  const renderEventWizard = () => {
+    if (!wizardEventId) return null;
+    const host = resolveEventHost(wizardEventId);
+    const ev = host
+      ? host.kind === 'start'
+        ? process.startEvents.find((e) => e.id === wizardEventId) || null
+        : (process.stages.find((s) => s.id === host.stageId)?.events.find((e) => e.id === wizardEventId) || null)
+      : null;
+    if (!ev) return null;
+
+    const createCollectionVariable = (name: string, modelTableName: string): string => {
+      const existing = process.variables.find((v) => v.name === name);
+      if (existing) return existing.id;
+      const modelTable = tables.find((t) => t.tableName === modelTableName);
+      const varId = genId('var');
+      setProcess((p) => ({
+        ...p,
+        variables: [...p.variables, {
+          id: varId, name, fieldType: 'collection', itemType: 'record',
+          targetModel: modelTableName,
+          columns: modelTable ? columnsFromModel(modelTable as any) : [],
+        }],
+      }));
+      return varId;
+    };
+
+    return (
+      <WorkflowEventWizard
+        key={wizardEventId}
+        eventId={wizardEventId}
+        eventType={ev.type as SharedWorkflowEventType}
+        config={ev.config || {}}
+        label={ev.label}
+        onLabelChange={(l) => {
+          const h = resolveEventHost(wizardEventId);
+          if (h?.kind === 'start') updateStartEventLabel(wizardEventId, l);
+          else if (h?.kind === 'stage') updateEventLabel(h.stageId, wizardEventId, l);
+        }}
+        description={ev.description || ''}
+        onDescriptionChange={(d) => {
+          const h = resolveEventHost(wizardEventId);
+          if (h?.kind === 'start') updateStartEventDescription(wizardEventId, d);
+          else if (h?.kind === 'stage') updateEventDescription(h.stageId, wizardEventId, d);
+        }}
+        variables={process.variables}
+        tables={tables}
+        onCreateCollectionVariable={createCollectionVariable}
+        onBindVariableToEvent={bindVariableToEvent}
+        onOpenExpressionEditor={(id) => setExprModalEventId(id)}
+        onOpenFilterBuilder={(id) => setRecordFilterEventId(id)}
+        columnsFromModel={(m: any) => columnsFromModel(m)}
+        onConfigChange={(name, value) => updateLiveEventConfig(wizardEventId, name, value)}
+        onDone={closeWizard}
+        onRemove={(id) => {
+          const h = resolveEventHost(id);
+          if (h?.kind === 'start') { removeStartEvent(id); closeWizard(); }
+          else if (h?.kind === 'stage') { removeEvent(h.stageId, id); closeWizard(); }
+        }}
+        onClose={() => {
+          // Cancel: roll the write-through edits back to the snapshot (replace,
+          // not merge — keys added during the session are dropped too).
+          if (wizardSnapshot) replaceEventConfig(wizardEventId, wizardSnapshot);
+          closeWizard();
+        }}
+      />
+    );
+  };
+
   // ── Render: Expression/Transform Modal ──
   const renderExprModal = () => {
     if (!exprModalEvent) return null;
     const def = EVENT_DEFS.find((d) => d.type === exprModalEvent.type);
-    const sample = Object.fromEntries(process.variables.filter((v) => v.name).map((v) => [v.name, v.fieldType === 'number' || v.fieldType === 'currency' ? (v.defaultValue ?? 0) : (v.defaultValue ?? '')]));
+    const sample = varSample;
     const onApply = (v: string) => {
       if (selectedStage) updateEventConfig(selectedStage.id, exprModalEvent.id, { expression: v });
       else if (selectedStart) updateStartEventConfig(exprModalEvent.id, { expression: v });
@@ -1613,7 +2319,7 @@ export const WorkflowStudio: React.FC = () => {
             <button className="ws-icon-btn" onClick={() => setExprModalEventId(null)}><X size={15} /></button>
           </div>
           <div className="ws-modal__body">
-            <ExpressionEditor showSnippets variables={process.variables.map((v) => ({ id: v.id, name: v.name, fieldType: v.fieldType }))} value={exprModalEvent.config.expression || ''} onChange={onApply} sample={sample} />
+            <ExpressionEditor showSnippets variables={varSuggestProps} recordSchemas={recordSchemas} value={exprModalEvent.config.expression || ''} onChange={onApply} sample={sample} />
             <p className="ws-props-hint">Type <code>$</code> for function suggestions (<code>$sum, $uppercase, $split, $map…</code>). Use <strong>Test</strong> to evaluate against variables.</p>
           </div>
           <div className="ws-modal__footer">
@@ -1651,7 +2357,6 @@ export const WorkflowStudio: React.FC = () => {
           <Workflow size={15} /> Workflow Studio
         </span>
         <input className="ws-toolbar__name" value={process.name} onChange={(e) => setProcess((p) => ({ ...p, name: e.target.value }))} disabled={isActive} placeholder="Process name" />
-        {process.tableId && <span className="ws-toolbar__table">{process.tableId}</span>}
         {def && <span className={`ws-toolbar__status ws-toolbar__status--${def.status}`}>{def.status}</span>}
 
         <div className="ws-mode-toggle">
@@ -1660,6 +2365,17 @@ export const WorkflowStudio: React.FC = () => {
         </div>
 
         <div className="ws-toolbar__actions">
+          {!isActive && (
+            <>
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={handleUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" aria-label="Undo">
+                <Undo2 size={14} />
+              </button>
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={handleRedo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" aria-label="Redo">
+                <Redo2 size={14} />
+              </button>
+              <span className="ws-toolbar__divider" />
+            </>
+          )}
           {isActive && <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={doStartEdit} disabled={saving}><Pencil size={12} /> Edit</button>}
           {isActive && <button className="sails-btn sails-btn--ghost sails-btn--sm" disabled={saving}>Deactivate</button>}
           {isDraft && <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={doDiscard} disabled={saving}><RotateCcw size={12} /> Discard</button>}
@@ -1760,7 +2476,10 @@ export const WorkflowStudio: React.FC = () => {
                 )}
               </div>
           )}
-          <div className={`ws-canvas ${layoutMode === 'canvas' ? 'ws-canvas--canvas' : ''}${panning ? ' ws-canvas--panning' : ''}`} onClick={() => { setSelectedStageId(null); setSelectedEventId(null); setSelectedEdgeId(null); setSelectedStart(false); }}>
+          <div className={`ws-canvas ${layoutMode === 'canvas' ? 'ws-canvas--canvas' : ''}${panning ? ' ws-canvas--panning' : ''}`} onClick={() => {
+            if (suppressCanvasClickRef.current) { suppressCanvasClickRef.current = false; return; }
+            setSelectedStageId(null); setSelectedEventId(null); setSelectedEdgeId(null); setSelectedStart(false);
+          }}>
           <div className="ws-world-holder" style={{ width: worldW * zoom, height: worldH * zoom }}>
             <div className="ws-world" ref={worldRef} style={{ width: worldW, height: worldH, transform: `scale(${zoom})`, transformOrigin: 'top left' }}
               onPointerDown={handleWorldPointerDown}
@@ -1778,10 +2497,33 @@ export const WorkflowStudio: React.FC = () => {
                 const aH = isStart ? startNodeH : NODE_H;
                 const handleFrom = portPos(e.a, e.fromPort, aW, aH);
                 const handleTo = portPos(e.b, e.toPort, NODE_W, NODE_H);
-                const pathD = roundedOrthogonalPath(orthogonalPoints(e.a, e.b, e.fromPort, e.toPort, aW, aH, NODE_W, NODE_H));
-                const mid = edgeMidpoint(e.a, e.b, e.fromPort, e.toPort, aW, aH, NODE_W, NODE_H);
+                // Route around every stage/Start node except this edge's own endpoints.
+                const selfRects: Rect[] = [
+                  { x: e.a.x, y: e.a.y, w: aW, h: aH },
+                  { x: e.b.x, y: e.b.y, w: NODE_W, h: NODE_H },
+                ];
+                const obs = edgeObstacles.filter((r) =>
+                  !selfRects.some((s) => s.x === r.x && s.y === r.y && s.w === r.w && s.h === r.h));
+                const pts = routeOrthogonal(e.a, e.b, e.fromPort, e.toPort, aW, aH, NODE_W, NODE_H, obs);
+                const pathD = roundedOrthogonalPath(pts);
+                const mid = polylineMidpoint(pts);
                 return (
                   <g key={e.id} className={`ws-edge ${isSel ? 'ws-edge--selected' : ''}`}>
+                    {/* Wide invisible hit path — makes the line easy to click.
+                        Ends are trimmed so the node ports stay grabbable. */}
+                    <path
+                      d={roundedOrthogonalPath(trimPolyline(pts))}
+                      fill="none"
+                      stroke="transparent"
+                      strokeWidth={20}
+                      className="ws-edge-hit"
+                      onPointerDown={(ev) => ev.stopPropagation()}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setSelectedEdgeId(e.branchId || null);
+                        if (e.sourceStageId) setSelectedStageId(e.sourceStageId);
+                      }}
+                    />
                     <path
                       d={pathD}
                       fill="none"
@@ -1789,6 +2531,7 @@ export const WorkflowStudio: React.FC = () => {
                       strokeWidth={isSel ? 3 : 2}
                       markerEnd="url(#ws-arrow-branch)"
                       className="ws-edge-path--clickable"
+                      onPointerDown={(ev) => ev.stopPropagation()}
                       onClick={(ev) => {
                         ev.stopPropagation();
                         setSelectedEdgeId(e.branchId || null);
@@ -1861,7 +2604,7 @@ export const WorkflowStudio: React.FC = () => {
                         style={{ borderColor: def?.color, color: def?.color }} title={`${ev.label} — double-click to edit`}
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => { e.stopPropagation(); setSelectedStart(true); setSelectedEventId(isEvSel ? null : ev.id); }}
-                        onDoubleClick={(e) => { e.stopPropagation(); openEventModal(ev.id); }}
+                        onDoubleClick={(e) => { e.stopPropagation(); openEventWizard(ev.id); }}
                       >{def?.icon}<span>{ev.label}</span></span>
                     );
                   })}
@@ -1902,59 +2645,95 @@ export const WorkflowStudio: React.FC = () => {
       </div>
 
       {/* Event Configuration Modal (double-click an event chip) */}
-      {eventModalEventId && (() => {
-        const host = resolveEventHost(eventModalEventId);
-        const ev = host
-          ? host.kind === 'start'
-            ? process.startEvents.find((e) => e.id === eventModalEventId) || null
-            : (process.stages.find((s) => s.id === host.stageId)?.events.find((e) => e.id === eventModalEventId) || null)
-          : null;
-        if (!ev) return null;
-        const def = EVENT_DEFS.find((d) => d.type === ev.type);
-        const hostName = host?.kind === 'start'
-          ? 'Start'
-          : (process.stages.find((s) => s.id === (host?.kind === 'stage' ? host.stageId : null))?.name || '');
-        const onLabelFor = (eventId: string, label: string) => {
-          const h = resolveEventHost(eventId);
-          if (h?.kind === 'start') updateStartEventLabel(eventId, label);
-          else if (h?.kind === 'stage') updateEventLabel(h.stageId, eventId, label);
-        };
-        const onRemoveFor = (eventId: string) => {
-          const h = resolveEventHost(eventId);
-          if (h?.kind === 'start') { removeStartEvent(eventId); setEventModalEventId(null); }
-          else if (h?.kind === 'stage') { removeEvent(h.stageId, eventId); setEventModalEventId(null); }
+      {/* Generic Workflow Event Wizard */}
+      {renderEventWizard()}
+
+      {/* Expression/Transform Modal */}
+      {renderExprModal()}
+
+      {/* JSONata Condition Builder (Entry Condition / Branch Condition) */}
+      {condBuilder && (() => {
+        const sample = varSample;
+        const target = condBuilder.kind === 'entry'
+          ? { stage: process.stages.find((st) => st.id === condBuilder.stageId) }
+          : condBuilder.kind === 'branch'
+            ? { stage: process.stages.find((st) => st.id === condBuilder.stageId), branch: process.stages.find((st) => st.id === condBuilder.stageId)?.branches.find((b) => b.id === condBuilder.branchId) }
+            : { branch: process.startBranches.find((b) => b.id === condBuilder.branchId) };
+        const hostName = target.stage?.name || '';
+        const label = condBuilder.kind === 'entry' ? 'Entry Condition' : condBuilder.kind === 'branch' ? 'Branch Condition' : 'Start Branch Condition';
+        const branchLabel = condBuilder.kind !== 'entry' ? (target.branch?.label || '') : '';
+        const value = condBuilder.kind === 'entry'
+          ? (target.stage?.entryCondition || '')
+          : (target.branch?.expression || '');
+        if (condBuilder.kind === 'entry' && !target.stage) { setCondBuilder(null); return null; }
+        if (condBuilder.kind !== 'entry' && !target.branch) { setCondBuilder(null); return null; }
+        const onApply = (v: string) => {
+          if (condBuilder.kind === 'entry') updateStage(condBuilder.stageId, { entryCondition: v });
+          else if (condBuilder.kind === 'branch') updateBranch(condBuilder.stageId, condBuilder.branchId, { expression: v });
+          else updateStartBranch(condBuilder.branchId, { expression: v });
         };
         return (
-          <div className="ws-modal-overlay" onClick={() => setEventModalEventId(null)}>
-            <div className="ws-modal ws-qstudio-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="ws-modal-overlay" onClick={() => setCondBuilder(null)}>
+            <div className="ws-modal ws-event-modal" onClick={(e) => e.stopPropagation()}>
               <div className="ws-modal__header">
-                <span className="ws-modal__icon" style={{ color: def?.color, background: `${def?.color}18` }}>{def?.icon}</span>
+                <span className="ws-modal__icon" style={{ background: 'rgba(59,130,246,.12)', color: '#3b82f6' }}><FunctionSquare size={16} /></span>
                 <div className="ws-modal__titles">
-                  <span className="ws-modal__title">{def?.label}</span>
-                  <span className="ws-modal__sub">{hostName ? `Host: ${hostName} · ` : ''}{ev.label}</span>
+                  <span className="ws-modal__title">{label}</span>
+                  <span className="ws-modal__sub">{hostName ? `${hostName} · ` : ''}{branchLabel ? `${branchLabel} · ` : ''}Condition builder</span>
                 </div>
-                <button className="ws-icon-btn" onClick={() => setEventModalEventId(null)}><X size={15} /></button>
+                <button className="ws-icon-btn" onClick={() => setCondBuilder(null)}><X size={15} /></button>
               </div>
               <div className="ws-modal__body">
-                {renderEventConfigForm(
-                  ev,
-                  (eventId, patch) => applyEventPatch(eventId, patch),
-                  onLabelFor,
-                  onRemoveFor,
-                  isActive,
-                )}
+                <ExpressionEditor
+                  showSnippets
+                  variables={varSuggestProps} recordSchemas={recordSchemas}
+                  value={value}
+                  onChange={onApply}
+                  sample={sample}
+                />
+                <p className="ws-props-hint">Returns a truthy value → condition passes. Use <strong>Test</strong> to evaluate against workflow variables.</p>
               </div>
               <div className="ws-modal__footer">
-                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setEventModalEventId(null)}>Cancel</button>
-                <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => setEventModalEventId(null)}><CheckCircle2 size={14} /> Done</button>
+                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setCondBuilder(null)}>Cancel</button>
+                <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => setCondBuilder(null)}><CheckCircle2 size={14} /> Done</button>
               </div>
             </div>
           </div>
         );
       })()}
 
-      {/* Expression/Transform Modal */}
-      {renderExprModal()}
+      {/* Variable upgrade confirm (Record Event → non-collection variable) */}
+      {confirmUpgradeVar && (() => {
+        const target = process.variables.find((v) => v.id === confirmUpgradeVar.varId);
+        return (
+          <div className="ws-modal-overlay" onClick={() => setConfirmUpgradeVar(null)}>
+            <div className="ws-modal" style={{ width: 480 }} onClick={(e) => e.stopPropagation()}>
+              <div className="ws-modal__header">
+                <span className="ws-modal__icon" style={{ background: 'rgba(245,158,11,.12)', color: '#d97706' }}><AlertTriangle size={16} /></span>
+                <div className="ws-modal__titles">
+                  <span className="ws-modal__title">Convert variable to collection?</span>
+                  <span className="ws-modal__sub">The Record Event result will be stored into it</span>
+                </div>
+                <button className="ws-icon-btn" onClick={() => setConfirmUpgradeVar(null)}><X size={15} /></button>
+              </div>
+              <div className="ws-modal__body">
+                <p className="ws-props-hint" style={{ paddingTop: 0 }}>
+                  <strong>{target?.name || 'This variable'}</strong> is currently a <code>{target?.fieldType || '?'}</code> variable.
+                  A Record Event returns rows and columns — it will be converted to{' '}
+                  <code>collection&lt;record: {confirmUpgradeVar.modelName}&gt;</code> with columns generated from the model.
+                </p>
+              </div>
+              <div className="ws-modal__footer">
+                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setConfirmUpgradeVar(null)}>Cancel</button>
+                <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => {
+                  bindVariableToEvent(confirmUpgradeVar.varId, confirmUpgradeVar.eventId, confirmUpgradeVar.modelName);
+                  setConfirmUpgradeVar(null);
+                }}><CheckCircle2 size={14} /> Convert &amp; Bind</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Start Condition Modal (wizard) */}
       {startConditionOpen && (
@@ -2141,8 +2920,8 @@ export const WorkflowStudio: React.FC = () => {
       )}
       {/* QueryStudio — Record Trigger condition (production FilterBuilder) */}
       {conditionOpen && (
-        <div className="ws-modal-overlay" onClick={() => setConditionOpen(false)}>
-          <div className="ws-modal ws-qstudio-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="ws-modal-overlay sails-qstudio-overlay" onClick={() => setConditionOpen(false)}>
+          <div className="ws-modal sails-qstudio-modal" onClick={(e) => e.stopPropagation()}>
             <div className="ws-modal__header">
               <span className="ws-modal__icon" style={{ background: 'rgba(59,130,246,.12)', color: '#3b82f6' }}><Filter size={16} /></span>
               <div className="ws-modal__titles">
@@ -2158,6 +2937,7 @@ export const WorkflowStudio: React.FC = () => {
                 initialGroups={process.triggerCondition}
                 showHeader={false}
                 title="Record Trigger Condition"
+                extraContextOptions={workflowContextOptions}
                 onApply={(groups) => {
                   setProcess((p) => ({ ...p, triggerCondition: groups }));
                   setConditionOpen(false);
@@ -2172,28 +2952,33 @@ export const WorkflowStudio: React.FC = () => {
       {recordFilterEventId && (() => {
         const hostEvent = process.startEvents.find((e) => e.id === recordFilterEventId)
           || process.stages.flatMap((s) => s.events).find((e) => e.id === recordFilterEventId);
-        const modelTable = tables.find((t) => t.tableName === hostEvent?.config.model);
+        // The wizard writes through to the live event config, so this always
+        // reflects the current model — even before Done is pressed.
+        const modelName = hostEvent?.config.model || '';
+        const modelTable = tables.find((t) => t.tableName === modelName);
+        const closeRecordFilter = () => setRecordFilterEventId(null);
         return (
-          <div className="ws-modal-overlay" onClick={() => setRecordFilterEventId(null)}>
-            <div className="ws-modal ws-qstudio-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="ws-modal-overlay sails-qstudio-overlay" onClick={closeRecordFilter}>
+            <div className="ws-modal sails-qstudio-modal" onClick={(e) => e.stopPropagation()}>
               <div className="ws-modal__header">
                 <span className="ws-modal__icon" style={{ background: 'rgba(59,130,246,.12)', color: '#3b82f6' }}><Filter size={16} /></span>
                 <div className="ws-modal__titles">
                   <span className="ws-modal__title">Record Filter</span>
-                  <span className="ws-modal__sub">Record Event · {modelTable?.name || hostEvent?.config.model || 'No model selected'}</span>
+                  <span className="ws-modal__sub">Record Event · {modelTable?.name || modelName || 'No model selected'}</span>
                 </div>
-                <button className="ws-icon-btn" onClick={() => setRecordFilterEventId(null)}><X size={15} /></button>
+                <button className="ws-icon-btn" onClick={closeRecordFilter}><X size={15} /></button>
               </div>
               <div className="ws-modal__body">
-                {!hostEvent?.config.model ? (
+                {!modelName ? (
                   <p className="ws-props-hint" style={{ padding: 12 }}>Select a target model first to build a filter.</p>
                 ) : (
                   <FilterBuilder
                     fields={modelTable?.fields || []}
                     rootTableName={modelTable?.tableName || ''}
-                    initialGroups={hostEvent.config.filterGroups || []}
+                    initialGroups={hostEvent?.config.filterGroups || []}
                     showHeader={false}
                     title="Record Filter"
+                    extraContextOptions={workflowContextOptions}
                     onApply={(groups) => {
                       if (process.startEvents.some((e) => e.id === recordFilterEventId)) {
                         updateStartEventConfig(recordFilterEventId, { filterGroups: groups });
@@ -2201,9 +2986,9 @@ export const WorkflowStudio: React.FC = () => {
                         const st = process.stages.find((s) => s.events.some((e) => e.id === recordFilterEventId));
                         if (st) updateEventConfig(st.id, recordFilterEventId, { filterGroups: groups });
                       }
-                      setRecordFilterEventId(null);
+                      closeRecordFilter();
                     }}
-                    onCancel={() => setRecordFilterEventId(null)}
+                    onCancel={closeRecordFilter}
                   />
                 )}
               </div>

@@ -149,9 +149,35 @@ const SmartPageRouter: React.FC = () => {
   return <AppPluginShell />;
 };
 
+/**
+ * TabTitle
+ * Sets browser tab titles for routes outside ConsoleProvider
+ * (login, admin-login, layout/workflow studio).
+ * Must live inside <BrowserRouter> to use useLocation().
+ */
+const TabTitle: React.FC = () => {
+  const location = useLocation();
+
+  React.useEffect(() => {
+    const path = location.pathname;
+    if (path === '/admin-login') {
+      document.title = 'Sails - Admin Login';
+    } else if (path === '/login') {
+      document.title = 'Sails';
+    } else if (path.startsWith('/layout-studio/')) {
+      document.title = 'Sails - Layout Studio';
+    } else if (path.startsWith('/workflow-studio/')) {
+      document.title = 'Sails - Workflow Studio';
+    }
+  }, [location.pathname]);
+
+  return null;
+};
+
 function App() {
   return (
     <BrowserRouter>
+      <TabTitle />
       <ThemeProvider>
       <AuthProvider>
         <Suspense fallback={<LoadingScreen />}>
