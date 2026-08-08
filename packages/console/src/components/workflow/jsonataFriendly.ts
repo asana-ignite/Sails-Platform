@@ -11,7 +11,7 @@
  * silently rewritten.
  */
 import jsonata from 'jsonata';
-import type { Suggestion, SuggestionVariable, RecordSchemaMap } from './jsonataSuggest';
+import type { Suggestion, SuggestionVariable, RecordSchemaMap, DrillRoots } from './jsonataSuggest';
 
 const parserFn: ((expr: string) => any) | null = (jsonata as any)?.parser || null;
 
@@ -75,6 +75,7 @@ export function buildPlainSuggestions(
   query: string,
   context = '',
   recordSchemas?: RecordSchemaMap,
+  drillRoots?: DrillRoots,
 ): Suggestion[] {
   const q = query.toLowerCase();
   const out: Suggestion[] = [];
@@ -83,7 +84,8 @@ export function buildPlainSuggestions(
   if (drill) {
     const varName = drill[1];
     const segs = drill[2].split('.').filter(Boolean);
-    const v = variables.find((x) => x.name === varName);
+    const v = variables.find((x) => x.name === varName)
+      || (drillRoots && drillRoots[varName] ? { name: varName, columns: drillRoots[varName] } : undefined);
     let fields = v?.columns;
     let valid = !!fields;
     if (valid) {

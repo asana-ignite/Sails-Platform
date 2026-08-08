@@ -6,7 +6,7 @@
  */
 import { pool } from '@/lib/knex';
 import { db } from '@/lib/db';
-import { genId, quoteIdent } from './WorkflowHelpers';
+import { genId, quoteIdent, evaluateJsonata } from './WorkflowHelpers';
 
 // ─── Recipient resolution ────────────────────────────────────
 
@@ -15,25 +15,61 @@ export interface ResolvedRecipient {
   email?: string;
 }
 
+export type RecipientInput = string | Array<string | { __expr: string }>;
+
 /** Tokenise the raw recipient string (comma / semicolon separated). */
 function tokenise(raw: string): string[] {
   return raw.split(/[,;]+/).map((t) => t.trim()).filter(Boolean);
+}
+
+/** Push email addresses from an evaluated __expr result. */
+function pushExprResult(results: ResolvedRecipient[], value: any): void {
+  if (value == null) return;
+  if (typeof value === 'string') {
+    for (const part of value.split(/[,;]+/).map((s) => s.trim())) {
+      if (part) results.push({ email: part });
+    }
+  } else if (Array.isArray(value)) {
+    for (const item of value) {
+      if (typeof item === 'string') results.push({ email: item });
+      else if (item && typeof item === 'object' && item.email) results.push({ email: item.email });
+    }
+  } else if (typeof value === 'object' && value.email) {
+    results.push({ email: value.email });
+  }
 }
 
 /**
  * Resolve a recipient expression into concrete user ids + email addresses.
  * Supports:
  *   user:<id>  team:<id>  position:<id>  role:<role>  email@domain  {{var}}
+ *   { __expr: "<jsonata>" } — evaluated against variables + record; the
+ *   result (email string / comma-list / array of emails) becomes recipients.
  */
 export async function resolveRecipients(
   tenantId: string,
-  raw: string,
+  raw: RecipientInput,
   variables: Record<string, any> = {},
+  record?: { values?: Record<string, any> } | null,
 ): Promise<ResolvedRecipient[]> {
-  const tokens = tokenise(raw);
+  const tokens = Array.isArray(raw) ? raw : tokenise(raw ?? '');
   const results: ResolvedRecipient[] = [];
 
   for (const token of tokens) {
+    // Expression token — evaluate JSONata against variables + record.
+    if (token && typeof token === 'object' && token.__expr) {
+      try {
+        const evalResult = await evaluateJsonata(token.__expr, { ...variables, record: record?.values || {} });
+        if (evalResult.ok) {
+          pushExprResult(results, evalResult.value);
+        }
+      } catch {
+        // evaluation errors are logged upstream — skip token
+      }
+      continue;
+    }
+    if (typeof token !== 'string') continue;
+
     if (token.startsWith('user:')) {
       const u = await db.user.findFirst({
         where: { id: token.slice(5), tenantId, isActive: true },
@@ -105,18 +141,40 @@ export async function resolveRecipients(
  * Replace {{variableName}} markers in the template string with values from
  * the context (variables + optional record fields).
  */
-export function renderTemplate(
+export async function renderTemplate(
   tpl: string,
   variables: Record<string, any>,
-  record?: { values?: Record<string, any> } | null,
-): string {
+  record?: { values?: Record<string, any>; oldValues?: Record<string, any> } | null,
+  wf?: { requestor?: Record<string, any> | null; requestDate?: string | null } | null,
+): Promise<string> {
   if (!tpl) return '';
-  return tpl.replace(/\{\{([\w.]+)\}\}/g, (_match, key) => {
+  let out = tpl;
+  // Pass 1 — JSONata expressions: {{$expr}}
+  for (const m of [...tpl.matchAll(/\{\{(\$[\s\S]*?)\}\}/g)]) {
+    let text = '';
+    try {
+      const res = await evaluateJsonata(m[1].trim(), { ...variables, record: record?.values || {} });
+      const v = res.ok ? res.value : undefined;
+      text = v == null ? '' : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+    } catch { /* expression failed — drop marker */ }
+    out = out.replace(m[0], text);
+  }
+  // Pass 2 — {{var}} / {{record.field}} / {{oldRecord.*}} / {{requestor.*}} / {{request_date}}
+  return out.replace(/\{\{([\w.]+)\}\}/g, (_match, key) => {
     const parts = String(key).split('.');
     if (parts[0] === 'record' && record?.values) {
       const val = record.values[parts[1]];
       return val == null ? '' : String(val);
     }
+    if (parts[0] === 'oldRecord' && record?.oldValues) {
+      const val = record.oldValues[parts[1]];
+      return val == null ? '' : String(val);
+    }
+    if (parts[0] === 'requestor' && wf?.requestor) {
+      const val = wf.requestor[parts[1]];
+      return val == null ? '' : String(val);
+    }
+    if (key === 'request_date') return wf?.requestDate ?? '';
     const val = variables[parts[0]];
     if (val == null) return '';
     if (typeof val === 'object') return JSON.stringify(val);

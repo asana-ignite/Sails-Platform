@@ -186,7 +186,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/layout-demo" element={<LayoutDemo />} />
-            <Route path="/route-builder" element={<RouteBuilder />} />
+                        <Route path="/route-builder" element={<RouteBuilder />} />
             <Route path="/bpmn-builder" element={<BpmnBuilder />} />
             <Route path="/table-builder" element={<TableBuilder />} />
             <Route path="/layout-studio/:tableId/:layoutId" element={

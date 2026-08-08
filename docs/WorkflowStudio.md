@@ -145,7 +145,7 @@ interface WorkflowEventConfigParameter {
 }
 
 interface WorkflowEventConfigStep {
-  label: string;             // e.g. "Model & Action", "Output & Mapping"
+  label: string;             // e.g. "Action", "Input", "Output"
   parameters: WorkflowEventConfigParameter[];
 }
 ```
@@ -156,41 +156,45 @@ The console renders this generically in
 
 1. Double-click an event chip (canvas stage card, Start node, or properties
    list) → the event configuration opens directly.
-2. The dialog is **tabbed**: **Tab 1 is always "Event"** (Name + Description);
-   every further tab renders one schema section from the event type's config.
-   The tab bar always shows, even for single-section events.
+2. The dialog is **step-based**: **Step 1 is always "Event"** (Name +
+   Description); every further step renders one schema section from the event
+   type's config. The step bar always shows, even for single-section events.
+   The footer navigates with **‹ Previous / Next ›**; the final step's Next
+   button becomes **Complete** (which validates + closes).
 3. **Write-through editing** — every parameter edit lands directly in the
    live event config (no local draft). QueryStudio and the stage properties
-   always see the current values, even before Done. The console snapshots the
-   config when the wizard opens; **Cancel** restores it exactly (replace, not
-   merge), **Done** just closes (already committed).
-4. **Done** validates completion (required parameters, event name, record
-   target-value context). On failure an inline error banner shows, red dots
-   mark the offending tabs, and the first invalid tab is opened automatically.
+   always see the current values, even before Complete. The console snapshots
+   the config when the wizard opens; **Cancel** restores it exactly (replace,
+   not merge), **Complete** just closes (already committed).
+4. **Complete** validates completion (required parameters, event name, record
+   target-value context, result-variable structure). On failure an inline
+   error banner shows, red dots mark the offending steps, and the first
+   invalid step is opened automatically.
 
 Parameter type catalog:
 
 | Type | Renders |
 |---|---|
 | `model_select` | Searchable model picker (`CustomSelect` of tables) |
-| `operation_select` | Operation dropdown (create / read / update / delete / list) |
+| `operation_select` | Operation dropdown (create / update / upsert / delete / read / list) |
 | `filter_builder` | QueryStudio `FilterBuilder` button + rule-count badge |
-| `variable_auto_create` | Collection-variable name input + model column preview (read/list) |
-| `field_mapping` | Side-by-side variable → column mapping: chips carry field-type icons and **connection ports** (variables = right port, columns = left port); drag a curvy line between two ports to connect/unmap (live dashed preview snaps green/red on compatible columns), Auto Map by name, per-panel A→Z / Z→A sorting and Clear All |
+| `variable_auto_create` | **Result variable picker** (`WorkflowVariablePicker`, top-level only): `list` → collection variables; `read`/writes → record variables. Blank auto-creates `<op>_<model>` on Complete. Red hint + Complete block when the variable's declared columns don't match the model |
+| `field_mapping` | Side-by-side input → column mapping: the left rail is the **Workflow Context tree** (Workflow Context → Requestor / Request Date / Record / OldRecord; Variables; Collections — searchable, expandable, 35/30/35 layout); tree leaves = right port, columns = left port; drag a leaf to a column to connect/unmap (live dashed preview snaps green/red on compatible types), Auto Map by name, per-rail search, column A→Z / Z→A sorting, Clear All, **click a line then Delete/Backspace to remove**. Record/OldRecord branches need a workflow root model; collection item fields map via their `[N]` index (default 0 = first item) |
 | `target_record` | Target selector (triggering record / variable / literal id) |
 | `variable_select` | Variable dropdown when the sibling `targetType` is 'variable', else a text input |
 | `expression_editor` | Opens the large JSONata expression editor modal |
 | `text` / `textarea` / `number` / `boolean` / `select` | Standard platform controls |
 
-### Record Event tabs (reference example)
+### Record Event steps (reference example)
 
-| Tab | Parameters | Behavior |
+| Step | Parameters | Behavior |
 |---|---|---|
 | Event | name, description | always present — every event type |
-| Model & Action | `model`*, `operation`, `filterGroups`, `targetType`, `targetValue` | model picker, operation select (**Create, Update, Upsert, Delete, Read, List**), QueryStudio filter for read/list/update/delete; **Target Record (ID)** group appears below for read/update/upsert/delete — which record the operation targets: triggering record / by variable / by literal id (*`targetValue` required when not `trigger`*; for upsert it selects the row to update when the id already exists) |
-| Output & Mapping | `storeToVariable`, `fieldMapping` | read/list auto-create a **collection** workflow variable named after the event label (columns snapshotted from the model); create/update/upsert show the port-based field mapping panel |
+| Action | `model`*, `operation`, `filterGroups`, `targetType`, `targetValue` | model picker, operation select (**Create, Update, Upsert, Delete, Read, List**), QueryStudio filter for read/list/update/delete; **Target Record (ID)** group appears below for read/update/upsert/delete — which record the operation targets: triggering record / by variable / by literal id (*`targetValue` required when not `trigger`*; for upsert it selects the row to update when the id already exists) |
+| Input | `fieldMapping` | create/update/upsert only. The left rail is the **unified Workflow Context tree**: `Workflow Context` → Requestor (name/email/role/title/team/position), Request Date, `Record <model>` (current values), `OldRecord <model>` (previous values, when the workflow starts on record update) — plus Variables and Collections. Collection item fields map via the `[N]` index row. System columns are excluded from mapping; `id` stays mappable for upsert (ON CONFLICT key) |
+| Output | `storeToVariable` | every op except delete. Picker restricted to record variables (collection for list); blank auto-creates `<op>_<model>` and binds it. Structure mismatch with the model blocks Complete |
 
-\* `required: true` — completion is validated on Done.
+\* `required: true` — completion is validated on Complete.
 
 ### Record Event execution (full CRUD via QueryLayer)
 
@@ -202,14 +206,59 @@ enforced identically to the platform APIs:
 |---|---|---|
 | `read` | `listRecords(limit: 1, filters: {id: targetId})` | single record; `targetId` from `config.targetType`/`targetValue` (trigger default = `ctx.recordId`) |
 | `list` | `listRecords(limit: 25, filterGroups: config.filterGroups)` | filter serialized via `serializeFilterGroups`, then enriched by `preprocessFilterGroups` (drill chains, record sources, macros) |
-| `create` | `insertRecord(payload from fieldMapping)` | payload built from `{ sourceVar → targetCol }` mapping, values read from `ctx.variables` |
-| `update` | `updateRecord(data from fieldMapping, targetId)` | target id resolved from `config.targetType`/`targetValue` |
-| `upsert` | `upsertRecord(id, data from fieldMapping)` | `INSERT … ON CONFLICT (id) DO UPDATE` (PG 9.5+). Conflict id = a variable mapped onto the `id` column → else the Target Record selector → else generated (pure insert). Requires both create **and** update permissions; audit logs `CREATE` or `UPDATE`. `created_by`/`owner_id` are never overwritten on the update path |
+| `create` | `insertRecord(payload from fieldMapping)` | payload built from the mapping; each row's value = variable, triggering-record field (`record`), pre-change value (`record_old`), or workflow context (`wf`: requestor.* / request_date) |
+| `update` | `updateRecord(data from fieldMapping, targetId)` | target id resolved from `config.targetType`/`targetValue`; same source kinds |
+| `upsert` | `upsertRecord(id, data from fieldMapping)` | `INSERT … ON CONFLICT (id) DO UPDATE` (PG 9.5+). Conflict id = any source mapped onto the `id` column → else the Target Record selector → else generated (pure insert). Requires both create **and** update permissions; audit logs `CREATE` or `UPDATE`. `created_by`/`owner_id` are never overwritten on the update path |
 | `delete` | `deleteRecord(targetId)` | same target resolution |
 
 A `SessionContext` is built per-execution (role fetched from `core.users`).
-Results are stored into the bound collection variable and validated against
-its declared structure (`validateCollectionValue` in `@sails/shared`).
+Results are stored into the bound record/collection variable and validated
+against its declared structure (`validateRecordValue` / `validateCollectionValue`
+in `@sails/shared`) — a mismatch fails the event, which is why the wizard
+blocks **Complete** on structurally incompatible result variables.
+
+### Record Event steps
+
+| Step | Visible for | Controls |
+|---|---|---|
+| Event | always | name, description |
+| Action | always | model*, operation, QueryStudio filter (read/list/update/delete), Target Record (read/update/upsert/delete) |
+| Input | create/update/upsert | field-mapping panel over the **Workflow Context tree** (Requestor / Request Date / Record / OldRecord branches — always shown when the workflow has a root model) |
+| Output | all except delete | result-variable picker (collection for list, record otherwise) — blank auto-creates `<op>_<model>` |
+
+\* `required: true` — completion is validated on Complete.
+
+### Unified Workflow Context tree
+
+Every pick-up/assign surface uses one tree picker
+(`WorkflowVariablePicker` + `buildContextRoot` in
+`packages/console/src/components/workflow/`):
+
+```
+Workflow Context          (record-triggered workflows)
+├── Requestor             name · email · role · title · team · position
+├── Request Date          wf_instance.created_at
+├── Record <model>        triggering record's current values
+└── OldRecord <model>     values before the change (update triggers)
+Variables                 scalars + records (field drill-down)
+Collections               item columns via [N]
+```
+
+Consumers: the Input field-mapping rail (drag leaves onto column ports),
+Result Variable pickers, the notification deep-reference picker, recipient
+chips, and the Expression/Transform intellisense (`record.`, `oldRecord.`,
+`requestor.`, `request_date` drills). The tree is searchable and each node
+carries a structured source descriptor. Mapping entries persist the source
+(`variable` / `record` / `record_old` / `wf`) so the engine resolves values
+at runtime:
+
+- `record.<field>` → `ctx.record.values[field]`
+- `oldRecord.<field>` → `ctx.record.oldValues[field]`
+- `requestor.<attr>` / `request_date` → resolved per instance via
+  `buildWorkflowCtx` (same queries as the `@wf.*` macros)
+- templates (`{{record.x}}`, `{{oldRecord.x}}`, `{{requestor.x}}`,
+  `{{request_date}}`) and JSONata expressions evaluate against the merged
+  context in the notification and expression/transform plugins.
 
 ### QueryStudio Context source in workflows
 
@@ -441,15 +490,35 @@ status ('delivered'|'read'), created_at, read_at
 
 ### Recipient resolution
 
-The `recipients` config field resolves at runtime:
+The `recipients` config field resolves at runtime (accepts a legacy comma
+string or an array of tokens):
 - `user:<id>`, `team:<id>`, `position:<id>`, `role:<role>` → tenant users
 - `email@domain.com` → literal email
 - `{{variable}}` → values from ctx.variables (string/array/user ids/record rows)
+- `{ "__expr": "<jsonata>" }` → evaluated against `variables` + `record`;
+  the result (email string / comma-separated list / array of emails) becomes
+  recipients. Built in the recipient chips control via the **ƒ Expression…**
+  button (JSONata editor with `record.<field>` + collection intellisense).
 - Deduped; bell only for users with a known `user_id`
 
 ### Template rendering
 
-`{{variable}}` replaced with ctx.variables values; `{{record.<field>}}` with the triggering record's fields. Plain text for bell; HTML for email (tiptap editor support planned).
+`{{variable}}` replaced with ctx.variables values; `{{record.<field>}}` with
+the triggering record's fields; `{{oldRecord.*}}` / `{{requestor.*}}` /
+`{{request_date}}` from workflow context; **`{{$<jsonata>}}`** is evaluated as a
+JSONata expression against `variables` + `record` (built with the ƒ Expression
+button — `{{$sum(invoices.amount)}}`). Plain text for bell; full HTML for
+email (tiptap with chips, tables, formatting).
+
+### Variable-aware text controls (reusable)
+
+`components/workflow/` ships reusable variable-reference controls used across
+events: `VariableTextInput` (textbox/textarea with inline `{{var}}` chips),
+`HtmlNotificationEditor` (full-HTML tiptap body), `RecipientsChipsInput`,
+`WorkflowVariablePicker` (hierarchy popup), `VariableAutocomplete` (`{{`
+intellisense with record/collection drill-down), `VariableEditor`. All share
+the same tree data (`variableTree.tsx`), drag-and-drop, and the ƒ JSONata
+editor. Export barrel: `components/workflow/index.ts`.
 
 ## 11. Related Concepts
 

@@ -58,7 +58,7 @@ const TARGET_RECORD_OPTIONS = [
 export const WORKFLOW_EVENT_CONFIGS: Record<WorkflowEventType, WorkflowEventConfigStep[]> = {
   record: [
     {
-      label: 'Model & Action',
+      label: 'Action',
       parameters: [
         { name: 'model', label: 'Target Model', type: 'model_select', required: true, description: 'The model the event operates on.' },
         { name: 'operation', label: 'Operation', type: 'operation_select', defaultValue: 'read' },
@@ -68,10 +68,15 @@ export const WORKFLOW_EVENT_CONFIGS: Record<WorkflowEventType, WorkflowEventConf
       ],
     },
     {
-      label: 'Output & Mapping',
+      label: 'Input',
       parameters: [
-        { name: 'storeToVariable', label: 'Result Variable', type: 'variable_auto_create', description: 'Auto-creates a collection variable for read/list results.' },
-        { name: 'fieldMapping', label: 'Field Mapping', type: 'field_mapping', description: 'Drag workflow variables onto model columns for create/update/upsert.' },
+        { name: 'fieldMapping', label: 'Field Mapping', type: 'field_mapping', description: 'Map inputs (Workflow Context, variables, collections) onto model columns for create/update/upsert (system columns excluded).' },
+      ],
+    },
+    {
+      label: 'Output',
+      parameters: [
+        { name: 'storeToVariable', label: 'Result Variable', type: 'variable_auto_create', description: 'Auto-creates a record variable for read/write results (collection for list).' },
       ],
     },
   ],
@@ -163,3 +168,14 @@ export const WORKFLOW_EVENT_CONFIGS: Record<WorkflowEventType, WorkflowEventConf
 };
 
 export const WORKFLOW_OPERATIONS = OPERATIONS;
+
+/** One field-mapping row: which input feeds a model column. */
+export interface WorkflowFieldMappingEntry {
+  /** 'variable' → ctx.variables[sourceVar] (optionally [itemIndex].sourceField for record/collection values); 'record' → ctx.record.values[sourceField]; 'record_old' → ctx.record.oldValues[sourceField]; 'wf' → workflow context (requestor.* / request_date). */
+  source?: 'variable' | 'record' | 'record_old' | 'wf';
+  sourceVar?: string;
+  sourceField?: string;
+  /** Item index into a collection variable (default 0 = first item). */
+  itemIndex?: number;
+  targetCol: string;
+}

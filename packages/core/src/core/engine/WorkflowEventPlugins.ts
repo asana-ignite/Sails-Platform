@@ -77,15 +77,17 @@ function serializeRecordFilters(groups: any[], fields: any[]): any[] {
 /**
  * Builds the workflow macro context lazily — only when a serialized rule
  * references the workflow namespace (@wf.requestor*, @wf.request_date,
- * @var.<name>). Resolves the instance starter (wf_instance.created_by) and
- * start date in one query each.
+ * @var.<name>) or `force` is set (payload/template sources: requestor,
+ * request_date, record_old). Resolves the instance starter
+ * (wf_instance.created_by) and start date in one query each.
  */
 async function buildWorkflowCtx(
   ctx: WorkflowEventContext,
   schema: string,
   filterGroups: any[],
+  force = false,
 ): Promise<WorkflowMacroCtx | null> {
-  const needsWorkflowCtx = filterGroups.some((g) =>
+  const needsWorkflowCtx = force || filterGroups.some((g) =>
     g?.rules?.some((r: any) =>
       typeof r.value === 'string' && (r.value.startsWith('@wf.') || r.value.startsWith('@var.'))
     )
@@ -127,6 +129,11 @@ async function buildWorkflowCtx(
   return { variables: ctx.variables || {}, requestor, requestDate };
 }
 
+/** True when any template/mapping string references the workflow context. */
+function referencesWorkflowContext(...sources: (string | null | undefined)[]): boolean {
+  return sources.some((s) => typeof s === 'string' && /(?:record|oldRecord|requestor)\.|\brequest_date\b/.test(s));
+}
+
 // ─── Record Event ─────────────────────────────────────────────
 
 const recordEventPlugin: WorkflowEventPlugin = {
@@ -151,17 +158,24 @@ const recordEventPlugin: WorkflowEventPlugin = {
       if (!meta) return fail(ctx, `Model '${model}' not found`);
       const filterGroups = serializeRecordFilters(eventConfig.filterGroups, meta.table.fields);
       const ses = await buildSession(ctx);
-      if (filterGroups.length > 0) {
+      // Workflow context (requestor/request_date) is needed for @wf.* macros in
+      // filters, and for payload mappings sourced from the Workflow Context tree.
+      const mapping = (eventConfig.fieldMapping || []) as any[];
+      const needsWfCtx = mapping.some((m) => m.source === 'wf' || m.source === 'record_old');
+      let workflowCtx: WorkflowMacroCtx | null = null;
+      if (filterGroups.length > 0 || needsWfCtx) {
         // Resolve drill chains, record sources and context/workflow macros
         // (@today, @me, @wf.requestor, @var.<name>, …) before SQL generation.
-        const workflowCtx = await buildWorkflowCtx(ctx, schema, filterGroups);
-        await preprocessFilterGroups({
-          session: ses,
-          tableName: model,
-          tableFields: meta.table.fields,
-          filterGroups,
-          workflowCtx: workflowCtx || undefined,
-        });
+        workflowCtx = await buildWorkflowCtx(ctx, schema, filterGroups, needsWfCtx);
+        if (filterGroups.length > 0) {
+          await preprocessFilterGroups({
+            session: ses,
+            tableName: model,
+            tableFields: meta.table.fields,
+            filterGroups,
+            workflowCtx: workflowCtx || undefined,
+          });
+        }
       }
 
       let stored: any = null;
@@ -197,11 +211,7 @@ const recordEventPlugin: WorkflowEventPlugin = {
 
       // ── Create ──
       else if (operation === 'create') {
-        const payload: Record<string, any> = {};
-        const mapping: { sourceVar: string; targetCol: string }[] = eventConfig.fieldMapping || [];
-        for (const m of mapping) {
-          payload[m.targetCol] = ctx.variables[m.sourceVar];
-        }
+        const payload = buildPayload(ctx, eventConfig, workflowCtx);
         stored = await QueryLayer.insertRecord(pool, schema, model, payload, ses);
       }
 
@@ -209,25 +219,22 @@ const recordEventPlugin: WorkflowEventPlugin = {
       else if (operation === 'update') {
         const targetId = resolveTargetId(ctx, eventConfig);
         if (!targetId) return fail(ctx, 'Record Event update requires a target record id');
-        const data: Record<string, any> = {};
-        const mapping: { sourceVar: string; targetCol: string }[] = eventConfig.fieldMapping || [];
-        for (const m of mapping) {
-          data[m.targetCol] = ctx.variables[m.sourceVar];
-        }
+        const data = buildPayload(ctx, eventConfig, workflowCtx);
         stored = await QueryLayer.updateRecord(pool, schema, model, targetId, data, ses);
       }
 
       // ── Upsert (insert, or update the row with the matching id) ──
       else if (operation === 'upsert') {
-        const mapping: { sourceVar: string; targetCol: string }[] = eventConfig.fieldMapping || [];
-        // Conflict key: a variable mapped onto the id column wins; otherwise
-        // fall back to the Target Record selector; otherwise pure insert.
-        const mappedId = mapping.find((m) => m.targetCol === 'id')?.sourceVar;
-        const idValue = mappedId ? (ctx.variables[mappedId] as string) ?? null : resolveTargetId(ctx, eventConfig);
+        const mapping: any[] = eventConfig.fieldMapping || [];
+        // Conflict key: a source mapped onto the id column wins (variable,
+        // triggering record or workflow context); otherwise the Target Record
+        // selector; else a pure insert with a generated id.
+        const idEntry = mapping.find((m) => m.targetCol === 'id');
+        const idValue = idEntry ? (valueFor(ctx, idEntry, workflowCtx) as string) ?? null : resolveTargetId(ctx, eventConfig);
         const payload: Record<string, any> = {};
         for (const m of mapping) {
           if (m.targetCol === 'id') continue;
-          payload[m.targetCol] = ctx.variables[m.sourceVar];
+          payload[m.targetCol] = valueFor(ctx, m, workflowCtx);
         }
         stored = await QueryLayer.upsertRecord(pool, schema, model, idValue, payload, ses);
       }
@@ -292,6 +299,43 @@ function resolveTargetId(ctx: WorkflowEventContext, config: Record<string, any>)
   return (config.targetValue as string) || null;
 }
 
+/**
+ * Resolve one field-mapping entry's input value by source:
+ * 'record' → the triggering record's current field value,
+ * 'record_old' → its value before the change (update triggers),
+ * 'wf' → the workflow context (requestor.* / request_date),
+ * anything else / legacy entries → the named workflow variable — with an
+ * optional field (record variable) and item index (collection variable).
+ */
+function valueFor(ctx: WorkflowEventContext, m: any, wfCtx?: WorkflowMacroCtx | null): any {
+  if (m.source === 'record') return (ctx.record?.values ?? {})[m.sourceField ?? m.targetCol];
+  if (m.source === 'record_old') return (ctx.record?.oldValues ?? {})[m.sourceField ?? m.targetCol];
+  if (m.source === 'wf') {
+    const f = String(m.sourceField || '');
+    if (f === 'request_date') return wfCtx?.requestDate ?? null;
+    if (f.startsWith('requestor.')) {
+      const key = f.slice('requestor.'.length);
+      return wfCtx?.requestor ? (wfCtx.requestor as Record<string, any>)[key] ?? null : null;
+    }
+    return null;
+  }
+  const v = ctx.variables[m.sourceVar];
+  if (!m.sourceField || v == null) return v;
+  if (Array.isArray(v)) return v[m.itemIndex ?? 0]?.[m.sourceField];
+  return v[m.sourceField];
+}
+
+/** Build a create/update/upsert payload from the field mapping (any source). */
+function buildPayload(ctx: WorkflowEventContext, eventConfig: Record<string, any>, wfCtx?: WorkflowMacroCtx | null): Record<string, any> {
+  const payload: Record<string, any> = {};
+  const mapping: any[] = eventConfig.fieldMapping || [];
+  for (const m of mapping) {
+    if (m.targetCol === 'id') continue;
+    payload[m.targetCol] = valueFor(ctx, m, wfCtx);
+  }
+  return payload;
+}
+
 // ─── Notification Event ───────────────────────────────────────
 
 const notificationEventPlugin: WorkflowEventPlugin = {
@@ -302,30 +346,40 @@ const notificationEventPlugin: WorkflowEventPlugin = {
   async execute(ctx) {
     const { eventConfig } = ctx;
     const channel = (eventConfig.channel as string) || 'bell';
-    const recipientsRaw = (eventConfig.recipients as string) || '';
+    const recipientsRaw = (eventConfig.recipients as string | Array<string | { __expr: string }>) || '';
     const subjectTpl = (eventConfig.subject as string) || '';
     const bodyTpl = (eventConfig.message as string) || '';
 
     const schema = await resolveTenantSchema(ctx.tenantId);
     if (!schema) return fail(ctx, 'Tenant schema not found');
 
-    if (!recipientsRaw) {
+    if (!recipientsRaw || (Array.isArray(recipientsRaw) && recipientsRaw.length === 0)) {
       return fail(ctx, 'Notification Event requires recipients');
     }
 
     const recordValues = ctx.record?.values?.id ? ctx.record.values : (ctx.variables ?? {});
-    const recipients = await resolveRecipients(ctx.tenantId, recipientsRaw, ctx.variables);
+    const recipients = await resolveRecipients(ctx.tenantId, recipientsRaw, ctx.variables, ctx.record);
     if (recipients.length === 0) {
       // No concrete recipients — warn but don't error (template may resolve later).
       await logWfAction(schema, ctx.instanceId, ctx.stageId, 'notify:no_recipients', ctx.session.userId, {
         channel,
-        recipientsRaw: recipientsRaw || null,
+        recipientsRaw: typeof recipientsRaw === 'string' ? recipientsRaw : JSON.stringify(recipientsRaw),
       });
       return { success: true };
     }
 
-    const subject = renderTemplate(subjectTpl, ctx.variables, ctx.record);
-    const body = renderTemplate(bodyTpl, ctx.variables, ctx.record);
+    // Workflow-context templates ({{record.x}}, {{oldRecord.x}}, {{requestor.x}}, {{request_date}}).
+    const templates = [
+      subjectTpl, bodyTpl,
+      typeof recipientsRaw === 'string' ? recipientsRaw : '',
+      JSON.stringify(eventConfig.attachments || []),
+    ];
+    const wfCtx = referencesWorkflowContext(...templates)
+      ? await buildWorkflowCtx(ctx, schema, [], true)
+      : null;
+
+    const subject = await renderTemplate(subjectTpl, ctx.variables, ctx.record, wfCtx);
+    const body = await renderTemplate(bodyTpl, ctx.variables, ctx.record, wfCtx);
 
     const emailRecipients = recipients
       .filter((r) => r.email)
@@ -438,7 +492,24 @@ function makeJsonataEvent(type: 'expression' | 'transform', label: string, descr
 
       if (!expression) return fail(ctx, `${label} requires config.expression`);
 
-      const result = await evaluateJsonata(expression, ctx.variables);
+      const schema = await resolveTenantSchema(ctx.tenantId);
+      if (!schema) return fail(ctx, 'Tenant schema not found');
+
+      // Workflow-context expressions (record. / oldRecord. / requestor. / request_date)
+      // evaluate against the merged context; otherwise variables only.
+      let evalCtx: Record<string, any> = ctx.variables;
+      if (referencesWorkflowContext(expression)) {
+        const wfCtx = await buildWorkflowCtx(ctx, schema, [], true);
+        evalCtx = {
+          ...ctx.variables,
+          record: ctx.record?.values ?? {},
+          oldRecord: ctx.record?.oldValues ?? {},
+          requestor: wfCtx?.requestor ?? null,
+          request_date: wfCtx?.requestDate ?? null,
+        };
+      }
+
+      const result = await evaluateJsonata(expression, evalCtx);
       if (!result.ok) return fail(ctx, `${type === 'expression' ? 'Expression' : 'Transform'} error: ${result.error}`);
 
       const output: Record<string, any> = {};

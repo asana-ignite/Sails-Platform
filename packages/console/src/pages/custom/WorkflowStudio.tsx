@@ -16,7 +16,7 @@ import {
   CornerUpLeft, Unlink, History, RotateCcw, Maximize2, Minimize2,
   Pencil, Save, Play, Wand2, Globe, ArrowRight, Undo2, Redo2, FunctionSquare,
 } from 'lucide-react';
-import ExpressionEditor from '../__mockups__/ExpressionEditor';
+import ExpressionEditor from '../../components/workflow/ExpressionEditor';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { FilterBuilder } from '../../components/common/FilterBuilder';
 import { DynamicIcon } from '../../components/common/DynamicIcon';
@@ -28,6 +28,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Unauthorized from '../Unauthorized';
 import LoadingScreen from '../../components/common/LoadingScreen';
 import { WorkflowEventWizard } from '../../components/workflow/WorkflowEventWizard';
+import { REQUESTOR_FIELDS } from '../../components/workflow/WorkflowVariablePicker';
 import { VariableEditor } from '../../components/workflow/VariableEditor';
 import type { WorkflowEventType as SharedWorkflowEventType } from '@sails/shared';
 import './WorkflowStudio.css';
@@ -1324,6 +1325,19 @@ export const WorkflowStudio: React.FC = () => {
   const recordSchemas: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]> = {};
   for (const m of varModels) recordSchemas[m.tableName] = columnsFromModel(m);
 
+  /** Workflow-context drill roots for the expression intellisense (record/oldRecord/requestor). */
+  const drillRoots: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]> = {};
+  const triggerHasUpdate = ['update', 'insert_or_update'].includes(triggerOpOf(process.triggerOn));
+  {
+    const trig = tables.find((t) => t.id === process.tableId);
+    if (trig) {
+      const cols = columnsFromModel(trig as any);
+      drillRoots.record = cols;
+      if (triggerHasUpdate) drillRoots.oldRecord = cols;
+    }
+    drillRoots.requestor = REQUESTOR_FIELDS.map((rf) => ({ fieldName: rf.field, label: rf.label, logicalType: rf.logicalType }));
+  }
+
   const sampleForType = (t: string): any =>
     ['number', 'decimal', 'currency', 'percentage'].includes(t) ? 0 : t === 'boolean' ? false : '';
 
@@ -2249,7 +2263,7 @@ export const WorkflowStudio: React.FC = () => {
       : null;
     if (!ev) return null;
 
-    const createCollectionVariable = (name: string, modelTableName: string): string => {
+    const createVariable = (name: string, modelTableName: string, fieldType: 'record' | 'collection'): string => {
       const existing = process.variables.find((v) => v.name === name);
       if (existing) return existing.id;
       const modelTable = tables.find((t) => t.tableName === modelTableName);
@@ -2257,13 +2271,16 @@ export const WorkflowStudio: React.FC = () => {
       setProcess((p) => ({
         ...p,
         variables: [...p.variables, {
-          id: varId, name, fieldType: 'collection', itemType: 'record',
+          id: varId, name, fieldType,
+          ...(fieldType === 'collection' ? { itemType: 'record' as const } : {}),
           targetModel: modelTableName,
           columns: modelTable ? columnsFromModel(modelTable as any) : [],
         }],
       }));
       return varId;
     };
+    const createCollectionVariable = (name: string, modelTableName: string): string => createVariable(name, modelTableName, 'collection');
+    const createRecordVariable = (name: string, modelTableName: string): string => createVariable(name, modelTableName, 'record');
 
     return (
       <WorkflowEventWizard
@@ -2285,7 +2302,12 @@ export const WorkflowStudio: React.FC = () => {
         }}
         variables={process.variables}
         tables={tables}
+        triggerModel={tables.find((t) => t.id === process.tableId) || null}
+        hasOldRecord={triggerHasUpdate}
+        recordSchemas={recordSchemas}
+        recordSchema={recordSchemas[String(process.tableId || '')]}
         onCreateCollectionVariable={createCollectionVariable}
+        onCreateRecordVariable={createRecordVariable}
         onBindVariableToEvent={bindVariableToEvent}
         onOpenExpressionEditor={(id) => setExprModalEventId(id)}
         onOpenFilterBuilder={(id) => setRecordFilterEventId(id)}
@@ -2329,7 +2351,15 @@ export const WorkflowStudio: React.FC = () => {
             <button className="ws-icon-btn" onClick={() => setExprModalEventId(null)}><X size={15} /></button>
           </div>
           <div className="ws-modal__body">
-            <ExpressionEditor showSnippets variables={varSuggestProps} recordSchemas={recordSchemas} value={exprModalEvent.config.expression || ''} onChange={onApply} sample={sample} />
+            <ExpressionEditor
+              showSnippets
+              variables={varSuggestProps}
+              recordSchemas={recordSchemas}
+              drillRoots={drillRoots}
+              value={exprModalEvent.config.expression || ''}
+              onChange={onApply}
+              sample={sample}
+            />
             <p className="ws-props-hint">Type <code>$</code> for function suggestions (<code>$sum, $uppercase, $split, $map…</code>). Use <strong>Test</strong> to evaluate against variables.</p>
           </div>
           <div className="ws-modal__footer">

@@ -5,7 +5,8 @@
  * the record schema (Model-bound or Custom), the collection item type, and
  * the default value — with a generated JSON Schema preview and validation.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Trash2, MoveUp, MoveDown, Braces, CheckCircle2, AlertTriangle, Database, PenLine, RotateCcw } from 'lucide-react';
 import { collectionValueSchema, validateCollectionValue } from '@sails/shared';
 import { CustomSelect } from '../common/CustomSelect';
@@ -81,6 +82,44 @@ const colLabel = (c: ColumnDef): string => c.label || c.fieldName;
 export const VariableEditor: React.FC<Props> = ({ variable: v, models, isReadonly, onChange, onReloadModels }) => {
   const [customField, setCustomField] = useState<ColumnDef>({ fieldName: '', label: '', logicalType: 'text' });
   const [customPopOpen, setCustomPopOpen] = useState(false);
+  const [customPopPos, setCustomPopPos] = useState<{ top: number; left: number } | null>(null);
+  const addFieldAnchorRef = useRef<HTMLDivElement | null>(null);
+  const addFieldPopRef = useRef<HTMLDivElement | null>(null);
+
+  // Close the Add Field popup on outside click / Escape (portaled to body).
+  useEffect(() => {
+    if (!customPopOpen) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (addFieldAnchorRef.current?.contains(t)) return;
+      if (addFieldPopRef.current?.contains(t)) return;
+      setCustomPopOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setCustomPopOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [customPopOpen]);
+
+  const openCustomPop = () => {
+    const anchor = addFieldAnchorRef.current;
+    if (anchor) {
+      const r = anchor.getBoundingClientRect();
+      const W = 260;
+      const estH = 320;
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - W - 8));
+      const below = r.bottom + 6 + estH <= window.innerHeight - 8;
+      const top = below ? r.bottom + 6 : Math.max(8, r.top - estH - 6);
+      setCustomPopPos({ top, left });
+    } else {
+      setCustomPopPos(null);
+    }
+    setCustomField({ fieldName: '', label: '', logicalType: 'text' });
+    setCustomPopOpen(true);
+  };
   const [defaultDraft, setDefaultDraft] = useState<string | null>(null);
   const [schemaOpen, setSchemaOpen] = useState(false);
 
@@ -298,12 +337,17 @@ export const VariableEditor: React.FC<Props> = ({ variable: v, models, isReadonl
                 </div>
               ))}
               {/* Add custom field — button + popup (same pattern as variable creation) */}
-              <div style={{ position: 'relative', marginTop: 6 }}>
-                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => { setCustomPopOpen(true); setCustomField({ fieldName: '', label: '', logicalType: 'text' }); }} disabled={isReadonly}>
+              <div ref={addFieldAnchorRef} style={{ position: 'relative', marginTop: 6 }}>
+                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={openCustomPop} disabled={isReadonly}>
                   <Plus size={12} /> Add Field
                 </button>
-                {customPopOpen && (
-                  <div className="ws-var-add-pop" style={{ left: 0, top: 'calc(100% + 6px)', width: 260 }} onClick={(e) => e.stopPropagation()}>
+                {customPopOpen && customPopPos && createPortal(
+                  <div
+                    ref={addFieldPopRef}
+                    className="ws-var-add-pop"
+                    style={{ position: 'fixed', top: customPopPos.top, left: customPopPos.left, width: 260, zIndex: 80 }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <label className="ws-props-label">Field Name</label>
                     <input className="ws-props-input" autoFocus placeholder="field_name" value={customField.fieldName}
                       onChange={(e) => setCustomField((f) => ({ ...f, fieldName: e.target.value }))}
@@ -332,7 +376,8 @@ export const VariableEditor: React.FC<Props> = ({ variable: v, models, isReadonl
                       <button className="sails-btn sails-btn--primary sails-btn--sm" disabled={!customField.fieldName.trim()}
                         onClick={addCustomField}>OK</button>
                     </div>
-                  </div>
+                  </div>,
+                  document.body,
                 )}
               </div>
             </>

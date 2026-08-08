@@ -22,6 +22,12 @@ export interface SuggestionVariable {
 /** Model tableName → column schema map, used to resolve multi-level record drills. */
 export type RecordSchemaMap = Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
 
+/** Drill roots for the workflow context (record / oldRecord / requestor). */
+export type DrillRoots = Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
+
+/** Context leaves (record. / oldRecord. / requestor. / request_date). */
+export const CONTEXT_DRILL_ROOT = 'request_date';
+
 export const JSONATA_FUNCTIONS: { name: string; signature: string; desc: string }[] = [
   { name: '$sum', signature: '$sum(array)', desc: 'Sum of an array of numbers' },
   { name: '$count', signature: '$count(array)', desc: 'Number of items in an array' },
@@ -69,16 +75,18 @@ export function buildJsonataSuggestions(
   query: string,
   context = '',
   recordSchemas?: RecordSchemaMap,
+  drillRoots?: DrillRoots,
 ): Suggestion[] {
   const q = query.toLowerCase();
   const out: Suggestion[] = [];
 
-  // Record drill-down: context like `currentRecord.address.` or `currentRecord.`
+  // Record drill-down: context like `currentRecord.address.` or `record.`
   const drill = context.match(/([A-Za-z_][A-Za-z0-9_]*)((?:\.[A-Za-z_][A-Za-z0-9_]*)*)\.$/);
   if (drill) {
     const varName = drill[1];
     const segs = drill[2].split('.').filter(Boolean);
-    const v = variables.find((x) => x.name === varName);
+    const v = variables.find((x) => x.name === varName)
+      || (drillRoots && drillRoots[varName] ? { name: varName, columns: drillRoots[varName] } : undefined);
     let fields = v?.columns;
     let valid = !!fields;
     if (valid) {

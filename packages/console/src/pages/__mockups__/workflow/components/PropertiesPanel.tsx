@@ -2,7 +2,7 @@ import React from 'react';
 import {
   AlertTriangle, CheckCircle2, MoveDown, MoveUp, Plus, Settings, Split, Trash2, X, Zap,
 } from 'lucide-react';
-import ExpressionEditor from '../../ExpressionEditor';
+import ExpressionEditor from '../../../../components/workflow/ExpressionEditor';
 import { EVENT_DEFS, FIELD_TYPES, MOCK_MODELS, ROUTER_TYPES } from '../constants';
 import type { BranchCondition, RouteStage, RouterType, RoutingProcess, WorkflowVariable } from '../types';
 import { EventConfigForm } from './EventConfigForm';

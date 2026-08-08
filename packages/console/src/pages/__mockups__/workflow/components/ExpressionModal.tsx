@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle2, X } from 'lucide-react';
-import ExpressionEditor from '../../ExpressionEditor';
+import ExpressionEditor from '../../../../components/workflow/ExpressionEditor';
 import { EVENT_DEFS } from '../constants';
 import { sampleValuesForVariables } from '../helpers';
 import type { RouteStage, WorkflowEvent, WorkflowVariable } from '../types';

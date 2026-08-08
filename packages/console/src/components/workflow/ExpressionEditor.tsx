@@ -6,7 +6,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, Lightbulb, Play, X, Search, Hash, Type, Sigma, CornerUpLeft } from 'lucide-react';
-import { buildJsonataSuggestions, type Suggestion, type SuggestionVariable, type RecordSchemaMap } from './jsonataSuggest';
+import { buildJsonataSuggestions, type Suggestion, type SuggestionVariable, type RecordSchemaMap, type DrillRoots } from './jsonataSuggest';
 import { JSONATA_SNIPPETS, fieldTypeMatches, type Snippet, type SnippetPlaceholderKind } from './jsonataSnippets';
 import { describeJsonata } from './jsonataExplain';
 import { friendlyToJsonata, jsonataToFriendly, buildPlainSuggestions } from './jsonataFriendly';
@@ -16,6 +16,8 @@ interface ExpressionEditorProps {
   variables: SuggestionVariable[];
   /** Model tableName → columns; enables multi-level record drill-down suggestions. */
   recordSchemas?: RecordSchemaMap;
+  /** Workflow-context drill roots (record / oldRecord / requestor) for intellisense. */
+  drillRoots?: DrillRoots;
   value: string;
   onChange: (v: string) => void;
   /** Build a sample record to run the Test button. */
@@ -112,6 +114,7 @@ export function detectAssignment(value: string): AssignmentInfo {
 export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   variables,
   recordSchemas,
+  drillRoots,
   value,
   onChange,
   sample,
@@ -266,19 +269,19 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
       const base = plainDraft;
       const word = (base.match(/[A-Za-z_][A-Za-z0-9_]*$/) || [''])[0];
       const context = base.slice(0, base.length - word.length);
-      const list = buildPlainSuggestions(variables, word, context, recordSchemas);
+      const list = buildPlainSuggestions(variables, word, context, recordSchemas, drillRoots);
       if (list.length > 0) { setSuggestions(list); setSuggestIndex(0); }
       else setSuggestions(null);
       return;
     }
     if (!value.trim()) {
-      setSuggestions(buildJsonataSuggestions(variables, '', '', recordSchemas));
+      setSuggestions(buildJsonataSuggestions(variables, '', '', recordSchemas, drillRoots));
       setSuggestIndex(0);
       return;
     }
     const word = (value.match(/[A-Za-z_$][A-Za-z0-9_$]*$/) || [''])[0];
     const context = value.slice(0, value.length - word.length);
-    setSuggestions(buildJsonataSuggestions(variables, word.replace(/^\$/, ''), context, recordSchemas));
+    setSuggestions(buildJsonataSuggestions(variables, word.replace(/^\$/, ''), context, recordSchemas, drillRoots));
     setSuggestIndex(0);
   };
 
@@ -328,9 +331,11 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
       hlRef.current.scrollLeft = e.currentTarget.scrollLeft;
     }
     const word = (e.target.value.match(/[A-Za-z_][A-Za-z0-9_]*$/) || [''])[0];
-    if (word.length >= 1) {
+    // A trailing dot (e.g. `read_invoice.`) must trigger drill-down intellisense
+    // too — the word regex alone matches empty there.
+    if (word.length >= 1 || e.target.value.endsWith('.')) {
       const context = e.target.value.slice(0, e.target.value.length - word.length);
-      const list = buildPlainSuggestions(variables, word, context, recordSchemas);
+      const list = buildPlainSuggestions(variables, word, context, recordSchemas, drillRoots);
       if (list.length > 0) { setSuggestions(list); setSuggestIndex(0); }
       else setSuggestions(null);
     } else {
@@ -347,9 +352,10 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
       hlRef.current.scrollLeft = e.currentTarget.scrollLeft;
     }
     const word = (e.target.value.match(/[A-Za-z_$][A-Za-z0-9_$]*$/) || [''])[0];
-    if (word.length >= 1) {
+    // A trailing dot must trigger drill-down intellisense (e.g. `read_invoice.`).
+    if (word.length >= 1 || e.target.value.endsWith('.')) {
       const context = e.target.value.slice(0, e.target.value.length - word.length);
-      const list = buildJsonataSuggestions(variables, word.replace(/^\$/, ''), context, recordSchemas);
+      const list = buildJsonataSuggestions(variables, word.replace(/^\$/, ''), context, recordSchemas, drillRoots);
       if (list.length > 0) { setSuggestions(list); setSuggestIndex(0); }
       else setSuggestions(null);
     } else {
