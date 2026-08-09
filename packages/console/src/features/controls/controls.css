@@ -382,7 +382,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   color: var(--sails-primary, #0284c7);
 }
 
-/* ─── Rich Text editor (TipTap) ───────────────────────────────── */
+/* ─── Rich Text editor (SunEditor — theme in sailsHtmlEditor.css) ──── */
 
 .sails-richtext {
   display: flex;
@@ -397,66 +397,6 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 
 .sails-richtext--disabled {
   opacity: 0.6;
-}
-
-.sails-richtext__toolbar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 2px;
-  padding: 4px 6px;
-  background: var(--sails-bg-secondary, #f8fafc);
-  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
-  user-select: none;
-}
-
-.sails-richtext__btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 6px;
-  border-radius: 4px;
-  border: none;
-  background: transparent;
-  color: var(--sails-text-secondary, #475569);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.sails-richtext__btn:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.07);
-  color: var(--sails-text-primary, #0f172a);
-}
-
-.sails-richtext__btn--active {
-  background: rgba(14, 165, 233, 0.15) !important;
-  color: #0284c7 !important;
-}
-
-.sails-richtext__btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.sails-richtext__divider {
-  width: 1px;
-  height: 16px;
-  background: var(--sails-border-color, #cbd5e1);
-  margin: 0 4px;
-  flex-shrink: 0;
-  display: inline-block;
-}
-
-.sails-richtext__select {
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid var(--sails-border-color, #cbd5e1);
-  background: var(--sails-bg-card, #ffffff);
-  font-size: 11px;
-  color: var(--sails-text-primary, #0f172a);
-  outline: none;
-  height: 24px;
 }
 
 .sails-richtext__content {
@@ -529,10 +469,6 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* Editor toolbar link-insert output (legacy Tailwind text-cyan-400 underline) */
-.sails-richtext__link {
-  color: #22d3ee;
-  text-decoration: underline;
-}
 
 /* ─── User Control (UserControl.tsx) ──────────────────────────── */
 

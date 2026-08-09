@@ -58,12 +58,16 @@ async function ensureRuntimeTables(schema: string): Promise<void> {
       status        text NOT NULL DEFAULT 'pending',
       assignee_type text,
       assignee_id   text,
+      assignee_users jsonb,
+      actions       jsonb,
       due_at        timestamptz,
       decided_by    text,
       decision      jsonb,
       decided_at    timestamptz,
       created_at    timestamptz NOT NULL DEFAULT now()
     );
+    ALTER TABLE ${wf}.wf_task ADD COLUMN IF NOT EXISTS assignee_users jsonb;
+    ALTER TABLE ${wf}.wf_task ADD COLUMN IF NOT EXISTS actions jsonb;
     CREATE TABLE IF NOT EXISTS ${wf}.wf_action_log (
       id          text PRIMARY KEY,
       instance_id text NOT NULL,
@@ -276,7 +280,7 @@ export async function startInstance(
 export async function advanceInstance(
   tenantId: string,
   instanceId: string,
-  decision?: { stepId: string; outcome: 'approved' | 'rejected'; actorId?: string; comment?: string },
+  decision?: { stepId: string; outcome: string; actorId?: string; comment?: string },
 ): Promise<{ state: string }> {
   const schema = await resolveTenantSchema(tenantId);
   if (!schema) throw new Error('Tenant schema not found');

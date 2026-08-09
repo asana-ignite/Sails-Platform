@@ -16,7 +16,8 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, ChevronDown, MoreHorizontal, Search, X, Hash, Database, Layers, Type, Calendar, Clock, User, ToggleLeft, Braces, FunctionSquare, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, MoreHorizontal, Search, Plus, X, Hash, Database, Layers, Type, Calendar, Clock, User, ToggleLeft, Braces, FunctionSquare, CheckCircle2, Mail, Phone, Link2, List, FileText, DollarSign, Percent, MapPin, Paperclip, AlignLeft } from 'lucide-react';
+import { STRUCTURED_TYPE_SUBFIELDS } from '@sails/shared';
 import ExpressionEditor from './ExpressionEditor';
 
 export interface PickerColumn {
@@ -57,15 +58,23 @@ interface Props {
   includeRequestor?: boolean;
   /** When provided, the popup shows a "ƒ Expression…" button that opens the JSONata ExpressionEditor. */
   onExpression?: (expr: string) => void;
+  /** When provided, the popup header shows a '+ Add' button that opens the variable creation flow.
+   *  The anchor element (the picker trigger) is passed for popover positioning; a resolved
+   *  variable name lets the caller auto-insert it (e.g. as a chip). */
+  onAddVariable?: (anchorEl?: HTMLElement) => void | Promise<string | null>;
   /** Triggering record schema (columns) — enables `record.<field>` intellisense in the expression editor. */
   recordSchema?: PickerColumn[];
+  /** External anchor for popup placement (e.g. a host toolbar button). Defaults to the internal trigger. */
+  anchorOverride?: () => HTMLElement | null;
+  /** When this number increments (>0), the popup opens at the current anchor. */
+  openSignal?: number;
 }
 
 export interface TreeNode {
   key: string;
   label: string;
   typeLabel: string;
-  kind: 'section' | 'leaf' | 'record' | 'collection' | 'index';
+  kind: 'section' | 'leaf' | 'record' | 'collection' | 'index' | 'all';
   seg: string;
   indexKey?: string; // for 'index' nodes — collection variable/field name
   children?: TreeNode[];
@@ -76,6 +85,8 @@ export interface TreeNode {
   logicalType?: string;
   /** Set on collection-item leaves — the owning collection variable's name (index via [N]). */
   itemKey?: string;
+  /** Model the record/collection node belongs to (whole-record mapping gates on this). */
+  modelName?: string;
 }
 
 /** Requestor leaves (mirrors the engine's workflow context resolution). */
@@ -89,16 +100,21 @@ export const REQUESTOR_FIELDS: { field: string; label: string; logicalType: stri
 ];
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
-  number: <Hash size={12} />, decimal: <Hash size={12} />,
+  number: <Hash size={12} />, decimal: <Hash size={12} />, currency: <DollarSign size={12} />, percentage: <Percent size={12} />, auto_number: <Hash size={12} />,
   date: <Calendar size={12} />, datetime: <Calendar size={12} />, time: <Clock size={12} />,
   user: <User size={12} />, boolean: <ToggleLeft size={12} />,
   record: <Database size={12} />, collection: <Layers size={12} />, relation: <Database size={12} />,
+  email: <Mail size={12} />, phone: <Phone size={12} />, url: <Link2 size={12} />, select: <List size={12} />,
+  short_text: <Type size={12} />, long_text: <AlignLeft size={12} />, rich_text: <FileText size={12} />,
+  address: <MapPin size={12} />, lat_lng: <MapPin size={12} />, attachment: <Paperclip size={12} />, uuid: <Hash size={12} />,
 };
 
 const TYPE_LABEL: Record<string, string> = {
-  number: 'Number', decimal: 'Number', date: 'Date', datetime: 'Date & Time', time: 'Time',
-  user: 'User', boolean: 'Boolean', text: 'Text', long_text: 'Text',
-  record: 'Record', collection: 'Collection', relation: 'Record',
+  number: 'Number', decimal: 'Number', currency: 'Currency', percentage: 'Percentage', auto_number: 'Auto Number',
+  date: 'Date', datetime: 'Date & Time', time: 'Time',
+  user: 'User', boolean: 'Boolean', text: 'Text', long_text: 'Long Text', short_text: 'Short Text', rich_text: 'Rich Text',
+  email: 'Email', phone: 'Phone', url: 'URL', select: 'Select',
+  record: 'Record', collection: 'Collection', relation: 'Record', address: 'Address', lat_lng: 'Lat / Lng', attachment: 'Attachment', uuid: 'UUID',
 };
 
 function iconOf(t?: string): React.ReactNode {
@@ -119,14 +135,34 @@ function colNodes(
   return cols.map((c) => {
     const seg = c.fieldName;
     const t = c.logicalType || 'text';
+    // Structured JSON types (address / lat_lng) drill into their sub-fields.
+    const subs = STRUCTURED_TYPE_SUBFIELDS[t];
+    if (subs && subs.length > 0) {
+      return {
+        key: `col:${seg}`, label: c.label || seg, typeLabel: typeLabelOf(t), kind: 'record', seg, source: 'variable', varName: parent?.varName, logicalType: t,
+        children: subs.map((s) => ({
+          key: `col:${seg}.${s.fieldName}`, label: s.label, typeLabel: typeLabelOf(s.logicalType), kind: 'leaf', seg: s.fieldName,
+          source: 'variable', varName: parent?.varName, fieldName: `${seg}.${s.fieldName}`, logicalType: s.logicalType,
+          itemKey: parent?.inCollection ? parent.varName : undefined,
+        })),
+      };
+    }
     if (t === 'collection') {
       const itemCols = c.targetModel ? schemas[c.targetModel] : undefined;
       return {
         key: `col:${seg}`, label: c.label || seg, typeLabel: 'Collection', kind: 'collection', seg,
-        children: [{
-          key: `col:${seg}:idx`, label: '[N]', typeLabel: 'Number', kind: 'index', seg, indexKey: seg,
-          children: itemCols ? colNodes(itemCols, schemas, parent) : undefined,
-        }],
+        children: [
+          // "All items" — fields without an index → maps over every row
+          // (JSONata `record.collection.field`, e.g. inside $sum(...)).
+          {
+            key: `col:${seg}:all`, label: 'All items', typeLabel: 'All', kind: 'all', seg: '', source: 'variable', varName: parent?.varName,
+            children: itemCols ? colNodes(itemCols, schemas, parent) : undefined,
+          },
+          {
+            key: `col:${seg}:idx`, label: '[N]', typeLabel: 'Number', kind: 'index', seg, indexKey: seg,
+            children: itemCols ? colNodes(itemCols, schemas, parent) : undefined,
+          },
+        ],
       };
     }
     if (t === 'relation' || t === 'lookup') {
@@ -149,16 +185,24 @@ function varNode(v: PickerVariable, schemas: PickerSchemaMap): TreeNode {
   if (t === 'collection') {
     const itemCols = v.columns && v.columns.length > 0 ? v.columns : (v.targetModel ? schemas[v.targetModel] : undefined);
     return {
-      key: `var:${v.name}`, label: v.name, typeLabel: 'Collection', kind: 'collection', seg: v.name, source: 'variable', varName: v.name,
-      children: [{
-        key: `var:${v.name}:idx`, label: '[N]', typeLabel: 'Number', kind: 'index', seg: v.name, indexKey: v.name,
-        children: itemCols ? colNodes(itemCols, schemas, { varName: v.name, inCollection: true }) : undefined,
-      }],
+      key: `var:${v.name}`, label: v.name, typeLabel: 'Collection', kind: 'collection', seg: v.name, source: 'variable', varName: v.name, modelName: v.targetModel,
+      children: [
+        // "All items" — fields without an index → maps over every row
+        // (JSONata `var.field`, e.g. inside $sum(...)).
+        {
+          key: `var:${v.name}:all`, label: 'All items', typeLabel: 'All', kind: 'all', seg: '', source: 'variable', varName: v.name,
+          children: itemCols ? colNodes(itemCols, schemas, { varName: v.name, inCollection: true }) : undefined,
+        },
+        {
+          key: `var:${v.name}:idx`, label: '[N]', typeLabel: 'Number', kind: 'index', seg: v.name, indexKey: v.name,
+          children: itemCols ? colNodes(itemCols, schemas, { varName: v.name, inCollection: true }) : undefined,
+        },
+      ],
     };
   }
   if (t === 'record') {
     return {
-      key: `var:${v.name}`, label: v.name, typeLabel: 'Record', kind: 'record', seg: v.name, source: 'variable', varName: v.name,
+      key: `var:${v.name}`, label: v.name, typeLabel: 'Record', kind: 'record', seg: v.name, source: 'variable', varName: v.name, modelName: v.targetModel,
       children: colNodes(v.columns, schemas, { varName: v.name, inCollection: false }),
     };
   }
@@ -173,13 +217,23 @@ function topNodes(vars: PickerVariable[], schemas: PickerSchemaMap): TreeNode[] 
 function recordBranch(source: 'record' | 'record_old', label: string, modelName: string | undefined, fields: PickerColumn[]): TreeNode {
   const seg = source === 'record' ? 'record' : 'oldRecord';
   return {
-    key: `${source}:root`, label, typeLabel: modelName ? `Record · ${modelName}` : 'Record', kind: 'record', seg, source,
-    children: fields.map((f) => {
+    key: `${source}:root`, label, typeLabel: modelName ? `Record · ${modelName}` : 'Record', kind: 'record', seg, source, modelName,
+    children: fields.flatMap((f): TreeNode[] => {
       const fn = f.fieldName || f.label || 'field';
       const lt = f.logicalType || 'text';
-      return {
+      const subs = STRUCTURED_TYPE_SUBFIELDS[lt];
+      if (subs && subs.length > 0) {
+        return [{
+          key: `${source}:${fn}`, label: f.label || fn, typeLabel: typeLabelOf(lt), kind: 'record', seg: fn, source, fieldName: fn, logicalType: lt,
+          children: subs.map((s) => ({
+            key: `${source}:${fn}.${s.fieldName}`, label: s.label, typeLabel: typeLabelOf(s.logicalType), kind: 'leaf', seg: s.fieldName,
+            source, fieldName: `${fn}.${s.fieldName}`, logicalType: s.logicalType,
+          })),
+        }];
+      }
+      return [{
         key: `${source}:${fn}`, label: f.label || fn, typeLabel: typeLabelOf(lt), kind: 'leaf', seg: fn, source, fieldName: fn, logicalType: lt,
-      };
+      }];
     }),
   };
 }
@@ -271,6 +325,7 @@ export function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
 export const WorkflowVariablePicker: React.FC<Props> = ({
   variables, recordSchemas = {}, value, onChange, format = 'moustache', placeholder = 'Select variable…', disabled, variant = 'control',
   onExpression, recordSchema, topLevelOnly, triggerModelFields, triggerModelName, includeOldRecord, includeRequestor,
+  onAddVariable, anchorOverride, openSignal,
 }) => {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
@@ -282,6 +337,19 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const anchorRef = useRef<HTMLDivElement | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
+  /** The internal trigger button — the popover anchor for '+' Add variable. */
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  /** The anchor the popup measures/stays-attached to: the external override
+   *  (e.g. a host toolbar button) or this picker's own trigger button. */
+  const anchorEl = (): HTMLElement | null => anchorOverride?.() || anchorRef.current;
+
+  // Open programmatically from the host (SunEditor toolbar button).
+  useEffect(() => {
+    if (!openSignal) return;
+    openPopup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSignal]);
 
   // ── Expression editor (ƒ) ──
   /** Strict column shape expected by the ExpressionEditor's suggestion types. */
@@ -361,7 +429,7 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
     if (!open) return;
     const onDown = (e: MouseEvent) => {
       const t = e.target as HTMLElement;
-      if (anchorRef.current?.contains(t)) return;
+      if (anchorEl()?.contains(t)) return;
       if (popupRef.current?.contains(t)) return;
       setOpen(false);
     };
@@ -386,7 +454,7 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
   /** Measure the portaled popup and correct its position against the viewport. */
   const correctPopupPos = () => {
     const popup = popupRef.current;
-    const anchor = anchorRef.current;
+    const anchor = anchorEl();
     if (!popup || !anchor) return;
     const pr = popup.getBoundingClientRect();
     const ar = anchor.getBoundingClientRect();
@@ -413,7 +481,7 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
       return;
     }
     const popup = popupRef.current;
-    const anchor = anchorRef.current;
+    const anchor = anchorEl();
     if (popup && anchor) {
       const pr = popup.getBoundingClientRect();
       const ar = anchor.getBoundingClientRect();
@@ -432,7 +500,7 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
 
   // Seed the selection from the current value when the popup opens.
   const openPopup = () => {
-    const anchor = anchorRef.current;
+    const anchor = anchorEl();
     if (anchor) {
       // Open below the trigger (no height guessing) — corrected after mount.
       const r = anchor.getBoundingClientRect();
@@ -478,11 +546,13 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
       const v = (indexValues[node.indexKey || node.key] || '').trim();
       return v === '' ? '0' : v;
     }
+    // "All items" contributes no path segment (invoice_item.line_total).
+    if (node.kind === 'all') return '';
     return node.seg;
   };
 
   const refFrom = (path: string[]): string => {
-    const joined = path.join('.');
+    const joined = path.filter(Boolean).join('.');
     return format === 'jsonata' ? joined : `{{${joined}}}`;
   };
 
@@ -526,7 +596,7 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
             e.dataTransfer.effectAllowed = 'copy';
           }}
           onClick={() => {
-            if (node.kind === 'section') {
+            if (node.kind === 'section' || node.kind === 'all') {
               if (hasChildren) toggleExpand(node);
               return;
             }
@@ -542,8 +612,8 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
           <span className="wvp-node__chevron" onClick={(e) => { e.stopPropagation(); if (hasChildren) toggleExpand(node); }}>
             {hasChildren ? (isOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />) : <span style={{ width: 11 }} />}
           </span>
-          <span className="wvp-node__icon" style={{ color: node.kind === 'collection' ? '#ec4899' : node.kind === 'record' ? '#3b82f6' : node.kind === 'section' ? 'var(--sails-text-muted)' : 'var(--sails-text-muted)' }}>
-            {iconOf(node.kind === 'index' ? 'number' : node.kind === 'collection' ? 'collection' : node.kind === 'record' ? 'record' : node.typeLabel)}
+          <span className="wvp-node__icon" style={{ color: node.kind === 'collection' || node.kind === 'all' ? '#ec4899' : node.kind === 'record' ? '#3b82f6' : node.kind === 'section' ? 'var(--sails-text-muted)' : 'var(--sails-text-muted)' }}>
+            {iconOf(node.kind === 'index' ? 'number' : node.kind === 'collection' || node.kind === 'all' ? 'collection' : node.kind === 'record' ? 'record' : node.typeLabel)}
           </span>
           {node.kind === 'index' ? (
             <span className="wvp-node__label" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -572,7 +642,9 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
   };
 
   const preview = selection ? refFrom(selection) : '';
-  const isIndexPending = !!selection && selection.some((s) => s === '');
+  // Index nodes default to '0', so a selected path is always resolvable —
+  // OK is enabled as soon as a node is selected.
+  const isIndexPending = false;
 
   return (
     <div className="wvp" ref={anchorRef} style={{ position: 'relative' }}>
@@ -588,12 +660,12 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
               <X size={12} />
             </button>
           )}
-          <button type="button" className="wvp-btn" title="Pick variable" disabled={disabled} onClick={openPopup}>
+          <button ref={triggerRef} type="button" className="wvp-btn" title="Pick variable" disabled={disabled} onClick={openPopup}>
             <MoreHorizontal size={14} />
           </button>
         </div>
       ) : (
-        <button type="button" className="sails-searchlist__trigger" title="Pick variable reference" disabled={disabled} onClick={openPopup}>
+        <button ref={triggerRef} type="button" className="sails-searchlist__trigger" title="Pick variable reference" disabled={disabled} onClick={openPopup}>
           <MoreHorizontal size={16} />
         </button>
       )}
@@ -602,10 +674,24 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
         <div
           ref={popupRef}
           className="ws-var-add-pop wvp-pop"
-          style={{ position: 'fixed', top: popupPos.top, left: popupPos.left, width: 400, zIndex: 80 }}
+          style={{ position: 'fixed', top: popupPos.top, left: popupPos.left, width: 400, zIndex: 2147483000 }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="wvp-head"><Braces size={12} /> Select Variable</div>
+          <div className="wvp-head" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Braces size={12} /> Select Variable</span>
+            {onAddVariable && (
+              <button
+                type="button"
+                className="sails-btn sails-btn--ghost sails-btn--sm"
+                style={{ marginLeft: 'auto', padding: '1px 8px' }}
+                title="Add a new workflow variable"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => { e.stopPropagation(); setOpen(false); onAddVariable(triggerRef.current ?? undefined); }}
+              >
+                <Plus size={12} /> Add
+              </button>
+            )}
+          </div>
           <div className="wvp-search">
             <Search size={11} />
             <input
@@ -629,12 +715,14 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
           <div className="ws-var-add-pop__footer">
             {onExpression && (
               <button className="sails-btn sails-btn--ghost sails-btn--sm" title="Formulate a JSONata expression instead"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={openExpression}>
                 <FunctionSquare size={12} /> Expression…
               </button>
             )}
-            <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setOpen(false)}>Cancel</button>
-            <button className="sails-btn sails-btn--primary sails-btn--sm" disabled={!preview || isIndexPending}
+            <button className="sails-btn sails-btn--ghost sails-btn--sm" onMouseDown={(e) => e.preventDefault()} onClick={() => setOpen(false)}>Cancel</button>
+            <button className="sails-btn sails-btn--primary sails-btn--sm" disabled={!preview}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => { onChange(preview); setOpen(false); }}>
               OK
             </button>
@@ -645,7 +733,7 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
 
       {/* Expression editor modal (ƒ) */}
       {exprOpen && createPortal(
-        <div className="ws-modal-overlay" style={{ zIndex: 90 }} onClick={() => setExprOpen(false)}>
+        <div className="ws-modal-overlay" style={{ zIndex: 2147483000 }} onClick={() => setExprOpen(false)}>
           <div className="ws-modal" style={{ width: 860 }} onClick={(e) => e.stopPropagation()}>
             <div className="ws-modal__header">
               <span className="ws-modal__icon" style={{ background: 'rgba(168,85,247,.12)', color: '#a855f7' }}><FunctionSquare size={16} /></span>

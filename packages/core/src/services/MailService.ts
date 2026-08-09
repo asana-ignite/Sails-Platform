@@ -16,6 +16,10 @@ export interface SendOptions {
   subject: string;
   html: string;
   tenantId: string;
+  /** Carbon-copy recipients (emails). */
+  cc?: string[];
+  /** Blind carbon-copy recipients (emails). */
+  bcc?: string[];
   /** Specific connection id — when omitted the tenant default is used. */
   connectionId?: string;
   /** Nodemailer-compatible attachments. */
@@ -64,6 +68,8 @@ export async function send(opts: SendOptions): Promise<SendResult> {
       from: conn.fromEmail,
       sender: conn.fromName ? `"${conn.fromName}" <${conn.fromEmail}>` : conn.fromEmail,
       to: opts.to.join(', '),
+      ...(opts.cc && opts.cc.length > 0 ? { cc: opts.cc.join(', ') } : {}),
+      ...(opts.bcc && opts.bcc.length > 0 ? { bcc: opts.bcc.join(', ') } : {}),
       subject: opts.subject,
       html: opts.html,
       attachments: opts.attachments || undefined,

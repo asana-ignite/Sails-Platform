@@ -176,7 +176,7 @@ Parameter type catalog:
 | Type | Renders |
 |---|---|
 | `model_select` | Searchable model picker (`CustomSelect` of tables) |
-| `operation_select` | Operation dropdown (create / update / upsert / delete / read / list) |
+| `operation_select` | Operation picker — icon button grid (3 columns × 2 rows: create / update / upsert / delete / read / list), same style as the Start Condition trigger-op selector |
 | `filter_builder` | QueryStudio `FilterBuilder` button + rule-count badge |
 | `variable_auto_create` | **Result variable picker** (`WorkflowVariablePicker`, top-level only): `list` → collection variables; `read`/writes → record variables. Blank auto-creates `<op>_<model>` on Complete. Red hint + Complete block when the variable's declared columns don't match the model |
 | `field_mapping` | Side-by-side input → column mapping: the left rail is the **Workflow Context tree** (Workflow Context → Requestor / Request Date / Record / OldRecord; Variables; Collections — searchable, expandable, 35/30/35 layout); tree leaves = right port, columns = left port; drag a leaf to a column to connect/unmap (live dashed preview snaps green/red on compatible types), Auto Map by name, per-rail search, column A→Z / Z→A sorting, Clear All, **click a line then Delete/Backspace to remove**. Record/OldRecord branches need a workflow root model; collection item fields map via their `[N]` index (default 0 = first item) |
@@ -191,8 +191,10 @@ Parameter type catalog:
 |---|---|---|
 | Event | name, description | always present — every event type |
 | Action | `model`*, `operation`, `filterGroups`, `targetType`, `targetValue` | model picker, operation select (**Create, Update, Upsert, Delete, Read, List**), QueryStudio filter for read/list/update/delete; **Target Record (ID)** group appears below for read/update/upsert/delete — which record the operation targets: triggering record / by variable / by literal id (*`targetValue` required when not `trigger`*; for upsert it selects the row to update when the id already exists) |
-| Input | `fieldMapping` | create/update/upsert only. The left rail is the **unified Workflow Context tree**: `Workflow Context` → Requestor (name/email/role/title/team/position), Request Date, `Record <model>` (current values), `OldRecord <model>` (previous values, when the workflow starts on record update) — plus Variables and Collections. Collection item fields map via the `[N]` index row. System columns are excluded from mapping; `id` stays mappable for upsert (ON CONFLICT key) |
-| Output | `storeToVariable` | every op except delete. Picker restricted to record variables (collection for list); blank auto-creates `<op>_<model>` and binds it. Structure mismatch with the model blocks Complete |
+| Input | `fieldMapping` | create/update/upsert/delete (read/list target via the filter). The left rail is the **unified Workflow Context tree**: `Workflow Context` → Requestor (name/email/role/title/team/position), Request Date, `Record <model>` (current values), `OldRecord <model>` (previous values, when the workflow starts on record update) — plus Variables and Collections. Collection item fields map via the `[N]` index row; **whole record/collection branches** map into same-model relation columns (stores the id) or JSONB columns (stores the object). System columns are excluded; the **ID (UUID)** column is pinned at the top for writable ops — **update/delete** target it (required unless a Record Filter is set), upsert uses it as the ON CONFLICT key, **create** can supply its own UUID. The toolbar's **Mapping Summary** button lists the current mappings in a popover. The Record/OldRecord branches carry an `id` leaf so the triggering record's exact UUID is mappable |
+| Output | `storeToVariable`, `outputMapping` | every op except delete. The result variable is the shared `VariableTextInput` (pill + picker) with a **Create** button that builds `<op>_<model>` and maps it automatically — no auto-create on Complete, and **Complete requires the output variable to be mapped** (record for read/writes, collection for list). **Output Mapping** (swapped sides vs Input) maps single-record result fields onto scalar workflow variables; list results are skipped by the engine. Structure mismatch with the model blocks Complete |
+
+**Per-operation validation on Complete** — read: filter-driven (a Record Filter is allowed and returns **one row**, `LIMIT 1`; the ID (UUID) mapping is optional, payload columns forbidden); delete: Input must map **exactly the ID (UUID)**, no Record Filter; update: the **ID (UUID) must be mapped**, no Record Filter; list: filter-driven; create/upsert: payload mapping + output variable. |
 
 \* `required: true` — completion is validated on Complete.
 
@@ -207,9 +209,11 @@ enforced identically to the platform APIs:
 | `read` | `listRecords(limit: 1, filters: {id: targetId})` | single record; `targetId` from `config.targetType`/`targetValue` (trigger default = `ctx.recordId`) |
 | `list` | `listRecords(limit: 25, filterGroups: config.filterGroups)` | filter serialized via `serializeFilterGroups`, then enriched by `preprocessFilterGroups` (drill chains, record sources, macros) |
 | `create` | `insertRecord(payload from fieldMapping)` | payload built from the mapping; each row's value = variable, triggering-record field (`record`), pre-change value (`record_old`), or workflow context (`wf`: requestor.* / request_date) |
-| `update` | `updateRecord(data from fieldMapping, targetId)` | target id resolved from `config.targetType`/`targetValue`; same source kinds |
+| `update` | `updateRecord(data from fieldMapping, targetId)` | target id = a source mapped onto the `id` column (Input step, required) → else legacy `config.targetType`/`targetValue`; same source kinds |
 | `upsert` | `upsertRecord(id, data from fieldMapping)` | `INSERT … ON CONFLICT (id) DO UPDATE` (PG 9.5+). Conflict id = any source mapped onto the `id` column → else the Target Record selector → else generated (pure insert). Requires both create **and** update permissions; audit logs `CREATE` or `UPDATE`. `created_by`/`owner_id` are never overwritten on the update path |
 | `delete` | `deleteRecord(targetId)` | same target resolution |
+
+Record **variables always include the ID (UUID)** field in their structure — `columnsFromModel` injects `{ fieldName: 'id', logicalType: 'uuid' }` — so `Record <model>` drill-downs, expression intellisense and mapping all expose it.
 
 A `SessionContext` is built per-execution (role fetched from `core.users`).
 Results are stored into the bound record/collection variable and validated
@@ -222,7 +226,7 @@ blocks **Complete** on structurally incompatible result variables.
 | Step | Visible for | Controls |
 |---|---|---|
 | Event | always | name, description |
-| Action | always | model*, operation, QueryStudio filter (read/list/update/delete), Target Record (read/update/upsert/delete) |
+| Action | always | model*, operation (icon button grid — create/update/upsert/delete/read/list), QueryStudio filter button (bottom, full width, read/list/update/delete). **QueryStudio is the query engine** — the `ID (UUID)` column is filterable, so `id = <UUID>` targets one record. Read/List are filter-driven; Update/Delete with a filter set apply to **all matching records** (batch, cap 500, audited per row) — without a filter they target a single record via the Input `id` mapping |
 | Input | create/update/upsert | field-mapping panel over the **Workflow Context tree** (Requestor / Request Date / Record / OldRecord branches — always shown when the workflow has a root model) |
 | Output | all except delete | result-variable picker (collection for list, record otherwise) — blank auto-creates `<op>_<model>` |
 
@@ -277,6 +281,19 @@ workflow values, resolved **per instance at execution time**:
 | Requestor → Position | `@wf.requestor.position` | starter's first `position_slots.position_id` |
 | Request Date | `@wf.request_date` | `wf_instance.created_at` (ISO date) |
 | `<variable> (<type>)` | `@var.<name>` | workflow variable value (scalars only; collections/records excluded) |
+
+### QueryStudio 'Workflow' value source
+
+Both workflow QueryStudio dialogs add a fifth RHS source — **Value / Field /
+Record / Context / Workflow**. Choosing **Workflow** opens the unified
+Workflow Context tree picker (Requestor / Request Date / Record / OldRecord /
+Variables / Collections) and stores a moustache reference
+(`{{requestor.name}}`, `{{record.customer}}`, `{{list_invoices.0.amount}}`,
+`{{request_date}}`) on the rule. `preprocessFilterGroups` resolves the
+reference against the workflow context (variables + triggering record +
+requestor + request date) before SQL generation; unresolvable references
+drop the rule. Available only in Workflow Studio (other QueryStudio hosts
+keep the four original sources).
 
 Mechanics: the Record Event plugin runs `preprocessFilterGroups` before SQL
 generation (same pipeline as `/api/dynamic`), passing the actor session plus
@@ -508,13 +525,13 @@ the triggering record's fields; `{{oldRecord.*}}` / `{{requestor.*}}` /
 `{{request_date}}` from workflow context; **`{{$<jsonata>}}`** is evaluated as a
 JSONata expression against `variables` + `record` (built with the ƒ Expression
 button — `{{$sum(invoices.amount)}}`). Plain text for bell; full HTML for
-email (tiptap with chips, tables, formatting).
+email (SunEditor with chips, tables, formatting).
 
 ### Variable-aware text controls (reusable)
 
 `components/workflow/` ships reusable variable-reference controls used across
 events: `VariableTextInput` (textbox/textarea with inline `{{var}}` chips),
-`HtmlNotificationEditor` (full-HTML tiptap body), `RecipientsChipsInput`,
+`SailsHtmlEditor` (full-HTML body — SunEditor-based, `components/shared/SailsHtmlEditor`),
 `WorkflowVariablePicker` (hierarchy popup), `VariableAutocomplete` (`{{`
 intellisense with record/collection drill-down), `VariableEditor`. All share
 the same tree data (`variableTree.tsx`), drag-and-drop, and the ƒ JSONata

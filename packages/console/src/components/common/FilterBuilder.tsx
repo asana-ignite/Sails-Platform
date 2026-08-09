@@ -5,6 +5,7 @@ import RecordPicker from './RecordPicker';
 import FieldPathPicker from './FieldPathPicker';
 import type { FieldDefinition as PickerField } from './FieldPathPicker';
 import type { FilterGroup, FilterRule, SailsFieldDefinition, FilterValueSource } from '@sails/shared';
+import { VariableTextInput } from '../workflow/VariableTextInput';
 import { CONTEXT_FLAT_OPTIONS, isNPeriodMacro } from '@sails/shared';
 import { useDateTimePrefs, resolveControlDisplayText } from '../../utils/systemDateTime';
 import { SailsDatePicker } from '../../features/controls/plugins/DateControl';
@@ -83,7 +84,11 @@ function useModelSchemas(rootFields: SailsFieldDefinition[], rootTableName: stri
         const map: Record<string, PickerField[]> = { [rootTableName]: rootMap };
         for (const t of rows) {
           if (t.tableName && Array.isArray(t.fields)) {
-            map[t.tableName] = t.fields.map(toPickerField);
+            // Related models also expose the record ID (UUID) for drill-downs.
+            const fs = t.fields.some((f: any) => f.fieldName === 'id')
+              ? t.fields
+              : [...t.fields, { id: 'id', name: 'ID', fieldName: 'id', logicalType: 'uuid' } as any];
+            map[t.tableName] = fs.map(toPickerField);
           }
         }
         modelSchemasCache[rootTableName] = map;
@@ -106,7 +111,10 @@ function emptyRule(fields: SailsFieldDefinition[]): FilterRule {
 }
 
 function emptyGroup(fields: SailsFieldDefinition[], name: string): FilterGroup {
-  return { id: newGroupId(), name, groupLogic: 'and', rules: [emptyRule(fields)] };
+  // No default rule — users shouldn't accidentally filter unintentionally.
+  // Rules are added explicitly via "+ Add Filter Rule".
+  void fields;
+  return { id: newGroupId(), name, groupLogic: 'and', rules: [] };
 }
 
 interface FilterBuilderProps {
@@ -125,6 +133,15 @@ interface FilterBuilderProps {
    * variables; other QueryStudio hosts leave this unset.
    */
   extraContextOptions?: { value: string; label: string; disabled?: boolean }[];
+  /** When provided (Workflow Studio), the 'Workflow' RHS source appears and
+   * opens the workflow variable picker for the rule value. */
+  workflowVariables?: { id: string; name: string; fieldType: string; targetModel?: string; columns?: any[] }[];
+  workflowRecordSchemas?: import('../workflow/WorkflowVariablePicker').PickerSchemaMap;
+  workflowTriggerFields?: import('../workflow/WorkflowVariablePicker').PickerColumn[];
+  workflowTriggerName?: string;
+  workflowHasOldRecord?: boolean;
+  /** When provided, the workflow value source's picker shows a '+ Add' button. */
+  onAddVariable?: (anchorEl?: HTMLElement) => void | Promise<string | null>;
 }
 
 export const FilterBuilder: React.FC<FilterBuilderProps> = ({
@@ -136,14 +153,31 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
   showHeader = true,
   title = 'Edit View Filters',
   extraContextOptions,
+  workflowVariables,
+  workflowRecordSchemas,
+  workflowTriggerFields,
+  workflowTriggerName,
+  workflowHasOldRecord,
+  onAddVariable,
 }) => {
   const dateTimePrefs = useDateTimePrefs();
-  const modelSchemas = useModelSchemas(fields, rootTableName);
+  // The record's ID (UUID) is a real column on every table — metadata excludes
+  // it, so it's injected here so every QueryStudio host can filter by it.
+  const allFields = React.useMemo(() => {
+    const base = fields || [];
+    if (base.some((f) => f.fieldName === 'id')) return base;
+    return [...base, { id: 'id', name: 'ID', fieldName: 'id', logicalType: 'uuid' } as any];
+  }, [fields]);
+  const modelSchemas = useModelSchemas(allFields, rootTableName);
   const contextOptions = extraContextOptions && extraContextOptions.length > 0
     ? [...CONTEXT_FLAT_OPTIONS, ...extraContextOptions]
     : CONTEXT_FLAT_OPTIONS;
+  // The 'Workflow' RHS source exists only where workflow variables are supplied.
+  const sourceOptions: { value: FilterValueSource; label: string }[] = workflowVariables
+    ? [...RHS_SOURCE_OPTIONS, { value: 'workflow', label: 'Workflow' }]
+    : RHS_SOURCE_OPTIONS;
   const [groups, setGroups] = useState<FilterGroup[]>(
-    initialGroups.length > 0 ? initialGroups : [emptyGroup(fields, '1')]
+    initialGroups.length > 0 ? initialGroups : [emptyGroup(allFields, '1')]
   );
   const [activeTabId, setActiveTabId] = useState<string>(groups[0]?.id || '');
 
@@ -172,7 +206,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
   };
 
   const addGroupTab = () => {
-    const g = emptyGroup(fields, String(groups.length + 1));
+    const g = emptyGroup(allFields, String(groups.length + 1));
     setGroups([...groups, g]);
     setActiveTabId(g.id);
   };
@@ -196,7 +230,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
 
   const addRuleToActiveGroup = () => {
     if (!activeGroup) return;
-    updateActiveRules([...activeGroup.rules, emptyRule(fields)]);
+    updateActiveRules([...activeGroup.rules, emptyRule(allFields)]);
   };
 
   const removeRule = (ruleId: string) => {
@@ -382,6 +416,27 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
       );
     }
 
+    if (source === 'workflow') {
+      // Workflow value: VariableTextInput — type `{{` for intellisense, use the
+      // … picker, or drag a node in. The moustache ref is resolved at runtime
+      // (preprocessFilterGroups) against the workflow context.
+      return (
+        <VariableTextInput
+          value={rule.workflowRef || ''}
+          onChange={(v) => updateRule(rule.id, { workflowRef: v, value: '' })}
+          variables={workflowVariables || []}
+          recordSchemas={workflowRecordSchemas}
+          recordSchema={workflowTriggerFields}
+          triggerModelFields={workflowTriggerFields}
+          triggerModelName={workflowTriggerName}
+          includeOldRecord={workflowHasOldRecord}
+          includeRequestor
+          placeholder="Pick a workflow variable…"
+          onAddVariable={onAddVariable}
+        />
+      );
+    }
+
     return literalValueEditor(rule);
   };
 
@@ -396,6 +451,9 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
   /** Human-readable RHS label for the read-only summary (no SQL is ever shown). */
   const summaryValueLabel = (rule: FilterRule): string => {
     const source = rule.valueSource || 'value';
+    if (source === 'workflow') {
+      return rule.workflowRef ? `Workflow \u2192 ${rule.workflowRef}` : '(workflow variable)';
+    }
     if (source === 'context') {
       const macro = rule.contextMacro || '@me';
       const opt = contextOptions.find((o) => o.value === macro);
@@ -527,7 +585,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
                   {!isNullOp ? (
                     <CustomSelect
                       value={rule.valueSource || 'value'}
-                      options={RHS_SOURCE_OPTIONS}
+                      options={sourceOptions}
                       onChange={(v) => {
                         const src = String(v) as FilterValueSource;
                         updateRule(rule.id, {
@@ -537,6 +595,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
                           refRecordId: src === 'record' ? rule.refRecordId : undefined,
                           contextMacro: src === 'context' ? (rule.contextMacro || '@me') : undefined,
                           contextN: src === 'context' ? (rule.contextN ?? 30) : undefined,
+                          workflowRef: src === 'workflow' ? rule.workflowRef : undefined,
                         });
                       }}
                       size="sm"
@@ -618,7 +677,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
         <button
           type="button"
           className="sails-btn sails-btn--ghost sails-btn--sm"
-          onClick={() => setGroups([emptyGroup(fields, '1')])}
+          onClick={() => setGroups([emptyGroup(allFields, '1')])}
         >
           Reset
         </button>

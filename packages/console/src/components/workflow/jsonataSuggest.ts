@@ -2,6 +2,7 @@
  * JSONata intellisense support — curated function list + suggestion builder.
  * Suggestions merge JSONata's built-in $functions with workflow variables.
  */
+import { STRUCTURED_TYPE_SUBFIELDS } from '@sails/shared';
 
 export interface Suggestion {
   label: string;
@@ -86,13 +87,22 @@ export function buildJsonataSuggestions(
     const varName = drill[1];
     const segs = drill[2].split('.').filter(Boolean);
     const v = variables.find((x) => x.name === varName)
-      || (drillRoots && drillRoots[varName] ? { name: varName, columns: drillRoots[varName] } : undefined);
-    let fields = v?.columns;
+      || (drillRoots && drillRoots[varName] ? { name: varName, columns: drillRoots[varName], targetModel: undefined } : undefined);
+    // Collection/record variables may declare their columns via targetModel
+    // (schemas map) instead of inline — mirror the picker's fallback so
+    // `invoice_item.` suggests the item fields.
+    let fields = v?.columns?.length
+      ? v.columns
+      : (v?.targetModel && recordSchemas ? recordSchemas[v.targetModel] : v?.columns);
     let valid = !!fields;
     if (valid) {
       for (const seg of segs) {
         const col = (fields || []).find((f) => f.fieldName === seg || f.label === seg);
-        if (!col || !col.targetModel || !recordSchemas) { valid = false; break; }
+        if (!col) { valid = false; break; }
+        // Structured JSON types (address / lat_lng) drill into their sub-fields.
+        const subs = STRUCTURED_TYPE_SUBFIELDS[col.logicalType];
+        if (subs && subs.length > 0) { fields = subs; continue; }
+        if (!col.targetModel || !recordSchemas) { valid = false; break; }
         fields = recordSchemas[col.targetModel];
         if (!fields) { valid = false; break; }
       }

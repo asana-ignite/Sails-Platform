@@ -6,7 +6,8 @@
  */
 import { pool } from '@/lib/knex';
 import { db } from '@/lib/db';
-import { genId, quoteIdent, evaluateJsonata } from './WorkflowHelpers';
+import { genId, quoteIdent, evaluateJsonata, logWfAction } from './WorkflowHelpers';
+import { MailService } from '@/services/MailService';
 
 // ─── Recipient resolution ────────────────────────────────────
 
@@ -101,6 +102,18 @@ export async function resolveRecipients(
     } else if (token.startsWith('{{') && token.endsWith('}}')) {
       // Variable reference — resolved at runtime.
       const varName = token.slice(2, -2).trim();
+      // {{$jsonata}} expression — evaluate against variables + record.
+      if (varName.startsWith('$')) {
+        try {
+          const evalResult = await evaluateJsonata(varName.slice(1), { ...variables, record: record?.values || {} });
+          if (evalResult.ok) {
+            pushExprResult(results, evalResult.value);
+          }
+        } catch {
+          // evaluation errors are logged upstream — skip token
+        }
+        continue;
+      }
       const val = variables[varName];
       if (!val) continue;
       if (typeof val === 'string') {
@@ -141,13 +154,22 @@ export async function resolveRecipients(
  * Replace {{variableName}} markers in the template string with values from
  * the context (variables + optional record fields).
  */
+/** Walk a dotted path ('address.city') through an object. */
+function deepGet(obj: any, segs: string[]): any {
+  let v = obj;
+  for (const s of segs) {
+    if (v == null) return undefined;
+    v = v[s];
+  }
+  return v;
+}
+
 export async function renderTemplate(
   tpl: string,
   variables: Record<string, any>,
   record?: { values?: Record<string, any>; oldValues?: Record<string, any> } | null,
   wf?: { requestor?: Record<string, any> | null; requestDate?: string | null } | null,
-): Promise<string> {
-  if (!tpl) return '';
+): Promise<string> {  if (!tpl) return '';
   let out = tpl;
   // Pass 1 — JSONata expressions: {{$expr}}
   for (const m of [...tpl.matchAll(/\{\{(\$[\s\S]*?)\}\}/g)]) {
@@ -163,15 +185,15 @@ export async function renderTemplate(
   return out.replace(/\{\{([\w.]+)\}\}/g, (_match, key) => {
     const parts = String(key).split('.');
     if (parts[0] === 'record' && record?.values) {
-      const val = record.values[parts[1]];
+      const val = deepGet(record.values, parts.slice(1));
       return val == null ? '' : String(val);
     }
     if (parts[0] === 'oldRecord' && record?.oldValues) {
-      const val = record.oldValues[parts[1]];
+      const val = deepGet(record.oldValues, parts.slice(1));
       return val == null ? '' : String(val);
     }
     if (parts[0] === 'requestor' && wf?.requestor) {
-      const val = wf.requestor[parts[1]];
+      const val = deepGet(wf.requestor, parts.slice(1));
       return val == null ? '' : String(val);
     }
     if (key === 'request_date') return wf?.requestDate ?? '';
@@ -298,4 +320,106 @@ export function resolveAttachments(
   }
 
   return results;
+}
+
+// ─── Shared delivery ─────────────────────────────────────────
+
+/** Everything the Notification event AND the Task Approval notification need. */
+export interface WorkflowNotificationInput {
+  tenantId: string;
+  schema: string;
+  instanceId: string;
+  stageId: string | null;
+  actorId: string | null;
+  channel: 'email' | 'bell' | 'both';
+  emailRecipients?: RecipientInput;
+  bellRecipients?: RecipientInput;
+  emailCc?: RecipientInput;
+  emailBcc?: RecipientInput;
+  subject?: string;
+  message?: string;
+  attachments?: AttachmentSpec[];
+  variables: Record<string, any>;
+  record?: { values?: Record<string, any>; oldValues?: Record<string, any> } | null;
+  workflowCtx?: { requestor?: Record<string, any> | null; requestDate?: string | null } | null;
+  emailConnectionId?: string;
+}
+
+export interface WorkflowNotificationResult {
+  ok: boolean;
+  error?: string;
+  bellCount?: number;
+  /** True when no recipients resolved at all — the caller may warn/return early. */
+  noRecipients?: boolean;
+}
+
+/**
+ * Resolve recipients, render templates and deliver bell (+email) notifications
+ * — the SHARED runtime of the Notification event and the Task Approval
+ * notification step (no copied delivery code). Emits the same `notify:*` audit
+ * entries as the notification event.
+ */
+export async function deliverWorkflowNotification(
+  inp: WorkflowNotificationInput,
+): Promise<WorkflowNotificationResult> {
+  const emailRaw = inp.emailRecipients ?? '';
+  const bellRaw = inp.bellRecipients ?? '';
+  const subjectTpl = inp.subject ?? '';
+  const bodyTpl = inp.message ?? '';
+
+  const bellRecipients = await resolveRecipients(inp.tenantId, bellRaw || emailRaw, inp.variables, inp.record);
+  const emailRecipients = await resolveRecipients(inp.tenantId, emailRaw || bellRaw, inp.variables, inp.record);
+
+  if (bellRecipients.length === 0 && emailRecipients.length === 0) {
+    return { ok: true, noRecipients: true };
+  }
+
+  const subject = await renderTemplate(subjectTpl, inp.variables, inp.record, inp.workflowCtx || null);
+  const body = await renderTemplate(bodyTpl, inp.variables, inp.record, inp.workflowCtx || null);
+
+  let bellCount = 0;
+
+  if (inp.channel === 'bell' || inp.channel === 'both') {
+    bellCount = await insertBellNotification(inp.schema, inp.instanceId, bellRecipients, subject, body);
+    await logWfAction(inp.schema, inp.instanceId, inp.stageId, 'notify:bell', inp.actorId, {
+      channel: inp.channel,
+      recipients: bellRecipients.map((r) => r.userId || r.email).join(', '),
+      count: bellCount,
+    });
+  }
+
+  if (inp.channel === 'email' || inp.channel === 'both') {
+    const emails = emailRecipients
+      .map((r) => r.email)
+      .filter((v): v is string => !!v)
+      .filter((v, i, a) => a.indexOf(v) === i);
+    if (emails.length > 0) {
+      const cc = (await resolveRecipients(inp.tenantId, inp.emailCc ?? '', inp.variables, inp.record))
+        .map((r) => r.email).filter((v): v is string => !!v);
+      const bcc = (await resolveRecipients(inp.tenantId, inp.emailBcc ?? '', inp.variables, inp.record))
+        .map((r) => r.email).filter((v): v is string => !!v);
+      const emailResult = await MailService.send({
+        to: emails,
+        cc,
+        bcc,
+        subject: subject || inp.variables['workflow_name'] || 'Workflow notification',
+        html: body || subject || '',
+        tenantId: inp.tenantId,
+        connectionId: inp.emailConnectionId,
+        attachments: resolveAttachments(inp.attachments, inp.record, inp.variables),
+      });
+      await logWfAction(inp.schema, inp.instanceId, inp.stageId,
+        emailResult.ok ? 'notify:email' : 'notify:email:error', inp.actorId, {
+          to: emails,
+          subject,
+          status: emailResult.ok ? 'sent' : 'failed',
+          error: emailResult.error || null,
+        });
+      if (!emailResult.ok) {
+        return { ok: false, error: emailResult.error, bellCount };
+      }
+    }
+  }
+
+  return { ok: true, bellCount };
 }

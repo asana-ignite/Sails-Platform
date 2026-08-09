@@ -10,7 +10,7 @@
  * Source of truth: sails-core/shared/types.ts
  */
 
-export { FIELD_TYPE_REGISTRY } from './fieldTypes';
+export { FIELD_TYPE_REGISTRY, STRUCTURED_TYPE_SUBFIELDS, WORKFLOW_SCALAR_TYPES } from './fieldTypes';
 export { COUNTRY_OPTIONS, PHONE_COUNTRY_OPTIONS, phoneFlag } from './countries';
 export type { CountryOption, PhoneCountryOption } from './countries';
 export { SYSTEM_PERMISSION_REGISTRY, getAllCapabilities } from './permissions';
@@ -39,12 +39,16 @@ export type { CollectionColumn, CollectionVarShape } from './workflowSchema';
 export {
   WORKFLOW_EVENT_CONFIGS,
   WORKFLOW_OPERATIONS,
+  slugActionLabel,
+  defaultActionStyle,
+  parseWorkflowActions,
 } from './workflowEvents';
 export type {
   WorkflowEventType,
   WorkflowEventConfigParameter,
   WorkflowEventConfigParameterType,
   WorkflowEventConfigStep,
+  WorkflowAction,
 } from './workflowEvents';
 
 // ─── Core Models ──────────────────────────────────────────────
@@ -567,7 +571,7 @@ export interface LayoutFilter {
  *  - 'context' → compare against a dynamic macro (`contextMacro`), with optional
  *                N period (`contextN`) for relative date macros
  */
-export type FilterValueSource = 'value' | 'field' | 'record' | 'context';
+export type FilterValueSource = 'value' | 'field' | 'record' | 'context' | 'workflow';
 
 export interface FilterRule {
   id: string;
@@ -584,6 +588,8 @@ export interface FilterRule {
   refRecordId?: string;
   contextMacro?: string;
   contextN?: number;
+  /** 'workflow' source: moustache reference to a workflow variable/context value, e.g. `{{requestor.name}}`. */
+  workflowRef?: string;
   /** Display-only: human-readable LHS path, e.g. "Company → Industry". */
   fieldPath?: string;
   /** Display-only: human-readable RHS path. */
@@ -938,6 +944,7 @@ export function isFilterRuleEmpty(rule: FilterRule): boolean {
   if (source === 'field') return !rule.refFieldId;
   if (source === 'record') return !rule.refFieldId || !rule.refRecordId;
   if (source === 'context') return !rule.contextMacro;
+  if (source === 'workflow') return !rule.workflowRef;
   return rule.value === undefined || rule.value === null || String(rule.value).trim() === '';
 }
 
@@ -977,6 +984,8 @@ export interface SerializedFilterRule {
   refChain?: string[];
   refRecordId?: string;
   contextN?: number;
+  /** 'workflow' source: the moustache reference to resolve at runtime. */
+  workflowRef?: string;
 }
 
 /** Serialize groups into the API-ready filterGroups param (field names, not ids). */
@@ -995,7 +1004,8 @@ export function serializeFilterGroups(
       const lhsChainIds = rule.fieldChain && rule.fieldChain.length > 0 ? rule.fieldChain : [rule.fieldId];
       const chain: string[] = [];
       for (const id of lhsChainIds) {
-        const name = resolveFieldName(id);
+        // The record's ID (UUID) resolves even though metadata excludes it.
+        const name = resolveFieldName(id) || (id === 'id' ? 'id' : null);
         if (!name) break;
         chain.push(name);
       }
@@ -1012,19 +1022,22 @@ export function serializeFilterGroups(
         const refChainIds = rule.refFieldChain && rule.refFieldChain.length > 0 ? rule.refFieldChain : [rule.refFieldId || ''];
         const refChain: string[] = [];
         for (const id of refChainIds) {
-          const name = id ? resolveFieldName(id) : null;
+          const name = id ? (resolveFieldName(id) || (id === 'id' ? 'id' : null)) : null;
           if (!name) break;
           refChain.push(name);
         }
         if (refChain.length === 0) continue;
         rules.push({ ...base, value: '', chain, refChain, refField: refChain[0] });
       } else if (source === 'record') {
-        const refFieldName = rule.refFieldId ? resolveFieldName(rule.refFieldId) : null;
+        const refFieldName = rule.refFieldId ? (resolveFieldName(rule.refFieldId) || (rule.refFieldId === 'id' ? 'id' : null)) : null;
         if (!refFieldName || !rule.refRecordId) continue;
         rules.push({ ...base, value: '', chain, refField: refFieldName, refRecordId: rule.refRecordId });
       } else if (source === 'context') {
         if (!rule.contextMacro) continue;
         rules.push({ ...base, value: rule.contextMacro, chain, contextN: rule.contextN });
+      } else if (source === 'workflow') {
+        if (!rule.workflowRef) continue;
+        rules.push({ ...base, value: '', chain, workflowRef: rule.workflowRef });
       } else {
         rules.push({ ...base, chain });
       }

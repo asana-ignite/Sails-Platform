@@ -19,6 +19,10 @@ export interface WorkflowMacroCtx {
   } | null;
   /** Instance start date (wf_instance.created_at) — the "Request Date". */
   requestDate: string | null;
+  /** Triggering record values (set by the record-event path) — `{{record.<field>}}`. */
+  record?: Record<string, any> | null;
+  /** Pre-change values of the triggering record (update triggers). */
+  oldRecord?: Record<string, any> | null;
 }
 
 /**

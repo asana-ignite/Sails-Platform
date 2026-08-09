@@ -1,0 +1,237 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * SailsHtmlEditor — Ghost Glass theme on top of SunEditor v3.
+ * SunEditor exposes the full palette through --se-* custom properties, which we
+ * remap to the platform's design tokens so the editor matches the rest of the
+ * console (Lexend, rounded corners, steel-blue accents, dark mode).
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.sails-html-editor {
+  --se-main-font-family: var(--sails-font-family, 'Lexend', sans-serif);
+  --se-main-font-size: 13px;
+  --se-main-color: var(--sails-primary, #9dcee0);
+  --se-main-color-lighter: var(--sails-primary-light, #e1e9ef);
+  --se-secondary-color: var(--sails-primary-dark, #6b8ba4);
+  --se-main-font-color: var(--sails-text-main, #344759);
+  --se-main-background-color: var(--sails-bg-card, #ffffff);
+  --se-main-border-color: var(--sails-border-color, #e2e8f0);
+  --se-main-divider-color: var(--sails-border-color, #e2e8f0);
+  --se-hover-color: var(--sails-primary-light, #e1e9ef);
+  --se-active-color: var(--sails-primary, #9dcee0);
+  --se-active-font-color: var(--sails-primary-dark, #6b8ba4);
+  --se-border-color: var(--sails-border-color, #e2e8f0);
+  --se-border-radius: var(--sails-radius-md, 8px);
+  --se-border-radius-lg: var(--sails-radius-lg, 12px);
+  --se-edit-border-light: var(--sails-border-color, #e2e8f0);
+  --se-edit-border-dark: var(--sails-primary-dark, #6b8ba4);
+  --se-edit-font-color: var(--sails-text-main, #344759);
+  --se-edit-background-pre: #f8fafc;
+  --se-edit-font-pre: #475569;
+  --se-edit-font-quote: var(--sails-text-muted, #6b8ba4);
+  --se-edit-inner-padding: 14px;
+  --se-edit-hr-color: var(--sails-border-color, #e2e8f0);
+  --se-caret-color: var(--sails-primary, #9dcee0);
+  --se-icon-size: 14px;
+  --se-statusbar-font-size: 11px;
+  --se-statusbar-font-color: var(--sails-text-muted, #6b8ba4);
+  --se-modal-background-color: var(--sails-bg-card, #ffffff);
+  --se-modal-border-color: var(--sails-border-color, #e2e8f0);
+  --se-modal-color: var(--sails-text-main, #344759);
+  --se-input-btn-border-color: var(--sails-border-color, #e2e8f0);
+  --se-input-btn-size: 26px;
+  --se-success-color: var(--sails-success, #4ec5ad);
+  --se-error-color: var(--sails-danger, #fd6161);
+  --se-shadow-controller: var(--sails-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.05));
+  --se-shadow-layer: var(--sails-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.05));
+
+  position: relative;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: var(--sails-radius-md, 8px);
+  overflow: hidden;
+  background: var(--sails-bg-card, #ffffff);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-family: var(--sails-font-family, 'Lexend', sans-serif);
+}
+
+.sails-html-editor:focus-within,
+.sails-html-editor.is-focused {
+  border-color: var(--sails-primary, #9dcee0);
+  box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.18);
+}
+
+.sails-html-editor.is-disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Editable body */
+.sails-html-editor .sun-editor,
+.sails-html-editor .sun-editor-editable {
+  /* SunEditor defines these on its own root — re-scope for compact sizing */
+  --se-input-btn-size: 26px;
+  --se-icon-size: 14px;
+}
+
+.sails-html-editor .sun-editor .se-wrapper .se-wrapper-wysiwyg {
+  font-family: var(--sails-font-family, 'Lexend', sans-serif);
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--sails-text-main, #344759);
+}
+
+.sails-html-editor .sun-editor .se-wrapper-wysiwyg p {
+  margin: 0 0 0.55em;
+}
+
+/* Toolbar (classic mode) */
+.sails-html-editor .se-toolbar {
+  background: var(--sails-bg-card, #ffffff);
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+}
+
+/* ── Inline mode: rounded floating toolbar pinned to the top of the area ──
+   SunEditor floats the inline toolbar above the editor with JS-set inline
+   styles; we pin it inside the top edge of the editing area instead and push
+   the content down while it is shown. */
+.sails-html-editor.inline .sun-editor {
+  position: relative;
+}
+
+.sails-html-editor.inline .se-toolbar {
+  top: 8px !important;
+  left: 8px !important;
+  right: 8px !important;
+  width: auto !important;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  z-index: 8;
+  background: var(--sails-bg-card, #ffffff);
+}
+
+.sails-html-editor.inline .se-wrapper-wysiwyg {
+  transition: padding-top 0.18s ease;
+}
+
+/* ── Full screen ──────────────────────────────────────────────────────
+   SunEditor flips the toolbar to position: relative (in-flow) on entering
+   fullscreen; the inline-mode inset offsets would shift it past the editable
+   area, so flush it to the editor edges instead. */
+.sails-html-editor.is-fullscreen {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.sails-html-editor.is-fullscreen .se-toolbar {
+  top: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+  width: 100% !important;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Toolbar buttons — compact, muted gray */
+.sails-html-editor .sun-editor .se-btn-tray {
+  padding: 3px 4px 1px 4px;
+}
+
+.sails-html-editor .se-btn-tray .se-btn {
+  border-radius: 5px;
+  color: var(--sails-text-muted, #6b8ba4);
+}
+
+.sails-html-editor .se-btn-tray .se-btn:hover {
+  background: var(--sails-primary-light, #e1e9ef);
+  color: var(--sails-primary-dark, #6b8ba4);
+}
+
+.sails-html-editor .se-btn-tray .se-btn-active {
+  background: var(--sails-primary, #9dcee0);
+  color: #fff;
+}
+
+.sails-html-editor .se-btn-tray .se-btn-active:hover {
+  background: var(--sails-primary, #9dcee0);
+  color: #fff;
+}
+
+/* Dropdowns / menus */
+.sails-html-editor .sun-editor .se-list-layer,
+.sails-html-editor .sun-editor .se-menu-list,
+.sails-html-editor .sun-editor .se-list-inner {
+  border-radius: var(--sails-radius-md, 8px);
+  box-shadow: var(--sails-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  font-family: var(--sails-font-family, 'Lexend', sans-serif);
+}
+
+.sails-html-editor .sun-editor .se-menu-list .se-btn-list {
+  border-radius: 6px;
+}
+
+.sails-html-editor .sun-editor .se-menu-list .se-btn-list:hover,
+.sails-html-editor .sun-editor .se-menu-list .se-btn-list.se-active {
+  background: var(--sails-primary-light, #e1e9ef);
+  color: var(--sails-primary-dark, #6b8ba4);
+}
+
+/* Variable chips ({{var}}), shared with VariableTextInput.
+   The real text content keeps the `{{...}}` markers (renderTemplate contract);
+   it is hidden and the brace-stripped `data-label` is rendered as the pill.
+   Font weight / style / decoration / color inherit from the surrounding text
+   so the pill reflects the formatting that will be rendered (bold, underline,
+   font color, …). */
+.sails-html-editor .wve-chip {
+  display: inline-block;
+  padding: 2px 10px;
+  margin: 0 1px;
+  border-radius: 999px;
+  background: rgba(157, 206, 224, 0.18);
+  border: 1px solid rgba(157, 206, 224, 0.55);
+  font-size: 0;
+  line-height: 0;
+  vertical-align: baseline;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.sails-html-editor .wve-chip::before {
+  content: attr(data-label);
+  font-size: 13px; /* matches the editor body text */
+  line-height: 1.6;
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────────── */
+[data-theme='dark'] .sails-html-editor {
+  --se-main-color: var(--sails-primary, #9dcee0);
+  --se-main-color-lighter: #2a3547;
+  --se-secondary-color: var(--sails-primary-dark, #6b8ba4);
+  --se-main-font-color: #f5f6fa;
+  --se-main-background-color: var(--sails-bg-card, #252b3b);
+  --se-main-border-color: var(--sails-border-color, #2d3436);
+  --se-main-divider-color: var(--sails-border-color, #2d3436);
+  --se-hover-color: #2a3547;
+  --se-active-color: rgba(157, 206, 224, 0.22);
+  --se-active-font-color: #9dcee0;
+  --se-border-color: var(--sails-border-color, #2d3436);
+  --se-edit-border-light: var(--sails-border-color, #2d3436);
+  --se-edit-font-color: #f5f6fa;
+  --se-edit-background-pre: #1a1d23;
+  --se-edit-font-pre: #aeb7c2;
+  --se-edit-font-quote: #aeb7c2;
+  --se-edit-hr-color: var(--sails-border-color, #2d3436);
+  --se-modal-background-color: var(--sails-bg-card, #252b3b);
+  --se-modal-color: #f5f6fa;
+  --se-input-btn-border-color: var(--sails-border-color, #2d3436);
+
+  background: var(--sails-bg-card, #252b3b);
+  border-color: var(--sails-border-color, #2d3436);
+}
+
+[data-theme='dark'] .sails-html-editor .sun-editor .se-wrapper-wysiwyg {
+  color: #f5f6fa;
+}
+
+

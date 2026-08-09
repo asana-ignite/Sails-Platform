@@ -11,6 +11,7 @@
  * silently rewritten.
  */
 import jsonata from 'jsonata';
+import { STRUCTURED_TYPE_SUBFIELDS } from '@sails/shared';
 import type { Suggestion, SuggestionVariable, RecordSchemaMap, DrillRoots } from './jsonataSuggest';
 
 const parserFn: ((expr: string) => any) | null = (jsonata as any)?.parser || null;
@@ -91,7 +92,11 @@ export function buildPlainSuggestions(
     if (valid) {
       for (const seg of segs) {
         const col = (fields || []).find((f) => f.fieldName === seg || f.label === seg);
-        if (!col || !col.targetModel || !recordSchemas) { valid = false; break; }
+        if (!col) { valid = false; break; }
+        // Structured JSON types (address / lat_lng) drill into their sub-fields.
+        const subs = STRUCTURED_TYPE_SUBFIELDS[col.logicalType];
+        if (subs && subs.length > 0) { fields = subs; continue; }
+        if (!col.targetModel || !recordSchemas) { valid = false; break; }
         fields = recordSchemas[col.targetModel];
         if (!fields) { valid = false; break; }
       }

@@ -16,10 +16,12 @@ import { executeScript, SandboxContext } from './ScriptSandbox';
 import { evaluateJsonata, genId, logWfAction, quoteIdent, resolveTenantSchema } from './WorkflowHelpers';
 import { normalizeFilters, serializeFilterGroups, validateCollectionValue, validateRecordValue, WORKFLOW_EVENT_CONFIGS } from '@sails/shared';
 import type { SessionContext } from '@/lib/auth/session';
-import { MailService } from '@/services/MailService';
-import { resolveRecipients, renderTemplate, insertBellNotification, resolveAttachments } from './notifications';
+import { deliverWorkflowNotification } from './notifications';
 import { preprocessFilterGroups } from './filterPreprocess';
 import type { WorkflowMacroCtx } from './contextMacros';
+
+/** Cap for filter-driven batch update/delete (RLS-enforced, audited per row). */
+const BATCH_LIMIT = 500;
 
 function fail(ctx: WorkflowEventContext, error: string): WorkflowEventResult {
   return { success: false, error };
@@ -65,11 +67,14 @@ async function resolveTableMeta(tenantId: string, tableName: string) {
   return { table, validFields, textFields, jsonbFields };
 }
 
-/** Serialize Record Event filterGroups into QueryLayer-compatible filter rules. */
+/** Serialize Record Event filterGroups into QueryLayer-compatible filter rules.
+ * The metadata field list excludes `id`, but every table has it — a virtual
+ * entry lets QueryStudio's `id = <UUID>` rules resolve to the real column. */
 function serializeRecordFilters(groups: any[], fields: any[]): any[] {
   if (!groups || !groups.length) return [];
+  const withId = [...(fields || []), { id: 'id', fieldName: 'id' }];
   const findField = (idOrName: string) =>
-    (fields || []).find((f: any) => f.id === idOrName || f.fieldName === idOrName);
+    withId.find((f: any) => f.id === idOrName || f.fieldName === idOrName);
   const normalized = normalizeFilters(groups);
   return serializeFilterGroups(normalized, (fieldId) => findField(fieldId)?.fieldName || null);
 }
@@ -126,7 +131,7 @@ async function buildWorkflowCtx(
     requestDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
-  return { variables: ctx.variables || {}, requestor, requestDate };
+  return { variables: ctx.variables || {}, requestor, requestDate, record: ctx.record?.values ?? null, oldRecord: ctx.record?.oldValues ?? null };
 }
 
 /** True when any template/mapping string references the workflow context. */
@@ -179,11 +184,14 @@ const recordEventPlugin: WorkflowEventPlugin = {
       }
 
       let stored: any = null;
+      // Batch update/delete (filter-driven) produce no storable result.
+      let batchMode = false;
 
       // ── Read (single record) ──
       if (operation === 'read') {
         const filters: Record<string, string> = {};
-        // Honor the configured target record (trigger default = ctx.recordId).
+        // Target comes from the QueryStudio filter (optionally `id = <UUID>`);
+        // default = the triggering record / legacy Target Record config.
         const targetId = resolveTargetId(ctx, eventConfig);
         if (targetId) filters['id:eq'] = targetId;
         const result = await QueryLayer.listRecords(pool, schema, model, {
@@ -211,16 +219,42 @@ const recordEventPlugin: WorkflowEventPlugin = {
 
       // ── Create ──
       else if (operation === 'create') {
-        const payload = buildPayload(ctx, eventConfig, workflowCtx);
+        const payload = buildPayload(ctx, eventConfig, workflowCtx, meta.table.fields);
+        // A mapped `id` (UUID) on create supplies the record's id explicitly.
+        const idEntry = (eventConfig.fieldMapping || []).find((m: any) => m.targetCol === 'id');
+        if (idEntry) {
+          const idVal = valueFor(ctx, idEntry, workflowCtx);
+          if (idVal != null && idVal !== '') payload.id = idVal;
+        }
         stored = await QueryLayer.insertRecord(pool, schema, model, payload, ses);
       }
 
       // ── Update ──
       else if (operation === 'update') {
-        const targetId = resolveTargetId(ctx, eventConfig);
-        if (!targetId) return fail(ctx, 'Record Event update requires a target record id');
-        const data = buildPayload(ctx, eventConfig, workflowCtx);
-        stored = await QueryLayer.updateRecord(pool, schema, model, targetId, data, ses);
+        const data = buildPayload(ctx, eventConfig, workflowCtx, meta.table.fields);
+        const hasFilter = filterGroups.length > 0;
+        if (hasFilter) {
+          // Batch: apply the payload to EVERY record matching the filter
+          // (RLS-enforced reads + per-row audited updates, capped).
+          batchMode = true;
+          const rows = await QueryLayer.listRecords(pool, schema, model, {
+            filterGroups,
+            limit: BATCH_LIMIT, page: 1,
+            validFields: meta.validFields,
+            textFields: meta.textFields,
+            jsonbFields: meta.jsonbFields,
+          });
+          for (const row of rows.rows) {
+            await QueryLayer.updateRecord(pool, schema, model, row.id, data, ses);
+          }
+        } else {
+          // Single record: a source mapped onto the id column wins (the Input
+          // step's id mapping), falling back to legacy Target Record configs.
+          const idEntry = (eventConfig.fieldMapping || []).find((m: any) => m.targetCol === 'id');
+          const targetId = idEntry ? (valueFor(ctx, idEntry, workflowCtx) as string) ?? null : resolveTargetId(ctx, eventConfig);
+          if (!targetId) return fail(ctx, 'Record Event update requires a target record id (map a source onto the id column, or set a Record Filter)');
+          stored = await QueryLayer.updateRecord(pool, schema, model, targetId, data, ses);
+        }
       }
 
       // ── Upsert (insert, or update the row with the matching id) ──
@@ -241,17 +275,37 @@ const recordEventPlugin: WorkflowEventPlugin = {
 
       // ── Delete ──
       else if (operation === 'delete') {
-        const targetId = resolveTargetId(ctx, eventConfig);
-        if (!targetId) return fail(ctx, 'Record Event delete requires a target record id');
-        stored = await QueryLayer.deleteRecord(pool, schema, model, targetId, ses);
+        const hasFilter = filterGroups.length > 0;
+        if (hasFilter) {
+          // Batch: delete EVERY record matching the filter (RLS-enforced
+          // reads + per-row audited deletes, capped).
+          batchMode = true;
+          const rows = await QueryLayer.listRecords(pool, schema, model, {
+            filterGroups,
+            limit: BATCH_LIMIT, page: 1,
+            validFields: meta.validFields,
+            textFields: meta.textFields,
+            jsonbFields: meta.jsonbFields,
+          });
+          for (const row of rows.rows) {
+            await QueryLayer.deleteRecord(pool, schema, model, row.id, ses);
+          }
+        } else {
+          // Single record: the mapped id column (Input step) or legacy Target Record.
+          const idEntry = (eventConfig.fieldMapping || []).find((m: any) => m.targetCol === 'id');
+          const targetId = idEntry ? (valueFor(ctx, idEntry, workflowCtx) as string) ?? null : resolveTargetId(ctx, eventConfig);
+          if (!targetId) return fail(ctx, 'Record Event delete requires a target record id (map a source onto the id column, or set a Record Filter)');
+          stored = await QueryLayer.deleteRecord(pool, schema, model, targetId, ses);
+        }
       }
 
       else {
         return fail(ctx, `Operation '${operation}' is not supported`);
       }
 
-      // Validate the stored value against the bound variable's declared structure.
-      if (storeToVariable && stored !== null && stored !== undefined) {
+      // Validate the stored value against the bound variable's declared structure
+      // (skipped for batch runs — no single result).
+      if (!batchMode && storeToVariable && stored !== null && stored !== undefined) {
         const varDef = (ctx.variableDefs || []).find((v: any) => v.name === storeToVariable);
         if (varDef) {
           if (varDef.fieldType === 'record') {
@@ -276,7 +330,17 @@ const recordEventPlugin: WorkflowEventPlugin = {
         }
       }
 
-      return { success: true, output: storeToVariable ? { [storeToVariable]: stored } : {} };
+      // Output mapping: single-record results → workflow variables (batch,
+      // list and delete produce no single row, so they are skipped).
+      const outVals: Record<string, any> = {};
+      if (!batchMode && operation !== 'list' && operation !== 'delete' && stored != null && !Array.isArray(stored)) {
+        const outMap = (eventConfig.outputMapping || []) as { sourceField: string; targetVar: string }[];
+        for (const om of outMap) {
+          if (om.targetVar) outVals[om.targetVar] = getPath(stored, om.sourceField);
+        }
+      }
+
+      return { success: true, output: { ...(storeToVariable ? { [storeToVariable]: stored } : {}), ...outVals } };
     } catch (error: any) {
       return fail(ctx, `Record Event failed: ${error?.message || error}`);
     }
@@ -299,39 +363,65 @@ function resolveTargetId(ctx: WorkflowEventContext, config: Record<string, any>)
   return (config.targetValue as string) || null;
 }
 
+/** Walk a dotted path (e.g. 'address.city') through an object. */
+function getPath(obj: any, path: string): any {
+  if (obj == null || !path) return undefined;
+  let v = obj;
+  for (const seg of String(path).split('.')) {
+    if (v == null) return undefined;
+    v = v[seg];
+  }
+  return v;
+}
+
 /**
  * Resolve one field-mapping entry's input value by source:
- * 'record' → the triggering record's current field value,
- * 'record_old' → its value before the change (update triggers),
+ * 'record' → the triggering record's current field value (dotted paths like
+ * 'address.city' supported), 'record_old' → its value before the change,
  * 'wf' → the workflow context (requestor.* / request_date),
  * anything else / legacy entries → the named workflow variable — with an
- * optional field (record variable) and item index (collection variable).
+ * optional field (record variable / structured JSON) and item index (collection).
  */
 function valueFor(ctx: WorkflowEventContext, m: any, wfCtx?: WorkflowMacroCtx | null): any {
-  if (m.source === 'record') return (ctx.record?.values ?? {})[m.sourceField ?? m.targetCol];
-  if (m.source === 'record_old') return (ctx.record?.oldValues ?? {})[m.sourceField ?? m.targetCol];
+  if (m.source === 'record') return getPath(ctx.record?.values, m.sourceField ?? m.targetCol);
+  if (m.source === 'record_old') return getPath(ctx.record?.oldValues, m.sourceField ?? m.targetCol);
   if (m.source === 'wf') {
     const f = String(m.sourceField || '');
     if (f === 'request_date') return wfCtx?.requestDate ?? null;
     if (f.startsWith('requestor.')) {
       const key = f.slice('requestor.'.length);
-      return wfCtx?.requestor ? (wfCtx.requestor as Record<string, any>)[key] ?? null : null;
+      return wfCtx?.requestor ? getPath(wfCtx.requestor, key) ?? null : null;
     }
     return null;
   }
   const v = ctx.variables[m.sourceVar];
   if (!m.sourceField || v == null) return v;
-  if (Array.isArray(v)) return v[m.itemIndex ?? 0]?.[m.sourceField];
-  return v[m.sourceField];
+  const base = Array.isArray(v) ? v[m.itemIndex ?? 0] : v;
+  return getPath(base, m.sourceField);
 }
 
-/** Build a create/update/upsert payload from the field mapping (any source). */
-function buildPayload(ctx: WorkflowEventContext, eventConfig: Record<string, any>, wfCtx?: WorkflowMacroCtx | null): Record<string, any> {
+/** Build a create/update/upsert payload from the field mapping (any source).
+ * Whole-record values (a record/collection source with no field) resolve by
+ * target column: relation/lookup → the record's id; otherwise the object is
+ * kept (pg-format stringifies it for JSONB columns). */
+function buildPayload(
+  ctx: WorkflowEventContext,
+  eventConfig: Record<string, any>,
+  wfCtx?: WorkflowMacroCtx | null,
+  tableFields?: any[],
+): Record<string, any> {
   const payload: Record<string, any> = {};
   const mapping: any[] = eventConfig.fieldMapping || [];
+  const isRel = (name: string) =>
+    !!tableFields?.some((f) => (f.fieldName === name) && (f.logicalType === 'relation' || f.logicalType === 'lookup'));
   for (const m of mapping) {
     if (m.targetCol === 'id') continue;
-    payload[m.targetCol] = valueFor(ctx, m, wfCtx);
+    const val = valueFor(ctx, m, wfCtx);
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      payload[m.targetCol] = isRel(m.targetCol) ? (val.id ?? null) : val;
+    } else {
+      payload[m.targetCol] = val;
+    }
   }
   return payload;
 }
@@ -345,8 +435,12 @@ const notificationEventPlugin: WorkflowEventPlugin = {
   parametersSchema: WORKFLOW_EVENT_CONFIGS.notification,
   async execute(ctx) {
     const { eventConfig } = ctx;
-    const channel = (eventConfig.channel as string) || 'bell';
-    const recipientsRaw = (eventConfig.recipients as string | Array<string | { __expr: string }>) || '';
+    const channel = (['email', 'bell', 'both'].includes(eventConfig.channel as string) ? eventConfig.channel : 'bell') as 'email' | 'bell' | 'both';
+    // Per-channel recipient lists (Email ⇄ Bell panels). Legacy configs only
+    // carry `channel` + `recipients` — fall back to the shared list for both.
+    const emailRaw = (eventConfig.emailRecipients ?? eventConfig.recipients ?? '') as string | Array<string | { __expr: string }>;
+    const bellRaw = (eventConfig.bellRecipients ?? eventConfig.recipients ?? '') as string | Array<string | { __expr: string }>;
+    const recipientsRaw = channel === 'email' ? emailRaw : channel === 'bell' ? bellRaw : emailRaw;
     const subjectTpl = (eventConfig.subject as string) || '';
     const bodyTpl = (eventConfig.message as string) || '';
 
@@ -355,17 +449,6 @@ const notificationEventPlugin: WorkflowEventPlugin = {
 
     if (!recipientsRaw || (Array.isArray(recipientsRaw) && recipientsRaw.length === 0)) {
       return fail(ctx, 'Notification Event requires recipients');
-    }
-
-    const recordValues = ctx.record?.values?.id ? ctx.record.values : (ctx.variables ?? {});
-    const recipients = await resolveRecipients(ctx.tenantId, recipientsRaw, ctx.variables, ctx.record);
-    if (recipients.length === 0) {
-      // No concrete recipients — warn but don't error (template may resolve later).
-      await logWfAction(schema, ctx.instanceId, ctx.stageId, 'notify:no_recipients', ctx.session.userId, {
-        channel,
-        recipientsRaw: typeof recipientsRaw === 'string' ? recipientsRaw : JSON.stringify(recipientsRaw),
-      });
-      return { success: true };
     }
 
     // Workflow-context templates ({{record.x}}, {{oldRecord.x}}, {{requestor.x}}, {{request_date}}).
@@ -378,58 +461,120 @@ const notificationEventPlugin: WorkflowEventPlugin = {
       ? await buildWorkflowCtx(ctx, schema, [], true)
       : null;
 
-    const subject = await renderTemplate(subjectTpl, ctx.variables, ctx.record, wfCtx);
-    const body = await renderTemplate(bodyTpl, ctx.variables, ctx.record, wfCtx);
+    const result = await deliverWorkflowNotification({
+      tenantId: ctx.tenantId,
+      schema,
+      instanceId: ctx.instanceId,
+      stageId: ctx.stageId,
+      actorId: ctx.session.userId || null,
+      channel,
+      emailRecipients: emailRaw,
+      bellRecipients: bellRaw,
+      emailCc: eventConfig.emailCc as string | undefined,
+      emailBcc: eventConfig.emailBcc as string | undefined,
+      subject: subjectTpl,
+      message: bodyTpl,
+      attachments: eventConfig.attachments as any[] | undefined,
+      variables: ctx.variables,
+      record: ctx.record,
+      workflowCtx: wfCtx,
+      emailConnectionId: eventConfig.emailConnectionId as string | undefined,
+    });
 
-    const emailRecipients = recipients
-      .filter((r) => r.email)
-      .map((r) => r.email)
-      .filter((v, i, a) => a.indexOf(v) === i); // dedupe emails
-
-    let bellCount = 0;
-    let emailResult: any = null;
-
-    // ── Bell ──
-    if (channel === 'bell' || channel === 'both') {
-      bellCount = await insertBellNotification(schema, ctx.instanceId, recipients, subject, body);
-      await logWfAction(schema, ctx.instanceId, ctx.stageId, 'notify:bell', ctx.session.userId, {
+    if (result.noRecipients) {
+      // No concrete recipients — warn but don't error (template may resolve later).
+      await logWfAction(schema, ctx.instanceId, ctx.stageId, 'notify:no_recipients', ctx.session.userId, {
         channel,
-        recipients: recipients.map((r) => r.userId || r.email).join(', '),
-        count: bellCount,
+        recipientsRaw: typeof recipientsRaw === 'string' ? recipientsRaw : JSON.stringify(recipientsRaw),
       });
+      return { success: true };
     }
-
-    // ── Email ──
-    if ((channel === 'email' || channel === 'both') && emailRecipients.length > 0) {
-      emailResult = await MailService.send({
-        to: emailRecipients,
-        subject: subject || ctx.variables['workflow_name'] || 'Workflow notification',
-        html: body || subject || '',
-        tenantId: ctx.tenantId,
-        connectionId: eventConfig.emailConnectionId as string | undefined,
-        attachments: resolveAttachments(
-          eventConfig.attachments as any[] | undefined,
-          ctx.record,
-          ctx.variables,
-        ),
-      });
-      await logWfAction(schema, ctx.instanceId, ctx.stageId,
-        emailResult.ok ? 'notify:email' : 'notify:email:error', ctx.session.userId, {
-          to: emailRecipients,
-          subject,
-          status: emailResult.ok ? 'sent' : 'failed',
-          error: emailResult.error || null,
-        });
-      if (!emailResult.ok) {
-        return fail(ctx, `Email delivery failed: ${emailResult.error}`);
-      }
+    if (!result.ok) {
+      return fail(ctx, `Email delivery failed: ${result.error}`);
     }
-
-    return { success: true, output: { notified: bellCount + emailRecipients.length } };
+    return { success: true, output: { notified: result.bellCount ?? 0 } };
   },
 };
 
 // ─── Task Approval Event ──────────────────────────────────────
+
+export interface ResolvedAssigneeUser {
+  id: string;
+  name: string | null;
+  email: string | null;
+}
+
+export interface AssigneeRef {
+  type: 'user' | 'role' | 'team' | 'position';
+  value: string;
+}
+
+/**
+ * Parse a router token ("user:<id|email>", "role:<name>", "team:<name|id>",
+ * "position:<name|id>") or a { type, value } object. A bare value falls back
+ * to `defaultType` (the configured Router Type for static references).
+ */
+export function parseAssigneeRef(raw: any, defaultType: string): AssigneeRef | null {
+  if (raw && typeof raw === 'object' && raw.type && raw.value) {
+    const t = String(raw.type).toLowerCase();
+    if (t === 'user' || t === 'role' || t === 'team' || t === 'position') {
+      return { type: t, value: String(raw.value).trim() };
+    }
+    return null;
+  }
+  const token = String(raw ?? '').trim();
+  if (!token) return null;
+  const m = token.match(/^(user|role|team|position)\:(.+)$/i);
+  if (m) return { type: m[1].toLowerCase() as AssigneeRef['type'], value: m[2].trim() };
+  if (defaultType) return { type: defaultType as AssigneeRef['type'], value: token };
+  return null;
+}
+
+/**
+ * Resolve an assignee reference to the CURRENT people who hold it:
+ * role → active users with that role; team → current members; position →
+ * filled position slots; user → the user by id or email (ids/names matched
+ * case-insensitively for team/position by name-or-id).
+ */
+export async function resolveAssigneeUsers(tenantId: string, type: AssigneeRef['type'], value: string): Promise<ResolvedAssigneeUser[]> {
+  const userSel = { id: true as const, name: true as const, email: true as const };
+  if (type === 'user') {
+    const u = await db.user.findFirst({
+      where: { tenantId, isActive: true, OR: [{ id: value }, { email: value.toLowerCase() }] },
+      select: userSel,
+    });
+    return u ? [u] : [];
+  }
+  if (type === 'role') {
+    return db.user.findMany({
+      where: { tenantId, role: value, isActive: true },
+      select: userSel,
+    });
+  }
+  if (type === 'team') {
+    const team = await db.team.findFirst({
+      where: { tenantId, OR: [{ id: value }, { name: value }] },
+      select: { id: true },
+    });
+    if (!team) return [];
+    const members = await db.userTeam.findMany({
+      where: { teamId: team.id },
+      select: { user: { select: userSel } },
+    });
+    return members.map((m) => m.user).filter((u): u is ResolvedAssigneeUser => !!u);
+  }
+  // position
+  const position = await db.position.findFirst({
+    where: { tenantId, OR: [{ id: value }, { name: value }] },
+    select: { id: true },
+  });
+  if (!position) return [];
+  const slots = await db.positionSlot.findMany({
+    where: { positionId: position.id, userId: { not: null } },
+    select: { user: { select: userSel } },
+  });
+  return slots.map((s) => s.user).filter((u): u is ResolvedAssigneeUser => !!u);
+}
 
 const approvalEventPlugin: WorkflowEventPlugin = {
   type: 'approval',
@@ -440,10 +585,11 @@ const approvalEventPlugin: WorkflowEventPlugin = {
     const { eventConfig } = ctx;
     const routerType = (eventConfig.routerType as string) || 'role';
     const routerValue = (eventConfig.routerValue as string) || '';
+    const routerRefs = Array.isArray(eventConfig.routerRefs) ? eventConfig.routerRefs.filter(Boolean) : [];
     const routerLabel = (eventConfig.routerLabel as string) || 'Approver';
     const timeoutHours = eventConfig.timeoutHours as number | null | undefined;
 
-    if (!routerValue && routerType !== 'field') {
+    if (!routerValue && !routerRefs.length && routerType !== 'field') {
       return fail(ctx, `Approval Event requires config.routerValue for router type '${routerType}'`);
     }
 
@@ -456,21 +602,148 @@ const approvalEventPlugin: WorkflowEventPlugin = {
       : null;
 
     try {
+      // ── Resolve the assignee reference(s) to the CURRENT holders ──
+      // Bare values fall back to the configured router type (static role/team/
+      // position/user references). Dynamic sources (field / variable /
+      // expression) may also yield tokens ("role:x"…), {type,value} objects or
+      // arrays (multi-assignee).
+      const staticLike = ['user', 'role', 'team', 'position'].includes(routerType);
+      const defaultType = staticLike ? routerType : 'user';
+
+      let rawRefs: any[];
+      if (routerRefs.length > 0) {
+        rawRefs = routerRefs;
+      } else if (routerType === 'field') {
+        rawRefs = [ctx.record?.values?.[routerValue]];
+      } else if (routerType === 'variable') {
+        rawRefs = [ctx.variables[routerValue]];
+      } else if (routerType === 'expression') {
+        // Evaluate the JSONata expression against the merged workflow context.
+        let evalCtx: Record<string, any> = ctx.variables;
+        if (referencesWorkflowContext(routerValue)) {
+          const wfCtx = await buildWorkflowCtx(ctx, schema, [], true);
+          evalCtx = {
+            ...ctx.variables,
+            record: ctx.record?.values ?? {},
+            oldRecord: ctx.record?.oldValues ?? {},
+            requestor: wfCtx?.requestor ?? null,
+            request_date: wfCtx?.requestDate ?? null,
+          };
+        }
+        const expr = await evaluateJsonata(routerValue, evalCtx);
+        if (!expr.ok) return fail(ctx, `Approval Event assignee expression error: ${expr.error}`);
+        rawRefs = Array.isArray(expr.value) ? expr.value : [expr.value];
+      } else {
+        rawRefs = [routerValue];
+      }
+
+      const refs: AssigneeRef[] = [];
+      for (const raw of rawRefs) {
+        if (Array.isArray(raw)) {
+          for (const item of raw) {
+            const r = parseAssigneeRef(item, defaultType);
+            if (r && r.value) refs.push(r);
+          }
+        } else {
+          const r = parseAssigneeRef(raw, defaultType);
+          if (r && r.value) refs.push(r);
+        }
+      }
+
+      const resolved: ResolvedAssigneeUser[] = [];
+      for (const ref of refs) {
+        const found = await resolveAssigneeUsers(ctx.tenantId, ref.type, ref.value);
+        for (const u of found) {
+          if (!resolved.some((x) => x.id === u.id)) resolved.push(u);
+        }
+      }
+
+      // ── Persist the task (descriptor + resolved users for a future inbox) ──
+      const assigneeType = refs.length === 1 ? refs[0].type : routerType;
+      const assigneeId = refs.length === 1 ? refs[0].value : JSON.stringify(refs.map((r) => r.value));
+      const assigneeUserIds = resolved.map((u) => u.id);
+
       const s = quoteIdent(schema);
       const taskId = genId('wft');
+      const actions = Array.isArray(eventConfig.actions) && eventConfig.actions.length > 0
+        ? eventConfig.actions
+        : [
+            ...(eventConfig.canApprove !== false ? [{ label: 'Approve', value: 'approve' }] : []),
+            ...(eventConfig.canReject !== false ? [{ label: 'Reject', value: 'reject' }] : []),
+          ];
       await pool.query(
-        `INSERT INTO ${s}.wf_task (id, instance_id, step_id, status, assignee_type, assignee_id, due_at)
-         VALUES ($1, $2, $3, 'pending', $4, $5, $6)`,
-        [taskId, ctx.instanceId, ctx.stageId, routerType, routerValue, dueAt],
+        `INSERT INTO ${s}.wf_task (id, instance_id, step_id, status, assignee_type, assignee_id, assignee_users, actions, due_at)
+         VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7, $8)`,
+        [taskId, ctx.instanceId, ctx.stageId, assigneeType, assigneeId, JSON.stringify(assigneeUserIds), JSON.stringify(actions), dueAt],
       );
+
+      // ── Approval notification (reuses the Notification event's delivery) ──
+      // Gated by "Send to Email" / "Send to Bell" checkboxes (Simple Action
+      // Reply model). There are no To / CC / BCC fields: email and bell both
+      // target the resolved assignees. Failures are logged and never break the
+      // task.
+      const notifyEmail = eventConfig.notifyEmail !== false;
+      const notifyBell = eventConfig.notifyBell !== false;
+      if (notifyEmail || notifyBell) {
+        try {
+          const notifEmailRaw = resolved.map((u) => u.email).filter((e): e is string => !!e).join(', ');
+          const notifBellRaw = resolved.map((u) => 'user:' + u.id).join(', ');
+          const notifSources = [notifEmailRaw, notifBellRaw, String(eventConfig.subject ?? ''), String(eventConfig.message ?? '')];
+          const notifWfCtx = referencesWorkflowContext(...notifSources)
+            ? await buildWorkflowCtx(ctx, schema, [], true)
+            : null;
+          await deliverWorkflowNotification({
+            tenantId: ctx.tenantId,
+            schema,
+            instanceId: ctx.instanceId,
+            stageId: ctx.stageId,
+            actorId: ctx.session.userId || null,
+            channel: notifyEmail && notifyBell ? 'both' : notifyEmail ? 'email' : 'bell',
+            emailRecipients: notifEmailRaw,
+            bellRecipients: notifBellRaw,
+            subject: eventConfig.subject as string | undefined,
+            message: eventConfig.message as string | undefined,
+            attachments: eventConfig.attachments as any[] | undefined,
+            variables: ctx.variables,
+            record: ctx.record,
+            workflowCtx: notifWfCtx,
+            emailConnectionId: eventConfig.emailConnectionId as string | undefined,
+          });
+        } catch (notifErr: any) {
+          await logWfAction(schema, ctx.instanceId, ctx.stageId, 'approval:notify:error', ctx.session.userId, {
+            taskId,
+            error: notifErr?.message || String(notifErr),
+          }).catch(() => undefined);
+        }
+      }
+
+      if (resolved.length === 0) {
+        // No current holder — keep the task pending (assignee_users empty) so
+        // it can be re-assigned later; audit the gap for visibility.
+        await logWfAction(schema, ctx.instanceId, ctx.stageId, 'task:no_assignee', ctx.session.userId, {
+          taskId,
+          routerType,
+          routerValue,
+          routerLabel,
+          refs: refs.map((r) => `${r.type}:${r.value}`),
+        });
+        return { success: true, output: { [`task_${ctx.stageId}`]: taskId, [`task_${ctx.stageId}_assignees`]: [] } };
+      }
+
       await logWfAction(schema, ctx.instanceId, ctx.stageId, 'task:assigned', ctx.session.userId, {
         taskId,
         routerType,
         routerValue,
         routerLabel,
+        assigneeType,
+        assigneeId,
+        assignees: resolved.map((u) => u.id),
         dueAt: dueAt ? dueAt.toISOString() : null,
       });
-      return { success: true, output: { [`task_${ctx.stageId}`]: taskId } };
+      return {
+        success: true,
+        output: { [`task_${ctx.stageId}`]: taskId, [`task_${ctx.stageId}_assignees`]: assigneeUserIds },
+      };
     } catch (error: any) {
       return fail(ctx, `Approval Event failed: ${error?.message || error}`);
     }

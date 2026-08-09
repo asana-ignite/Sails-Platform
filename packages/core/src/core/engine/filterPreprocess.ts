@@ -4,6 +4,32 @@ import { FilterGroupRule } from './QueryLayer';
 import { resolveContextMacro, WorkflowMacroCtx } from './contextMacros';
 
 /**
+ * Resolve a workflow value reference (from QueryStudio's 'Workflow' source,
+ * e.g. `{{requestor.name}}`, `{{record.customer}}`, `{{list_invoices.0.amount}}`,
+ * `{{request_date}}`) against the workflow context. Returns null when the ref
+ * can't be resolved — the caller drops the rule.
+ */
+export function resolveWorkflowRef(ref: string, wfCtx?: WorkflowMacroCtx | null): string | null {
+  if (!wfCtx || !ref) return null;
+  const inner = String(ref).trim().replace(/^\{\{/, '').replace(/\}\}$/, '');
+  const segs = inner.split('.').filter(Boolean);
+  if (segs.length === 0) return null;
+  let val: any;
+  const head = segs[0];
+  if (head === 'record') val = wfCtx.record ?? null;
+  else if (head === 'oldRecord') val = wfCtx.oldRecord ?? null;
+  else if (head === 'requestor') val = wfCtx.requestor ?? null;
+  else if (head === 'request_date') return wfCtx.requestDate ?? null;
+  else val = wfCtx.variables?.[head];
+  for (const s of segs.slice(1)) {
+    if (val == null) return null;
+    if (Array.isArray(val)) val = val[parseInt(s, 10) || 0];
+    else val = val[s];
+  }
+  return val == null ? null : String(val);
+}
+
+/**
  * Validates and enriches a payload of Query Studio filter groups before SQL
  * generation. Shared by `GET /api/dynamic/[tableName]` (record lists) and
  * `GET /api/dynamic/[tableName]/options` (distinct dropdown values), plus the
@@ -28,11 +54,16 @@ export async function preprocessFilterGroups(params: {
   if (!Array.isArray(filterGroups) || filterGroups.length === 0) return;
 
   const validFields = new Set<string>(tableFields.map((f: any) => f.fieldName));
+  // The record's ID (UUID) is a real column on every table — metadata excludes it.
+  validFields.add('id');
   const fieldByName = new Map(tableFields.map((f: any) => [f.fieldName, f]));
 
   // Related-table metadata cache for drill-chain resolution (per request).
+  // Every table's list is augmented with the virtual `id` (UUID) column so
+  // `customer.id = …` chains resolve — metadata excludes it.
+  const withId = (flds: any[]): any[] => flds.some((f: any) => f.fieldName === 'id') ? flds : [...flds, { fieldName: 'id' }];
   const tableCache = new Map<string, any[]>();
-  tableCache.set(tableName, tableFields);
+  tableCache.set(tableName, withId(tableFields));
   const loadTableFields = async (tName: string): Promise<any[] | null> => {
     if (tableCache.has(tName)) return tableCache.get(tName) || null;
     const t = await db.tableDefinition.findFirst({
@@ -40,8 +71,9 @@ export async function preprocessFilterGroups(params: {
       include: { fields: true },
     });
     const flds = (t?.fields || []) as any[];
-    tableCache.set(tName, flds);
-    return flds.length > 0 ? flds : null;
+    const withIdFields = withId(flds);
+    tableCache.set(tName, withIdFields);
+    return flds.length > 0 ? withIdFields : null;
   };
 
   // Resolve a drill chain [c0, c1, ...] into per-hop table names.
@@ -50,7 +82,7 @@ export async function preprocessFilterGroups(params: {
   const resolveChain = async (chain: string[]): Promise<string[] | null> => {
     if (!Array.isArray(chain) || chain.length === 0) return null;
     const tables: string[] = [tableName];
-    let curFields = tableFields;
+    let curFields = withId(tableFields);
     if (!curFields.some((f: any) => f.fieldName === chain[0])) return null;
     for (let i = 1; i < chain.length; i++) {
       const relField = curFields.find((f: any) => f.fieldName === chain[i - 1]);
@@ -88,7 +120,7 @@ export async function preprocessFilterGroups(params: {
       }
 
       // Field-to-field (single hop): refField must be a valid root column.
-      if (rule.refField && !rule.refRecordId && !Array.isArray(rule.refChain) && !validFields.has(rule.refField)) {
+      if (rule.refField && !rule.refRecordId && !Array.isArray(rule.refChain) && !validFields.has(rule.refField) && rule.refField !== 'id') {
         rule.value = '';
         continue;
       }
@@ -112,6 +144,15 @@ export async function preprocessFilterGroups(params: {
           teams: session.teams,
           role: session.role,
         }, workflowCtx);
+      }
+
+      // Workflow value source: resolve the moustache reference against the
+      // workflow context (variables / record / oldRecord / requestor / date).
+      if (rule.workflowRef) {
+        const resolved = resolveWorkflowRef(rule.workflowRef, workflowCtx);
+        if (resolved == null) { rule.value = ''; continue; }
+        rule.value = resolved;
+        delete rule.workflowRef;
       }
     }
   }

@@ -19,6 +19,8 @@ export interface FilterGroupRule {
   refChain?: string[];
   refRecordId?: string;
   contextN?: number;
+  /** 'workflow' value source — resolved against the workflow context before SQL. */
+  workflowRef?: string;
   /** Resolved by the route: physical table name for the record-source subquery. */
   targetTable?: string;
   /** Resolved by the route: table where each LHS chain hop lives (chainTables[0] = root). */
@@ -320,7 +322,8 @@ export class QueryLayer {
       pool,
       async (client) => {
         // 1. Add standard audit columns & generate ID
-        const generatedId = generateTimeOrderedId();
+        //    A payload-provided id (workflow mapping) wins over generation.
+        const generatedId = payload.id || generateTimeOrderedId();
         const dataToInsert = { 
           id: generatedId,
           ...stripProtectedColumns(payload), 

@@ -19,8 +19,9 @@ export type WorkflowEventType =
 export type WorkflowEventConfigParameterType =
   | 'text' | 'textarea' | 'number' | 'boolean' | 'select'
   | 'model_select' | 'operation_select' | 'filter_builder'
-  | 'variable_auto_create' | 'field_mapping' | 'target_record'
-  | 'variable_select' | 'expression_editor' | 'html_editor' | 'attachment_list';
+  | 'variable_auto_create' | 'field_mapping' | 'output_mapping' | 'target_record'
+  | 'variable_select' | 'expression_editor' | 'html_editor' | 'attachment_list'
+  | 'assignee' | 'workflow_actions';
 
 export interface WorkflowEventConfigParameter {
   /** Key inside the event's config JSON (e.g. "model", "storeToVariable"). */
@@ -55,13 +56,92 @@ const TARGET_RECORD_OPTIONS = [
   { label: 'By Literal ID', value: 'literal' },
 ];
 
+// ─── Shared Notification parameters ───────────────────────────
+// Single source of truth for notification fields — used by BOTH the
+// Notification event and the Task Approval "Notification" step (no copy).
+const NOTIFICATION_CHANNEL_PARAM: WorkflowEventConfigParameter = {
+  name: 'channel', label: 'Delivery Channel', type: 'select', defaultValue: 'bell',
+  options: [
+    { label: 'Email', value: 'email' },
+    { label: 'Bell (in-app)', value: 'bell' },
+  ],
+};
+
+const NOTIFICATION_BODY_PARAMETERS: WorkflowEventConfigParameter[] = [
+  { name: 'emailRecipients', label: 'Email Recipients', type: 'text', placeholder: 'name@example.com, role:admins or {{variable}}',
+    description: 'Emails or system tokens (user:, role:, team:, position:, {{variable}}) — system tokens resolve to their user email.' },
+  { name: 'emailCc', label: 'CC', type: 'text', placeholder: 'cc@example.com or {{variable}}',
+    description: 'Carbon copy recipients — emails or system tokens (resolved to emails).' },
+  { name: 'emailBcc', label: 'BCC', type: 'text', placeholder: 'bcc@example.com or {{variable}}',
+    description: 'Blind carbon copy recipients — emails or system tokens (resolved to emails).' },
+  { name: 'bellRecipients', label: 'Bell Recipients', type: 'text', placeholder: 'user:ID, role:name or {{variable}}' },
+  { name: 'subject', label: 'Subject', type: 'text' },
+  { name: 'message', label: 'Message', type: 'html_editor' },
+];
+
+const NOTIFICATION_ATTACHMENTS_PARAM: WorkflowEventConfigParameter = {
+  name: 'attachments', label: 'Email Attachments', type: 'attachment_list',
+};
+
+/**
+ * Approval Notification parameters — the Notification event's fields WITHOUT
+ * the Delivery Channel selector and WITHOUT recipient fields (To / CC / BCC):
+ * delivery targets the resolved assignees, gated by "Send to Email" /
+ * "Send to Bell" checkboxes (the approval's Simple Action Reply model).
+ */
+const APPROVAL_NOTIFICATION_PARAMETERS: WorkflowEventConfigParameter[] = [
+  { name: 'notifyEmail', label: 'Delivery', type: 'boolean', defaultValue: true, description: 'Send the notification by email to the assignees.' },
+  { name: 'notifyBell', label: 'Send to Bell', type: 'boolean', defaultValue: true, description: 'Send the notification as a bell (in-app) alert to the assignees.' },
+  { name: 'subject', label: 'Subject', type: 'text' },
+  { name: 'message', label: 'Message', type: 'html_editor' },
+  NOTIFICATION_ATTACHMENTS_PARAM,
+];
+
+/** One decision action on an approval task. `value` is the routable slug. */
+export interface WorkflowAction {
+  label: string;
+  value: string;
+  color?: string;
+  icon?: string;
+}
+
+/** Slugify an action label into its routing value (mirrors the Select field). */
+export function slugActionLabel(label: string): string {
+  return (label || '').trim().toLowerCase().replace(/\s+/g, '_');
+}
+
+const ACTION_STYLE_KEYWORDS: { value: RegExp; color: string; icon: string }[] = [
+  { value: /approve|accepted|approved|confirm|yes|proceed|sign/i, color: '#10b981', icon: 'CheckCircle2' },
+  { value: /reject|declin|deny|denied|no\b|disapprove/i, color: '#ef4444', icon: 'XCircle' },
+  { value: /request_changes|changes|amend|rework|edit|revise/i, color: '#f59e0b', icon: 'RefreshCw' },
+  { value: /more_info|need_info|clarif|info|question/i, color: '#3b82f6', icon: 'Info' },
+  { value: /send_back|sent_back|reassign|assign_back|return/i, color: '#8b5cf6', icon: 'CornerUpLeft' },
+];
+
+/** Default color/icon for an action value (only stored once the user overrides). */
+export function defaultActionStyle(value: string): { color: string; icon: string } {
+  for (const k of ACTION_STYLE_KEYWORDS) {
+    if (k.value.test(value || '')) return { color: k.color, icon: k.icon };
+  }
+  return { color: '#64748b', icon: 'Circle' };
+}
+
+/** Parse "one action per line" source into WorkflowAction[] (Select-field style). */
+export function parseWorkflowActions(source: string): WorkflowAction[] {
+  return (source || '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((label) => ({ label, value: slugActionLabel(label) }));
+}
+
 export const WORKFLOW_EVENT_CONFIGS: Record<WorkflowEventType, WorkflowEventConfigStep[]> = {
   record: [
     {
       label: 'Action',
       parameters: [
         { name: 'model', label: 'Target Model', type: 'model_select', required: true, description: 'The model the event operates on.' },
-        { name: 'operation', label: 'Operation', type: 'operation_select', defaultValue: 'read' },
+        { name: 'operation', label: 'Action', type: 'operation_select', required: true, description: 'Which operation the event performs on the target model.' },
         { name: 'filterGroups', label: 'Record Filter', type: 'filter_builder', description: 'QueryStudio filter for read / list / update / delete.' },
         { name: 'targetType', label: 'Target Record (ID)', type: 'select', defaultValue: 'trigger', options: TARGET_RECORD_OPTIONS },
         { name: 'targetValue', label: 'Target Value', type: 'variable_select', placeholder: 'Variable name or record ID', description: 'Used when Target Record is "By Variable" (dropdown) or "By Literal ID" (text). For upsert it selects the record to update when the id already exists.' },
@@ -76,7 +156,8 @@ export const WORKFLOW_EVENT_CONFIGS: Record<WorkflowEventType, WorkflowEventConf
     {
       label: 'Output',
       parameters: [
-        { name: 'storeToVariable', label: 'Result Variable', type: 'variable_auto_create', description: 'Auto-creates a record variable for read/write results (collection for list).' },
+        { name: 'storeToVariable', label: 'Result Variable', type: 'variable_auto_create', description: 'The output variable (record for read/write results, collection for list) — create it with the Create button or pick an existing one. Required before Complete.' },
+        { name: 'outputMapping', label: 'Output Mapping', type: 'output_mapping', description: 'Map single-record result fields onto workflow variables (swapped sides vs Input).' },
       ],
     },
   ],
@@ -84,48 +165,45 @@ export const WORKFLOW_EVENT_CONFIGS: Record<WorkflowEventType, WorkflowEventConf
   notification: [
     {
       label: 'Notification',
-      parameters: [
-        {
-          name: 'channel', label: 'Channel', type: 'select', defaultValue: 'bell',
-          options: [
-            { label: 'Bell (in-app)', value: 'bell' },
-            { label: 'Email', value: 'email' },
-            { label: 'Both', value: 'both' },
-          ],
-        },
-        { name: 'recipients', label: 'Recipients', type: 'text', placeholder: 'user@x or {{variable}}' },
-        { name: 'subject', label: 'Subject', type: 'text' },
-        { name: 'message', label: 'Message', type: 'html_editor' },
-      ],
+      parameters: [NOTIFICATION_CHANNEL_PARAM, ...NOTIFICATION_BODY_PARAMETERS],
     },
     {
       label: 'Attachments',
-      parameters: [
-        { name: 'attachments', label: 'Email Attachments', type: 'attachment_list' },
-      ],
+      parameters: [NOTIFICATION_ATTACHMENTS_PARAM],
     },
   ],
 
   approval: [
     {
-      label: 'Task Approval',
+      label: 'Assignee',
       parameters: [
         {
-          name: 'routerType', label: 'Router Type', type: 'select', defaultValue: 'role',
-          options: [
-            { label: 'Specific User', value: 'user' },
-            { label: 'Team', value: 'team' },
-            { label: 'Position', value: 'position' },
-            { label: 'Role', value: 'role' },
-            { label: 'Record Field', value: 'field' },
-          ],
+          name: 'routerType', label: 'Assign To', type: 'assignee', defaultValue: 'role',
+          description: 'Who receives this approval task. Resolved to the CURRENT holders at task time — a role/team/position reference always targets whoever holds it right now (newly added members get the next task automatically).',
         },
-        { name: 'routerValue', label: 'Router Value', type: 'text' },
-        { name: 'routerLabel', label: 'Display Label', type: 'text', defaultValue: 'Approver' },
-        { name: 'canApprove', label: 'Allow Approve', type: 'boolean', defaultValue: true },
-        { name: 'canReject', label: 'Allow Reject', type: 'boolean', defaultValue: true },
+        {
+          name: 'routerValue', label: 'Assignee Reference', type: 'text', defaultValue: '',
+          description: 'The assignee reference — role/team/position/user name-or-id, a record field name, a workflow variable name, or a JSONata expression. Managed by the Assign To picker.',
+        },
+        {
+          name: 'routerRefs', label: 'Assignees', type: 'text', defaultValue: [],
+          description: 'Multiple assignee references (multi-assignee). Managed by the Assign To picker.',
+        },
+      ],
+    },
+    {
+      label: 'Workflow Action',
+      parameters: [
+        {
+          name: 'actions', label: 'Actions', type: 'workflow_actions', defaultValue: [],
+          description: 'The available decisions on this task (e.g. Approve, Reject, Request Changes). Each action becomes a routable outcome for branch conditions. Legacy canApprove / canReject flags seed the default list.',
+        },
         { name: 'timeoutHours', label: 'Timeout (hours)', type: 'number', placeholder: 'No timeout' },
       ],
+    },
+    {
+      label: 'Notification',
+      parameters: APPROVAL_NOTIFICATION_PARAMETERS,
     },
   ],
 

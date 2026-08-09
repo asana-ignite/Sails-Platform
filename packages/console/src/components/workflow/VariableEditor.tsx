@@ -5,10 +5,9 @@
  * the record schema (Model-bound or Custom), the collection item type, and
  * the default value — with a generated JSON Schema preview and validation.
  */
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Plus, Trash2, MoveUp, MoveDown, Braces, CheckCircle2, AlertTriangle, Database, PenLine, RotateCcw } from 'lucide-react';
-import { collectionValueSchema, validateCollectionValue } from '@sails/shared';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Braces, CheckCircle2, AlertTriangle, RotateCcw, Plus } from 'lucide-react';
+import { collectionValueSchema, validateCollectionValue, WORKFLOW_SCALAR_TYPES } from '@sails/shared';
 import { CustomSelect } from '../common/CustomSelect';
 
 interface ColumnDef {
@@ -41,20 +40,16 @@ interface Props {
   variable: VariableShape;
   models: ModelRow[];
   isReadonly: boolean;
+  /** Locks the Name field only (draft creation — the name is fixed by the picker). */
+  nameReadonly?: boolean;
   onChange: (patch: Partial<VariableShape>) => void;
   onReloadModels: () => void;
+  /** When provided, an '+ Add Variable' button appears at the top. */
+  onAddVariable?: () => void;
 }
 
 const VAR_TYPES = [
-  { value: 'text', label: 'Text' },
-  { value: 'long_text', label: 'Long Text' },
-  { value: 'number', label: 'Number' },
-  { value: 'decimal', label: 'Decimal' },
-  { value: 'date', label: 'Date' },
-  { value: 'datetime', label: 'Date & Time' },
-  { value: 'time', label: 'Time' },
-  { value: 'user', label: 'User' },
-  { value: 'boolean', label: 'Boolean' },
+  ...WORKFLOW_SCALAR_TYPES,
   { value: 'collection', label: 'Collection' },
   { value: 'record', label: 'Record' },
 ];
@@ -62,64 +57,12 @@ const VAR_TYPES = [
 const COLLECTION_ITEM_TYPES = [
   { value: 'record', label: 'Record (rows)' },
   { value: 'any', label: 'Any' },
-  { value: 'text', label: 'Text' },
-  { value: 'number', label: 'Number' },
-  { value: 'decimal', label: 'Decimal' },
-  { value: 'boolean', label: 'Boolean' },
-  { value: 'date', label: 'Date' },
-  { value: 'datetime', label: 'Date & Time' },
-  { value: 'user', label: 'User' },
-];
-
-/** Scalar types usable inside a custom record schema. */
-const FIELD_TYPES = [
-  'text', 'long_text', 'number', 'decimal', 'date', 'datetime', 'time',
-  'user', 'boolean', 'relation',
+  ...WORKFLOW_SCALAR_TYPES,
 ];
 
 const colLabel = (c: ColumnDef): string => c.label || c.fieldName;
 
-export const VariableEditor: React.FC<Props> = ({ variable: v, models, isReadonly, onChange, onReloadModels }) => {
-  const [customField, setCustomField] = useState<ColumnDef>({ fieldName: '', label: '', logicalType: 'text' });
-  const [customPopOpen, setCustomPopOpen] = useState(false);
-  const [customPopPos, setCustomPopPos] = useState<{ top: number; left: number } | null>(null);
-  const addFieldAnchorRef = useRef<HTMLDivElement | null>(null);
-  const addFieldPopRef = useRef<HTMLDivElement | null>(null);
-
-  // Close the Add Field popup on outside click / Escape (portaled to body).
-  useEffect(() => {
-    if (!customPopOpen) return;
-    const onDown = (e: MouseEvent) => {
-      const t = e.target as HTMLElement;
-      if (addFieldAnchorRef.current?.contains(t)) return;
-      if (addFieldPopRef.current?.contains(t)) return;
-      setCustomPopOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setCustomPopOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [customPopOpen]);
-
-  const openCustomPop = () => {
-    const anchor = addFieldAnchorRef.current;
-    if (anchor) {
-      const r = anchor.getBoundingClientRect();
-      const W = 260;
-      const estH = 320;
-      const left = Math.max(8, Math.min(r.left, window.innerWidth - W - 8));
-      const below = r.bottom + 6 + estH <= window.innerHeight - 8;
-      const top = below ? r.bottom + 6 : Math.max(8, r.top - estH - 6);
-      setCustomPopPos({ top, left });
-    } else {
-      setCustomPopPos(null);
-    }
-    setCustomField({ fieldName: '', label: '', logicalType: 'text' });
-    setCustomPopOpen(true);
-  };
+export const VariableEditor: React.FC<Props> = ({ variable: v, models, isReadonly, nameReadonly, onChange, onReloadModels, onAddVariable }) => {
   const [defaultDraft, setDefaultDraft] = useState<string | null>(null);
   const [schemaOpen, setSchemaOpen] = useState(false);
 
@@ -149,49 +92,6 @@ export const VariableEditor: React.FC<Props> = ({ variable: v, models, isReadonl
   }, [v.defaultValue, columns, isRecordShape]);
 
   // ── Column ops (model mode) ──
-  const toggleModelField = (fieldName: string) => {
-    const existing = columns.some((c) => c.fieldName === fieldName);
-    const next = existing
-      ? columns.filter((c) => c.fieldName !== fieldName)
-      : [...columns, { fieldName, label: fieldName, logicalType: 'text' }];
-    onChange({ columns: next });
-  };
-
-  const moveColumn = (idx: number, dir: -1 | 1) => {
-    const next = [...columns];
-    const other = idx + dir;
-    if (other < 0 || other >= next.length) return;
-    [next[idx], next[other]] = [next[other], next[idx]];
-    onChange({ columns: next });
-  };
-
-  const removeColumn = (idx: number) => {
-    onChange({ columns: columns.filter((_, i) => i !== idx) });
-  };
-
-  // ── Custom schema ops ──
-  const addCustomField = () => {
-    if (!customField.fieldName.trim()) return;
-    onChange({
-      columns: [...columns, {
-        fieldName: customField.fieldName.trim(),
-        label: customField.label?.trim() || customField.fieldName.trim(),
-        logicalType: customField.logicalType || 'text',
-        targetModel: customField.targetModel || undefined,
-      }],
-    });
-    setCustomPopOpen(false);
-    setCustomField({ fieldName: '', label: '', logicalType: 'text' });
-  };
-
-  const updateCustomField = (idx: number, patch: Partial<ColumnDef>) => {
-    const next = [...columns];
-    next[idx] = { ...next[idx], ...patch };
-    onChange({ columns: next });
-  };
-
-  const patchColumn = (idx: number, patch: Partial<ColumnDef>) => updateCustomField(idx, patch);
-
   const defaultText = defaultDraft ?? (v.defaultValue != null ? JSON.stringify(v.defaultValue, null, 2) : '');
   const commitDefault = () => {
     if (defaultDraft === null) return;
@@ -204,19 +104,20 @@ export const VariableEditor: React.FC<Props> = ({ variable: v, models, isReadonl
 
   return (
     <div style={{ border: '1px solid var(--sails-border,#e2e8f0)', borderRadius: 8, margin: '0 12px 10px', padding: 10, background: 'var(--sails-bg-card,#fff)' }}>
+      {/* No '+ Add Variable' for record/collection variables — their editor is for the created variable. */}
+      {onAddVariable && v.fieldType !== 'record' && v.fieldType !== 'collection' && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+          <button type="button" className="sails-btn sails-btn--ghost sails-btn--sm" onClick={onAddVariable}>
+            <Plus size={12} /> Add Variable
+          </button>
+        </div>
+      )}
       {/* Name + type */}
       <label className="ws-props-label">Name</label>
-      <input className="ws-props-input" value={v.name} onChange={(e) => onChange({ name: e.target.value })} disabled={isReadonly} />
+      <input className="ws-props-input" value={v.name} onChange={(e) => onChange({ name: e.target.value })} disabled={isReadonly || nameReadonly} />
       <label className="ws-props-label" style={{ marginTop: 6 }}>Type</label>
-      <select className="ws-props-input" value={v.fieldType}
-        onChange={(e) => {
-          const ft = e.target.value;
-          const patch: any = { fieldType: ft };
-          if (ft === 'collection') { patch.itemType = v.itemType || 'record'; patch.defaultValue = Array.isArray(v.defaultValue) ? v.defaultValue : []; }
-          else if (ft === 'record') { patch.itemType = undefined; patch.defaultValue = v.defaultValue && typeof v.defaultValue === 'object' && !Array.isArray(v.defaultValue) ? v.defaultValue : {}; }
-          else { patch.itemType = undefined; patch.targetModel = undefined; patch.columns = undefined; }
-          onChange(patch);
-        }} disabled={isReadonly}>
+      {/* A variable's type is fixed once created — only name/description are editable. */}
+      <select className="ws-props-input" value={v.fieldType} disabled>
         {VAR_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
       </select>
 
@@ -224,163 +125,60 @@ export const VariableEditor: React.FC<Props> = ({ variable: v, models, isReadonl
       {v.fieldType === 'collection' && (
         <>
           <label className="ws-props-label" style={{ marginTop: 6 }}>Item Type</label>
-          <select className="ws-props-input" value={v.itemType || 'record'}
-            onChange={(e) => {
-              const it = e.target.value;
+          <CustomSelect
+            size="md"
+            searchable
+            className="ws-props-select"
+            value={v.itemType || 'record'}
+            options={COLLECTION_ITEM_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+            onChange={(val) => {
+              const it = String(val);
               const patch: any = { itemType: it };
               if (it !== 'record') { patch.targetModel = undefined; patch.columns = undefined; }
               onChange(patch);
-            }} disabled={isReadonly}>
-            {COLLECTION_ITEM_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+            }}
+            disabled={isReadonly}
+          />
         </>
       )}
 
-      {/* Record schema editor */}
+      {/* Record schema — model only; all of the model's columns are included. */}
       {isRecordShape && (
         <>
-          {/* Schema mode toggle */}
-          <label className="ws-props-label" style={{ marginTop: 6 }}>Schema Source</label>
-          <div className="ws-mode-toggle" style={{ marginBottom: 6 }}>
-            <button type="button" className={`ws-mode-btn ${(v.schemaMode || 'model') === 'model' ? 'ws-mode-btn--active' : ''}`}
-              onClick={() => onChange({ schemaMode: 'model' })} disabled={isReadonly}>
-              <Database size={12} /> Model
-            </button>
-            <button type="button" className={`ws-mode-btn ${v.schemaMode === 'custom' ? 'ws-mode-btn--active' : ''}`}
-              onClick={() => onChange({ schemaMode: 'custom' })} disabled={isReadonly}>
-              <PenLine size={12} /> Custom
-            </button>
+          <label className="ws-props-label" style={{ marginTop: 6 }}>Model</label>
+          <div className="ws-props-row">
+            <CustomSelect
+              size="md"
+              searchable
+              className="ws-props-select"
+              style={{ flex: 1, minWidth: 0 }}
+              value={v.targetModel || ''}
+              options={models.map((m) => ({ value: m.tableName, label: `${m.name} (${m.tableName})` }))}
+              onChange={(val) => {
+                const name = String(val);
+                const m = models.find((x) => x.tableName === name || x.name === name);
+                onChange({
+                  schemaMode: 'model',
+                  targetModel: name || undefined,
+                  columns: m ? m.fields.map((f: any) => ({
+                    fieldName: f.fieldName ?? f.columnName ?? f.id,
+                    label: f.name ?? f.label ?? f.fieldName,
+                    logicalType: f.logicalType ?? f.physicalType ?? 'text',
+                    targetModel: (f.logicalType === 'relation' || f.logicalType === 'lookup')
+                      ? (f.config?.targetTable ?? f.config?.targetModel ?? undefined)
+                      : undefined,
+                  })) : [],
+                });
+              }}
+              disabled={isReadonly}
+              placeholder="Select model..."
+            />
+            <button className="ws-icon-btn" title="Reload models" onClick={onReloadModels}><RotateCcw size={12} /></button>
           </div>
-
-          {(v.schemaMode || 'model') === 'model' ? (
-            <>
-              <label className="ws-props-label">Model</label>
-              <div className="ws-props-row">
-                <CustomSelect
-                  size="sm"
-                  searchable
-                  value={v.targetModel || ''}
-                  options={models.map((m) => ({ value: m.tableName, label: `${m.name} (${m.tableName})` }))}
-                  onChange={(val) => {
-                    const name = String(val);
-                    const m = models.find((x) => x.tableName === name || x.name === name);
-                    onChange({
-                      targetModel: name || undefined,
-                      columns: m ? m.fields.map((f: any) => ({
-                        fieldName: f.fieldName ?? f.columnName ?? f.id,
-                        label: f.name ?? f.label ?? f.fieldName,
-                        logicalType: f.logicalType ?? f.physicalType ?? 'text',
-                        targetModel: (f.logicalType === 'relation' || f.logicalType === 'lookup')
-                          ? (f.config?.targetTable ?? f.config?.targetModel ?? undefined)
-                          : undefined,
-                      })) : [],
-                    });
-                  }}
-                  disabled={isReadonly}
-                  placeholder="Select model..."
-                />
-                <button className="ws-icon-btn" title="Reload models" onClick={onReloadModels}><RotateCcw size={12} /></button>
-              </div>
-
-              {model ? (
-                <>
-                  <label className="ws-props-label" style={{ marginTop: 6 }}>Columns ({columns.length}/{model.fields.length})</label>
-                  <div style={{ maxHeight: 160, overflow: 'auto', border: '1px solid var(--sails-border,#e2e8f0)', borderRadius: 6 }}>
-                    {model.fields.map((f: any, i: number) => {
-                      const fn = f.fieldName ?? f.columnName ?? f.id;
-                      const included = columns.some((c) => c.fieldName === fn);
-                      return (
-                        <div key={fn} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 6px', borderBottom: '1px solid var(--sails-border,#e2e8f0)' }}>
-                          <input type="checkbox" checked={included} disabled={isReadonly}
-                            onChange={() => toggleModelField(fn)} />
-                          <span style={{ flex: 1, fontSize: 11 }}>{f.name ?? f.label ?? fn}</span>
-                          <code style={{ fontSize: 9, color: 'var(--sails-text-muted,#94a3b8)' }}>{f.logicalType ?? f.physicalType ?? 'text'}</code>
-                          {included && (
-                            <span style={{ display: 'inline-flex', gap: 2 }}>
-                              <button className="ws-icon-btn" title="Move up" disabled={i === 0 || isReadonly} onClick={() => moveColumn(Math.max(0, columns.findIndex((c) => c.fieldName === fn)), -1)}><MoveUp size={10} /></button>
-                              <button className="ws-icon-btn" title="Move down" disabled={isReadonly} onClick={() => moveColumn(columns.findIndex((c) => c.fieldName === fn), 1)}><MoveDown size={10} /></button>
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : (
-                <p className="ws-props-hint" style={{ paddingTop: 4 }}>Select a model to derive its columns. Uncheck columns you don't need.</p>
-              )}
-            </>
+          {model ? (
+            <p className="ws-props-hint" style={{ paddingTop: 4 }}>All columns of {model.name} are included.</p>
           ) : (
-            <>
-              <label className="ws-props-label">Custom Fields</label>
-              {columns.length === 0 && <p className="ws-props-hint">No custom fields yet — add fields below.</p>}
-              {columns.map((c, i) => (
-                <div key={i} style={{ border: '1px solid var(--sails-border,#e2e8f0)', borderRadius: 6, padding: 6, marginBottom: 4 }}>
-                  <div className="ws-props-row">
-                    <input className="ws-props-input" style={{ flex: 1 }} placeholder="field_name" value={c.fieldName}
-                      onChange={(e) => patchColumn(i, { fieldName: e.target.value })} disabled={isReadonly} />
-                    <select className="ws-props-input" style={{ width: 90 }} value={c.logicalType || 'text'}
-                      onChange={(e) => patchColumn(i, { logicalType: e.target.value })} disabled={isReadonly}>
-                      {FIELD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    <button className="ws-icon-btn ws-icon-btn--danger" title="Remove field" disabled={isReadonly} onClick={() => removeColumn(i)}><Trash2 size={11} /></button>
-                  </div>
-                  <div className="ws-props-row" style={{ marginTop: 4 }}>
-                    <input className="ws-props-input" style={{ flex: 1 }} placeholder="Display label (optional)" value={c.label || ''}
-                      onChange={(e) => patchColumn(i, { label: e.target.value })} disabled={isReadonly} />
-                    <select className="ws-props-input" style={{ width: 120 }} value={c.targetModel || ''}
-                      onChange={(e) => patchColumn(i, { targetModel: e.target.value || undefined })} disabled={isReadonly}>
-                      <option value="">— no nested model —</option>
-                      {models.map((m) => <option key={m.id} value={m.tableName}>{m.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-              ))}
-              {/* Add custom field — button + popup (same pattern as variable creation) */}
-              <div ref={addFieldAnchorRef} style={{ position: 'relative', marginTop: 6 }}>
-                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={openCustomPop} disabled={isReadonly}>
-                  <Plus size={12} /> Add Field
-                </button>
-                {customPopOpen && customPopPos && createPortal(
-                  <div
-                    ref={addFieldPopRef}
-                    className="ws-var-add-pop"
-                    style={{ position: 'fixed', top: customPopPos.top, left: customPopPos.left, width: 260, zIndex: 80 }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <label className="ws-props-label">Field Name</label>
-                    <input className="ws-props-input" autoFocus placeholder="field_name" value={customField.fieldName}
-                      onChange={(e) => setCustomField((f) => ({ ...f, fieldName: e.target.value }))}
-                      onKeyDown={(e) => { if (e.key === 'Enter') addCustomField(); if (e.key === 'Escape') setCustomPopOpen(false); }} />
-                    <label className="ws-props-label" style={{ marginTop: 4 }}>Display Label</label>
-                    <input className="ws-props-input" placeholder="Display label (optional)" value={customField.label || ''}
-                      onChange={(e) => setCustomField((f) => ({ ...f, label: e.target.value }))} />
-                    <label className="ws-props-label" style={{ marginTop: 4 }}>Type</label>
-                    <CustomSelect
-                      size="sm"
-                      searchable
-                      value={customField.logicalType || 'text'}
-                      options={FIELD_TYPES.map((t) => ({ value: t, label: t }))}
-                      onChange={(v) => setCustomField((f) => ({ ...f, logicalType: String(v) }))}
-                    />
-                    <label className="ws-props-label" style={{ marginTop: 4 }}>Nested Model (optional)</label>
-                    <CustomSelect
-                      size="sm"
-                      searchable
-                      value={customField.targetModel || ''}
-                      options={[{ value: '', label: '— none —' }, ...models.map((m) => ({ value: m.tableName, label: `${m.name} (${m.tableName})` }))]}
-                      onChange={(v) => setCustomField((f) => ({ ...f, targetModel: String(v) || undefined }))}
-                    />
-                    <div className="ws-var-add-pop__footer">
-                      <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setCustomPopOpen(false)}>Cancel</button>
-                      <button className="sails-btn sails-btn--primary sails-btn--sm" disabled={!customField.fieldName.trim()}
-                        onClick={addCustomField}>OK</button>
-                    </div>
-                  </div>,
-                  document.body,
-                )}
-              </div>
-            </>
+            <p className="ws-props-hint" style={{ paddingTop: 4 }}>Select a model — all of its columns are included.</p>
           )}
 
           {/* Declared columns summary */}

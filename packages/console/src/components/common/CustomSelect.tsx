@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 import './CustomSelect.css';
 
@@ -36,7 +37,9 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [computedDropUp, setComputedDropUp] = useState(false);
+  const [dropPos, setDropPos] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const isValueMatch = (val1: string | number, val2: string | number) => {
@@ -61,23 +64,42 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     ? options.filter(opt => opt.label.toLowerCase().includes(searchQuery.toLowerCase()) || String(opt.value).toLowerCase().includes(searchQuery.toLowerCase()))
     : options;
 
+  // The dropdown is portaled to <body> with fixed positioning so it can fly
+  // over modals / overflowing containers. Position is recomputed on open and
+  // tracked across scroll + resize.
   useEffect(() => {
-    if (isOpen && containerRef.current) {
-      if (direction === 'up') {
-        setComputedDropUp(true);
-      } else if (direction === 'down') {
-        setComputedDropUp(false);
-      } else {
-        const rect = containerRef.current.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - rect.bottom;
-        setComputedDropUp(spaceBelow < 220);
-      }
-    }
+    if (!isOpen || !containerRef.current) return;
+    const position = () => {
+      const el = containerRef.current!;
+      const rect = el.getBoundingClientRect();
+      let dropUp: boolean;
+      if (direction === 'up') dropUp = true;
+      else if (direction === 'down') dropUp = false;
+      else dropUp = window.innerHeight - rect.bottom < 220;
+      setComputedDropUp(dropUp);
+      setDropPos({
+        left: rect.left,
+        width: rect.width,
+        ...(dropUp ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 4 }),
+      });
+    };
+    position();
+    window.addEventListener('resize', position);
+    window.addEventListener('scroll', position, true);
+    return () => {
+      window.removeEventListener('resize', position);
+      window.removeEventListener('scroll', position, true);
+    };
   }, [isOpen, direction]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        containerRef.current && dropdownRef.current &&
+        !containerRef.current.contains(target) &&
+        !dropdownRef.current.contains(target)
+      ) {
         setIsOpen(false);
         setSearchQuery('');
       }
@@ -127,8 +149,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         <ChevronDown size={size === 'sm' ? 14 : 16} className="sails-custom-select__chevron" />
       </button>
 
-      {isOpen && (
-        <div className="sails-custom-select__dropdown">
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={dropdownRef}
+          className="sails-custom-select__dropdown"
+          style={dropPos ? { position: 'fixed', left: dropPos.left, width: dropPos.width, ...(dropPos.top !== undefined ? { top: dropPos.top } : { bottom: dropPos.bottom }) } : undefined}
+        >
           {searchable && (
             <div className="sails-custom-select__search-wrapper" onClick={e => e.stopPropagation()}>
               <input
@@ -167,7 +193,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

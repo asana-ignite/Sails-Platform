@@ -1,0 +1,88 @@
+/** ActionsEditor — Task Approval "Actions" (one per line, Select-field style). */
+
+.axe { display: flex; flex-direction: column; gap: 8px; }
+
+.axe__chips { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.axe__chips-title { font-size: 10px; font-weight: 600; color: var(--sails-text-muted, #64748b); }
+.axe__chip-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  border: 1px dashed var(--sails-border, #cbd5e1);
+  border-radius: 999px;
+  background: var(--sails-bg-card, #fff);
+  color: var(--sails-primary, #3b82f6);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.axe__chip-add:hover:not(:disabled) { border-style: solid; border-color: var(--sails-primary, #3b82f6); background: rgba(59, 130, 246, 0.06); }
+.axe__chip-add:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.axe__textarea { width: 100%; min-height: 96px; font-size: 12px; line-height: 1.5; resize: vertical; }
+
+.axe__hint { font-size: 10px; color: var(--sails-text-muted, #94a3b8); margin: -4px 0 0; }
+
+.axe__preview { display: flex; flex-wrap: wrap; gap: 5px; }
+.axe__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--sails-bg-card, #fff);
+  cursor: pointer;
+  transition: box-shadow 0.12s;
+}
+.axe__action:hover { box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.06); }
+
+.axe__style {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--sails-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--sails-bg-card, #fff);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.axe__style-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.axe__style-label { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; color: var(--sails-text-muted, #64748b); min-width: 52px; }
+.axe__swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  padding: 0;
+}
+.axe__swatch.is-active { box-shadow: 0 0 0 2px var(--sails-primary, #3b82f6); }
+.axe__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--sails-border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--sails-bg-card, #fff);
+  cursor: pointer;
+}
+.axe__icon-btn.is-active { border-color: currentColor; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+.axe__reset {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.axe__reset:hover { color: #ef4444; }

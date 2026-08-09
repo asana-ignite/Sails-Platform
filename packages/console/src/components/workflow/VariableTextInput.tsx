@@ -11,7 +11,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { WorkflowVariablePicker, type PickerColumn } from './WorkflowVariablePicker';
 import { VariableAutocomplete } from './VariableAutocomplete';
-import { escapeHtml, refFromSegs, type PickerVariable, type PickerSchemaMap } from './variableTree';
+import { escapeHtml, chipLabel, refFromSegs, type PickerVariable, type PickerSchemaMap } from './variableTree';
 
 interface Props {
   value: string;
@@ -24,6 +24,9 @@ interface Props {
   triggerModelName?: string;
   includeOldRecord?: boolean;
   includeRequestor?: boolean;
+  /** When provided, the picker popup header shows a '+ Add' button. */
+  /** JIT variable creation — anchored at the picker trigger; a resolved name is auto-inserted as a chip. */
+  onAddVariable?: (anchorEl?: HTMLElement) => void | Promise<string | null>;
   multiline?: boolean;
   rows?: number;
   placeholder?: string;
@@ -46,7 +49,7 @@ function renderHtml(value: string, multiline: boolean): string {
   const parts = value.split(REF_RE);
   return parts.map((p) => {
     if (/^\{\{[^{}]+\}\}$/.test(p)) {
-      return `<span class="wve-chip" contenteditable="false" data-ref="${p}">${escapeHtml(p)}</span>`;
+      return `<span class="wve-chip" contenteditable="false" data-ref="${p}" data-label="${chipLabel(p)}">${escapeHtml(p)}</span>`;
     }
     if (!p) return '';
     const escaped = escapeHtml(p);
@@ -56,7 +59,7 @@ function renderHtml(value: string, multiline: boolean): string {
 
 export const VariableTextInput: React.FC<Props> = ({
   value, onChange, variables, recordSchemas = {}, recordSchema,
-  triggerModelFields, triggerModelName, includeOldRecord, includeRequestor,
+  triggerModelFields, triggerModelName, includeOldRecord, includeRequestor, onAddVariable,
   multiline = false, rows = 3, placeholder = '', disabled,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -106,7 +109,19 @@ export const VariableTextInput: React.FC<Props> = ({
   const insertRef = useCallback((ref: string) => {
     const el = containerRef.current;
     if (!el) return;
-    const chip = `<span class="wve-chip" contenteditable="false" data-ref="${ref}">${escapeHtml(ref)}</span>&#8203;`;
+    const chip = `<span class="wve-chip" contenteditable="false" data-ref="${ref}" data-label="${chipLabel(ref)}">${escapeHtml(ref)}</span>&#8203;`;
+    // The picker popup blurs the editor, so restore the caret before
+    // inserting — otherwise execCommand('insertHTML') silently no-ops.
+    const caret = window.getSelection();
+    const caretInEditor = caret && caret.rangeCount > 0 && el.contains(caret.getRangeAt(0).startContainer);
+    if (!caretInEditor) {
+      el.focus();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false); // end of content
+      const s = window.getSelection();
+      if (s) { s.removeAllRanges(); s.addRange(range); }
+    }
     // If the autocomplete is open, select from `{{` to the caret so the typed
     // query is REPLACED by the chip (not inserted in front of it).
     const sel = window.getSelection();
@@ -167,6 +182,14 @@ export const VariableTextInput: React.FC<Props> = ({
 
   const pickerOnExpression = (expr: string) => insertRef(`{{$${expr}}}`);
 
+  /** JIT create a variable, then drop `{{name}}` at the caret. */
+  const handleAddVariable = useCallback(async (anchorEl?: HTMLElement): Promise<string | null> => {
+    const created = await onAddVariable?.(anchorEl);
+    if (created) insertRef(`{{${created}}}`);
+    return created ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onAddVariable, insertRef]);
+
   return (
     <div className={`wve ${multiline ? 'wve--area' : 'wve--box'}`} style={{ position: 'relative' }}>
       {multiline ? (
@@ -199,6 +222,7 @@ export const VariableTextInput: React.FC<Props> = ({
                 variant="trigger"
                 onChange={insertRef}
                 onExpression={pickerOnExpression}
+                onAddVariable={handleAddVariable}
               />
             </div>
           )}
@@ -231,6 +255,7 @@ export const VariableTextInput: React.FC<Props> = ({
               variant="trigger"
               onChange={insertRef}
               onExpression={pickerOnExpression}
+              onAddVariable={handleAddVariable}
             />
           )}
         </div>

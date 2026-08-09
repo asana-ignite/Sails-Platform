@@ -10,6 +10,7 @@ import { buildJsonataSuggestions, type Suggestion, type SuggestionVariable, type
 import { JSONATA_SNIPPETS, fieldTypeMatches, type Snippet, type SnippetPlaceholderKind } from './jsonataSnippets';
 import { describeJsonata } from './jsonataExplain';
 import { friendlyToJsonata, jsonataToFriendly, buildPlainSuggestions } from './jsonataFriendly';
+import { WorkflowVariablePicker, type PickerVariable, type PickerSchemaMap, type PickerColumn } from './WorkflowVariablePicker';
 import './ExpressionEditor.css';
 
 interface ExpressionEditorProps {
@@ -18,6 +19,10 @@ interface ExpressionEditorProps {
   recordSchemas?: RecordSchemaMap;
   /** Workflow-context drill roots (record / oldRecord / requestor) for intellisense. */
   drillRoots?: DrillRoots;
+  /** When provided, the variable picker popup shows a '+ Add' button. */
+  onAddVariable?: (anchorEl?: HTMLElement) => void | Promise<string | null>;
+  /** Triggering model name for the variable picker's `record.` branch label. */
+  triggerModelName?: string;
   value: string;
   onChange: (v: string) => void;
   /** Build a sample record to run the Test button. */
@@ -115,6 +120,8 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   variables,
   recordSchemas,
   drillRoots,
+  triggerModelName,
+  onAddVariable,
   value,
   onChange,
   sample,
@@ -183,6 +190,22 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   const tokens = useMemo(() => tokenizeHighlight(displayedValue), [displayedValue]);
   const assignment = useMemo(() => detectAssignment(effectiveValue), [effectiveValue]);
   const plainText = useMemo(() => describeJsonata(effectiveValue), [effectiveValue]);
+
+  // ── Variable picker (… corner button) ──
+  // The picker's prop shapes are structurally identical to the suggestion
+  // types (id/name/fieldType/columns + fieldName/label/logicalType), so the
+  // studio-supplied payloads pass straight through.
+  const pickerVariables = useMemo<PickerVariable[]>(() => variables, [variables]);
+  const pickerSchemas = useMemo<PickerSchemaMap>(() => recordSchemas || {}, [recordSchemas]);
+  const pickerTriggerFields = useMemo<PickerColumn[] | undefined>(() => drillRoots?.record, [drillRoots]);
+  // Show the … trigger whenever there is anything to pick — workflow variables
+  // OR the workflow-context branches (record / oldRecord / requestor). The
+  // studio always supplies drillRoots.requestor, so the button is always
+  // available there even for workflows with no variables.
+  const hasPickerTargets = pickerVariables.length > 0
+    || !!pickerTriggerFields
+    || !!drillRoots?.oldRecord
+    || !!drillRoots?.requestor;
 
   const [jsonataLib, setJsonataLib] = useState<any>(null);
   const [jsonataLoadError, setJsonataLoadError] = useState<string | null>(null);
@@ -285,9 +308,34 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
     setSuggestIndex(0);
   };
 
-  const applySuggestion = (s: Suggestion) => {
-    if (!taRef.current) return;
+  /** Replace an explicit text range with mode-aware commit (Plain vs JSONata). */
+  const commitInsert = (start: number, end: number, text: string) => {
     const el = taRef.current;
+    if (!el) return;
+    const base = mode === 'plain' ? plainDraft : value;
+    const next = base.slice(0, start) + text + base.slice(end);
+    if (mode === 'plain') commitPlain(next);
+    else onChange(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const caret = start + text.length;
+      el.setSelectionRange(caret, caret);
+    });
+  };
+
+  /** Insert at the textarea caret — used by the variable picker (… button). */
+  const insertAtCaret = (text: string) => {
+    const el = taRef.current;
+    if (!el) return;
+    const base = mode === 'plain' ? plainDraft : value;
+    const start = el.selectionStart ?? base.length;
+    const end = el.selectionEnd ?? base.length;
+    commitInsert(start, end, text);
+  };
+
+  const applySuggestion = (s: Suggestion) => {
+    const el = taRef.current;
+    if (!el) return;
     const base = mode === 'plain' ? plainDraft : value;
     const start = el.selectionStart ?? base.length;
     const end = el.selectionEnd ?? base.length;
@@ -296,14 +344,7 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
     const wordStart = wordMatch ? start - wordMatch[1].length : start;
     const opensParen = s.insert.endsWith('(');
     const suffix = opensParen ? ')' : '';
-    const next = base.slice(0, wordStart) + s.insert + suffix + base.slice(end);
-    if (mode === 'plain') commitPlain(next);
-    else onChange(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      const caret = wordStart + s.insert.length;
-      el.setSelectionRange(caret, caret);
-    });
+    commitInsert(wordStart, end, s.insert + suffix);
     setSuggestions(null);
   };
 
@@ -426,7 +467,7 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
           <button type="button" className={`ex-editor__mode-btn ${mode === 'plain' ? 'is-active' : ''}`} onClick={() => switchMode('plain')} title="Type in plain English-style syntax">Plain</button>
           <button type="button" className={`ex-editor__mode-btn ${mode === 'jsonata' ? 'is-active' : ''}`} onClick={() => switchMode('jsonata')} title="Type raw JSONata">JSONata</button>
         </div>
-        <div className="ex-editor__area">
+        <div className={`ex-editor__area ${hasPickerTargets ? 'ex-editor__area--corner' : ''}`}>
           <pre ref={hlRef} className="ex-editor__hl" aria-hidden>
             {tokens.map((t, i) => (t.cls ? <span key={i} className={t.cls}>{t.text}</span> : t.text))}
           </pre>
@@ -448,6 +489,25 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             }}
             rows={compact ? 2 : 5}
           />
+
+          {hasPickerTargets && (
+            <div className="ex-editor__corner">
+              <WorkflowVariablePicker
+                variables={pickerVariables}
+                recordSchemas={pickerSchemas}
+                value=""
+                variant="trigger"
+                format="jsonata"
+                triggerModelFields={pickerTriggerFields}
+                triggerModelName={triggerModelName}
+                includeOldRecord={!!drillRoots?.oldRecord}
+                includeRequestor={!!drillRoots?.requestor}
+                onChange={insertAtCaret}
+                onExpression={insertAtCaret}
+                onAddVariable={onAddVariable}
+              />
+            </div>
+          )}
 
           {suggestions && suggestions.length > 0 && popupPos && createPortal(
             <div

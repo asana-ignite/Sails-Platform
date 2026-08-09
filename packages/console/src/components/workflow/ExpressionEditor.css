@@ -135,6 +135,29 @@
   position: relative;
 }
 
+/* Variable-picker trigger (… button), top-right — same corner treatment as
+   VariableTextInput's TextArea mode; sits above the textarea + highlight. */
+.ex-editor__corner {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 50;
+}
+
+.ex-editor__corner .sails-searchlist__trigger {
+  width: 28px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--sails-bg-card, #ffffff);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Keep the first line from running under the corner button. */
+.ex-editor__area--corner .ex-editor__input,
+.ex-editor__area--corner .ex-editor__hl {
+  padding-right: 40px;
+}
+
 .ex-editor__hl {
   position: absolute;
   inset: 0;

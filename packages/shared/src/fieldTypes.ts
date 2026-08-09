@@ -128,11 +128,7 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
     parametersSchema: [
       { name: 'rows', label: 'No. of Lines (Height)', type: 'number', defaultValue: 5, min: 1, max: 50 },
       { name: 'placeholder', label: 'Placeholder Text', type: 'text', placeholder: 'e.g. Enter formatted content...' },
-      { name: 'toolbarPreset', label: 'Toolbar Features', type: 'select', defaultValue: 'standard', options: [
-        { label: 'Minimal (Bold, Italic, Underline)', value: 'minimal' },
-        { label: 'Standard (Formatting, Lists, Link)', value: 'standard' },
-        { label: 'Full (Headers, Font, Table, Code)', value: 'full' }
-      ]}
+      { name: 'toolbarFull', label: 'Full Toolbar (Font, Color, Table, Full Screen)', type: 'boolean', defaultValue: true }
     ]
   },
   {
@@ -537,3 +533,25 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
     ]
   }
 ];
+
+/** Sub-field structure of JSON-stored field types (drill-down in pickers, mapping and expressions).
+ *  Mirrors the value shapes produced by the platform controls. */
+export const STRUCTURED_TYPE_SUBFIELDS: Record<string, { fieldName: string; label: string; logicalType: string }[]> = {
+  address: [
+    { fieldName: 'address1', label: 'Address 1', logicalType: 'short_text' },
+    { fieldName: 'address2', label: 'Address 2', logicalType: 'short_text' },
+    { fieldName: 'city', label: 'City', logicalType: 'short_text' },
+    { fieldName: 'state', label: 'State / Province', logicalType: 'short_text' },
+    { fieldName: 'postalCode', label: 'Zip / Postal Code', logicalType: 'short_text' },
+    { fieldName: 'country', label: 'Country', logicalType: 'short_text' },
+  ],
+  lat_lng: [
+    { fieldName: 'lat', label: 'Latitude', logicalType: 'decimal' },
+    { fieldName: 'lng', label: 'Longitude', logicalType: 'decimal' },
+  ],
+};
+
+/** Scalar workflow-variable types derived from the canonical field registry
+ *  (the DB FieldType standard). record/collection are workflow containers. */
+export const WORKFLOW_SCALAR_TYPES: { value: string; label: string }[] =
+  FIELD_TYPE_REGISTRY.map((t) => ({ value: t.type, label: t.label }));

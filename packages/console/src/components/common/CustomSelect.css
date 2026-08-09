@@ -113,12 +113,6 @@
   box-sizing: border-box;
 }
 
-.sails-custom-select--dropup .sails-custom-select__dropdown {
-  top: auto !important;
-  bottom: calc(100% + 6px) !important;
-  box-shadow: 0 -10px 30px -5px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05);
-}
-
 .sails-custom-select__search-wrapper {
   padding: 4px 4px 6px 4px;
   border-bottom: 1px solid var(--sails-border-color, #f1f2f6);

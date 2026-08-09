@@ -7,6 +7,7 @@
  *   Right = Properties (contextual: stage / event / branch / workflow)
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus, X, Trash2, GitBranch, User, Users,
   Briefcase, Shield, Hash, Clock, Settings, Filter,
@@ -14,21 +15,21 @@ import {
   Link2, Split, CheckCircle2, AlertTriangle,
   Layers, ChevronsUpDown, Braces, MousePointer2,
   CornerUpLeft, Unlink, History, RotateCcw, Maximize2, Minimize2,
-  Pencil, Save, Play, Wand2, Globe, ArrowRight, Undo2, Redo2, FunctionSquare,
+  Pencil, Save, Play, Wand2, Globe, ArrowRight, Undo2, Redo2, FunctionSquare, Search, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import ExpressionEditor from '../../components/workflow/ExpressionEditor';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { FilterBuilder } from '../../components/common/FilterBuilder';
 import { DynamicIcon } from '../../components/common/DynamicIcon';
 import type { FilterGroup, SailsTableDefinition } from '@sails/shared';
-import { collectionValueSchema, validateCollectionValue } from '@sails/shared';
+import { collectionValueSchema, validateCollectionValue, WORKFLOW_SCALAR_TYPES, FIELD_TYPE_REGISTRY } from '@sails/shared';
 import { fetchCached } from '../../api/client';
 import jsonata from 'jsonata';
 import { useAuth } from '../../contexts/AuthContext';
 import Unauthorized from '../Unauthorized';
 import LoadingScreen from '../../components/common/LoadingScreen';
 import { WorkflowEventWizard } from '../../components/workflow/WorkflowEventWizard';
-import { REQUESTOR_FIELDS } from '../../components/workflow/WorkflowVariablePicker';
+import { REQUESTOR_FIELDS, buildContextRoot, flattenTree, filterTree, type TreeNode } from '../../components/workflow/WorkflowVariablePicker';
 import { VariableEditor } from '../../components/workflow/VariableEditor';
 import type { WorkflowEventType as SharedWorkflowEventType } from '@sails/shared';
 import './WorkflowStudio.css';
@@ -198,60 +199,36 @@ const EVENT_DEFS: { type: WorkflowEventType; label: string; desc: string; icon: 
 ];
 
 const VAR_TYPES: { value: string; label: string }[] = [
-  { value: 'text', label: 'Text' },
-  { value: 'long_text', label: 'Long Text' },
-  { value: 'number', label: 'Number' },
-  { value: 'decimal', label: 'Decimal' },
-  { value: 'date', label: 'Date' },
-  { value: 'datetime', label: 'Date & Time' },
-  { value: 'time', label: 'Time' },
-  { value: 'user', label: 'User' },
-  { value: 'boolean', label: 'Boolean' },
+  ...WORKFLOW_SCALAR_TYPES,
   { value: 'collection', label: 'Collection' },
   { value: 'record', label: 'Record' },
 ];
 
-const VAR_TYPE_LABELS: Record<string, string> = Object.fromEntries(VAR_TYPES.map((t) => [t.value, t.label]));
+const VAR_TYPE_LABELS: Record<string, string> = { ...Object.fromEntries(VAR_TYPES.map((t) => [t.value, t.label])), uuid: 'UUID' };
 
-/** Icon name + tint per variable type (icons from core FieldTypePlugin registry). */
+/** Icon name + tint per variable type (icons from the canonical FieldType registry). */
 const VAR_TYPE_ICON_NAMES: Record<string, string> = {
-  text: 'Type',
-  long_text: 'AlignLeft',
-  number: 'Hash',
-  decimal: 'Hash',
-  date: 'Calendar',
-  datetime: 'CalendarDays',
-  time: 'Clock',
-  user: 'UserCheck',
-  boolean: 'ToggleLeft',
+  ...Object.fromEntries(FIELD_TYPE_REGISTRY.map((t) => [t.type, t.iconName || 'Type'])),
   collection: 'Layers',
   record: 'Database',
+  uuid: 'Fingerprint',
 };
 
 const VAR_TYPE_COLORS: Record<string, string> = {
-  text: '#3b82f6',
-  long_text: '#3b82f6',
-  number: '#8b5cf6',
-  decimal: '#8b5cf6',
-  date: '#f59e0b',
-  datetime: '#f59e0b',
-  time: '#f59e0b',
-  user: '#0ea5e5',
-  boolean: '#10b981',
-  collection: '#ec4899',
-  record: '#3b82f6',
+  text: '#3b82f6', short_text: '#3b82f6', long_text: '#3b82f6', rich_text: '#3b82f6',
+  email: '#3b82f6', phone: '#3b82f6', url: '#3b82f6', select: '#3b82f6',
+  number: '#8b5cf6', decimal: '#8b5cf6', currency: '#8b5cf6', percentage: '#8b5cf6', auto_number: '#8b5cf6',
+  date: '#f59e0b', datetime: '#f59e0b', time: '#f59e0b',
+  user: '#0ea5e5', boolean: '#10b981', relation: '#8b5cf6',
+  address: '#0d9488', lat_lng: '#0d9488', attachment: '#64748b', uuid: '#a855f7',
+  collection: '#ec4899', record: '#3b82f6',
 };
 
 /** Scalar types usable inside a custom record schema. */
 const VAR_FIELD_TYPES = VAR_TYPES.filter((t) => t.value !== 'collection' && t.value !== 'record').map((t) => t.value);
 
-/** Legacy fieldType → canonical type (saved workflows). `boolean`/`relation` pass through. */
-const LEGACY_VAR_TYPE_MAP: Record<string, string> = {
-  short_text: 'text', rich_text: 'text', email: 'text', phone: 'text', select: 'text',
-  currency: 'decimal', percentage: 'decimal', auto_number: 'number',
-};
-
-const normalizeVarType = (t: string): string => LEGACY_VAR_TYPE_MAP[t] || t;
+/** Saved workflow variable types are already canonical (no legacy set). */
+const normalizeVarType = (t: string): string => t;
 
 const TRIGGER_OPS: { value: string; label: string; desc: string }[] = [
   { value: 'insert', label: 'Inserted', desc: 'Starts when a new record is created.' },
@@ -284,7 +261,7 @@ function newEvent(type: WorkflowEventType): WorkflowEvent {
   const id = genId('ev');
   const base = { id, type, description: '' };
   switch (type) {
-    case 'record': return { ...base, label: 'Record Event', config: { model: '', operation: 'read', storeToVariable: '' } };
+    case 'record': return { ...base, label: 'Record Event', config: { model: '', operation: '', storeToVariable: '' } };
     case 'notification': return { ...base, label: 'Notification', config: { channel: 'bell', recipients: '', subject: '', message: '' } };
     case 'approval': return { ...base, label: 'Task Approval', config: { routerType: 'role', routerValue: '', routerLabel: 'Approver', canApprove: true, canReject: true, timeoutHours: null } };
     case 'expression': return { ...base, label: 'Expression', config: { expression: '', assignToVariable: '' } };
@@ -696,6 +673,11 @@ export const WorkflowStudio: React.FC = () => {
   const [newVarOpen, setNewVarOpen] = useState(false);
   const [newVarName, setNewVarName] = useState('');
   const [newVarType, setNewVarType] = useState('text');
+  const [varTypeFilter, setVarTypeFilter] = useState('');
+  const [varAddPos, setVarAddPos] = useState<{ top: number; left: number } | null>(null);
+  const addVarBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [varTreeSearch, setVarTreeSearch] = useState('');
+  const [varTreeExpanded, setVarTreeExpanded] = useState<Set<string>>(() => new Set(['sec:wf', 'sec:vars', 'sec:collections', 'wf:requestor', 'rec:root', 'old:root']));
   const [renameVarId, setRenameVarId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
 
@@ -706,8 +688,12 @@ export const WorkflowStudio: React.FC = () => {
   };
   const [selectedVarId, setSelectedVarId] = useState<string | null>(null);
   const [varEditorOpen, setVarEditorOpen] = useState(false);
+  /** Record/collection variables are configured BEFORE they enter the list: the
+   *  editor edits this draft and 'Create Variable' commits it. */
+  const [varDraft, setVarDraft] = useState<WorkflowVariable | null>(null);
   const [varModels, setVarModels] = useState<{ id: string; name: string; tableName: string; fields: any[] }[]>([]);
-  const [confirmUpgradeVar, setConfirmUpgradeVar] = useState<{ eventId: string; varId: string; modelName: string } | null>(null);
+  /** Target model picked in the Start Condition but not yet applied — awaiting confirmation. */
+  const [pendingTriggerModel, setPendingTriggerModel] = useState<string | null>(null);
   const [startConditionOpen, setStartConditionOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2>(1);
   const [conditionOpen, setConditionOpen] = useState(false);
@@ -715,6 +701,8 @@ export const WorkflowStudio: React.FC = () => {
   /** Config snapshot taken when the event wizard opens — restored on Cancel so
    * write-through edits don't survive an abandoned wizard session. */
   const [wizardSnapshot, setWizardSnapshot] = useState<Record<string, any> | null>(null);
+  // Pending event removal awaiting confirmation.
+  const [confirmRemoveEvent, setConfirmRemoveEvent] = useState<string | null>(null);
   const [condBuilder, setCondBuilder] = useState<CondBuilderTarget | null>(null);
   // Drag-and-drop event reordering (chip currently being dropped onto).
   const [reorderTargetId, setReorderTargetId] = useState<string | null>(null);
@@ -873,6 +861,13 @@ export const WorkflowStudio: React.FC = () => {
       const t = e.target as HTMLElement;
       const isTyping = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
 
+      // While any modal owns the keyboard (event wizard, expression editor,
+      // QueryStudio dialogs, start-condition, remove-event confirm), the canvas
+      // shortcuts (undo/redo, Delete/Backspace) are inert — keyboard input
+      // belongs to the modal.
+      const modalOpen = !!wizardEventId || !!exprModalEventId || conditionOpen || !!recordFilterEventId || !!confirmRemoveEvent;
+      if (modalOpen) return;
+
       // Undo / Redo: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl/Cmd+Y.
       // Skipped while typing so the browser handles native text undo.
       const mod = e.metaKey || e.ctrlKey;
@@ -901,14 +896,14 @@ export const WorkflowStudio: React.FC = () => {
         else if (process.startBranches.some((b) => b.id === selectedEdgeId)) { removeStartBranch(selectedEdgeId); }
         return;
       }
-      if (selectedEventId && selectedStart) { removeStartEvent(selectedEventId); return; }
-      if (selectedEventId && selectedStageId) { removeEvent(selectedStageId, selectedEventId); return; }
+      if (selectedEventId && selectedStart) { setConfirmRemoveEvent(selectedEventId); return; }
+      if (selectedEventId && selectedStageId) { setConfirmRemoveEvent(selectedEventId); return; }
       if (selectedStageId) removeStage(selectedStageId);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
     // eslint-disable-next-line
-  }, [selectedStageId, selectedEventId, selectedEdgeId, selectedStart, editingLabelId, process, undoStack, redoStack, isActiveStatus]);
+  }, [selectedStageId, selectedEventId, selectedEdgeId, selectedStart, editingLabelId, process, undoStack, redoStack, isActiveStatus, wizardEventId, exprModalEventId, conditionOpen, recordFilterEventId, confirmRemoveEvent]);
 
   // ── Panel resize ──
   useEffect(() => {
@@ -1258,20 +1253,136 @@ export const WorkflowStudio: React.FC = () => {
   };
 
   // ── Variable ops ──
-  const addVariable = (name: string, fieldType: string) => {
-    if (!name.trim()) return;
-    const v: WorkflowVariable = { ...newVariable(), name: name.trim(), fieldType };
-    if (fieldType === 'collection') {
-      v.itemType = 'any';
-      v.defaultValue = [];
-    } else if (fieldType === 'record') {
-      v.schemaMode = 'model';
-      v.defaultValue = {};
+  const addVariable = (name: string, fieldType: string): string | null => {
+    if (!name.trim()) return null;
+    const trimmed = name.trim();
+    // JIT creation is name-keyed — reuse an existing variable instead of duplicating.
+    const existing = process.variables.find((v) => v.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) {
+      setSelectedVarId(existing.id);
+      setNewVarOpen(false); setNewVarName(''); setNewVarType('text');
+      return existing.name;
     }
+    if (fieldType === 'record' || fieldType === 'collection') {
+      // Draft-first: model + properties must be configured in the editor before
+      // the variable is created — commit happens on 'Create Variable'.
+      const draft: WorkflowVariable = { ...newVariable(), name: trimmed, fieldType };
+      if (fieldType === 'collection') {
+        draft.itemType = 'any';
+        draft.defaultValue = [];
+      } else {
+        draft.schemaMode = 'model';
+        draft.defaultValue = {};
+      }
+      setVarDraft(draft);
+      setSelectedVarId(null);
+      setVarEditorOpen(true);
+      setNewVarOpen(false); setNewVarName(''); setNewVarType('text');
+      return trimmed;
+    }
+    const v: WorkflowVariable = { ...newVariable(), name: trimmed, fieldType };
     setProcess((p) => ({ ...p, variables: [...p.variables, v] }));
     setSelectedVarId(v.id);
     setNewVarOpen(false); setNewVarName(''); setNewVarType('text');
+    return v.name;
   };
+  /** Count configuration that references the OLD trigger model — surfaced in the
+   *  "Change Target Model?" confirmation so the user knows what to re-review. */
+  const triggerModelChangeFlags = (oldTableName: string | undefined) => {
+    let vars = 0;
+    let mappings = 0;
+    let templates = 0;
+    if (!oldTableName) return { vars, mappings, templates };
+    const RE = /\{\{(?:oldRecord|record)\./;
+    const allEvents: WorkflowEvent[] = [
+      ...(process.startEvents || []),
+      ...(process.stages || []).flatMap((s) => s.events || []),
+    ];
+    vars = process.variables.filter((v) => v.targetModel === oldTableName).length;
+    for (const ev of allEvents) {
+      const cfg = ev.config || {};
+      const fm: any[] = cfg.fieldMapping || [];
+      if (fm.some((m) => m.source === 'record' || m.source === 'record_old')) mappings++;
+      const tplKeys = ['subject', 'message', 'emailRecipients', 'emailCc', 'emailBcc', 'bellRecipients', 'expression', 'expressionRaw'];
+      if (tplKeys.some((k) => typeof cfg[k] === 'string' && RE.test(cfg[k]))) templates++;
+    }
+    for (const b of process.startBranches || []) {
+      if (typeof b.expression === 'string' && RE.test(b.expression)) templates++;
+    }
+    for (const s of process.stages || []) {
+      if (typeof s.entryCondition === 'string' && RE.test(s.entryCondition)) templates++;
+      for (const b of s.branches || []) {
+        if (typeof b.expression === 'string' && RE.test(b.expression)) templates++;
+      }
+    }
+    return { vars, mappings, templates };
+  };
+
+  /** Resolver for the JIT "+ Add" flow — resolves with the created variable name (or null). */
+  const varAddResolveRef = useRef<((name: string | null) => void) | null>(null);
+  const varPopRef = useRef<HTMLDivElement | null>(null);
+  const closeVarAdd = (result: string | null) => {
+    setNewVarOpen(false);
+    varAddResolveRef.current?.(result);
+    varAddResolveRef.current = null;
+  };
+  /** Open the Add Variable popover next to the anchor (clamped to the viewport
+   *  edges), or at the panel button / viewport center when no anchor is given. */
+  const openVarAdd = (anchorEl?: HTMLElement): Promise<string | null> => {
+    const W = 320;
+    const estH = Math.min(440, Math.round(window.innerHeight * 0.6));
+    let top: number;
+    let left: number;
+    const rect = anchorEl?.getBoundingClientRect();
+    if (rect && rect.width > 0 && rect.height > 0) {
+      left = Math.max(8, Math.min(rect.left, window.innerWidth - W - 8));
+      const below = rect.bottom + 6;
+      top = below + estH > window.innerHeight - 8 ? Math.max(8, rect.top - estH - 6) : below;
+    } else {
+      const r = addVarBtnRef.current?.getBoundingClientRect();
+      if (r) {
+        left = Math.max(8, Math.min(r.left - 12, window.innerWidth - W - 8));
+        top = r.bottom + 6;
+      } else {
+        left = Math.max(8, Math.round((window.innerWidth - W) / 2));
+        top = Math.max(8, Math.round((window.innerHeight - estH) / 2));
+      }
+    }
+    setVarAddPos({ top, left });
+    setNewVarName(''); setNewVarType('text'); setVarTypeFilter('');
+    setNewVarOpen(true);
+    return new Promise((resolve) => { varAddResolveRef.current = resolve; });
+  };
+
+  // Close + resolve null when clicking outside the popover.
+  React.useEffect(() => {
+    if (!newVarOpen) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (varPopRef.current?.contains(t)) return;
+      closeVarAdd(null);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newVarOpen]);
+
+  // One-shot position correction after the popover mounts (measured height vs estimate).
+  React.useEffect(() => {
+    if (!newVarOpen) return;
+    const pop = varPopRef.current;
+    if (!pop) return;
+    const r = pop.getBoundingClientRect();
+    if (r.width === 0) return;
+    const W = 320;
+    let top = r.top;
+    let left = r.left;
+    if (r.bottom > window.innerHeight - 8) top = Math.max(8, r.top - r.height - 6);
+    if (r.right > window.innerWidth - 8) left = Math.max(8, window.innerWidth - W - 8);
+    if (top !== r.top || left !== r.left) setVarAddPos((prev) => (prev ? { top, left } : prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newVarOpen]);
+
   const updateVariable = (varId: string, patch: Partial<WorkflowVariable>) => {
     setProcess((p) => ({ ...p, variables: p.variables.map((v) => (v.id === varId ? { ...v, ...patch } : v)) }));
   };
@@ -1281,8 +1392,8 @@ export const WorkflowStudio: React.FC = () => {
   };
 
   type StrictColumn = { fieldName: string; label: string; logicalType: string; targetModel?: string };
-  const columnsFromModel = (model: { id: string; name: string; tableName: string; fields: any[] }): StrictColumn[] =>
-    (model.fields || []).map((f) => ({
+  const columnsFromModel = (model: { id: string; name: string; tableName: string; fields: any[] }): StrictColumn[] => {
+    const cols = (model.fields || []).map((f) => ({
       fieldName: f.fieldName ?? f.columnName ?? f.id,
       label: f.name ?? f.label ?? f.fieldName,
       logicalType: f.logicalType ?? f.physicalType ?? 'text',
@@ -1290,6 +1401,13 @@ export const WorkflowStudio: React.FC = () => {
         ? (f.config?.targetTable ?? f.config?.targetModel ?? undefined)
         : undefined,
     }));
+    // Record structures always carry the record's ID (UUID) — the metadata
+    // field list excludes it, but every row has it.
+    if (!cols.some((c) => c.fieldName === 'id')) {
+      cols.unshift({ fieldName: 'id', label: 'ID', logicalType: 'uuid', targetModel: undefined });
+    }
+    return cols;
+  };
 
   const loadVarModels = async () => {
     try {
@@ -1338,6 +1456,14 @@ export const WorkflowStudio: React.FC = () => {
     drillRoots.requestor = REQUESTOR_FIELDS.map((rf) => ({ fieldName: rf.field, label: rf.label, logicalType: rf.logicalType }));
   }
 
+  /** Triggering model name — labels the `record.` branch in the variable picker. */
+  const triggerModelName = tables.find((t) => t.id === process.tableId)?.tableName;
+
+  /** Workflow root model fields (incl. ID) — for the QueryStudio 'Workflow' value source. */
+  const wfTriggerFields = tables.find((t) => t.id === process.tableId)
+    ? columnsFromModel(tables.find((t) => t.id === process.tableId) as any)
+    : undefined;
+
   const sampleForType = (t: string): any =>
     ['number', 'decimal', 'currency', 'percentage'].includes(t) ? 0 : t === 'boolean' ? false : '';
 
@@ -1363,33 +1489,26 @@ export const WorkflowStudio: React.FC = () => {
 
   const varSample = Object.fromEntries(process.variables.filter((v) => v.name).map((v) => [v.name, sampleForVariable(v)]));
 
-  const varTypeLabel = (v: WorkflowVariable): string => VAR_TYPE_LABELS[v.fieldType] || v.fieldType;
+  const varTypeLabel = (v: WorkflowVariable): string => {
+    const base = VAR_TYPE_LABELS[v.fieldType] || v.fieldType;
+    if ((v.fieldType === 'record' || v.fieldType === 'collection') && v.targetModel) {
+      const m = varModels.find((x) => x.tableName === v.targetModel || x.name === v.targetModel);
+      return `${base} (${m?.name || v.targetModel})`;
+    }
+    return base;
+  };
 
   // ── Record Event ⇄ variable binding ──
-  const bindVariableToEvent = (varId: string, eventId: string, modelName: string) => {
+  const bindVariableToEvent = (varId: string, eventId: string, modelName: string, fieldType?: 'record' | 'collection') => {
     const model = varModels.find((m) => m.tableName === modelName || m.name === modelName || m.id === modelName);
     updateVariable(varId, {
-      fieldType: 'collection',
-      itemType: 'record',
+      // Preserve the variable's type — a record output variable must stay a record.
+      ...(fieldType ? { fieldType } : {}),
+      ...(fieldType === 'collection' ? { itemType: 'record' as const } : {}),
       targetModel: modelName,
       columns: model ? columnsFromModel(model) : undefined,
       boundEventId: eventId,
     });
-  };
-
-  const handleStoreToVariableChange = (eventId: string, varName: string, modelName: string) => {
-    if (!varName) {
-      const bound = process.variables.find((v) => v.boundEventId === eventId);
-      if (bound) updateVariable(bound.id, { boundEventId: undefined });
-      return;
-    }
-    const target = process.variables.find((v) => v.name === varName);
-    if (!target) return; // partial name while typing — nothing to bind yet
-    if (target.fieldType === 'collection') {
-      bindVariableToEvent(target.id, eventId, modelName);
-    } else {
-      setConfirmUpgradeVar({ eventId, varId: target.id, modelName });
-    }
   };
 
   /** Bidirectional sync: variable model change rewrites Record Events that store into it. */
@@ -1861,74 +1980,129 @@ export const WorkflowStudio: React.FC = () => {
 
         <div className="ws-props-section-title ws-var-section-head">
           <span className="ws-var-section-head__title"><Hash size={11} /> Variables ({process.variables.length})</span>
-          <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setNewVarOpen(true)} disabled={isReadonly}>
+          <button
+            ref={addVarBtnRef}
+            className="sails-btn sails-btn--ghost sails-btn--sm"
+            onClick={() => { openVarAdd(); }}
+            disabled={isReadonly}
+          >
             <Plus size={12} /> Add Variable
           </button>
-          {newVarOpen && (
-            <div className="ws-var-add-pop" onClick={(e) => e.stopPropagation()}>
-              <label className="ws-props-label">Name</label>
-              <input
-                className="ws-props-input"
-                autoFocus
-                placeholder="Variable name"
-                value={newVarName}
-                onChange={(e) => setNewVarName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && newVarName.trim()) { addVariable(newVarName, newVarType); setNewVarOpen(false); } if (e.key === 'Escape') setNewVarOpen(false); }}
-              />
-              <label className="ws-props-label" style={{ marginTop: 4 }}>Type</label>
-              <CustomSelect
-                searchable
-                value={newVarType}
-                options={VAR_TYPES.map((t) => ({ value: t.value, label: t.label }))}
-                onChange={(v) => setNewVarType(String(v))}
-              />
-              <div className="ws-var-add-pop__footer">
-                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setNewVarOpen(false)}>Cancel</button>
-                <button className="sails-btn sails-btn--primary sails-btn--sm" disabled={!newVarName.trim()}
-                  onClick={() => { addVariable(newVarName, newVarType); setNewVarOpen(false); }}>
-                  OK
-                </button>
-              </div>
-            </div>
-          )}
         </div>
         {process.variables.length === 0 && <p className="ws-props-hint">Workflow variables are shared across events, branches and scripts.</p>}
-        {process.variables.map((v) => {
-          const isSel = selectedVarId === v.id;
-          const color = VAR_TYPE_COLORS[v.fieldType] || '#3b82f6';
-          const isRenaming = renameVarId === v.id;
+        {(() => {
+          // Inline picker-style tree of the workflow variables (with the
+          // workflow-context branches for reference) — search + drill-down.
+          const varTreeAll = buildContextRoot({
+            variables: process.variables as any,
+            recordSchemas,
+            triggerModelFields: wfTriggerFields,
+            triggerModelName: tables.find((t) => t.id === process.tableId)?.tableName,
+            includeOldRecord: triggerHasUpdate,
+            includeRequestor: true,
+          });
+          const varSearching = varTreeSearch.trim().length > 0;
+          const varTree = varSearching ? filterTree(varTreeAll, varTreeSearch) : varTreeAll;
+          const varExpanded = varSearching
+            ? (() => {
+                const s = new Set<string>();
+                const collect = (nodes: TreeNode[]) => { for (const n of nodes) { if (n.children?.length) { s.add(n.key); collect(n.children); } } };
+                collect(varTree);
+                return s;
+              })()
+            : varTreeExpanded;
+          const varRows = flattenTree(varTree, varExpanded);
+          const toggleVar = (key: string) => {
+            setVarTreeExpanded((prev) => {
+              const next = new Set(prev);
+              if (next.has(key)) next.delete(key);
+              else next.add(key);
+              return next;
+            });
+          };
           return (
-            <div key={v.id} className={`ws-event-chip ws-event-chip--list ${isSel ? 'ws-event-chip--selected' : ''}`}
-              style={{ borderColor: color, color, margin: '2px 12px', cursor: 'pointer' }}
-              onClick={() => setSelectedVarId(isSel ? null : v.id)}
-              onDoubleClick={(e) => { e.stopPropagation(); setSelectedVarId(v.id); setVarEditorOpen(true); }}
-              title="Click to select · double-click to edit"
-            >
-              <DynamicIcon name={VAR_TYPE_ICON_NAMES[v.fieldType] || 'Hash'} size={10} />
-              {isRenaming ? (
+            <div style={{ margin: '2px 12px', border: '1px solid var(--sails-border,#e2e8f0)', borderRadius: 8, overflow: 'hidden' }}>
+              <div className="wvp-search" style={{ border: 'none', borderBottom: '1px solid var(--sails-border,#e2e8f0)', borderRadius: 0 }}>
+                <Search size={11} />
                 <input
-                  className="ws-props-input ws-var-rename-input"
-                  autoFocus
-                  value={renameDraft}
-                  onChange={(e) => setRenameDraft(e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                  onBlur={() => commitRename(v.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') commitRename(v.id);
-                    if (e.key === 'Escape') setRenameVarId(null);
-                  }}
+                  className="wvp-search-input"
+                  placeholder="Search variables…"
+                  value={varTreeSearch}
+                  onChange={(e) => setVarTreeSearch(e.target.value)}
                 />
-              ) : (
-                <span className="ws-var-row__name" onDoubleClick={(e) => { e.stopPropagation(); if (!isReadonly) { setRenameVarId(v.id); setRenameDraft(v.name || ''); } }}>
-                  {v.name || <em>unnamed</em>}
-                </span>
-              )}
-              <span className="ws-var-row__type">{varTypeLabel(v)}</span>
-              {v.boundEventId && <span className="ws-var-row__bound" title="Bound to a Record Event">↗ ev</span>}
-              <button className="ws-var-row__remove" title="Remove variable" onClick={(e) => { e.stopPropagation(); removeVariable(v.id); }}><X size={10} /></button>
+              </div>
+              <div className="wvp-tree" style={{ maxHeight: 400 }}>
+                {varRows.map(({ node: v, depth }) => {
+                  const isSection = v.kind === 'section';
+                  const isVarNode = v.key.startsWith('var:') && !v.key.endsWith(':idx');
+                  const variable = isVarNode ? process.variables.find((x) => x.name === v.varName) || null : null;
+                  const isSel = !!variable && selectedVarId === variable.id;
+                  const isRenaming = !!variable && renameVarId === variable.id;
+                  const lt = isVarNode && variable ? variable.fieldType : (v.logicalType || 'text');
+                  const color = VAR_TYPE_COLORS[lt] || '#3b82f6';
+                  const hasChildren = !!v.children && v.children.length > 0;
+                  const open = varExpanded.has(v.key);
+                  if (isSection) {
+                    return (
+                      <div key={v.key} className="wvp-node wvp-node--section">
+                        <span className="wvp-node__chevron"><span style={{ width: 11 }} /></span>
+                        <span className="wvp-node__label">{v.label}</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div
+                      key={v.key}
+                      className={`wvp-node ${isSel ? 'wvp-node--selected' : ''}`}
+                      onClick={() => {
+                        if (isVarNode && variable) setSelectedVarId(isSel ? null : variable.id);
+                        if (hasChildren) toggleVar(v.key);
+                      }}
+                      onDoubleClick={(e) => {
+                        if (!isVarNode || !variable) return;
+                        e.stopPropagation();
+                        setSelectedVarId(variable.id);
+                        setVarEditorOpen(true);
+                      }}
+                      title={isVarNode ? 'Click to select · double-click to edit' : v.label}
+                      style={{ cursor: isVarNode || hasChildren ? 'pointer' : 'default', paddingLeft: 6 + depth * 12 }}
+                    >
+                      <span className="wvp-node__chevron" onClick={(e) => { e.stopPropagation(); if (hasChildren) toggleVar(v.key); }}>
+                        {hasChildren ? (open ? <ChevronDown size={11} /> : <ChevronRight size={11} />) : <span style={{ width: 11 }} />}
+                      </span>
+                      <span className="wvp-node__icon" style={{ color: isVarNode || hasChildren ? color : 'var(--sails-text-muted)' }}>
+                        <DynamicIcon name={VAR_TYPE_ICON_NAMES[lt] || 'Hash'} size={12} />
+                      </span>
+                      {isRenaming ? (
+                        <input
+                          className="ws-props-input ws-var-rename-input"
+                          autoFocus
+                          value={renameDraft}
+                          onChange={(e) => setRenameDraft(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onBlur={() => commitRename(variable!.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitRename(variable!.id);
+                            if (e.key === 'Escape') setRenameVarId(null);
+                          }}
+                        />
+                      ) : (
+                        <span className="wvp-node__label" onDoubleClick={(e) => { if (!isVarNode || !variable) return; e.stopPropagation(); if (!isReadonly) { setRenameVarId(variable.id); setRenameDraft(variable.name || ''); } }}>
+                          {v.label}
+                        </span>
+                      )}
+                      {isVarNode && variable?.boundEventId && <span className="ws-var-row__bound" title="Bound to a Record Event">↗ ev</span>}
+                      <span className="wvp-node__type">{isVarNode && variable ? varTypeLabel(variable) : (VAR_TYPE_LABELS[lt] || lt)}</span>
+                      {isVarNode && (
+                        <button className="ws-var-row__remove" title="Remove variable" onClick={(e) => { e.stopPropagation(); removeVariable(variable!.id); }}><X size={10} /></button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
-        })}
+        })()}
 
         {versions.length > 0 && (
           <>
@@ -2306,19 +2480,17 @@ export const WorkflowStudio: React.FC = () => {
         hasOldRecord={triggerHasUpdate}
         recordSchemas={recordSchemas}
         recordSchema={recordSchemas[String(process.tableId || '')]}
+        drillRoots={drillRoots}
         onCreateCollectionVariable={createCollectionVariable}
         onCreateRecordVariable={createRecordVariable}
         onBindVariableToEvent={bindVariableToEvent}
         onOpenExpressionEditor={(id) => setExprModalEventId(id)}
         onOpenFilterBuilder={(id) => setRecordFilterEventId(id)}
-        columnsFromModel={(m: any) => columnsFromModel(m)}
         onConfigChange={(name, value) => updateLiveEventConfig(wizardEventId, name, value)}
+        onAddVariable={isReadonly ? undefined : openVarAdd}
+        onSelectVariable={(varId) => { setSelectedVarId(varId); setVarEditorOpen(true); }}
         onDone={closeWizard}
-        onRemove={(id) => {
-          const h = resolveEventHost(id);
-          if (h?.kind === 'start') { removeStartEvent(id); closeWizard(); }
-          else if (h?.kind === 'stage') { removeEvent(h.stageId, id); closeWizard(); }
-        }}
+        onRemove={(id) => setConfirmRemoveEvent(id)}
         onClose={() => {
           // Cancel: roll the write-through edits back to the snapshot (replace,
           // not merge — keys added during the session are dropped too).
@@ -2356,6 +2528,8 @@ export const WorkflowStudio: React.FC = () => {
               variables={varSuggestProps}
               recordSchemas={recordSchemas}
               drillRoots={drillRoots}
+              triggerModelName={triggerModelName}
+              onAddVariable={isReadonly ? undefined : openVarAdd}
               value={exprModalEvent.config.expression || ''}
               onChange={onApply}
               sample={sample}
@@ -2689,6 +2863,46 @@ export const WorkflowStudio: React.FC = () => {
       {/* Generic Workflow Event Wizard */}
       {renderEventWizard()}
 
+      {/* Remove-event confirmation */}
+      {confirmRemoveEvent && (() => {
+        const ev = process.startEvents.find((e) => e.id === confirmRemoveEvent)
+          || process.stages.flatMap((s) => s.events).find((e) => e.id === confirmRemoveEvent);
+        const host = resolveEventHost(confirmRemoveEvent);
+        return (
+          <div className="ws-modal-overlay" style={{ zIndex: 70 }} onClick={() => setConfirmRemoveEvent(null)}>
+            <div className="ws-modal" style={{ width: 420 }} onClick={(e) => e.stopPropagation()}>
+              <div className="ws-modal__header">
+                <span className="ws-modal__icon" style={{ background: 'rgba(239,68,68,.12)', color: '#ef4444' }}><Trash2 size={16} /></span>
+                <div className="ws-modal__titles">
+                  <span className="ws-modal__title">Remove Event</span>
+                  <span className="ws-modal__sub">{ev?.label || 'Workflow Event'}</span>
+                </div>
+                <button className="ws-icon-btn" onClick={() => setConfirmRemoveEvent(null)}><X size={15} /></button>
+              </div>
+              <div className="ws-modal__body">
+                <p className="ws-props-hint" style={{ padding: 0 }}>
+                  Remove &lsquo;{ev?.label || 'this event'}&rsquo; from the workflow? This cannot be undone.
+                </p>
+              </div>
+              <div className="ws-modal__footer">
+                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setConfirmRemoveEvent(null)}>Cancel</button>
+                <button
+                  className="sails-btn sails-btn--danger sails-btn--sm"
+                  onClick={() => {
+                    if (host?.kind === 'start') removeStartEvent(confirmRemoveEvent);
+                    else if (host?.kind === 'stage') removeEvent(host.stageId, confirmRemoveEvent);
+                    if (wizardEventId === confirmRemoveEvent) closeWizard();
+                    setConfirmRemoveEvent(null);
+                  }}
+                >
+                  <Trash2 size={12} /> Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Expression/Transform Modal */}
       {renderExprModal()}
 
@@ -2728,6 +2942,9 @@ export const WorkflowStudio: React.FC = () => {
                 <ExpressionEditor
                   showSnippets
                   variables={varSuggestProps} recordSchemas={recordSchemas}
+                  drillRoots={drillRoots}
+                  triggerModelName={triggerModelName}
+                  onAddVariable={isReadonly ? undefined : openVarAdd}
                   value={value}
                   onChange={onApply}
                   sample={sample}
@@ -2744,32 +2961,125 @@ export const WorkflowStudio: React.FC = () => {
       })()}
 
       {/* Variable editor popup (double-click a variable chip) */}
-      {varEditorOpen && selectedVarId && (() => {
-        const v = process.variables.find((x) => x.id === selectedVarId);
+          {newVarOpen && varAddPos && createPortal(
+            <div ref={varPopRef} className="ws-var-add-pop wvp-pop" style={{ position: 'fixed', top: varAddPos.top, left: varAddPos.left, width: 320, zIndex: 30000 }} onClick={(e) => e.stopPropagation()}>
+              <div className="wvp-head"><Braces size={12} /> Add Variable</div>
+              <label className="ws-props-label">Name</label>
+              <input
+                className="ws-props-input"
+                autoFocus
+                placeholder="Variable name"
+                value={newVarName}
+                onChange={(e) => setNewVarName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && newVarName.trim()) { closeVarAdd(addVariable(newVarName, newVarType)); } if (e.key === 'Escape') closeVarAdd(null); }}
+              />
+              <div className="wvp-search">
+                <Search size={11} />
+                <input
+                  className="wvp-search-input"
+                  placeholder="Filter types…"
+                  value={varTypeFilter}
+                  onChange={(e) => setVarTypeFilter(e.target.value)}
+                />
+              </div>
+              <div className="wvp-tree">
+                {(() => {
+                  const q = varTypeFilter.trim().toLowerCase();
+                  const match = (t: { value: string; label: string }) => !q || t.label.toLowerCase().includes(q);
+                  const scalars = WORKFLOW_SCALAR_TYPES.filter(match);
+                  const containers = VAR_TYPES.filter((t) => t.value === 'collection' || t.value === 'record').filter(match);
+                  const renderType = (t: { value: string; label: string }) => {
+                    const sel = newVarType === t.value;
+                    const color = VAR_TYPE_COLORS[t.value] || '#3b82f6';
+                    return (
+                      <div key={t.value} className={`wvp-node ${sel ? 'wvp-node--selected' : ''}`}
+                        style={{ cursor: 'pointer', paddingLeft: 20 }}
+                        onClick={() => setNewVarType(t.value)}>
+                        <span className="wvp-node__icon" style={{ color }}>
+                          <DynamicIcon name={VAR_TYPE_ICON_NAMES[t.value] || 'Hash'} size={12} />
+                        </span>
+                        <span className="wvp-node__label">{t.label}</span>
+                        <span className="wvp-node__type">{t.label}</span>
+                      </div>
+                    );
+                  };
+                  return (
+                    <>
+                      <div className="wvp-node wvp-node--section"><span className="wvp-node__chevron"><span style={{ width: 11 }} /></span><span className="wvp-node__label">Scalars</span></div>
+                      {scalars.map(renderType)}
+                      {containers.length > 0 && (
+                        <>
+                          <div className="wvp-node wvp-node--section"><span className="wvp-node__chevron"><span style={{ width: 11 }} /></span><span className="wvp-node__label">Containers</span></div>
+                          {containers.map(renderType)}
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="wvp-preview">
+                <span className="wvp-preview__label">New variable</span>
+                <code className="wvp-preview__code">{newVarName.trim() ? `${newVarName.trim()} · ${VAR_TYPE_LABELS[newVarType] || newVarType}` : '—'}</code>
+              </div>
+              <div className="ws-var-add-pop__footer">
+                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => closeVarAdd(null)}>Cancel</button>
+                <button className="sails-btn sails-btn--primary sails-btn--sm" disabled={!newVarName.trim()}
+                  onClick={() => { closeVarAdd(addVariable(newVarName, newVarType)); }}>
+                  <Plus size={12} /> Add
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )}
+
+      {varEditorOpen && (selectedVarId || varDraft) && (() => {
+        const isDraft = !!varDraft;
+        const v = isDraft ? varDraft : process.variables.find((x) => x.id === selectedVarId);
         if (!v) return null;
+        // A record/collection variable is only "configured" once a model is chosen.
+        const canCommit = v.fieldType === 'record' ? !!v.targetModel
+          : v.fieldType === 'collection' ? (v.itemType !== 'record' || !!v.targetModel)
+          : true;
+        const commit = () => {
+          if (isDraft) {
+            if (!canCommit) return;
+            setProcess((p) => ({ ...p, variables: [...p.variables, v] }));
+            setSelectedVarId(v.id);
+            setVarDraft(null);
+            setVarEditorOpen(false);
+          } else {
+            setVarEditorOpen(false);
+          }
+        };
+        const cancel = () => { setVarDraft(null); setVarEditorOpen(false); };
         return (
-          <div className="ws-modal-overlay" onClick={() => setVarEditorOpen(false)}>
+          <div className="ws-modal-overlay" onClick={isDraft ? cancel : () => setVarEditorOpen(false)}>
             <div className="ws-modal" style={{ width: 560 }} onClick={(e) => e.stopPropagation()}>
               <div className="ws-modal__header">
                 <span className="ws-modal__icon" style={{ background: 'rgba(236,72,153,.12)', color: '#ec4899' }}><Database size={16} /></span>
                 <div className="ws-modal__titles">
-                  <span className="ws-modal__title">Variable — {v.name || 'unnamed'}</span>
+                  <span className="ws-modal__title">{isDraft ? `New ${v.fieldType === 'collection' ? 'Collection' : 'Record'} Variable — ${v.name || 'unnamed'}` : `Variable — ${v.name || 'unnamed'}`}</span>
                   <span className="ws-modal__sub">{varTypeLabel(v)}</span>
                 </div>
-                <button className="ws-icon-btn" onClick={() => setVarEditorOpen(false)}><X size={15} /></button>
+                <button className="ws-icon-btn" onClick={cancel}><X size={15} /></button>
               </div>
               <div className="ws-modal__body" style={{ padding: 0 }}>
                 <VariableEditor
                   variable={v}
                   models={varModels}
                   isReadonly={isReadonly}
-                  onChange={(patch) => updateVariable(v.id, patch)}
+                  nameReadonly={isDraft}
+                  onChange={(patch) => (isDraft ? setVarDraft({ ...varDraft!, ...patch }) : updateVariable(v.id, patch))}
                   onReloadModels={loadVarModels}
+                  onAddVariable={isReadonly ? undefined : () => openVarAdd()}
                 />
               </div>
               <div className="ws-modal__footer">
-                <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => setVarEditorOpen(false)}>
-                  <CheckCircle2 size={14} /> Done
+                {isDraft && (
+                  <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={cancel}>Cancel</button>
+                )}
+                <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={commit} disabled={isDraft && !canCommit}>
+                  <CheckCircle2 size={14} /> {isDraft ? 'Create Variable' : 'Done'}
                 </button>
               </div>
             </div>
@@ -2777,33 +3087,60 @@ export const WorkflowStudio: React.FC = () => {
         );
       })()}
 
-      {/* Variable upgrade confirm (Record Event → non-collection variable) */}
-      {confirmUpgradeVar && (() => {
-        const target = process.variables.find((v) => v.id === confirmUpgradeVar.varId);
+      {/* Change Target Model confirm (Start Condition) */}
+      {pendingTriggerModel !== null && (() => {
+        const oldModel = tables.find((t) => t.id === process.tableId);
+        const oldName = oldModel?.tableName;
+        const flags = triggerModelChangeFlags(oldName);
+        const ruleCount = (process.triggerCondition || []).reduce((n, g: any) => n + (g.rules?.length || 0), 0);
+        const total = flags.vars + flags.mappings + flags.templates;
         return (
-          <div className="ws-modal-overlay" onClick={() => setConfirmUpgradeVar(null)}>
-            <div className="ws-modal" style={{ width: 480 }} onClick={(e) => e.stopPropagation()}>
+          <div className="ws-modal-overlay" style={{ zIndex: 30000 }} onClick={() => setPendingTriggerModel(null)}>
+            <div className="ws-modal" style={{ width: 540 }} onClick={(e) => e.stopPropagation()}>
               <div className="ws-modal__header">
                 <span className="ws-modal__icon" style={{ background: 'rgba(245,158,11,.12)', color: '#d97706' }}><AlertTriangle size={16} /></span>
                 <div className="ws-modal__titles">
-                  <span className="ws-modal__title">Convert variable to collection?</span>
-                  <span className="ws-modal__sub">The Record Event result will be stored into it</span>
+                  <span className="ws-modal__title">Change Target Model?</span>
+                  <span className="ws-modal__sub">The triggering record will use the new model's fields</span>
                 </div>
-                <button className="ws-icon-btn" onClick={() => setConfirmUpgradeVar(null)}><X size={15} /></button>
+                <button className="ws-icon-btn" onClick={() => setPendingTriggerModel(null)}><X size={15} /></button>
               </div>
               <div className="ws-modal__body">
                 <p className="ws-props-hint" style={{ paddingTop: 0 }}>
-                  <strong>{target?.name || 'This variable'}</strong> is currently a <code>{target?.fieldType || '?'}</code> variable.
-                  A Record Event returns rows and columns — it will be converted to{' '}
-                  <code>collection&lt;record: {confirmUpgradeVar.modelName}&gt;</code> with columns generated from the model.
+                  Changing the target model from <strong>{oldName || 'none'}</strong>:
+                </p>
+                <ul style={{ fontSize: 12, margin: '8px 0 0', paddingLeft: 18, color: 'var(--sails-text-main,#1e293b)', lineHeight: 1.7 }}>
+                  <li>
+                    {ruleCount > 0
+                      ? <>The trigger condition rules (<strong>{ruleCount}</strong>) will be <strong>cleared</strong> — field references are model-specific.</>
+                      : 'The trigger condition has no rules.'}
+                  </li>
+                  {flags.vars > 0 && (
+                    <li><strong>{flags.vars}</strong> variable(s) bound to the old model will keep their structure but no longer match the trigger record.</li>
+                  )}
+                  {flags.mappings > 0 && (
+                    <li><strong>{flags.mappings}</strong> event(s) map fields from <code>record</code>/<code>oldRecord</code> — they will resolve empty against the new record until re-mapped.</li>
+                  )}
+                  {flags.templates > 0 && (
+                    <li><strong>{flags.templates}</strong> template(s) reference <code>{'{{record.*}}'}</code>/<code>{'{{oldRecord.*}}'}</code> — they will render empty until updated.</li>
+                  )}
+                  {total === 0 && <li>No other configuration references the old model.</li>}
+                </ul>
+                <p className="ws-props-hint" style={{ paddingTop: 8 }}>
+                  Activation is not blocked — the flagged items resolve against the new record shape at runtime.
                 </p>
               </div>
               <div className="ws-modal__footer">
-                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setConfirmUpgradeVar(null)}>Cancel</button>
-                <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => {
-                  bindVariableToEvent(confirmUpgradeVar.varId, confirmUpgradeVar.eventId, confirmUpgradeVar.modelName);
-                  setConfirmUpgradeVar(null);
-                }}><CheckCircle2 size={14} /> Convert &amp; Bind</button>
+                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setPendingTriggerModel(null)}>Cancel</button>
+                <button
+                  className="sails-btn sails-btn--primary sails-btn--sm"
+                  onClick={() => {
+                    setProcess((p) => ({ ...p, tableId: pendingTriggerModel, triggerCondition: [] }));
+                    setPendingTriggerModel(null);
+                  }}
+                >
+                  <CheckCircle2 size={14} /> Change Model
+                </button>
               </div>
             </div>
           </div>
@@ -2856,7 +3193,12 @@ export const WorkflowStudio: React.FC = () => {
                         searchable
                         value={process.tableId || ''}
                         options={modelOptions}
-                        onChange={(v) => setProcess((p) => ({ ...p, tableId: v ? String(v) : null }))}
+                        onChange={(v) => {
+                          const next = v ? String(v) : null;
+                          if (next === (process.tableId || null)) return;
+                          // Hold the pick until the user confirms the cascade.
+                          setPendingTriggerModel(next);
+                        }}
                         placeholder={tables.length === 0 ? 'No models found…' : 'Select a data model…'}
                       />
                       <p className="ws-props-hint" style={{ paddingTop: 4 }}>The model whose records trigger this workflow.</p>
@@ -3013,6 +3355,12 @@ export const WorkflowStudio: React.FC = () => {
                 showHeader={false}
                 title="Record Trigger Condition"
                 extraContextOptions={workflowContextOptions}
+                workflowVariables={process.variables as any}
+                workflowRecordSchemas={recordSchemas as any}
+                workflowTriggerFields={wfTriggerFields as any}
+                workflowTriggerName={tables.find((t) => t.id === process.tableId)?.tableName}
+                workflowHasOldRecord={triggerHasUpdate}
+                onAddVariable={isReadonly ? undefined : openVarAdd}
                 onApply={(groups) => {
                   setProcess((p) => ({ ...p, triggerCondition: groups }));
                   setConditionOpen(false);
@@ -3058,6 +3406,12 @@ export const WorkflowStudio: React.FC = () => {
                     showHeader={false}
                     title="Record Filter"
                     extraContextOptions={workflowContextOptions}
+                    workflowVariables={process.variables as any}
+                    workflowRecordSchemas={recordSchemas as any}
+                    workflowTriggerFields={wfTriggerFields as any}
+                    workflowTriggerName={tables.find((t) => t.id === process.tableId)?.tableName}
+                    workflowHasOldRecord={triggerHasUpdate}
+                    onAddVariable={isReadonly ? undefined : openVarAdd}
                     onApply={(groups) => {
                       if (process.startEvents.some((e) => e.id === recordFilterEventId)) {
                         updateStartEventConfig(recordFilterEventId, { filterGroups: groups });

@@ -16,7 +16,7 @@ export interface TreeNode {
   key: string;
   label: string;
   typeLabel: string;
-  kind: 'leaf' | 'record' | 'collection' | 'index';
+  kind: 'leaf' | 'record' | 'collection' | 'index' | 'all';
   seg: string;
   indexKey?: string; // for 'index' nodes — the collection name whose items this indexes
   children?: TreeNode[];
@@ -52,10 +52,18 @@ export function colNodes(cols: PickerColumn[] | undefined, schemas: PickerSchema
       const itemCols = c.targetModel ? schemas[c.targetModel] : undefined;
       return {
         key: `col:${seg}`, label: c.label || seg, typeLabel: 'Collection', kind: 'collection', seg,
-        children: [{
-          key: `col:${seg}:idx`, label: '[N]', typeLabel: 'Number', kind: 'index', seg, indexKey: seg,
-          children: itemCols ? colNodes(itemCols, schemas) : undefined,
-        }],
+        children: [
+          // "All items" — fields without an index → maps over every row
+          // (JSONata `parent.collection.field`).
+          {
+            key: `col:${seg}:all`, label: 'All items', typeLabel: 'All', kind: 'all', seg: '',
+            children: itemCols ? colNodes(itemCols, schemas) : undefined,
+          },
+          {
+            key: `col:${seg}:idx`, label: '[N]', typeLabel: 'Number', kind: 'index', seg, indexKey: seg,
+            children: itemCols ? colNodes(itemCols, schemas) : undefined,
+          },
+        ],
       };
     }
     if (t === 'relation' || t === 'lookup') {
@@ -77,10 +85,17 @@ export function topNodes(vars: PickerVariable[], schemas: PickerSchemaMap): Tree
       const itemCols = v.columns && v.columns.length > 0 ? v.columns : (v.targetModel ? schemas[v.targetModel] : undefined);
       return {
         key: `var:${v.name}`, label: v.name, typeLabel: 'Collection', kind: 'collection', seg: v.name,
-        children: [{
-          key: `var:${v.name}:idx`, label: '[N]', typeLabel: 'Number', kind: 'index', seg: v.name, indexKey: v.name,
-          children: itemCols ? colNodes(itemCols, schemas) : undefined,
-        }],
+        children: [
+          // "All items" — fields without an index → maps over every row.
+          {
+            key: `var:${v.name}:all`, label: 'All items', typeLabel: 'All', kind: 'all', seg: '',
+            children: itemCols ? colNodes(itemCols, schemas) : undefined,
+          },
+          {
+            key: `var:${v.name}:idx`, label: '[N]', typeLabel: 'Number', kind: 'index', seg: v.name, indexKey: v.name,
+            children: itemCols ? colNodes(itemCols, schemas) : undefined,
+          },
+        ],
       };
     }
     if (t === 'record') {
@@ -94,7 +109,9 @@ export function topNodes(vars: PickerVariable[], schemas: PickerSchemaMap): Tree
 }
 
 export function refFromSegs(segs: string[], format: 'moustache' | 'jsonata'): string {
-  const joined = segs.join('.');
+  // "All items" nodes contribute an empty segment — drop it so the ref reads
+  // `invoice_item.line_total` (all rows) instead of `invoice_item..line_total`.
+  const joined = segs.filter(Boolean).join('.');
   return format === 'jsonata' ? joined : `{{${joined}}}`;
 }
 
@@ -120,7 +137,15 @@ export function resolveAutocompleteLevel(
       if (idx && /^\d+$/.test(seg)) match = idx;
     }
     if (!match) return { list: [], prefix, path };
-    list = match.children || [];
+    if (match.kind === 'collection') {
+      // Drilling into a collection shows the ITEM FIELDS directly (maps over
+      // all rows — `invoice_item.line_total`) plus the [N] index node.
+      const all = match.children?.find((c) => c.kind === 'all');
+      const idx = match.children?.find((c) => c.kind === 'index');
+      list = [...(all?.children || []), ...(idx ? [idx] : [])];
+    } else {
+      list = match.children || [];
+    }
   }
   return { list, prefix, path };
 }
@@ -140,4 +165,9 @@ export function escapeHtml(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/** Display label for a variable chip: `{{var}}` / `{{$expr}}` → `var` / `$expr`. */
+export function chipLabel(ref: string): string {
+  return ref.replace(/^\{\{/, '').replace(/\}\}$/, '');
 }
