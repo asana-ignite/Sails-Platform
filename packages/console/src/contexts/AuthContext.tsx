@@ -52,14 +52,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.location.href = '/login';
   };
 
-  const logout = async () => {
-    try {
-      // For NextAuth, we need to handle the CSRF token usually, 
-      // but a simple redirect to the signout page works best for a simple implementation.
-      window.location.href = '/api/auth/signout';
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+  const logout = () => {
+    // The Signout page performs the NextAuth signout (CSRF POST)
+    // and shows a themed confirmation before redirecting to /login.
+    window.location.href = '/signout';
   };
 
   return (

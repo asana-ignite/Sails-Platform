@@ -33,6 +33,8 @@ export class TransactionContext {
       }
 
       await client.query('BEGIN');
+      await client.query('SET LOCAL statement_timeout = 30000');
+      await client.query('SET LOCAL lock_timeout = 5000');
 
       if (resolvedRole) {
         // Switch role if provided (e.g., to a non-superuser for testing RLS)
@@ -69,14 +71,11 @@ export class TransactionContext {
       await client.query('ROLLBACK');
       throw error;
     } finally {
-      // Clean up the session context before returning the client to the pool in a single round-trip
       try {
-        let resetQuery = "RESET app.current_user_id; RESET app.current_tenant_id; RESET app.current_team_id;";
-        if (options?.role || resolvedRole) {
-          resetQuery += " RESET ROLE;";
-        }
-        await client.query(resetQuery);
-      } catch (e) {}
+        await client.query('DISCARD ALL');
+      } catch (e) {
+        console.error('[TransactionContext] Failed to reset session state:', e);
+      }
       client.release();
     }
   }

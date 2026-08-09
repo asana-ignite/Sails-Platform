@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ConsoleApp, ConsoleMenu, ConsoleWidget } from '@sails/shared';
 
 export type { ConsoleApp, ConsoleMenu, ConsoleWidget };
@@ -26,6 +26,27 @@ interface ConsoleContextType {
 }
 
 const ConsoleContext = createContext<ConsoleContextType | undefined>(undefined);
+
+const normalizePath = (p: string | null | undefined) => (p ? p.replace(/\/+$/, '').toLowerCase() : '');
+
+const hasMatchingMenu = (menus: ConsoleMenu[], currentPath: string): boolean => {
+  return menus.some(m => {
+    if (m.path && currentPath.startsWith(m.path)) return true;
+    if (m.children) return hasMatchingMenu(m.children, currentPath);
+    return false;
+  });
+};
+
+const findFirstPath = (menus: ConsoleMenu[]): string | null => {
+  for (const m of menus) {
+    if (m.path) return m.path;
+    if (m.children) {
+      const childPath = findFirstPath(m.children);
+      if (childPath) return childPath;
+    }
+  }
+  return null;
+};
 
 export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -87,15 +108,7 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
             // 2. Fallback: match by menu path prefix (legacy paths like /table/..., /admin/...)
             if (!matchedAppId) {
               for (const app of filteredApps) {
-                const hasMatchingMenu = (menus: ConsoleMenu[]): boolean => {
-                  return menus.some(m => {
-                    if (m.path && currentPath.startsWith(m.path)) return true;
-                    if (m.children) return hasMatchingMenu(m.children);
-                    return false;
-                  });
-                };
-
-                if (hasMatchingMenu(app.menus)) {
+                if (hasMatchingMenu(app.menus, currentPath)) {
                   matchedAppId = app.id;
                   break;
                 }
@@ -135,33 +148,20 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return loadConfig({ silent: true });
   }, [loadConfig]);
 
-  const activeApp = apps.find(app => app.id === activeAppId) || null;
-  const navigationItems = activeApp?.menus || [];
+  const activeApp = useMemo(() => apps.find(app => app.id === activeAppId) || null, [apps, activeAppId]);
+  const navigationItems = useMemo(() => activeApp?.menus || [], [activeApp]);
 
-  const setActiveApp = (appId: string) => {
+  const setActiveApp = useCallback((appId: string) => {
     const targetApp = apps.find(a => a.id === appId);
     if (!targetApp) return;
 
     setActiveAppId(appId);
 
-    // AUTOMATIC NAVIGATION: 
-    // When switching apps, find the first valid path in that app and navigate to it.
-    const findFirstPath = (menus: ConsoleMenu[]): string | null => {
-      for (const m of menus) {
-        if (m.path) return m.path;
-        if (m.children) {
-          const childPath = findFirstPath(m.children);
-          if (childPath) return childPath;
-        }
-      }
-      return null;
-    };
-
     const firstPath = findFirstPath(targetApp.menus);
     if (firstPath) {
       navigate(firstPath);
     }
-  };
+  }, [apps, navigate]);
 
   const [headerActions, setHeaderActions] = useState<React.ReactNode | null>(null);
   const [pageTitle, setPageTitle] = useState<string | null>(null);
@@ -177,35 +177,31 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [location.pathname]);
 
   // Dynamic browser tab title: "Sails - <Page Label>"
-  useEffect(() => {
-    const allMenus: ConsoleMenu[] = [];
+  const allMenuPaths = useMemo(() => {
+    const flat: { menu: ConsoleMenu; path: string }[] = [];
     const collect = (items: ConsoleMenu[]) => {
       for (const item of items) {
-        allMenus.push(item);
+        const normalized = normalizePath(item.path);
+        if (normalized) flat.push({ menu: item, path: normalized });
         if (item.children) collect(item.children);
       }
     };
-    const normalizePath = (p: string | null | undefined) => (p ? p.replace(/\/+$/, '').toLowerCase() : '');
+    for (const app of apps) {
+      if (app.menus) collect(app.menus);
+    }
+    return flat;
+  }, [apps]);
 
-    const findMenu = (menus: ConsoleMenu[]): ConsoleMenu | null => {
-      const target = normalizePath(location.pathname);
-      collect(menus);
-      const exact = allMenus.find(m => normalizePath(m.path) === target);
-      if (exact) return exact;
-      const prefixMatches = allMenus
-        .map(m => ({ menu: m, path: normalizePath(m.path) }))
-        .filter(x => x.path && target.startsWith(x.path + '/'))
-        .sort((a, b) => b.path.length - a.path.length);
-      return prefixMatches[0]?.menu || null;
-    };
+  useEffect(() => {
+    const target = normalizePath(location.pathname);
+    const exact = allMenuPaths.find(x => x.path === target);
+    const prefixMatches = allMenuPaths
+      .filter(x => x.path && target.startsWith(x.path + '/'))
+      .sort((a, b) => b.path.length - a.path.length);
+
+    const menu = exact?.menu || prefixMatches[0]?.menu || null;
 
     let label: string | null = null;
-    let menu: ConsoleMenu | null = null;
-    for (const source of [navigationItems, ...apps.map(a => a.menus || [])]) {
-      const found = findMenu(source);
-      if (found) { menu = found; break; }
-    }
-
     if (pageTitle) {
       label = pageTitle;
     } else if (menu) {
@@ -221,27 +217,33 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     document.title = label ? `Sails - ${label}` : 'Sails';
-  }, [location.pathname, pageTitle, apps, navigationItems, activeApp]);
+  }, [location.pathname, pageTitle, allMenuPaths, navigationItems, activeApp]);
+
+  const contextValue = useMemo(() => ({
+    apps, 
+    activeApp, 
+    navigationItems,
+    widgets, 
+    isLoading, 
+    error, 
+    setActiveApp,
+    headerActions,
+    setHeaderActions,
+    pageTitle,
+    setPageTitle,
+    pageSubtitle,
+    setPageSubtitle,
+    showAddUserDrawer,
+    setShowAddUserDrawer,
+    refreshConfig
+  }), [
+    apps, activeApp, navigationItems, widgets, isLoading, error,
+    setActiveApp, headerActions, pageTitle, pageSubtitle,
+    showAddUserDrawer, refreshConfig
+  ]);
 
   return (
-    <ConsoleContext.Provider value={{ 
-      apps, 
-      activeApp, 
-      navigationItems,
-      widgets, 
-      isLoading, 
-      error, 
-      setActiveApp,
-      headerActions,
-      setHeaderActions,
-      pageTitle,
-      setPageTitle,
-      pageSubtitle,
-      setPageSubtitle,
-      showAddUserDrawer,
-      setShowAddUserDrawer,
-      refreshConfig
-    }}>
+    <ConsoleContext.Provider value={contextValue}>
       {children}
     </ConsoleContext.Provider>
   );

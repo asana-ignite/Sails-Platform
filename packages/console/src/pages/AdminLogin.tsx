@@ -5,8 +5,6 @@ import {
   Mail, 
   ArrowLeft, 
   ShieldCheck, 
-  KeyRound, 
-  Server, 
   Database, 
   Code, 
   Activity, 

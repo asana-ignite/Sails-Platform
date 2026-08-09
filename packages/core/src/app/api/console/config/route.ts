@@ -12,8 +12,11 @@ import { getConfigCache, setConfigCache } from '@/lib/configCache';
 export async function GET() {
   try {
     const session = await getAppSession();
-    const tenantId = (session?.user as any)?.tenantId || process.env.DEFAULT_TENANT_ID;
-    const userId = (session?.user as any)?.id || 'anon';
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const tenantId = (session.user as any).tenantId || process.env.DEFAULT_TENANT_ID;
+    const userId = (session.user as any).id || 'anon';
     const cacheKey = `${tenantId}:${userId}`;
 
     const cached = getConfigCache(cacheKey);
@@ -48,9 +51,11 @@ export async function GET() {
       });
     }
 
-    // 2. Fallback Mock Data if DB is empty or no tenantId (e.g., local development without seeded data)
-    if (apps.length === 0) {
+    // 2. Fallback Mock Data if DB is empty — only for authenticated users
+    if (apps.length === 0 && session) {
       apps = getMockData();
+    } else if (apps.length === 0) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     // 3. Filter Apps and Menus by Role & System Capability
@@ -78,8 +83,6 @@ export async function GET() {
       }) : [];
       userCapabilities = assignedPerms.map(p => p.capability);
     }
-
-    console.log(`[CONFIG] User: ${user?.email || 'Anonymous'}, Role: ${user?.role || 'NONE'}, IsAdmin: ${isSystemAdmin}, Capabilities: ${userCapabilities.length}`);
 
     const filteredApps = apps.filter(app => {
       // If app has a required capability, user must possess it (unless isSystemAdmin)
@@ -109,8 +112,6 @@ export async function GET() {
       // Only return apps that contain visible menus or are marked public
       return (app.menus && app.menus.length > 0) || !app.requiredCapability;
     });
-
-    console.log(`[CONFIG] Returning ${filteredApps.length} apps`);
 
     // 5. Fetch Widgets for the Widget Bar
     let widgets: any[] = [];

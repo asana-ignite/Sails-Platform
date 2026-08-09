@@ -155,6 +155,7 @@ export interface ProvisionTenantRequest {
   name: string;
   adminEmail: string;
   existingUserId?: string;
+  password?: string;
 }
 
 export interface ProvisionTenantResponse {

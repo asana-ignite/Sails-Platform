@@ -85,10 +85,8 @@ const UserManager: React.FC = () => {
   useEffect(() => {
     const bridgeName = '__SAILS_OPEN_DRAWER__';
     (window as any)[bridgeName] = () => {
-      console.log("ACTION: Global Signal Received -> Opening Drawer");
       setShowAddUserDrawer(true);
     };
-    console.log("SYSTEM: Global Bridge Initialized");
     return () => { delete (window as any)[bridgeName]; };
   }, [setShowAddUserDrawer]);
 
@@ -145,7 +143,6 @@ const UserManager: React.FC = () => {
     const handleGlobalClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('#sails-header-add-user')) {
-        console.log("DOM: Global Click Intercepted -> Opening Drawer");
         setShowAddUserDrawer(true);
       }
     };

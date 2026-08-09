@@ -1,0 +1,53 @@
+/* Sign Out Page — extends the split-screen auth layout (Login.css) */
+
+.sails-signout-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.sails-signout-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sails-success-light);
+  color: var(--sails-success);
+  box-shadow: var(--sails-shadow-sm);
+}
+
+.sails-signout-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px;
+  background: var(--sails-primary-bg);
+  border: none;
+  border-radius: var(--sails-radius-md);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--sails-transition);
+}
+
+.sails-signout-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+}
+
+.sails-signout-hint {
+  font-size: 0.78rem;
+  color: var(--sails-text-muted);
+  text-align: center;
+  margin-top: -8px;
+}
+
+[data-theme='dark'] .sails-signout-button {
+  color: #ffffff;
+}

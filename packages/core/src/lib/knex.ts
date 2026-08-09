@@ -8,6 +8,14 @@ if (process.env.NODE_ENV === 'production' && connectionString && !connectionStri
 
 const pool = new Pool({
   connectionString,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  allowExitOnIdle: true,
+});
+
+pool.on('error', (err) => {
+  console.error('[knex] Unexpected pool error:', err);
 });
 
 export { pool };

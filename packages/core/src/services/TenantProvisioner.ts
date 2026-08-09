@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 import { ConnectionManager } from '../core/engine/ConnectionManager';
 import { ProvisionTenantResponse } from '@sails/shared';
 import { TranslatorLayer } from './TranslatorLayer';
+import bcrypt from 'bcryptjs';
 
 export class TenantProvisioner {
   private engine: AlchemaCore;
@@ -32,8 +33,9 @@ export class TenantProvisioner {
     }
   }
 
-  async provisionTenant(name: string, adminEmail?: string, existingUserId?: string): Promise<ProvisionTenantResponse> {
+  async provisionTenant(name: string, adminEmail?: string, existingUserId?: string, password?: string): Promise<ProvisionTenantResponse> {
     if (!adminEmail && !existingUserId) throw new Error('Either adminEmail or existingUserId must be provided.');
+    if (!existingUserId && !password) throw new Error('Password is required when creating a new admin user.');
     const baseSchemaName = this.normalizeSchemaName(name);
     const uniqueSchemaName = await this.generateUniqueSchemaName(baseSchemaName);
 
@@ -57,8 +59,7 @@ export class TenantProvisioner {
         data: { tenantId: tenant.id, teams: { create: { teamId: adminTeam.id, isLeader: true } } }
       });
     } else {
-      const bcrypt = require('bcryptjs');
-      const hash = await bcrypt.hash('Welcome2Ignite', 10);
+      const hash = await bcrypt.hash(password!, 12);
       user = await db.user.create({
         data: {
           email: adminEmail!,
@@ -162,11 +163,11 @@ export class TenantProvisioner {
       }
     });
 
-    await db.$executeRawUnsafe(`
+    await db.$executeRaw`
       UPDATE core.console_menus 
-      SET app_id = '${adminApp.id}' 
-      WHERE parent_id IN (SELECT id FROM core.console_menus WHERE app_id = '${adminApp.id}')
-    `);
+      SET app_id = ${adminApp.id}
+      WHERE parent_id IN (SELECT id FROM core.console_menus WHERE app_id = ${adminApp.id})
+    `;
 
     return adminApp;
   }
@@ -247,14 +248,13 @@ export class TenantProvisioner {
       });
     }
 
-    // Fix appId for all business apps
-    await db.$executeRawUnsafe(`
+    await db.$executeRaw`
       UPDATE core.console_menus 
       SET app_id = parent_id_table.app_id
       FROM core.console_menus AS parent_id_table
       WHERE core.console_menus.parent_id = parent_id_table.id
       AND core.console_menus.app_id IS NULL
-    `);
+    `;
   }
 
   async provisionDefaultWidgets(tenantId: string) {

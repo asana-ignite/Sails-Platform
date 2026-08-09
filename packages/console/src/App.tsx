@@ -17,6 +17,7 @@ const DynamicDetailPage = lazy(() => import('./pages/DynamicDetailPage'));
 const AppPluginShell = lazy(() => import('./pages/admin/AppPluginShell'));
 const AdminAuditLog = lazy(() => import('./pages/admin/AdminAuditLog'));
 const Login = lazy(() => import('./pages/Login'));
+const Signout = lazy(() => import('./pages/Signout'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized'));
 const LayoutDemo = lazy(() => import('./pages/__mockups__/LayoutDemo'));
@@ -164,6 +165,8 @@ const TabTitle: React.FC = () => {
       document.title = 'Sails - Admin Login';
     } else if (path === '/login') {
       document.title = 'Sails';
+    } else if (path === '/signout') {
+      document.title = 'Sails - Signed Out';
     } else if (path.startsWith('/layout-studio/')) {
       document.title = 'Sails - Layout Studio';
     } else if (path.startsWith('/workflow-studio/')) {
@@ -184,6 +187,7 @@ function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/signout" element={<Signout />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/layout-demo" element={<LayoutDemo />} />
             <Route path="/route-builder" element={<RouteBuilder />} />

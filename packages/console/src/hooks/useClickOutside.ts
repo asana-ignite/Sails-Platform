@@ -1,12 +1,16 @@
 import { useEffect } from 'react';
 
-/**
- * useClickOutside
- * Hook to handle clicks outside of a specific element.
- */
 export const useClickOutside = (ref: React.RefObject<HTMLElement>, callback: () => void) => {
   useEffect(() => {
-    // Logic will be implemented here
-    console.log('[Hook]: useClickOutside initialized');
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        callback();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [ref, callback]);
 };

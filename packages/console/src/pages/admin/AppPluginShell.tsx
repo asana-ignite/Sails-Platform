@@ -15,9 +15,7 @@ const AppPluginShell: React.FC = () => {
   const location = useLocation();
   const { appSlug } = useParams<{ appSlug: string }>();
 
-  React.useEffect(() => {
-    console.log("SHELL: Header Actions Updated ->", headerActions ? "PRESENT" : "EMPTY");
-  }, [headerActions]);
+
 
   // Helper to normalize paths for comparison
   const normalizePath = (p: string | null) => {

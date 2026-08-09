@@ -243,10 +243,3 @@ export function makeJsonataEvent(type: 'expression', label: string, description:
     },
   };
 }
-
-
-export const WorkflowEventPlugins: WorkflowEventPlugin[] = [
-];
-
-// Self-register all built-in plugins into the global SDK registry.
-WorkflowEventPlugins.forEach((plugin) => workflowEventRegistry.register(plugin));

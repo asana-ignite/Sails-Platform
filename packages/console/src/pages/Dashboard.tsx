@@ -18,8 +18,8 @@ const Dashboard: React.FC = () => {
       </header>
 
       <section className="sails-dashboard__stats">
-        {stats.map((stat, index) => (
-          <div key={index} className="sails-card sails-stat-card">
+        {stats.map((stat) => (
+          <div key={stat.label} className="sails-card sails-stat-card">
             <div className="sails-stat-card__content">
               <span className="sails-stat-card__label">{stat.label}</span>
               <h2 className="sails-stat-card__value">{stat.value}</h2>

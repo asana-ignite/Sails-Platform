@@ -45,3 +45,6 @@ backups/
 # Custom Assets & Docs
 /docs/_assets_references
 /docs/_docs_references
+
+# Graphify analysis artifacts
+graphify-out/
