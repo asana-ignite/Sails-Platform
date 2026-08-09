@@ -1,0 +1,10 @@
+{
+  "name": "@sails/plugin-sdk",
+  "version": "1.0.0",
+  "description": "SAILS Platform Plugin SDK — types and registry for building Workflow Event, Field Type, and Web Control plugins",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@sails/shared": "workspace:*"
+  }
+}

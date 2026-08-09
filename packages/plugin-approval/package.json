@@ -1,0 +1,12 @@
+{
+  "name": "@sails/plugin-approval",
+  "version": "1.0.0",
+  "description": "SAILS Platform — Approval Event Plugin (Task assignment + notification)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "sails-core": "workspace:*",
+    "@sails/plugin-sdk": "workspace:*",
+    "@sails/shared": "workspace:*"
+  }
+}

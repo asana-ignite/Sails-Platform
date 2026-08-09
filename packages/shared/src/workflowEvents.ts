@@ -13,7 +13,6 @@ export type WorkflowEventType =
   | 'notification'
   | 'approval'
   | 'expression'
-  | 'transform'
   | 'script';
 
 export type WorkflowEventConfigParameterType =
@@ -212,16 +211,6 @@ export const WORKFLOW_EVENT_CONFIGS: Record<WorkflowEventType, WorkflowEventConf
       label: 'Expression',
       parameters: [
         { name: 'expression', label: 'JSONata Expression', type: 'expression_editor', required: true },
-        { name: 'assignToVariable', label: 'Assign result to', type: 'text', placeholder: 'variable name' },
-      ],
-    },
-  ],
-
-  transform: [
-    {
-      label: 'Transform',
-      parameters: [
-        { name: 'expression', label: 'JSONata Transform', type: 'expression_editor', required: true },
         { name: 'assignToVariable', label: 'Assign result to', type: 'text', placeholder: 'variable name' },
       ],
     },

@@ -1,0 +1,12 @@
+{
+  "name": "@sails/plugin-notification",
+  "version": "1.0.0",
+  "description": "SAILS Platform — Notification Event Plugin (Bell / Email delivery)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "sails-core": "workspace:*",
+    "@sails/plugin-sdk": "workspace:*",
+    "@sails/shared": "workspace:*"
+  }
+}

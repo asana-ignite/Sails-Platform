@@ -33,6 +33,12 @@
       "dependencies": {
         "@auth/prisma-adapter": "^2.11.2",
         "@prisma/client": "^6.19.3",
+        "@sails/plugin-approval": "workspace:*",
+        "@sails/plugin-expression": "workspace:*",
+        "@sails/plugin-notification": "workspace:*",
+        "@sails/plugin-record-event": "workspace:*",
+        "@sails/plugin-script": "workspace:*",
+        "@sails/plugin-sdk": "workspace:*",
         "@sails/shared": "workspace:*",
         "bcryptjs": "^3.0.3",
         "jsonata": "^2.2.2",
@@ -53,6 +59,58 @@
         "prisma": "^6.19.3",
         "typescript": "^5.0.0",
         "zod": "^3.25.76",
+      },
+    },
+    "packages/plugin-approval": {
+      "name": "@sails/plugin-approval",
+      "version": "1.0.0",
+      "dependencies": {
+        "@sails/plugin-sdk": "workspace:*",
+        "@sails/shared": "workspace:*",
+        "sails-core": "workspace:*",
+      },
+    },
+    "packages/plugin-expression": {
+      "name": "@sails/plugin-expression",
+      "version": "1.0.0",
+      "dependencies": {
+        "@sails/plugin-sdk": "workspace:*",
+        "@sails/shared": "workspace:*",
+        "sails-core": "workspace:*",
+      },
+    },
+    "packages/plugin-notification": {
+      "name": "@sails/plugin-notification",
+      "version": "1.0.0",
+      "dependencies": {
+        "@sails/plugin-sdk": "workspace:*",
+        "@sails/shared": "workspace:*",
+        "sails-core": "workspace:*",
+      },
+    },
+    "packages/plugin-record-event": {
+      "name": "@sails/plugin-record-event",
+      "version": "1.0.0",
+      "dependencies": {
+        "@sails/plugin-sdk": "workspace:*",
+        "@sails/shared": "workspace:*",
+        "sails-core": "workspace:*",
+      },
+    },
+    "packages/plugin-script": {
+      "name": "@sails/plugin-script",
+      "version": "1.0.0",
+      "dependencies": {
+        "@sails/plugin-sdk": "workspace:*",
+        "@sails/shared": "workspace:*",
+        "sails-core": "workspace:*",
+      },
+    },
+    "packages/plugin-sdk": {
+      "name": "@sails/plugin-sdk",
+      "version": "1.0.0",
+      "dependencies": {
+        "@sails/shared": "workspace:*",
       },
     },
     "packages/shared": {
@@ -252,6 +310,18 @@
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.62.3", "", { "os": "win32", "cpu": "x64" }, "sha512-MOG/3gTOn4Fwf574RVOaY61I5o6P90legkFADiTyn1hyjNydT+cerU2rLUwPdZkKKyJ+iT+K9p7WXK4LM1Ka6g=="],
 
     "@sails/console": ["@sails/console@workspace:packages/console"],
+
+    "@sails/plugin-approval": ["@sails/plugin-approval@workspace:packages/plugin-approval"],
+
+    "@sails/plugin-expression": ["@sails/plugin-expression@workspace:packages/plugin-expression"],
+
+    "@sails/plugin-notification": ["@sails/plugin-notification@workspace:packages/plugin-notification"],
+
+    "@sails/plugin-record-event": ["@sails/plugin-record-event@workspace:packages/plugin-record-event"],
+
+    "@sails/plugin-script": ["@sails/plugin-script@workspace:packages/plugin-script"],
+
+    "@sails/plugin-sdk": ["@sails/plugin-sdk@workspace:packages/plugin-sdk"],
 
     "@sails/shared": ["@sails/shared@workspace:packages/shared"],
 

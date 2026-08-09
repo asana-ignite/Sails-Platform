@@ -1,0 +1,37 @@
+/** ExitConditionsEditor — shared Exit Conditions (chips + Add/Edit modals). */
+
+.ecl__list { display: flex; flex-direction: column; gap: 2px; padding: 0 12px; }
+
+.ecl__list .ws-event-chip {
+  transition: box-shadow 0.12s, background 0.12s;
+}
+.ecl__list .ws-event-chip:hover { opacity: 1; background: rgba(157, 206, 224, 0.06); }
+.ecl__list .ws-event-chip--selected { background: rgba(157, 206, 224, 0.1); }
+
+/* Dragging the chip reorders (kept simple; no-op visual safety). */
+.ecl__list .ws-icon-btn { margin-left: 4px; }
+
+/* Header row: title left, + Add Exit right (same line). */
+.ecl__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 4px;
+}
+.ecl__head .sails-btn {
+  padding: 2px 8px;
+  font-size: 10px;
+}
+
+/* Per-line editor: Requires + Decision on the same row. */
+.ecl-editor__row { display: flex; gap: 14px; align-items: flex-start; }
+.ecl-editor__col { flex: 1; min-width: 0; }
+
+/* Match CustomSelect to the .ws-props-input metrics (height/radius/font). */
+.ecl-editor .ws-props-select .sails-custom-select__trigger {
+  min-height: 0;
+  padding: 6px 8px;
+  font-size: 12px;
+  border-radius: 5px;
+}

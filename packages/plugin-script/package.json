@@ -1,0 +1,12 @@
+{
+  "name": "@sails/plugin-script",
+  "version": "1.0.0",
+  "description": "SAILS Platform — Script Event Plugin (BYOC sandbox executor)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "sails-core": "workspace:*",
+    "@sails/plugin-sdk": "workspace:*",
+    "@sails/shared": "workspace:*"
+  }
+}

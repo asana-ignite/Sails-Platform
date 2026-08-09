@@ -1,0 +1,12 @@
+{
+  "name": "@sails/plugin-expression",
+  "version": "1.0.0",
+  "description": "SAILS Platform — Expression Event Plugin (JSONata evaluation)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "sails-core": "workspace:*",
+    "@sails/plugin-sdk": "workspace:*",
+    "@sails/shared": "workspace:*"
+  }
+}

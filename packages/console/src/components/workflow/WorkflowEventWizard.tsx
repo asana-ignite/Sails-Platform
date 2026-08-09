@@ -13,6 +13,7 @@ import { VariableTextInput } from './VariableTextInput';
 import { WorkflowVariablePicker, buildContextRoot, flattenTree, filterTree, type PickerSchemaMap, type PickerColumn, type TreeNode } from './WorkflowVariablePicker';
 import { AssignToEditor } from './AssignToEditor';
 import { ActionsEditor } from './ActionsEditor';
+import { ExitConditionsEditor, type WorkflowExitLine, type ExitLinePatch } from './ExitConditionsEditor';
 import type { DrillRoots } from './jsonataSuggest';
 import { UiToast } from '../ui';
 
@@ -60,6 +61,17 @@ export interface WorkflowEventWizardProps {
   onCreateCollectionVariable: (name: string, modelTableName: string) => string;
   /** Workflow-context drill roots (record / oldRecord / requestor) for the expression editor. */
   drillRoots?: DrillRoots;
+  /** Task Approval only: the host stage's exit conditions (last "Exit" tab). */
+  exitConditions?: {
+    lines: WorkflowExitLine[];
+    actions: { value: string; label: string }[];
+    stageNames: Record<string, string>;
+    disabled?: boolean;
+    expression?: React.ComponentProps<typeof ExitConditionsEditor>['expression'];
+    onAdd: (patch: ExitLinePatch) => void;
+    onUpdate: (id: string, patch: ExitLinePatch) => void;
+    onRemove: (id: string) => void;
+  };
   /** Create a record workflow variable for read results; returns its id. */
   onCreateRecordVariable: (name: string, modelTableName: string) => string;
   onBindVariableToEvent: (varId: string, eventId: string, modelName: string, fieldType?: 'record' | 'collection') => void;
@@ -157,7 +169,7 @@ function isEmptyValue(v: any): boolean {
  */
 export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
   eventId, eventType, config, label, onLabelChange, description, onDescriptionChange,
-  variables, tables, triggerModel, hasOldRecord, recordSchemas, recordSchema, drillRoots,
+  variables, tables, triggerModel, hasOldRecord, recordSchemas, recordSchema, drillRoots, exitConditions,
   onCreateCollectionVariable, onCreateRecordVariable, onBindVariableToEvent,
   onOpenExpressionEditor, onOpenFilterBuilder, onAddVariable, onSelectVariable,
   onConfigChange, onDone, onRemove, onClose,
@@ -282,6 +294,8 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
       ? schema.filter((s) => s.label !== 'Output')
       : schema;
   const tabs = [{ label: 'Event' }, ...steps.map((s) => ({ label: s.label }))];
+  // Task Approval: append the shared Exit Conditions editor as the LAST tab.
+  if (eventType === 'approval') tabs.push({ label: 'Exit Condition' });
   const currentTab = Math.min(activeTab, tabs.length - 1);
   const isLastTab = currentTab === tabs.length - 1;
   const modelTable = tables.find((t) => t.tableName === config.model);
@@ -339,6 +353,9 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
     if (config.canApprove !== false) seed.push({ label: 'Approve', value: 'approve' });
     if (config.canReject !== false) seed.push({ label: 'Reject', value: 'reject' });
     if (seed.length > 0) onConfigChange('actions', seed);
+    // Seeded defaults never auto-create exit conditions — only actions the
+    // user genuinely adds do.
+    for (const a of seed) handledActionsRef.current.add(a.value);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -348,6 +365,38 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
     if (name === 'model' || name === 'operation') {
       onConfigChange('filterGroups', []);
       onConfigChange('fieldMapping', []);
+    }
+  };
+
+  // Task Approval: every newly-created Workflow Action gets a matching Exit
+  // Condition automatically (line routes on the action's value → Completed).
+  // Only actions the user genuinely adds are "unhandled" — actions present at
+  // open (loaded configs) and the seeded defaults are marked handled and never
+  // auto-create, so merely focusing/blurring the Actions box creates nothing.
+  const handledActionsRef = React.useRef<Set<string>>(
+    new Set((Array.isArray(config.actions) ? config.actions : []).map((a: any) => a.value)),
+  );
+  const createExitForAction = (a: { label: string; value: string }) => {
+    if (!exitConditions || exitConditions.disabled) return;
+    handledActionsRef.current.add(a.value);
+    if (exitConditions.lines.some((l) => l.action === a.value)) return;
+    exitConditions.onAdd({ label: a.label, action: a.value, votePolicy: 'at_least', voteCount: 1 });
+  };
+  // Quick-add chips fire immediately (discrete creation).
+  const handleActionAdded = (a: { label: string; value: string }) => {
+    createExitForAction(a);
+  };
+  // Typed lines are synced when the textarea loses focus (e.g. leaving the
+  // tab) — mid-typing fragments never become exit lines.
+  const syncExitConditionsForActions = () => {
+    if (!exitConditions || exitConditions.disabled) return;
+    const actions = Array.isArray(config.actions) ? config.actions : [];
+    const existing = new Set(exitConditions.lines.map((l) => l.action));
+    for (const a of actions) {
+      if (handledActionsRef.current.has(a.value)) continue;
+      handledActionsRef.current.add(a.value);
+      if (existing.has(a.value)) continue;
+      exitConditions.onAdd({ label: a.label, action: a.value, votePolicy: 'at_least', voteCount: 1 });
     }
   };
 
@@ -484,6 +533,8 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
           <ActionsEditor
             value={Array.isArray(value) ? value : []}
             onChange={(a) => setParam(p.name, a)}
+            onActionAdded={handleActionAdded}
+            onBlur={syncExitConditionsForActions}
           />
         );
       case 'model_select':
@@ -617,12 +668,18 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
         const SECTION_GAP = 4;
         const SECTION_PITCH = SECTION_H + SECTION_GAP;
         const PORT_R = 6;
+        // Port dot centers sit this far inside the rails' content edges
+        // (12px dot + 2px side offset), so connector lines start/end exactly
+        // on the dots instead of at the rail boundaries.
+        const PORT_INSET = PORT_R + 2;
         const HEADER_H = LABEL_H + SEARCH_H;
         // 40% left · 20% drag gap · 40% right — measured from the flex row so
         // the overlay lines and ports stay in lockstep.
         const mapW = mapRowRef.current?.offsetWidth || 0;
         const svgLeft = mapW ? mapW * 0.4 : 280;
         const GAP_W = mapW ? Math.round(mapW * 0.2) : 160;
+        const srcPortX = svgLeft - PORT_INSET;
+        const tgtPortX = svgLeft + GAP_W + PORT_INSET;
         const isMappableCol = (col: any): boolean => isMappableTarget(col.fieldName || col.name);
         // The unified Workflow Context tree: Requestor / Request Date / Record /
         // OldRecord (when the workflow can supply old values) + Variables + Collections.
@@ -922,12 +979,16 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                           draggable={draggable}
                           onDragStart={draggable ? (e) => {
                             e.stopPropagation();
+                            // Keep the ghost glued to the grab point — the default
+                            // anchors it top-left, which makes the drop drift.
+                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                            e.dataTransfer.setDragImage(e.currentTarget as HTMLElement, e.clientX - rect.left, e.clientY - rect.top);
                             const itemIndex = isLeaf && v.itemKey
                               ? (parseInt(srcIndex[v.itemKey] || '0', 10) || 0)
                               : undefined;
                             e.dataTransfer.setData('application/json', JSON.stringify({ type: 'wiz-map', source: v.source, sourceVar: v.varName, sourceField: v.fieldName, itemIndex, record: !isLeaf, modelName: v.modelName, name: v.label, fieldType: lt, rowIndex: i }));
                             e.dataTransfer.effectAllowed = 'copy';
-                            setDragPreview({ srcIndex: i, tgtIndex: -1, ok: false, cx: svgLeft, cy: yAtSrc(i) });
+                            setDragPreview({ srcIndex: i, tgtIndex: -1, ok: false, cx: srcPortX, cy: yAtSrc(i) });
                           } : undefined}
                           onDragEnd={() => setDragPreview(null)}
                           title={isSection ? v.label : isLeaf ? `Type: ${typeLabel(lt)} — drag to a column port, or click then a column` : v.label}
@@ -1001,35 +1062,42 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                       const feedback = dropFeedback !== null && dropFeedback.col === (col.fieldName || col.name);
                       const feedbackOk = feedback && dropFeedback.ok;
                       const colType = col.logicalType || col.physicalType || 'text';
+                      // The whole row accepts the drop — no pixel-perfect port hits.
                       return (
                         <div key={col.fieldName || col.name} className="wvp-node"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (clickSrc) tryMap(clickSrc, col);
-                            else if (mapped) onConfigChange('fieldMapping', fieldMapping.filter((m) => m.targetCol !== (col.fieldName || col.name)));
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (clickSrc) tryMap(clickSrc, col);
+                              else if (mapped) onConfigChange('fieldMapping', fieldMapping.filter((m) => m.targetCol !== (col.fieldName || col.name)));
+                            }}
+                            onDragOver={(e) => {
+                            e.preventDefault(); e.stopPropagation();
+                            e.dataTransfer.dropEffect = 'copy';
+                            const ok = isCompatibleType(
+                              (() => { try { return JSON.parse(e.dataTransfer.getData('application/json')).fieldType || ''; } catch { return ''; } })(),
+                              colType,
+                            );
+                            setDragPreview((prev) => (prev ? { ...prev, tgtIndex: ci, ok } : prev));
+                            setDropFeedback({ col: col.fieldName || col.name, ok });
                           }}
+                          onDragLeave={(e) => {
+                            if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                            e.preventDefault(); e.stopPropagation();
+                            setDragPreview((prev) => (prev ? { ...prev, tgtIndex: -1 } : prev));
+                            setDropFeedback(null);
+                          }}
+                          onDrop={(e) => handlePortDrop(e, col)}
                           style={{
                             position: 'relative', height: ROW_H, marginTop: 0, marginBottom: ROW_GAP, boxSizing: 'border-box', width: '100%', gap: 4,
                             background: mapped ? 'rgba(59,130,246,.08)' : (feedback ? (feedbackOk ? 'rgba(16,185,129,.12)' : 'rgba(239,68,68,.12)') : undefined),
                             borderRadius: 4,
                           }}
                         >
-                          {/* Left port — drop target */}
+                          {/* Visual port marker (the row itself is the drop zone) */}
                           <span
                             className="ws-map-port"
                             style={{ ...portStyle, left: 2, top: '50%', transform: 'translateY(-50%)' }}
                             title={mapped ? 'Drop to unmap' : `Drop to map a variable → ${col.name || col.fieldName}`}
-                            onDragOver={(e) => {
-                              e.preventDefault(); e.stopPropagation();
-                              e.dataTransfer.dropEffect = 'copy';
-                              const ok = isCompatibleType(
-                                (() => { try { return JSON.parse(e.dataTransfer.getData('application/json')).fieldType || ''; } catch { return ''; } })(),
-                                colType,
-                              );
-                              setDragPreview((prev) => (prev ? { ...prev, tgtIndex: ci, ok } : prev));
-                            }}
-                            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragPreview((prev) => (prev ? { ...prev, tgtIndex: -1 } : prev)); }}
-                            onDrop={(e) => handlePortDrop(e, col)}
                           />
                           <span className="wvp-node__icon" style={{ color: typeColor(colType) }}>
                             {(() => { const I = typeIcon(colType); return <I size={11} />; })()}
@@ -1056,7 +1124,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                       <g key={mi}>
                         <title>{sel ? `${srcLabel} → ${m.targetCol} (click again or press Delete to remove)` : `${srcLabel} → ${m.targetCol} (click to select)`}</title>
                         <path
-                          d={connPath(svgLeft, yAtSrc(si), svgLeft + GAP_W, yAtCol(ti))}
+                          d={connPath(srcPortX, yAtSrc(si), tgtPortX, yAtCol(ti))}
                           stroke={sel ? '#ef4444' : 'var(--sails-primary,#9dcee0)'}
                           strokeWidth={sel ? 3 : 2}
                           fill="none"
@@ -1064,7 +1132,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                           style={{ pointerEvents: 'visiblePainted', cursor: 'pointer' }}
                           onClick={(e) => { e.stopPropagation(); setSelMapIdx(sel ? null : mi); }}
                         />
-                        <circle cx={svgLeft + GAP_W} cy={yAtCol(ti)} r={sel ? 4.5 : 3.5} fill={sel ? '#ef4444' : 'var(--sails-primary,#9dcee0)'} style={{ pointerEvents: 'visiblePainted' }} onClick={(e) => { e.stopPropagation(); setSelMapIdx(sel ? null : mi); }} />
+                        <circle cx={tgtPortX} cy={yAtCol(ti)} r={sel ? 4.5 : 3.5} fill={sel ? '#ef4444' : 'var(--sails-primary,#9dcee0)'} style={{ pointerEvents: 'visiblePainted' }} onClick={(e) => { e.stopPropagation(); setSelMapIdx(sel ? null : mi); }} />
                       </g>
                     );
                   })}
@@ -1072,8 +1140,8 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                     <path
                       d={
                         dragPreview.tgtIndex >= 0
-                          ? connPath(svgLeft, yAtSrc(dragPreview.srcIndex), svgLeft + GAP_W, yAtCol(dragPreview.tgtIndex))
-                          : connPath(svgLeft, yAtSrc(dragPreview.srcIndex), Math.min(Math.max(dragPreview.cx, svgLeft), svgLeft + GAP_W), dragPreview.cy)
+                          ? connPath(srcPortX, yAtSrc(dragPreview.srcIndex), tgtPortX, yAtCol(dragPreview.tgtIndex))
+                          : connPath(srcPortX, yAtSrc(dragPreview.srcIndex), Math.min(Math.max(dragPreview.cx, srcPortX), tgtPortX), dragPreview.cy)
                       }
                       stroke={dragPreview.tgtIndex >= 0 ? (dragPreview.ok ? '#10b981' : '#ef4444') : 'var(--sails-primary,#9dcee0)'}
                       strokeWidth={2}
@@ -1103,9 +1171,12 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
         const OPITCH = OROW_H + OGAP;
         const OROWS_MAX = 200;
         const OPORT_R = 6;
+        const OPORT_INSET = OPORT_R + 2; // port dot center offset from the rail content edge
         const omapW = outMapRowRef.current?.offsetWidth || 0;
         const osvgLeft = omapW ? omapW * 0.4 : 280;
         const oGAP_W = omapW ? Math.round(omapW * 0.2) : 160;
+        const osrcX = osvgLeft - OPORT_INSET;
+        const otgtX = osvgLeft + oGAP_W + OPORT_INSET;
         const resRowsAll = [
           // The result always carries the record's ID (UUID) — pinned first.
           ...(modelFields.some((f: any) => (f.fieldName || f.name) === 'id') ? [] : [{ key: 'res:id', label: 'ID', fieldType: 'uuid', sourceField: 'id' }]),
@@ -1135,8 +1206,10 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
           ? varRowsAll.filter((v) => v.label.toLowerCase().includes(outVarSearch.toLowerCase()))
           : varRowsAll;
         const outEntries: { sourceField: string; targetVar: string }[] = config.outputMapping || [];
-        const oYLeft = (i: number) => OHEADER_H + i * OPITCH + OROW_H / 2 - outLeftScroll;
-        const oYRight = (j: number) => OHEADER_H + j * OPITCH + OROW_H / 2 - outRightScroll;
+        // Rows-area coordinates (the svg already starts below the label+search
+        // band, so row positions are relative to its top — no OHEADER_H term).
+        const oYLeft = (i: number) => i * OPITCH + OROW_H / 2 - outLeftScroll;
+        const oYRight = (j: number) => j * OPITCH + OROW_H / 2 - outRightScroll;
         const oConn = (x1: number, y1: number, x2: number, y2: number) =>
           `M ${x1} ${y1} C ${x1 + (x2 - x1) * 0.35} ${y1}, ${x1 + (x2 - x1) * 0.65} ${y2}, ${x2} ${y2}`;
         const oPort: React.CSSProperties = {
@@ -1168,7 +1241,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
           <>
             <div
               ref={outMapRowRef}
-              style={{ display: 'flex', position: 'relative', padding: 4 }}
+              style={{ display: 'flex', position: 'relative' }}
               onClick={() => { setOutSelMapIdx(null); setOutClickSrc(null); }}
               onDragOver={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -1217,9 +1290,13 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                       draggable
                       onDragStart={(e) => {
                         e.stopPropagation();
+                        // Keep the ghost glued to the grab point — the default
+                        // anchors it top-left, which makes the drop drift.
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        e.dataTransfer.setDragImage(e.currentTarget as HTMLElement, e.clientX - rect.left, e.clientY - rect.top);
                         e.dataTransfer.setData('application/json', JSON.stringify({ type: 'out-map', sourceField: f.sourceField, fieldType: f.fieldType, name: f.label, rowIndex: i }));
                         e.dataTransfer.effectAllowed = 'copy';
-                        setOutDragPreview({ srcIndex: i, tgtIndex: -1, ok: false, cx: osvgLeft, cy: oYLeft(i) });
+                        setOutDragPreview({ srcIndex: i, tgtIndex: -1, ok: false, cx: osrcX, cy: oYLeft(i) });
                       }}
                       onDragEnd={() => setOutDragPreview(null)}
                       title={`Type: ${typeLabel(f.fieldType)} — drag to a variable, or click then a variable`}
@@ -1264,6 +1341,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                     const mapped = outEntries.some((m) => m.targetVar === v.label);
                     const feedback = outDropFeedback !== null && outDropFeedback.col === v.label;
                     const feedbackOk = feedback && outDropFeedback.ok;
+                    // The whole row accepts the drop — no pixel-perfect port hits.
                     return (
                       <div key={v.key} className="wvp-node"
                         onClick={(e) => {
@@ -1271,35 +1349,42 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                           if (outClickSrc) tryOutMap(outClickSrc, { name: v.label, fieldType: v.fieldType });
                           else if (mapped) onConfigChange('outputMapping', outEntries.filter((m) => m.targetVar !== v.label));
                         }}
+                        onDragOver={(e) => {
+                          e.preventDefault(); e.stopPropagation();
+                          e.dataTransfer.dropEffect = 'copy';
+                          const ok = isCompatibleType(
+                            (() => { try { return JSON.parse(e.dataTransfer.getData('application/json')).fieldType || ''; } catch { return ''; } })(),
+                            v.fieldType,
+                          );
+                          setOutDragPreview((prev) => (prev ? { ...prev, tgtIndex: j, ok } : prev));
+                          setOutDropFeedback({ col: v.label, ok });
+                        }}
+                        onDragLeave={(e) => {
+                          if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                          e.preventDefault(); e.stopPropagation();
+                          setOutDragPreview((prev) => (prev ? { ...prev, tgtIndex: -1 } : prev));
+                          setOutDropFeedback(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault(); e.stopPropagation();
+                          setOutDragPreview(null);
+                          try {
+                            const p = JSON.parse(e.dataTransfer.getData('application/json'));
+                            if (p.type !== 'out-map') return;
+                            tryOutMap(p, { name: v.label, fieldType: v.fieldType });
+                          } catch { /* ignore */ }
+                        }}
                         style={{
                           position: 'relative', height: OROW_H, marginTop: 0, marginBottom: OGAP, boxSizing: 'border-box', width: '100%', gap: 4,
                           background: mapped ? 'rgba(59,130,246,.08)' : (feedback ? (feedbackOk ? 'rgba(16,185,129,.12)' : 'rgba(239,68,68,.12)') : undefined),
                           borderRadius: 4,
                         }}
                       >
+                        {/* Visual port marker (the row itself is the drop zone) */}
                         <span
                           className="ws-map-port"
                           style={{ ...oPort, left: 2, top: '50%', transform: 'translateY(-50%)' }}
                           title={mapped ? 'Drop to unmap' : `Drop to assign → ${v.label}`}
-                          onDragOver={(e) => {
-                            e.preventDefault(); e.stopPropagation();
-                            e.dataTransfer.dropEffect = 'copy';
-                            const ok = isCompatibleType(
-                              (() => { try { return JSON.parse(e.dataTransfer.getData('application/json')).fieldType || ''; } catch { return ''; } })(),
-                              v.fieldType,
-                            );
-                            setOutDragPreview((prev) => (prev ? { ...prev, tgtIndex: j, ok } : prev));
-                          }}
-                          onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setOutDragPreview((prev) => (prev ? { ...prev, tgtIndex: -1 } : prev)); }}
-                          onDrop={(e) => {
-                            e.preventDefault(); e.stopPropagation();
-                            setOutDragPreview(null);
-                            try {
-                              const p = JSON.parse(e.dataTransfer.getData('application/json'));
-                              if (p.type !== 'out-map') return;
-                              tryOutMap(p, { name: v.label, fieldType: v.fieldType });
-                            } catch { /* ignore */ }
-                          }}
                         />
                         <span className="wvp-node__icon" style={{ color: typeColor(v.fieldType) }}>
                           {(() => { const I = typeIcon(v.fieldType); return <I size={11} />; })()}
@@ -1323,7 +1408,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                     <g key={mi}>
                       <title>{sel ? `${m.sourceField} → ${m.targetVar} (click again or press Delete to remove)` : `${m.sourceField} → ${m.targetVar} (click to select)`}</title>
                       <path
-                        d={oConn(osvgLeft, oYLeft(si), osvgLeft + oGAP_W, oYRight(ti))}
+                        d={oConn(osrcX, oYLeft(si), otgtX, oYRight(ti))}
                         stroke={sel ? '#ef4444' : 'var(--sails-primary,#9dcee0)'}
                         strokeWidth={sel ? 3 : 2}
                         fill="none"
@@ -1331,7 +1416,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                         style={{ pointerEvents: 'visiblePainted', cursor: 'pointer' }}
                         onClick={(e) => { e.stopPropagation(); setOutSelMapIdx(sel ? null : mi); }}
                       />
-                      <circle cx={osvgLeft + oGAP_W} cy={oYRight(ti)} r={sel ? 4.5 : 3.5} fill={sel ? '#ef4444' : 'var(--sails-primary,#9dcee0)'} style={{ pointerEvents: 'visiblePainted' }} onClick={(e) => { e.stopPropagation(); setOutSelMapIdx(sel ? null : mi); }} />
+                      <circle cx={otgtX} cy={oYRight(ti)} r={sel ? 4.5 : 3.5} fill={sel ? '#ef4444' : 'var(--sails-primary,#9dcee0)'} style={{ pointerEvents: 'visiblePainted' }} onClick={(e) => { e.stopPropagation(); setOutSelMapIdx(sel ? null : mi); }} />
                     </g>
                   );
                 })}
@@ -1339,8 +1424,8 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                   <path
                     d={
                       outDragPreview.tgtIndex >= 0
-                        ? oConn(osvgLeft, oYLeft(outDragPreview.srcIndex), osvgLeft + oGAP_W, oYRight(outDragPreview.tgtIndex))
-                        : oConn(osvgLeft, oYLeft(outDragPreview.srcIndex), Math.min(Math.max(outDragPreview.cx, osvgLeft), osvgLeft + oGAP_W), outDragPreview.cy)
+                        ? oConn(osrcX, oYLeft(outDragPreview.srcIndex), otgtX, oYRight(outDragPreview.tgtIndex))
+                        : oConn(osrcX, oYLeft(outDragPreview.srcIndex), Math.min(Math.max(outDragPreview.cx, osrcX), otgtX), outDragPreview.cy)
                     }
                     stroke={outDragPreview.tgtIndex >= 0 ? (outDragPreview.ok ? '#10b981' : '#ef4444') : 'var(--sails-primary,#9dcee0)'}
                     strokeWidth={2}
@@ -1608,6 +1693,24 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
 
             {/* Schema step tabs */}
             {currentTab > 0 && (() => {
+              // Task Approval — last tab "Exit": the shared Exit Conditions editor.
+              if (eventType === 'approval' && currentTab === tabs.length - 1) {
+                if (!exitConditions) {
+                  return <p className="ws-props-hint" style={{ padding: 12 }}>Exit conditions are configured in the Workflow Studio stage properties.</p>;
+                }
+                return (
+                  <ExitConditionsEditor
+                    lines={exitConditions.lines}
+                    actions={exitConditions.actions}
+                    stageNames={exitConditions.stageNames}
+                    disabled={exitConditions.disabled}
+                    expression={exitConditions.expression}
+                    onAdd={exitConditions.onAdd}
+                    onUpdate={exitConditions.onUpdate}
+                    onRemove={exitConditions.onRemove}
+                  />
+                );
+              }
               const opParam = stepParams.find((p) => p.type === 'operation_select');
               const filterParam = stepParams.find((p) => p.type === 'filter_builder');
               const targetTypeParam = stepParams.find((p) => p.name === 'targetType');

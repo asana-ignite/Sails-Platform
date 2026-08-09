@@ -12,12 +12,13 @@ import {
   Plus, X, Trash2, GitBranch, User, Users,
   Briefcase, Shield, Hash, Clock, Settings, Filter,
   Database, Bell, ClipboardCheck, Code2, Workflow, Zap,
-  Link2, Split, CheckCircle2, AlertTriangle,
+  Link2, CheckCircle2, AlertTriangle,
   Layers, ChevronsUpDown, Braces, MousePointer2,
   CornerUpLeft, Unlink, History, RotateCcw, Maximize2, Minimize2,
-  Pencil, Save, Play, Wand2, Globe, ArrowRight, Undo2, Redo2, FunctionSquare, Search, ChevronDown, ChevronRight,
+  Pencil, Save, Play, Wand2, Globe, ArrowRight, ArrowUp, ArrowDown, ArrowLeft, Undo2, Redo2, FunctionSquare, Search, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import ExpressionEditor from '../../components/workflow/ExpressionEditor';
+import { ExitConditionsEditor, exitConditionSummary, type ExitLinePatch } from '../../components/workflow/ExitConditionsEditor';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { FilterBuilder } from '../../components/common/FilterBuilder';
 import { DynamicIcon } from '../../components/common/DynamicIcon';
@@ -36,7 +37,7 @@ import './WorkflowStudio.css';
 
 // ─── Types ────────────────────────────────────────────────────
 
-type WorkflowEventType = 'record' | 'notification' | 'approval' | 'expression' | 'transform' | 'script';
+type WorkflowEventType = 'record' | 'notification' | 'approval' | 'expression' | 'script';
 type RouterType = 'user' | 'team' | 'position' | 'role' | 'field';
 type LayoutMode = 'chain' | 'canvas';
 type Port = 'top' | 'right' | 'bottom' | 'left';
@@ -81,6 +82,61 @@ interface BranchCondition {
   targetStageId?: string;
   fromPort?: Port;
   toPort?: Port;
+  /** Exit condition: the approval decision this line follows (one of the Task Approval action values). */
+  action?: string;
+  /** How many assignee votes for `action` are needed to take this line. */
+  votePolicy?: 'all' | 'any' | 'at_least';
+  /** Vote count threshold for votePolicy === 'at_least'. */
+  voteCount?: number;
+}
+
+/** The available approval decisions for a stage (from its Task Approval event's Actions). */
+function stageApprovalActions(stage: RouteStage): { value: string; label: string }[] {
+  const ev = stage.events.find((e) => e.type === 'approval');
+  const acts = Array.isArray(ev?.config?.actions) ? ev.config.actions as { value: string; label: string }[] : [];
+  if (acts.length > 0) return acts;
+  return [
+    { value: 'approve', label: 'Approve' },
+    { value: 'reject', label: 'Reject' },
+  ];
+}
+
+/** value → label map for a stage's approval decisions (canvas/panel display). */
+function stageActionLabels(stage: RouteStage): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const a of stageApprovalActions(stage)) out[a.value] = a.label;
+  return out;
+}
+
+/** Single-row port-direction control (↑ → ↓ ←) for Line / Start-Branch properties. */
+function PortDirectionPicker({ value, onChange, disabled }: { value?: Port; onChange: (p: Port | undefined) => void; disabled?: boolean }) {
+  const opts: { p: Port; I: typeof ArrowUp }[] = [
+    { p: 'top', I: ArrowUp },
+    { p: 'right', I: ArrowRight },
+    { p: 'bottom', I: ArrowDown },
+    { p: 'left', I: ArrowLeft },
+  ];
+  return (
+    <div className="ws-props-group">
+      <label className="ws-props-label">Connection port</label>
+      <div style={{ display: 'flex', gap: 4 }}>
+        {opts.map(({ p, I }) => (
+          <button
+            key={p}
+            type="button"
+            className={`ws-icon-btn${value === p ? ' is-active' : ''}`}
+            title={`Leave from ${p}`}
+            disabled={disabled}
+            style={value === p ? { color: '#3b82f6', background: 'rgba(59,130,246,.12)' } : undefined}
+            onClick={() => onChange(value === p ? undefined : p)}
+          >
+            <I size={13} />
+          </button>
+        ))}
+      </div>
+      <p className="ws-props-hint" style={{ paddingTop: 2 }}>Where the line leaves the node. Default is automatic.</p>
+    </div>
+  );
 }
 
 interface RouteStage {
@@ -116,6 +172,9 @@ interface RoutingProcess {
   /** Explicit routing paths from the Start node. Empty = no start edge. */
   startBranches: BranchCondition[];
   stages: RouteStage[];
+  /** Canvas position of the Start node (persisted with the config). */
+  startX?: number;
+  startY?: number;
 }
 
 type StartMode = 'record' | 'rest' | 'scheduled';
@@ -172,6 +231,8 @@ const CHAIN_SPACING = 180;
 const ROUTE_STUB = 26;
 const CORNER_RADIUS = 10;
 const GRID = 20;
+/** Length of the visible "→ Completed" stub for lines targeting Completed. */
+const TERMINAL_STUB = 120;
 const ALL_PORTS: Port[] = ['top', 'right', 'bottom', 'left'];
 
 const PORT_DIR: Record<Port, Pt> = {
@@ -179,6 +240,18 @@ const PORT_DIR: Record<Port, Pt> = {
   right: { x: 1, y: 0 },
   bottom: { x: 0, y: 1 },
   left: { x: -1, y: 0 },
+};
+
+/** Badge metadata for the approval-event assignee modes shown on stage cards:
+ *  icon + short label, e.g. (Briefcase) Position. */
+const APPROVAL_BADGE_META: Record<string, { label: string; icon: React.ReactNode }> = {
+  user: { label: 'User', icon: <User size={12} /> },
+  team: { label: 'Team', icon: <Users size={12} /> },
+  position: { label: 'Position', icon: <Briefcase size={12} /> },
+  role: { label: 'Role', icon: <Shield size={12} /> },
+  field: { label: 'Field', icon: <Hash size={12} /> },
+  variable: { label: 'Variable', icon: <Braces size={12} /> },
+  expression: { label: 'Expression', icon: <Code2 size={12} /> },
 };
 
 const ROUTER_TYPES: { type: RouterType; label: string; icon: React.ReactNode }[] = [
@@ -194,7 +267,6 @@ const EVENT_DEFS: { type: WorkflowEventType; label: string; desc: string; icon: 
   { type: 'notification', label: 'Notification', desc: 'Bell / Email', icon: <Bell size={13} />, color: '#f59e0b' },
   { type: 'approval', label: 'Task Approval', desc: 'Assign approver', icon: <ClipboardCheck size={13} />, color: '#10b981' },
   { type: 'expression', label: 'Expression', desc: 'JSONata compute', icon: <Code2 size={13} />, color: '#a855f7' },
-  { type: 'transform', label: 'Transform', desc: 'JSONata mapping', icon: <Braces size={13} />, color: '#0ea5e5' },
   { type: 'script', label: 'Script Event', desc: 'BYOC sandbox', icon: <Workflow size={13} />, color: '#8b5cf6' },
 ];
 
@@ -265,7 +337,6 @@ function newEvent(type: WorkflowEventType): WorkflowEvent {
     case 'notification': return { ...base, label: 'Notification', config: { channel: 'bell', recipients: '', subject: '', message: '' } };
     case 'approval': return { ...base, label: 'Task Approval', config: { routerType: 'role', routerValue: '', routerLabel: 'Approver', canApprove: true, canReject: true, timeoutHours: null } };
     case 'expression': return { ...base, label: 'Expression', config: { expression: '', assignToVariable: '' } };
-    case 'transform': return { ...base, label: 'Transform', config: { expression: '', assignToVariable: '' } };
     case 'script': return { ...base, label: 'Script', config: { scriptId: '', scriptName: '', timeoutMs: 5000 } };
   }
 }
@@ -281,6 +352,12 @@ function newStage(name: string, x: number, y: number): RouteStage {
 
 function newBranch(): BranchCondition {
   return { id: genId('br'), label: 'New Branch', expression: '', targetType: 'completed' };
+}
+
+/** True when a line still carries its auto-generated placeholder name. */
+function isPlaceholderLabel(label?: string): boolean {
+  const l = (label || '').trim().toLowerCase();
+  return !l || l === 'new branch' || l === 'new exit';
 }
 
 function newVariable(): WorkflowVariable {
@@ -614,7 +691,11 @@ export const WorkflowStudio: React.FC = () => {
   const [sizePopoverOpen, setSizePopoverOpen] = useState(false);
   const [sizeDraft, setSizeDraft] = useState({ w: '1400', h: '' });
   const [connectFrom, setConnectFrom] = useState<{ stageId: string; port: Port } | null>(null);
+  /** Stage port the in-flight connection is snapped to (hover feedback). */
+  const [connectHover, setConnectHover] = useState<{ stageId: string; port: Port } | null>(null);
   const [connectPos, setConnectPos] = useState<Pt | null>(null);
+  /** Cursor position while dragging a terminal stub's 'to' handle (reconnect preview). */
+  const [terminalDragPos, setTerminalDragPos] = useState<Pt | null>(null);
   const [draggingEdgePort, setDraggingEdgePort] = useState<{ branchId: string; side: 'from' | 'to' } | null>(null);
   const [dragPaletteType, setDragPaletteType] = useState<WorkflowEventType | null>(null);
 
@@ -708,6 +789,7 @@ export const WorkflowStudio: React.FC = () => {
   const [reorderTargetId, setReorderTargetId] = useState<string | null>(null);
   // Generic Workflow Event configuration wizard (schema-driven).
   const [wizardEventId, setWizardEventId] = useState<string | null>(null);
+
   const [tables, setTables] = useState<SailsTableDefinition[]>([]);
 
   useEffect(() => {
@@ -764,26 +846,43 @@ export const WorkflowStudio: React.FC = () => {
 
   // Edges
   const edges = useMemo(() => {
-    type Edge = { id: string; a: Pt; b: Pt; label: string; kind: 'start' | 'branch'; fromPort: Port; toPort: Port; branchId?: string; sourceStageId?: string };
+    type Edge = { id: string; a: Pt; b: Pt; label: string; kind: 'start' | 'branch' | 'terminal'; fromPort: Port; toPort: Port; branchId?: string; sourceStageId?: string };
+    // A completed-target line has no destination stage — render a short stub
+    // from its port ending in a Completed tag, so every exit condition stays
+    // visible (and re-linkable) on the canvas.
+    const terminalEdge = (br: { id: string; fromPort?: Port }, a: Pt, aW: number, aH: number, label: string, sourceStageId?: string): Edge => {
+      const fromPort = br.fromPort || 'right';
+      const s = portPos(a, fromPort, aW, aH);
+      const dir = PORT_DIR[fromPort];
+      return {
+        id: br.id, a, b: { x: s.x + dir.x * TERMINAL_STUB, y: s.y + dir.y * TERMINAL_STUB },
+        label, kind: 'terminal', fromPort, toPort: fromPort, branchId: br.id, sourceStageId,
+      };
+    };
     const out: Edge[] = [];
     process.startBranches.forEach((br) => {
-      if (br.targetType === 'completed') return;
+      if (br.targetType === 'completed') {
+        out.push(terminalEdge(br, startNodePos, START_W, startNodeH, exitConditionSummary(br)));
+        return;
+      }
       const tIdx = process.stages.findIndex((st) => st.id === br.targetStageId);
       if (tIdx === -1) return;
       const tb = stagePos(tIdx, process.stages[tIdx]);
       const dp = defaultPorts(startNodePos, tb);
-      out.push({ id: br.id, a: startNodePos, b: tb, label: br.label, kind: 'start', fromPort: br.fromPort || dp.fromPort, toPort: br.toPort || dp.toPort, branchId: br.id });
-    });
+      out.push({ id: br.id, a: startNodePos, b: tb, label: exitConditionSummary(br), kind: 'start', fromPort: br.fromPort || dp.fromPort, toPort: br.toPort || dp.toPort, branchId: br.id });    });
     process.stages.forEach((s, idx) => {
       const a = stagePos(idx, s);
       s.branches.forEach((br) => {
-        // A branch targeting Completed draws no edge — no next path means the flow completes.
-        if (br.targetType === 'completed') return;
+        // A branch targeting Completed draws a terminal stub — no next path means the flow completes.
+        if (br.targetType === 'completed') {
+          out.push(terminalEdge(br, a, NODE_W, NODE_H, exitConditionSummary(br, stageActionLabels(s)), s.id));
+          return;
+        }
         const tIdx = process.stages.findIndex((st) => st.id === br.targetStageId);
         if (tIdx === -1) return;
         const tb = stagePos(tIdx, process.stages[tIdx]);
         const dp = defaultPorts(a, tb);
-        out.push({ id: br.id, a, b: tb, label: br.label, kind: 'branch', fromPort: br.fromPort || dp.fromPort, toPort: br.toPort || dp.toPort, branchId: br.id, sourceStageId: s.id });
+        out.push({ id: br.id, a, b: tb, label: exitConditionSummary(br, stageActionLabels(s)), kind: 'branch', fromPort: br.fromPort || dp.fromPort, toPort: br.toPort || dp.toPort, branchId: br.id, sourceStageId: s.id });
       });
     });
     return out;
@@ -834,6 +933,11 @@ export const WorkflowStudio: React.FC = () => {
             startBranches: source.startBranches || [],
             stages: source.stages || [],
           });
+          // Restore the Start node's canvas position (legacy configs without
+          // one keep the default — Canvas mode backfills a sensible spot).
+          if (typeof source.startX === 'number' && typeof source.startY === 'number') {
+            setStartPos({ x: source.startX, y: source.startY });
+          }
         } else {
           setProcess((p) => ({ ...p, name: d.name, description: d.description || '', tableId: d.tableId || null } as any));
         }
@@ -1016,6 +1120,30 @@ export const WorkflowStudio: React.FC = () => {
       }),
     }));
   };
+
+  // Canvas-mode entry: stages created in Simple mode (or loaded from legacy
+  // configs saved before canvas positions existed) may lack x/y coordinates —
+  // without them every stage renders stacked at the origin and the canvas
+  // height becomes NaN. Backfill ONLY the missing positions; manually
+  // arranged stages are never overwritten. If no stage was ever laid out,
+  // run the full auto-layout once (also centers the Start node).
+  useEffect(() => {
+    if (layoutMode !== 'canvas') return;
+    const missing = process.stages.filter((s) => typeof s.x !== 'number' || typeof s.y !== 'number');
+    if (missing.length === 0) return;
+    if (missing.length === process.stages.length) {
+      doAutoLayout();
+      return;
+    }
+    setProcess((p) => ({
+      ...p,
+      stages: p.stages.map((s, idx) =>
+        typeof s.x === 'number' && typeof s.y === 'number'
+          ? s
+          : { ...s, x: CHAIN_X, y: START_H + 100 + idx * CHAIN_SPACING }),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutMode]);
   const removeStage = (stageId: string) => {
     setProcess((p) => ({ ...p, stages: p.stages.filter((s) => s.id !== stageId).map((s) => ({ ...s, branches: s.branches.filter((br) => br.targetStageId !== stageId) })) }));
     if (selectedStageId === stageId) { setSelectedStageId(null); setSelectedEventId(null); }
@@ -1235,9 +1363,11 @@ export const WorkflowStudio: React.FC = () => {
   };
 
   // ── Branch ops ──
-  const addBranch = (stageId: string) => {
+  const addBranch = (stageId: string, patch?: Partial<BranchCondition>): string => {
     const br = newBranch(); br.targetType = 'completed';
+    if (patch) Object.assign(br, patch);
     setProcess((p) => ({ ...p, stages: p.stages.map((s) => (s.id === stageId ? { ...s, branches: [...s.branches, br] } : s)) }));
+    return br.id;
   };
   const addBranchWithPorts = (fromStageId: string, fromPort: Port, toStageId: string, toPort: Port) => {
     const br = newBranch(); br.label = 'New branch'; br.targetType = 'stage'; br.targetStageId = toStageId; br.fromPort = fromPort; br.toPort = toPort;
@@ -1569,34 +1699,56 @@ export const WorkflowStudio: React.FC = () => {
   };
 
   const handlePortPointerDown = (e: React.PointerEvent, stageId: string, port: Port) => {
+    if (e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
     const idx = process.stages.findIndex((st) => st.id === stageId);
     if (idx === -1) return;
+    // Capture the pointer so the connect gesture survives releases outside the
+    // canvas and never gets stuck in connect mode.
+    worldRef.current?.setPointerCapture(e.pointerId);
     const a = stagePos(idx, process.stages[idx]);
     setConnectFrom({ stageId, port }); setConnectPos(portPos(a, port));
+    setConnectHover(null);
     setSelectedEdgeId(null); setSelectedStageId(stageId);
   };
 
   const handleStartPortPointerDown = (e: React.PointerEvent, port: Port) => {
+    if (e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
+    worldRef.current?.setPointerCapture(e.pointerId);
     setConnectFrom({ stageId: '__start__', port });
     setConnectPos(portPos(startNodePos, port, START_W, startNodeH));
+    setConnectHover(null);
     setSelectedEdgeId(null); setSelectedStageId(null); setSelectedStart(true);
+  };
+
+  /** Forgiving connect completion: release within ~SNAP px of a stage (or on
+   *  it) connects to that stage's nearest port. Start node stays source-only. */
+  const tryCompleteConnect = (worldPos: Pt): boolean => {
+    if (!connectFrom) return false;
+    const SNAP = 24;
+    for (let i = 0; i < process.stages.length; i++) {
+      const st = process.stages[i];
+      if (st.id === connectFrom.stageId) continue;
+      const b = stagePos(i, st);
+      if (worldPos.x < b.x - SNAP || worldPos.x > b.x + NODE_W + SNAP || worldPos.y < b.y - SNAP || worldPos.y > b.y + NODE_H + SNAP) continue;
+      const toPort = nearestPort(b, worldPos);
+      if (connectFrom.stageId === '__start__') {
+        addStartBranchWithPorts(connectFrom.port, st.id, toPort);
+      } else {
+        addBranchWithPorts(connectFrom.stageId, connectFrom.port, st.id, toPort);
+      }
+      return true;
+    }
+    return false;
   };
 
   const handleNodePointerUp = (e: React.PointerEvent, stageId: string) => {
     if (!connectFrom || connectFrom.stageId === stageId) return;
     e.preventDefault(); e.stopPropagation();
-    const idx = process.stages.findIndex((st) => st.id === stageId);
-    if (idx === -1) return;
-    const b = stagePos(idx, process.stages[idx]);
-    const toPort = nearestPort(b, getWorldPos(e));
-    if (connectFrom.stageId === '__start__') {
-      addStartBranchWithPorts(connectFrom.port, stageId, toPort);
-    } else {
-      addBranchWithPorts(connectFrom.stageId, connectFrom.port, stageId, toPort);
+    if (tryCompleteConnect(getWorldPos(e))) {
+      setConnectFrom(null); setConnectPos(null); setConnectHover(null);
     }
-    setConnectFrom(null); setConnectPos(null);
   };
 
   const handleEdgePortPointerDown = (e: React.PointerEvent, branchId: string, side: 'from' | 'to') => {
@@ -1626,11 +1778,15 @@ export const WorkflowStudio: React.FC = () => {
       const stageSource = process.stages.find((st) => st.branches.some((b) => b.id === branchId));
       if (stageSource) {
         const br = stageSource.branches.find((b) => b.id === branchId);
-        if (!br || br.targetType === 'completed') return;
+        if (!br) return;
         const srcIdx = process.stages.findIndex((st) => st.id === stageSource.id);
         const srcPos = stagePos(srcIdx, stageSource);
         if (side === 'from') {
           updateBranch(stageSource.id, branchId, { fromPort: nearestPort(srcPos, pos) });
+        } else if (br.targetType === 'completed') {
+          // Terminal stub reconnect: the 'to' end follows the cursor until it
+          // is released over a stage (converted in handleWorldPointerUp).
+          setTerminalDragPos(pos);
         } else {
           const tIdx = process.stages.findIndex((st) => st.id === br.targetStageId);
           if (tIdx === -1) return;
@@ -1642,6 +1798,8 @@ export const WorkflowStudio: React.FC = () => {
       if (startBr) {
         if (side === 'from') {
           updateStartBranch(branchId, { fromPort: nearestPort(startNodePos, pos) });
+        } else if (startBr.targetType === 'completed') {
+          setTerminalDragPos(pos);
         } else {
           const tIdx = process.stages.findIndex((st) => st.id === startBr.targetStageId);
           if (tIdx === -1) return;
@@ -1651,7 +1809,27 @@ export const WorkflowStudio: React.FC = () => {
       }
       return;
     }
-    if (connectFrom && worldRef.current) { setConnectPos(getWorldPos(e)); return; }
+    if (connectFrom && worldRef.current) {
+      const pos = getWorldPos(e);
+      // Snap the line to the nearest port of the stage under the cursor
+      // (rect expanded by a tolerance) so the attach point is always visible.
+      const SNAP = 24;
+      let hovered: { stageId: string; stagePos: Pt; port: Port } | null = null;
+      for (let i = 0; i < process.stages.length; i++) {
+        const sp = stagePos(i, process.stages[i]);
+        if (pos.x < sp.x - SNAP || pos.x > sp.x + NODE_W + SNAP || pos.y < sp.y - SNAP || pos.y > sp.y + NODE_H + SNAP) continue;
+        hovered = { stageId: process.stages[i].id, stagePos: sp, port: nearestPort(sp, pos) };
+        break;
+      }
+      if (hovered) {
+        setConnectHover({ stageId: hovered.stageId, port: hovered.port });
+        setConnectPos(portPos(hovered.stagePos, hovered.port));
+      } else {
+        setConnectHover(null);
+        setConnectPos(pos);
+      }
+      return;
+    }
     if (!dragging || !worldRef.current) return;
 
     // Simple (chain) mode: vertical drag reorders the stage sequence live and
@@ -1694,6 +1872,43 @@ export const WorkflowStudio: React.FC = () => {
     if (e && worldRef.current?.hasPointerCapture(e.pointerId)) {
       worldRef.current.releasePointerCapture(e.pointerId);
     }
+    // Forgiving release: a connect completes when the pointer comes up on (or
+    // within a tolerance of) any stage — it no longer needs a pixel-perfect
+    // hit on the port dot.
+    if (e && connectFrom && tryCompleteConnect(getWorldPos(e))) {
+      setConnectFrom(null); setConnectPos(null); setConnectHover(null);
+    }
+    // Terminal stub reconnect: releasing the 'to' handle of a completed-target
+    // line over a stage converts the line into a real edge to that stage.
+    if (e && draggingEdgePort && draggingEdgePort.side === 'to') {
+      const pos = getWorldPos(e);
+      const SNAP = 24;
+      const owner = process.stages.find((st) => st.branches.some((b) => b.id === draggingEdgePort.branchId));
+      if (owner) {
+        const br = owner.branches.find((b) => b.id === draggingEdgePort.branchId);
+        if (br && br.targetType === 'completed') {
+          for (let i = 0; i < process.stages.length; i++) {
+            const st = process.stages[i];
+            if (st.id === owner.id) continue;
+            const b = stagePos(i, st);
+            if (pos.x < b.x - SNAP || pos.x > b.x + NODE_W + SNAP || pos.y < b.y - SNAP || pos.y > b.y + NODE_H + SNAP) continue;
+            updateBranch(owner.id, br.id, { targetType: 'stage', targetStageId: st.id, toPort: nearestPort(b, pos) });
+            break;
+          }
+        }
+      } else {
+        const startBr = process.startBranches.find((b) => b.id === draggingEdgePort.branchId);
+        if (startBr && startBr.targetType === 'completed') {
+          for (let i = 0; i < process.stages.length; i++) {
+            const st = process.stages[i];
+            const b = stagePos(i, st);
+            if (pos.x < b.x - SNAP || pos.x > b.x + NODE_W + SNAP || pos.y < b.y - SNAP || pos.y > b.y + NODE_H + SNAP) continue;
+            updateStartBranch(startBr.id, { targetType: 'stage', targetStageId: st.id, toPort: nearestPort(b, pos) });
+            break;
+          }
+        }
+      }
+    }
     // A gesture just ended — the following click would otherwise retarget to the
     // canvas and clear the selection. Consume it in the canvas onClick handler.
     // Only a real gesture (drag/connect/pan that actually moved) suppresses the
@@ -1702,6 +1917,8 @@ export const WorkflowStudio: React.FC = () => {
       suppressCanvasClickRef.current = true;
     }
     setDragging(null); setDraggingEdgePort(null); setConnectFrom(null); setConnectPos(null);
+    setConnectHover(null);
+    setTerminalDragPos(null);
     chainDragRef.current = null;
     setChainDragY(null);
     setPanning(null);
@@ -1744,7 +1961,9 @@ export const WorkflowStudio: React.FC = () => {
   };
 
   // ── Serialize / Deserialize ──
-  const serializeProcess = (): RoutingProcess => ({ ...process });
+  // The Start node's canvas position lives in local state — fold it into the
+  // persisted config so it survives saves/reloads alongside the stage x/y.
+  const serializeProcess = (): RoutingProcess => ({ ...process, startX: startPos.x, startY: startPos.y });
 
   // ── Undo / Redo engine ──
 
@@ -1883,7 +2102,12 @@ export const WorkflowStudio: React.FC = () => {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       const fresh = await fetch(`/api/workflows?id=${encodeURIComponent(def.id)}`).then((r) => r.json());
-      if (fresh.success) { setDef(fresh.data as WorkflowDef); setProcess((fresh.data.config?.stages ? { ...process, ...fresh.data.config, stages: fresh.data.config.stages, variables: fresh.data.config.variables || [], startEvents: fresh.data.config.startEvents || [], startBranches: fresh.data.config.startBranches || [] } : process)); }
+      if (fresh.success) {
+        setDef(fresh.data as WorkflowDef);
+        const cfg = fresh.data.config;
+        setProcess((cfg?.stages ? { ...process, ...cfg, stages: cfg.stages, variables: cfg.variables || [], startEvents: cfg.startEvents || [], startBranches: cfg.startBranches || [] } : process));
+        if (typeof cfg?.startX === 'number' && typeof cfg?.startY === 'number') setStartPos({ x: cfg.startX, y: cfg.startY });
+      }
       setSavedMsg(`Rolled back to version ${targetVersion}`);
     } catch (e: any) { setSaveError(e?.message || String(e)); }
     finally { setSaving(false); }
@@ -1899,6 +2123,7 @@ export const WorkflowStudio: React.FC = () => {
       setDef(json.data as WorkflowDef);
       const source = json.data.publishedConfig || json.data.config;
       if (source?.stages) setProcess({ ...process, stages: source.stages, variables: (source.variables || []).map((v: any) => ({ ...v, fieldType: normalizeVarType(v.fieldType) })), startEvents: source.startEvents || [], startBranches: source.startBranches || [], triggerOn: source.triggerOn || [], triggerCondition: source.triggerCondition || [], startMode: source.startMode || 'record', restConfig: { path: '', method: 'POST', headers: '', authToken: '', payloadExample: '', ...(source.restConfig || {}) }, scheduleConfig: { preset: 'custom', cron: '', timezone: 'UTC', ...(source.scheduleConfig || {}) } } as any);
+      if (typeof source?.startX === 'number' && typeof source?.startY === 'number') setStartPos({ x: source.startX, y: source.startY });
       setSavedMsg('Draft discarded — reverted to published version');
     } catch (e: any) { setSaveError(e?.message || String(e)); }
     finally { setSaving(false); }
@@ -2153,6 +2378,19 @@ export const WorkflowStudio: React.FC = () => {
             <input className="ws-props-input" type="number" min={0} value={s.timeoutHours ?? ''} placeholder="No timeout" onChange={(e) => updateStage(s.id, { timeoutHours: e.target.value ? Number(e.target.value) : null })} disabled={isReadonly} />
           </div>
 
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <ExitConditionsEditor
+              lines={s.branches}
+              actions={stageApprovalActions(s)}
+              stageNames={Object.fromEntries(process.stages.filter((st) => st.id !== s.id).map((st) => [st.id, st.name]))}
+              disabled={isReadonly}
+              expression={{ variables: varSuggestProps, recordSchemas, drillRoots }}
+              onAdd={(patch) => { const id = addBranch(s.id, patch); setSelectedStageId(s.id); return id; }}
+              onUpdate={(id, patch) => updateBranch(s.id, id, patch)}
+              onRemove={(id) => removeBranch(s.id, id)}
+            />
+          </div>
+
           {renderEventConfigForms(s.events,
             (eventId, patch) => updateEventConfig(s.id, eventId, patch),
             (eventId, label) => updateEventLabel(s.id, eventId, label),
@@ -2273,15 +2511,7 @@ export const WorkflowStudio: React.FC = () => {
                 {process.stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            <div className="ws-props-group ws-props-check-row">
-              <label><input type="checkbox" checked={!!startBr.fromPort} onChange={(e) => updateStartBranch(startBr.id, { fromPort: e.target.checked ? 'bottom' : undefined })} disabled={isReadonly} /> Custom from port</label>
-            </div>
-            {startBr.fromPort && (
-              <div className="ws-props-group">
-                <label className="ws-props-label">From Port</label>
-                <select className="ws-props-input" value={startBr.fromPort} onChange={(e) => updateStartBranch(startBr.id, { fromPort: e.target.value as Port })} disabled={isReadonly}>{ALL_PORTS.map((p) => <option key={p} value={p}>{p}</option>)}</select>
-              </div>
-            )}
+          <PortDirectionPicker value={startBr.fromPort} onChange={(p) => updateStartBranch(startBr.id, { fromPort: p })} disabled={isReadonly} />
             <button className="sails-btn sails-btn--danger sails-btn--sm ws-props-delete-btn" onClick={() => removeStartBranch(startBr.id)}><Unlink size={12} /> Remove Branch</button>
           </div>
         );
@@ -2293,16 +2523,32 @@ export const WorkflowStudio: React.FC = () => {
           </div>
           <div className="ws-props-section-title">Label</div>
           <div className="ws-props-group"><input className="ws-props-input" value={br.label} onChange={(e) => updateBranch(owner.id, br.id, { label: e.target.value })} disabled={isReadonly} /></div>
-          <div className="ws-props-section-title">Condition (JSONata)</div>
+          <div className="ws-props-section-title">Exit Condition</div>
           <div className="ws-props-group">
-            <ConditionRow
-              value={br.expression}
-              emptyText="No condition — always taken"
-              onOpen={() => setCondBuilder({ kind: 'branch', stageId: owner.id, branchId: br.id })}
-              onClear={() => updateBranch(owner.id, br.id, { expression: '' })}
-              disabled={isReadonly}
-            />
-            <p className="ws-props-hint" style={{ paddingTop: 2 }}>Empty condition routes by default; first truthy branch wins.</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {stageApprovalActions(owner).map((a) => {
+                const selected = br.action === a.value;
+                return (
+                  <button
+                    key={a.value}
+                    type="button"
+                    className={`sails-btn sails-btn--ghost sails-btn--sm${selected ? ' is-active' : ''}`}
+                    style={selected ? { borderColor: 'var(--sails-primary,#9dcee0)', color: 'var(--sails-primary,#9dcee0)' } : undefined}
+                    title={selected ? `Bound to ${a.label} — click to unbind` : `Bind to ${a.label}`}
+                    disabled={isReadonly}
+                    onClick={() => updateBranch(owner.id, br.id, selected
+                      ? { action: undefined, votePolicy: undefined, voteCount: undefined }
+                      : { action: a.value, votePolicy: br.votePolicy || 'at_least', voteCount: br.voteCount ?? 1, ...(isPlaceholderLabel(br.label) ? { label: a.label } : {}) })}
+                  >
+                    {a.label}
+                  </button>
+                );
+              })}
+              {stageApprovalActions(owner).length === 0 && (
+                <p className="ws-props-hint" style={{ padding: 0, fontStyle: 'italic' }}>No decisions on this stage.</p>
+              )}
+            </div>
+            <p className="ws-props-hint" style={{ paddingTop: 2 }}>Bind this line to one of the stage's Exit Conditions (the decisions of the Task Approval event). Click to toggle.</p>
           </div>
           <div className="ws-props-group">
             <label className="ws-props-label">Target</label>
@@ -2312,15 +2558,7 @@ export const WorkflowStudio: React.FC = () => {
             </select>
             <p className="ws-props-hint" style={{ padding: '2px 0 0' }}>Targeting <strong>Completed</strong> ends the flow — no outgoing path is drawn.</p>
           </div>
-          <div className="ws-props-group ws-props-check-row">
-            <label><input type="checkbox" checked={!!br.fromPort} onChange={(e) => updateBranch(owner.id, br.id, { fromPort: e.target.checked ? 'bottom' : undefined })} disabled={isReadonly} /> Custom from port</label>
-          </div>
-          {br.fromPort && (
-            <div className="ws-props-group">
-              <label className="ws-props-label">From Port</label>
-              <select className="ws-props-input" value={br.fromPort} onChange={(e) => updateBranch(owner.id, br.id, { fromPort: e.target.value as Port })} disabled={isReadonly}>{ALL_PORTS.map((p) => <option key={p} value={p}>{p}</option>)}</select>
-            </div>
-          )}
+          <PortDirectionPicker value={br.fromPort} onChange={(p) => updateBranch(owner.id, br.id, { fromPort: p })} disabled={isReadonly} />
           <button className="sails-btn sails-btn--danger sails-btn--sm ws-props-delete-btn" onClick={() => removeBranch(owner.id, br.id)}><Unlink size={12} /> Remove Branch</button>
         </div>
       );
@@ -2333,7 +2571,6 @@ export const WorkflowStudio: React.FC = () => {
   const renderStageCard = (s: RouteStage, idx: number) => {
     const pos = stagePos(idx, s);
     const isSel = selectedStageId === s.id;
-    const routerInfo = ROUTER_TYPES.find((r) => r.type === s.routerType);
 
     const isChainDragging = layoutMode === 'chain' && dragging?.id === s.id && chainDragY !== null && chainDragRef.current;
     // Keep the dragged card glued to the pointer: base slot Y + glide offset.
@@ -2364,7 +2601,16 @@ export const WorkflowStudio: React.FC = () => {
           </div>
         </div>
         <div className="ws-stage__badges">
-          {routerInfo && <span className="ws-badge ws-badge--router">{routerInfo.icon}{s.routerLabel || routerInfo.label}</span>}
+          {s.events.filter((e) => e.type === 'approval' && (((e.config as any)?.routerValue) || ((e.config as any)?.routerRefs?.length))).map((ev) => {
+            const cfg = (ev.config || {}) as any;
+            const meta = APPROVAL_BADGE_META[cfg.routerType];
+            if (!meta) return null;
+            return (
+              <span key={ev.id} className="ws-badge ws-badge--router" title={cfg.routerValue || cfg.routerRefs?.join(', ') || ''}>
+                {meta.icon}{meta.label}
+              </span>
+            );
+          })}
           {s.entryCondition && <span className="ws-badge ws-badge--cond"><Filter size={10} /> cond</span>}
           {s.timeoutHours && <span className="ws-badge ws-badge--timeout"><Clock size={10} /> {s.timeoutHours}h</span>}
           {s.events.length > 0 && <span className="ws-badge ws-badge--events">{s.events.length} event{s.events.length > 1 ? 's' : ''}</span>}
@@ -2380,10 +2626,9 @@ export const WorkflowStudio: React.FC = () => {
         <div className="ws-stage__branchbar">
           <Link2 size={11} />
           {s.branches.length === 0 ? <span className="ws-stage__branch-empty">next →</span> : <span className="ws-stage__branch-count">{s.branches.length} branch{s.branches.length > 1 ? 'es' : ''}</span>}
-          <button className="ws-stage__add-branch" title="Add branch" onClick={(e) => { e.stopPropagation(); setSelectedStageId(s.id); addBranch(s.id); }}><Plus size={11} /> Branch</button>
         </div>
         {ALL_PORTS.map((p) => (
-          <span key={p} className={`ws-port ws-port--${p} ${connectFrom ? 'ws-port--active' : ''}`}
+          <span key={p} className={`ws-port ws-port--${p} ${connectFrom ? 'ws-port--active' : ''}${connectHover && connectHover.stageId === s.id && connectHover.port === p ? ' ws-port--hover' : ''}`}
             style={{ position: 'absolute', ...(p === 'top' ? { top: -8, left: '50%' } : p === 'bottom' ? { bottom: -8, left: '50%' } : p === 'left' ? { left: -8, top: '50%' } : { right: -8, top: '50%' }) }}
             onPointerDown={(e) => handlePortPointerDown(e, s.id, p)}
             title={`Connect from ${p}`}
@@ -2420,7 +2665,7 @@ export const WorkflowStudio: React.FC = () => {
         <div className="ws-palette-help">
           <p><MousePointer2 size={11} /> Simple: auto-layout. Canvas: drag free.</p>
           <p><GitBranch size={11} /> Drag a port dot to connect stages.</p>
-          <p><Split size={11} /> Add branches from a stage's + Branch bar.</p>
+          <p><Link2 size={11} /> Add exit lines from a stage's properties → Exit Conditions.</p>
         </div>
       </div>
     </div>
@@ -2436,6 +2681,27 @@ export const WorkflowStudio: React.FC = () => {
         : (process.stages.find((s) => s.id === host.stageId)?.events.find((e) => e.id === wizardEventId) || null)
       : null;
     if (!ev) return null;
+
+    // Task Approval → thread the host stage's Exit Conditions into the wizard.
+    const wizHostStage = host && host.kind === 'stage'
+      ? process.stages.find((s) => s.id === host.stageId) || null
+      : null;
+    const exitConditions = ev.type === 'approval' && wizHostStage
+      ? {
+          lines: wizHostStage.branches,
+          actions: stageApprovalActions(wizHostStage),
+          stageNames: Object.fromEntries(process.stages.filter((st) => st.id !== wizHostStage.id).map((st) => [st.id, st.name])),
+          disabled: isReadonly,
+          expression: { variables: varSuggestProps, recordSchemas, drillRoots },
+          onAdd: (patch: ExitLinePatch) => {
+            const id = addBranch(wizHostStage!.id, patch);
+            setSelectedStageId(wizHostStage!.id);
+            return id;
+          },
+          onUpdate: (id: string, patch: ExitLinePatch) => updateBranch(wizHostStage!.id, id, patch),
+          onRemove: (id: string) => removeBranch(wizHostStage!.id, id),
+        }
+      : undefined;
 
     const createVariable = (name: string, modelTableName: string, fieldType: 'record' | 'collection'): string => {
       const existing = process.variables.find((v) => v.name === name);
@@ -2481,6 +2747,7 @@ export const WorkflowStudio: React.FC = () => {
         recordSchemas={recordSchemas}
         recordSchema={recordSchemas[String(process.tableId || '')]}
         drillRoots={drillRoots}
+        exitConditions={exitConditions}
         onCreateCollectionVariable={createCollectionVariable}
         onCreateRecordVariable={createRecordVariable}
         onBindVariableToEvent={bindVariableToEvent}
@@ -2710,18 +2977,26 @@ export const WorkflowStudio: React.FC = () => {
                 const isSel = selectedEdgeId === e.id;
                 const aW = isStart ? START_W : NODE_W;
                 const aH = isStart ? startNodeH : NODE_H;
+                const isTerminal = e.kind === 'terminal';
                 const handleFrom = portPos(e.a, e.fromPort, aW, aH);
-                const handleTo = portPos(e.b, e.toPort, NODE_W, NODE_H);
+                const handleTo = isTerminal ? e.b : portPos(e.b, e.toPort, NODE_W, NODE_H);
                 // Route around every stage/Start node except this edge's own endpoints.
-                const selfRects: Rect[] = [
+                const selfRects: Rect[] = isTerminal ? [] : [
                   { x: e.a.x, y: e.a.y, w: aW, h: aH },
                   { x: e.b.x, y: e.b.y, w: NODE_W, h: NODE_H },
                 ];
-                const obs = edgeObstacles.filter((r) =>
+                const obs = isTerminal ? [] : edgeObstacles.filter((r) =>
                   !selfRects.some((s) => s.x === r.x && s.y === r.y && s.w === r.w && s.h === r.h));
-                const pts = routeOrthogonal(e.a, e.b, e.fromPort, e.toPort, aW, aH, NODE_W, NODE_H, obs);
-                const pathD = roundedOrthogonalPath(pts);
-                const mid = polylineMidpoint(pts);
+                const pts = isTerminal ? [handleFrom, handleTo] : routeOrthogonal(e.a, e.b, e.fromPort, e.toPort, aW, aH, NODE_W, NODE_H, obs);
+                const pathD = isTerminal ? `M ${handleFrom.x} ${handleFrom.y} L ${handleTo.x} ${handleTo.y}` : roundedOrthogonalPath(pts);
+                const mid = isTerminal
+                  ? { x: (handleFrom.x + handleTo.x) / 2, y: (handleFrom.y + handleTo.y) / 2 }
+                  : polylineMidpoint(pts);
+                // Terminal stub: label sits beside the line so it never hides the
+                // "Completed" tag at the stub end.
+                const labelMid = isTerminal
+                  ? { x: mid.x - PORT_DIR[e.fromPort].y * 24, y: mid.y + PORT_DIR[e.fromPort].x * 24 }
+                  : mid;
                 return (
                   <g key={e.id} className={`ws-edge ${isSel ? 'ws-edge--selected' : ''}`}>
                     {/* Wide invisible hit path — makes the line easy to click.
@@ -2742,9 +3017,10 @@ export const WorkflowStudio: React.FC = () => {
                     <path
                       d={pathD}
                       fill="none"
-                      stroke="#3b82f6"
+                      stroke={isTerminal ? '#94a3b8' : '#3b82f6'}
                       strokeWidth={isSel ? 3 : 2}
-                      markerEnd="url(#ws-arrow-branch)"
+                      strokeDasharray={isTerminal ? '6 4' : undefined}
+                      markerEnd={isTerminal ? undefined : 'url(#ws-arrow-branch)'}
                       className="ws-edge-path--clickable"
                       onPointerDown={(ev) => ev.stopPropagation()}
                       onClick={(ev) => {
@@ -2753,11 +3029,20 @@ export const WorkflowStudio: React.FC = () => {
                         if (e.sourceStageId) setSelectedStageId(e.sourceStageId);
                       }}
                     />
+                    {isTerminal && (
+                      <g pointerEvents="none">
+                        <circle cx={handleTo.x} cy={handleTo.y} r={4} fill="#94a3b8" />
+                        <rect x={handleTo.x - 40} y={handleTo.y - 9} width={80} height={18} rx={9}
+                          fill="rgba(248,250,252,0.95)" stroke="#94a3b8" strokeWidth={1} />
+                        <text x={handleTo.x} y={handleTo.y + 3} textAnchor="middle" fontSize={10}
+                          fill="#64748b" fontWeight={600}>Completed</text>
+                      </g>
+                    )}
                     {e.label && (
                       <g pointerEvents="none">
-                        <rect x={mid.x - 45} y={mid.y - 11} width={90} height={22} rx={11}
-                          fill="rgba(255,255,255,0.95)" stroke="#3b82f6" strokeWidth={1} />
-                        <text x={mid.x} y={mid.y + 4} textAnchor="middle" fontSize={10}
+                        <rect x={labelMid.x - 45} y={labelMid.y - 11} width={90} height={22} rx={11}
+                          fill="rgba(255,255,255,0.95)" stroke={isTerminal ? '#94a3b8' : '#3b82f6'} strokeWidth={1} />
+                        <text x={labelMid.x} y={labelMid.y + 4} textAnchor="middle" fontSize={10}
                           fill="#1e293b" fontWeight={600}>{e.label}</text>
                       </g>
                     )}
@@ -2791,6 +3076,43 @@ export const WorkflowStudio: React.FC = () => {
                     markerEnd="url(#ws-arrow-branch)"
                   />
                 );
+              })()}
+              {terminalDragPos && draggingEdgePort && (() => {
+                // Terminal stub reconnect preview: dashed line from the stub's
+                // port to the cursor while its 'to' handle is dragged.
+                const { branchId } = draggingEdgePort;
+                const owner = process.stages.find((st) => st.branches.some((b) => b.id === branchId));
+                if (owner) {
+                  const br = owner.branches.find((b) => b.id === branchId);
+                  if (!br) return null;
+                  const idx = process.stages.findIndex((st) => st.id === owner.id);
+                  const from = portPos(stagePos(idx, owner), br.fromPort || 'right');
+                  return (
+                    <line
+                      x1={from.x} y1={from.y} x2={terminalDragPos.x} y2={terminalDragPos.y}
+                      className="ws-connect-temp"
+                      stroke="var(--sails-primary,#9dcee0)"
+                      strokeWidth={2}
+                      strokeDasharray="6 4"
+                      markerEnd="url(#ws-arrow-branch)"
+                    />
+                  );
+                }
+                const startBr = process.startBranches.find((b) => b.id === branchId);
+                if (startBr) {
+                  const from = portPos(startNodePos, startBr.fromPort || 'right', START_W, startNodeH);
+                  return (
+                    <line
+                      x1={from.x} y1={from.y} x2={terminalDragPos.x} y2={terminalDragPos.y}
+                      className="ws-connect-temp"
+                      stroke="var(--sails-primary,#9dcee0)"
+                      strokeWidth={2}
+                      strokeDasharray="6 4"
+                      markerEnd="url(#ws-arrow-branch)"
+                    />
+                  );
+                }
+                return null;
               })()}
             </svg>
 

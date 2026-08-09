@@ -23,7 +23,13 @@
     "pg": "^8.11.3",
     "pg-format": "^1.0.4",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "@sails/plugin-sdk": "workspace:*",
+    "@sails/plugin-record-event": "workspace:*",
+    "@sails/plugin-notification": "workspace:*",
+    "@sails/plugin-expression": "workspace:*",
+    "@sails/plugin-script": "workspace:*",
+    "@sails/plugin-approval": "workspace:*"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",

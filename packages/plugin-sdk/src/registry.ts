@@ -1,11 +1,14 @@
-import { WorkflowEventPlugin } from './WorkflowEventPlugin';
-import { WorkflowEventPlugins } from '@/core/engine/WorkflowEventPlugins';
+import type { WorkflowEventPlugin } from './types';
 
 /**
- * WorkflowEventRegistry — compile-time registry of Workflow Event Plug-In
- * types. Mirrors FieldRegistry: built-ins are registered in the constructor,
- * runtime code only ever resolves a type by name. BYOC scripts are NOT
- * registered here — they are configurations of the built-in 'script' type.
+ * WorkflowEventRegistry — singleton registry of Workflow Event Plug-Ins.
+ *
+ * Built-in (first-party) plugins self-register at import time via the
+ * singleton exported by this module.  Third-party plugins are loaded by
+ * core's plugin loader and registered through the same singleton.
+ *
+ * BYOC scripts are NOT registered here — they are configurations of the
+ * built-in 'script' type.
  */
 export class WorkflowEventRegistry {
   private static instance: WorkflowEventRegistry;
@@ -13,7 +16,9 @@ export class WorkflowEventRegistry {
 
   private constructor() {
     this.plugins = new Map();
-    WorkflowEventPlugins.forEach((plugin) => this.register(plugin));
+    // Built-in plugins self-register via side-effect imports in
+    // core's WorkflowEventPlugins module — no auto-import here to
+    // keep the SDK decoupled from core.
   }
 
   public static getInstance(): WorkflowEventRegistry {
@@ -25,7 +30,9 @@ export class WorkflowEventRegistry {
 
   public register(plugin: WorkflowEventPlugin): void {
     if (this.plugins.has(plugin.type)) {
-      console.warn(`Workflow event type '${plugin.type}' is already registered and will be overwritten.`);
+      console.warn(
+        `Workflow event type '${plugin.type}' is already registered and will be overwritten.`,
+      );
     }
     this.plugins.set(plugin.type, plugin);
   }

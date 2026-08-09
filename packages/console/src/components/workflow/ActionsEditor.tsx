@@ -27,9 +27,13 @@ const parse = (text: string): WorkflowAction[] => parseWorkflowActions(text);
 interface ActionsEditorProps {
   value: WorkflowAction[];
   onChange: (actions: WorkflowAction[]) => void;
+  /** Fired when a quick-add chip creates a brand-new action (discrete event). */
+  onActionAdded?: (action: WorkflowAction) => void;
+  /** Fired when the actions textarea loses focus (e.g. leaving the tab). */
+  onBlur?: () => void;
 }
 
-export const ActionsEditor: React.FC<ActionsEditorProps> = ({ value, onChange }) => {
+export const ActionsEditor: React.FC<ActionsEditorProps> = ({ value, onChange, onActionAdded, onBlur }) => {
   const [text, setText] = useState<string>(() => chipsText(value));
   const [openStyleFor, setOpenStyleFor] = useState<string | null>(null);
   const textRef = useRef<HTMLTextAreaElement | null>(null);
@@ -49,7 +53,10 @@ export const ActionsEditor: React.FC<ActionsEditorProps> = ({ value, onChange })
 
   const appendChip = (label: string) => {
     if (actions.some((a) => a.label.toLowerCase() === label.toLowerCase())) return;
-    commit(text ? text + '\n' + label : label);
+    const nextText = text ? text + '\n' + label : label;
+    commit(nextText);
+    const added = parse(nextText).find((a) => a.label.toLowerCase() === label.toLowerCase());
+    if (added) onActionAdded?.(added);
   };
 
   const setStyle = (action: WorkflowAction, color: string, icon: string) => {
@@ -83,6 +90,7 @@ export const ActionsEditor: React.FC<ActionsEditorProps> = ({ value, onChange })
         placeholder={'Approve\nReject\nRequest Changes\nSent Back'}
         value={text}
         onChange={(e) => commit(e.target.value)}
+        onBlur={onBlur}
         onKeyDown={(e) => { if (e.key === 'Tab') { e.preventDefault(); commit(text + '\n'); } }}
       />
       <p className="axe__hint">One action per line. The value (used for routing) is created from the label automatically.</p>

@@ -6,15 +6,17 @@
  * and is written through the shared pg pool with the tenant's search_path.
  *
  * Version pinning: startInstance() freezes `version_id` to the definition's
- * current published WorkflowVersion. advanceInstance() reads the DAG from
+ * current published WorkflowVersion. proceedInstance() reads the DAG from
  * that snapshot — never from the live draft — so activating a new version
  * never alters in-flight instances.
  */
 import { pool } from '@/lib/knex';
 import { db } from '@/lib/db';
-import { workflowEventRegistry } from '@/core/registry/WorkflowEventRegistry';
-import { WorkflowEventContext } from '@/core/registry/WorkflowEventPlugin';
+import { workflowEventRegistry } from '@sails/plugin-sdk';
+import type { WorkflowEventContext } from '@sails/plugin-sdk';
 import { evaluateJsonata, genId, logWfAction, quoteIdent, resolveTenantSchema } from './WorkflowHelpers';
+import { evaluateExitConditions, majorityAction, type VoteLookup, type VotePolicyBranch } from './exitConditions';
+import '@/core/plugins/init'; // side-effect: registers event plugins + starts the scheduler (bare import — never tree-shaken)
 
 export interface WorkflowInstanceInput {
   defId: string;
@@ -48,9 +50,13 @@ async function ensureRuntimeTables(schema: string): Promise<void> {
       current_step_ids jsonb NOT NULL DEFAULT '[]',
       vars          jsonb NOT NULL DEFAULT '{}',
       created_by    text,
+      trigger       text,
+      record_id     text,
       created_at    timestamptz NOT NULL DEFAULT now(),
       updated_at    timestamptz NOT NULL DEFAULT now()
     );
+    ALTER TABLE ${wf}.wf_instance ADD COLUMN IF NOT EXISTS trigger text;
+    ALTER TABLE ${wf}.wf_instance ADD COLUMN IF NOT EXISTS record_id text;
     CREATE TABLE IF NOT EXISTS ${wf}.wf_task (
       id            text PRIMARY KEY,
       instance_id   text NOT NULL,
@@ -59,6 +65,7 @@ async function ensureRuntimeTables(schema: string): Promise<void> {
       assignee_type text,
       assignee_id   text,
       assignee_users jsonb,
+      decisions     jsonb,
       actions       jsonb,
       due_at        timestamptz,
       decided_by    text,
@@ -67,6 +74,7 @@ async function ensureRuntimeTables(schema: string): Promise<void> {
       created_at    timestamptz NOT NULL DEFAULT now()
     );
     ALTER TABLE ${wf}.wf_task ADD COLUMN IF NOT EXISTS assignee_users jsonb;
+    ALTER TABLE ${wf}.wf_task ADD COLUMN IF NOT EXISTS decisions jsonb;
     ALTER TABLE ${wf}.wf_task ADD COLUMN IF NOT EXISTS actions jsonb;
     CREATE TABLE IF NOT EXISTS ${wf}.wf_action_log (
       id          text PRIMARY KEY,
@@ -93,6 +101,42 @@ async function ensureRuntimeTables(schema: string): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS wf_notification_user_idx ON ${wf}.wf_notification (user_id, status);
     CREATE INDEX IF NOT EXISTS wf_notification_instance_idx ON ${wf}.wf_notification (instance_id);
+    CREATE TABLE IF NOT EXISTS ${wf}.wf_execution_log (
+      id          text PRIMARY KEY,
+      instance_id text NOT NULL UNIQUE,
+      def_id      text,
+      version_id  text,
+      def_name    text,
+      status      text NOT NULL,
+      started_at  timestamptz NOT NULL,
+      ended_at    timestamptz NOT NULL,
+      duration_ms bigint NOT NULL,
+      error       text,
+      stage_id    text,
+      event_type  text,
+      trigger     text,
+      actor_id    text,
+      record_id   text,
+      events      jsonb,
+      created_at  timestamptz NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS wf_execution_log_def_idx ON ${wf}.wf_execution_log (def_id, status);
+    CREATE INDEX IF NOT EXISTS wf_execution_log_status_idx ON ${wf}.wf_execution_log (status, ended_at DESC);
+    DO $$ BEGIN
+      ALTER TABLE ${wf}.wf_execution_log ADD CONSTRAINT wf_execution_log_instance_fk
+        FOREIGN KEY (instance_id) REFERENCES ${wf}.wf_instance (id) ON DELETE CASCADE NOT VALID;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+    DO $$ BEGIN
+      ALTER TABLE ${wf}.wf_task ADD CONSTRAINT wf_task_instance_fk
+        FOREIGN KEY (instance_id) REFERENCES ${wf}.wf_instance (id) ON DELETE CASCADE NOT VALID;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+    DO $$ BEGIN
+      ALTER TABLE ${wf}.wf_action_log ADD CONSTRAINT wf_action_log_instance_fk
+        FOREIGN KEY (instance_id) REFERENCES ${wf}.wf_instance (id) ON DELETE CASCADE NOT VALID;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
   `);
 }
 
@@ -104,6 +148,8 @@ async function ensureRuntimeTables(schema: string): Promise<void> {
  *
  * `tableName` is threaded from the caller when known (avoids a redundant
  * table lookup); when omitted it falls back to resolving dag.tableId.
+ * `onEvent` (when provided) receives a per-event execution summary used by
+ * the Workflow Execution Log.
  */
 export async function fireStageEvents(
   tenantId: string,
@@ -116,6 +162,7 @@ export async function fireStageEvents(
   vars: Record<string, any>,
   recordInfo: RecordTriggerInfo | null = null,
   tableName: string | null | undefined = undefined,
+  onEvent?: (summary: WorkflowEventExec) => void,
 ): Promise<Record<string, any>> {
   const stage = stageId
     ? (dag?.stages || []).find((s: any) => s.id === stageId)
@@ -146,6 +193,8 @@ export async function fireStageEvents(
     } catch {
       continue;
     }
+    const t0 = Date.now();
+    const summary: WorkflowEventExec = { stageId: stage.id, type: event.type, timing, success: true, durationMs: 0 };
     const ctx: WorkflowEventContext = {
       tenantId,
       instanceId,
@@ -183,14 +232,21 @@ export async function fireStageEvents(
         }
       }
       if (!result.success) {
+        summary.success = false;
+        summary.error = result.error || 'unknown error';
         await logEventFailure(event, result.error || 'unknown error');
         if (timing === 'stage_enter') {
           throw new Error(`Workflow event '${event.type}' failed: ${result.error}`);
         }
       }
     } catch (error: any) {
+      summary.success = false;
+      summary.error = error?.message || String(error);
       await logEventFailure(event, error?.message || String(error));
       if (timing === 'stage_enter') throw error;
+    } finally {
+      summary.durationMs = Date.now() - t0;
+      onEvent?.(summary);
     }
   }
 
@@ -199,6 +255,74 @@ export async function fireStageEvents(
     [JSON.stringify(currentVars), instanceId],
   );
   return currentVars;
+}
+
+/**
+ * Per-event execution summary captured during fireStageEvents for the
+ * Workflow Execution Log.
+ */
+export interface WorkflowEventExec {
+  stageId: string;
+  type: string;
+  timing: 'stage_enter' | 'stage_exit';
+  success: boolean;
+  error?: string;
+  durationMs: number;
+}
+
+/**
+ * Write a terminal entry to the tenant's wf_execution_log — ONE row per
+ * workflow instance, inserted asynchronously (fire-and-forget) AFTER the
+ * instance reaches its terminal state. Start time is read back from
+ * wf_instance.created_at, so there is never a start-row-then-update pattern:
+ * the log row is created once, complete with start/end/duration/status/error.
+ */
+export async function writeExecutionLog(
+  tenantSchema: string,
+  instanceId: string,
+  input: {
+    status: 'success' | 'failed';
+    error?: string | null;
+    stageId?: string | null;
+    eventType?: string | null;
+    events?: WorkflowEventExec[];
+  },
+): Promise<void> {
+  const s = quoteIdent(tenantSchema);
+  const res = await pool.query(
+    `SELECT id, def_id, version_id, created_at, created_by, trigger, record_id
+     FROM ${s}.wf_instance WHERE id = $1`,
+    [instanceId],
+  );
+  const inst = res.rows[0];
+  if (!inst) return;
+
+  let defName: string | null = null;
+  if (inst.def_id) {
+    const def = await db.workflowDefinition
+      .findUnique({ where: { id: inst.def_id }, select: { name: true } })
+      .catch(() => null);
+    defName = def?.name || null;
+  }
+
+  const startedAt = new Date(inst.created_at as string);
+  const endedAt = new Date();
+  const durationMs = Math.max(0, endedAt.getTime() - startedAt.getTime());
+
+  await pool.query(
+    `INSERT INTO ${s}.wf_execution_log
+       (id, instance_id, def_id, version_id, def_name, status, started_at, ended_at, duration_ms,
+        error, stage_id, event_type, trigger, actor_id, record_id, events)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+     ON CONFLICT (instance_id) DO NOTHING`,
+    [
+      genId('wfx'), instanceId, inst.def_id, inst.version_id, defName, input.status,
+      startedAt, endedAt, String(durationMs),
+      input.error ?? null, input.stageId ?? null, input.eventType ?? null,
+      inst.trigger ?? null, inst.created_by ?? null, inst.record_id ?? null,
+      input.events && input.events.length > 0 ? JSON.stringify(input.events) : null,
+    ],
+  );
 }
 
 /**
@@ -241,9 +365,10 @@ export async function startInstance(
   const vars = { ...(input.payload || {}) };
 
   await pool.query(
-    `INSERT INTO ${wf}.wf_instance (id, def_id, version_id, state, current_step_ids, vars, created_by)
-     VALUES ($1, $2, $3, 'running', '[]', $4, $5)`,
-    [instanceId, def.id, version?.id || null, JSON.stringify(vars), actorId || null],
+    `INSERT INTO ${wf}.wf_instance (id, def_id, version_id, state, current_step_ids, vars, created_by, trigger, record_id)
+     VALUES ($1, $2, $3, 'running', '[]', $4, $5, $6, $7)`,
+    [instanceId, def.id, version?.id || null, JSON.stringify(vars), actorId || null,
+      recordInfo?.operation || 'manual', recordInfo?.recordId || null],
   );
 
   await logWfAction(schema, instanceId, null, 'started', actorId || null, {
@@ -253,31 +378,58 @@ export async function startInstance(
 
   // Fire stage_enter events of the first stage (Workflow Event Plug-Ins).
   const dag = version?.config || def.publishedConfig || def.config || null;
+  const eventLog: WorkflowEventExec[] = [];
   try {
     await fireStageEvents(
       tenantId, schema, instanceId, dag, null, 'stage_enter', actorId || null, vars, recordInfo, def.table?.tableName || null,
+      (summary) => eventLog.push(summary),
     );
   } catch (error: any) {
     await pool.query(
       `UPDATE ${wf}.wf_instance SET state = 'failed', updated_at = now() WHERE id = $1`,
       [instanceId],
     );
+    const failed = eventLog.find((e) => !e.success);
+    void writeExecutionLog(schema, instanceId, {
+      status: 'failed',
+      error: error?.message || String(error),
+      stageId: failed?.stageId || null,
+      eventType: failed?.type || null,
+      events: eventLog,
+    }).catch(() => undefined);
     throw error;
   }
+
+  // Kick the progression loop: if the first stage has no pending tasks (no
+  // approval events), the instance completes immediately — otherwise it waits
+  // for the scheduler / assignee decisions.
+  const proceed = await proceedInstance(tenantId, instanceId).catch((error: any) => {
+    console.error(`[WF-ENGINE] post-start progression failed for ${instanceId}:`, error?.message || error);
+    return null;
+  });
 
   return {
     instanceId,
     versionId: version?.id || null,
     defName: def.name,
-    state: 'running',
+    state: proceed?.state || 'running',
   };
 }
 
 /**
- * Advance an instance using its pinned version snapshot. The DAG (stages,
- * branches, events, variables) is read from the frozen WorkflowVersion row.
+ * Proceed a running workflow instance as far as it can go right now.
+ *
+ * Drives the DAG traversal: records an optional assignee decision, checks the
+ * current stage's pending tasks and, when none remain, routes through the
+ * stage's branches to the next stage (firing stage_exit / stage_enter events)
+ * or completes the instance. Stage transitions use compare-and-set updates on
+ * wf_instance so concurrent decide/scheduler calls can never double-fire
+ * stage events.
+ *
+ * Failures mark the instance 'failed' and are recorded in wf_execution_log
+ * (async, fire-and-forget) before the error is re-thrown to the caller.
  */
-export async function advanceInstance(
+export async function proceedInstance(
   tenantId: string,
   instanceId: string,
   decision?: { stepId: string; outcome: string; actorId?: string; comment?: string },
@@ -287,69 +439,320 @@ export async function advanceInstance(
 
   const wf = quoteIdent(schema);
   const res = await pool.query(
-    `SELECT id, def_id, version_id, state, vars FROM ${wf}.wf_instance WHERE id = $1`,
+    `SELECT id, def_id, version_id, state, vars, current_step_ids FROM ${wf}.wf_instance WHERE id = $1`,
     [instanceId],
   );
   const instance = res.rows[0];
   if (!instance) throw new Error('Instance not found');
-  if (instance.state === 'completed') return { state: instance.state };
+  if (instance.state === 'completed' || instance.state === 'failed') return { state: instance.state };
 
-  // Frozen DAG from the version snapshot (or live config fallback for NULL).
+  const eventLog: WorkflowEventExec[] = [];
+  try {
+    return await proceedCore(tenantId, schema, wf, instance, decision, eventLog);
+  } catch (error: any) {
+    // Only mark failed while the instance is still running — a concurrent
+    // flow may have completed it already (then no failed log is written).
+    const mark = await pool
+      .query(
+        `UPDATE ${wf}.wf_instance SET state = 'failed', updated_at = now() WHERE id = $1 AND state = 'running'`,
+        [instanceId],
+      )
+      .catch(() => ({ rowCount: 0 }));
+    if ((mark.rowCount || 0) > 0) {
+      const failed = eventLog.find((e) => !e.success);
+      void writeExecutionLog(schema, instanceId, {
+        status: 'failed',
+        error: error?.message || String(error),
+        stageId: failed?.stageId || null,
+        eventType: failed?.type || null,
+        events: eventLog,
+      }).catch(() => undefined);
+    }
+    throw error;
+  }
+}
+
+/** Backwards-compatible alias — the decide flow and scheduler use proceedInstance. */
+export const advanceInstance = proceedInstance;
+
+/** Max stage transitions per proceedInstance call (guards cycles / bad configs). */
+const MAX_STAGE_HOPS = 20;
+
+/** Load the pinned-version DAG for an instance (or live config fallback for NULL). */
+async function loadDag(instance: any): Promise<any> {
   let dag: any = null;
   if (instance.version_id) {
-    const version = await db.workflowVersion.findUnique({
-      where: { id: instance.version_id },
-    });
+    const version = await db.workflowVersion.findUnique({ where: { id: instance.version_id } });
     dag = version?.config || null;
   }
   if (!dag) {
     const def = await db.workflowDefinition.findUnique({ where: { id: instance.def_id } });
     dag = def?.publishedConfig || def?.config || null;
   }
+  return dag;
+}
+
+/**
+ * Core progression loop for proceedInstance. The current stage is the last
+ * entry of wf_instance.current_step_ids; an empty list means the FIRST stage
+ * (its stage_enter events were already fired by startInstance).
+ */
+async function proceedCore(
+  tenantId: string,
+  schema: string,
+  wf: string,
+  instance: any,
+  decision?: { stepId: string; outcome: string; actorId?: string; comment?: string },
+  eventLog: WorkflowEventExec[] = [],
+): Promise<{ state: string }> {
+  const instanceId = instance.id;
+  const dag = await loadDag(instance);
   if (!dag) throw new Error('No workflow configuration available for this instance');
 
-  if (decision) {
-    await pool.query(
-      `UPDATE ${wf}.wf_task SET status = $1, decided_by = $2, decision = $3, decided_at = now()
-       WHERE instance_id = $4 AND step_id = $5 AND status = 'pending'`,
-      [decision.outcome, decision.actorId || null, JSON.stringify({ comment: decision.comment || null }), instanceId, decision.stepId],
+  const stages: any[] = dag?.stages || [];
+  let currentIds: string[] = Array.isArray(instance.current_step_ids) ? instance.current_step_ids : [];
+  let stageId = currentIds.length ? currentIds[currentIds.length - 1] : stages[0]?.id || null;
+  let vars: Record<string, any> = { ...(instance.vars || {}) };
+
+  for (let hops = 0; hops < MAX_STAGE_HOPS; hops++) {
+    const stage = stages.find((st: any) => st.id === stageId) || null;
+    if (!stage) throw new Error(`Stage '${stageId}' not found in the workflow configuration`);
+
+    // 1. Record an assignee's decision for the current stage (if provided).
+    if (decision && decision.stepId === stageId) {
+      const handled = await recordVote(schema, wf, instance, dag, stage, decision);
+      if (!handled) return { state: 'running' }; // resolved concurrently elsewhere
+    }
+
+    // 2. Pending tasks on the current stage → wait for humans (or the
+    //    scheduler's timeout handling, when that lands).
+    const pending = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM ${wf}.wf_task WHERE instance_id = $1 AND step_id = $2 AND status = 'pending'`,
+      [instanceId, stageId],
     );
-    await logWfAction(schema, instanceId, decision.stepId, `decided:${decision.outcome}`, decision.actorId || null, {
+    if ((pending.rows[0]?.n || 0) > 0) return { state: 'running' };
+
+    // 3. No pending tasks → resolve the stage's exit and route onward.
+    const exit = await resolveStageExit(schema, wf, instance, dag, stage);
+    if (!exit) return { state: 'running' }; // no branch matched — scheduler retries
+
+    if (exit.type === 'completed') {
+      const upd = await pool.query(
+        `UPDATE ${wf}.wf_instance SET state = 'completed', updated_at = now() WHERE id = $1 AND state = 'running'`,
+        [instanceId],
+      );
+      if ((upd.rowCount || 0) === 0) {
+        const reread = await pool.query(`SELECT state FROM ${wf}.wf_instance WHERE id = $1`, [instanceId]);
+        return { state: reread.rows[0]?.state || 'running' };
+      }
+      vars = await fireStageExit(tenantId, schema, instanceId, dag, stage, vars, eventLog);
+      await logWfAction(schema, instanceId, null, 'completed', null, {});
+      void writeExecutionLog(schema, instanceId, { status: 'success', events: eventLog }).catch(() => undefined);
+      return { state: 'completed' };
+    }
+
+    // 4. Route to the next stage — CAS-claim the transition, then fire events.
+    const nextStageId = exit.stageId as string;
+    const nextIds = [...currentIds, nextStageId];
+    const claimed = await pool.query(
+      `UPDATE ${wf}.wf_instance SET current_step_ids = $1::jsonb, updated_at = now()
+       WHERE id = $2 AND state = 'running' AND current_step_ids = $3::jsonb`,
+      [JSON.stringify(nextIds), instanceId, JSON.stringify(currentIds)],
+    );
+    if ((claimed.rowCount || 0) === 0) {
+      const reread = await pool.query(`SELECT state FROM ${wf}.wf_instance WHERE id = $1`, [instanceId]);
+      return { state: reread.rows[0]?.state || 'running' };
+    }
+    vars = await fireStageExit(tenantId, schema, instanceId, dag, stage, vars, eventLog);
+    const nextStage = stages.find((st: any) => st.id === nextStageId);
+    if (nextStage?.events?.length) {
+      vars = await fireStageEvents(
+        tenantId, schema, instanceId, dag, nextStageId, 'stage_enter', null, vars,
+        null, undefined, (summary) => eventLog.push(summary),
+      );
+    }
+    await logWfAction(schema, instanceId, nextStageId, `entered:${nextStageId}`, null, {
+      fromStage: stageId,
+    });
+    currentIds = nextIds;
+    stageId = nextStageId;
+  }
+
+  throw new Error(`Workflow stage transition loop detected after ${MAX_STAGE_HOPS} hops`);
+}
+
+/** Fire a stage's stage_exit events (tolerated failures), returning merged vars. */
+async function fireStageExit(
+  tenantId: string,
+  schema: string,
+  instanceId: string,
+  dag: any,
+  stage: any,
+  vars: Record<string, any>,
+  eventLog: WorkflowEventExec[],
+): Promise<Record<string, any>> {
+  if (!stage?.events?.length) return vars;
+  return fireStageEvents(
+    tenantId, schema, instanceId, dag, stage.id, 'stage_exit', null, vars,
+    null, undefined, (summary) => eventLog.push(summary),
+  );
+}
+
+/**
+ * Determine where the instance routes after a stage with no pending tasks:
+ * the branch a resolved task pinned via matchedBranch, else the first branch
+ * whose vote policy + JSONata gate pass (fallback branches have no action and
+ * an empty expression, so they always match last). Returns null while the
+ * stage stays open.
+ */
+async function resolveStageExit(
+  schema: string,
+  wf: string,
+  instance: any,
+  dag: any,
+  stage: any,
+): Promise<{ type: 'stage'; stageId: string } | { type: 'completed' } | null> {
+  const branches: VotePolicyBranch[] = (stage?.branches || []).map((b: any) => ({
+    id: b.id,
+    action: b.action,
+    votePolicy: b.votePolicy,
+    voteCount: b.voteCount,
+    expression: b.expression,
+  }));
+  // A stage with no outgoing branches is an implicit end.
+  if (branches.length === 0) return { type: 'completed' };
+
+  const taskRes = await pool.query(
+    `SELECT decisions, decision, assignee_users FROM ${wf}.wf_task WHERE instance_id = $1 AND step_id = $2`,
+    [instance.id, stage.id],
+  );
+  const tasks = taskRes.rows as { decisions?: any; decision?: any; assignee_users?: string[] | null }[];
+  const votes: VoteLookup = {};
+  let assigneeCount = 0;
+  let matchedBranchId: string | null = null;
+  for (const t of tasks) {
+    if (t.decisions && typeof t.decisions === 'object') Object.assign(votes, t.decisions);
+    if (Array.isArray(t.assignee_users)) assigneeCount += t.assignee_users.length;
+    if (!matchedBranchId && t.decision?.matchedBranch) matchedBranchId = t.decision.matchedBranch;
+  }
+
+  // A task that already resolved via exit conditions pins the exit branch.
+  const pinned = branches.find((b) => b.id === matchedBranchId) || null;
+  if (pinned) return exitTargetOf(pinned);
+
+  // Otherwise evaluate the branches in order.
+  const match = await evaluateExitConditions(
+    votes,
+    branches,
+    { variables: instance.vars || {}, stageId: stage.id, assigneeCount },
+    { evaluate: (expr, ctx) => evaluateJsonata(expr, ctx) },
+  );
+  if (!match) return null;
+  return exitTargetOf(match.branch);
+}
+
+/** Convert a branch to its routing target. */
+function exitTargetOf(branch: VotePolicyBranch): { type: 'stage'; stageId: string } | { type: 'completed' } {
+  const b = branch as any;
+  if (b.targetType === 'stage' && b.targetStageId) return { type: 'stage', stageId: b.targetStageId };
+  return { type: 'completed' };
+}
+
+/**
+ * Record an assignee's vote on the current stage's pending task and resolve
+ * the task when the stage's exit conditions are met. Returns false when the
+ * task was resolved concurrently — the other flow continues progression.
+ */
+async function recordVote(
+  schema: string,
+  wf: string,
+  instance: any,
+  dag: any,
+  stage: any,
+  decision: { stepId: string; outcome: string; actorId?: string; comment?: string },
+): Promise<boolean> {
+  const instanceId = instance.id;
+  const taskRes = await pool.query(
+    `SELECT id, assignee_users FROM ${wf}.wf_task WHERE instance_id = $1 AND step_id = $2 AND status = 'pending'`,
+    [instanceId, decision.stepId],
+  );
+  const task = taskRes.rows[0] as { id: string; assignee_users?: string[] | null } | undefined;
+  if (!task) return true; // already decided or no task — nothing to record
+
+  const assignees: string[] = Array.isArray(task.assignee_users) ? task.assignee_users : [];
+  const actorId = decision.actorId || '';
+
+  if (!actorId || !assignees.includes(actorId)) {
+    await logWfAction(schema, instanceId, decision.stepId, 'vote:ignored', actorId || null, {
+      reason: assignees.length === 0 ? 'task has no assignees' : 'actor is not an assignee',
+      outcome: decision.outcome,
+    });
+    return true;
+  }
+
+  // Atomic merge: concurrent votes never overwrite each other; a re-vote by
+  // the same actor replaces their entry.
+  const vote: VoteLookup = {
+    [actorId]: { action: decision.outcome, comment: decision.comment || null, at: new Date().toISOString() },
+  };
+  const upd = await pool.query(
+    `UPDATE ${wf}.wf_task SET decisions = COALESCE(decisions, '{}'::jsonb) || $1::jsonb
+     WHERE id = $2 AND status = 'pending'`,
+    [JSON.stringify(vote), task.id],
+  );
+  if ((upd.rowCount || 0) === 0) return false; // resolved concurrently
+
+  const votesRes = await pool.query(`SELECT decisions FROM ${wf}.wf_task WHERE id = $1`, [task.id]);
+  const votes: VoteLookup = votesRes.rows[0]?.decisions || {};
+
+  const branches: VotePolicyBranch[] = (stage?.branches || []).map((b: any) => ({
+    id: b.id,
+    action: b.action,
+    votePolicy: b.votePolicy,
+    voteCount: b.voteCount,
+    expression: b.expression,
+  }));
+  const match = await evaluateExitConditions(
+    votes,
+    branches,
+    { variables: instance.vars || {}, stageId: decision.stepId, assigneeCount: assignees.length },
+    { evaluate: (expr, ctx) => evaluateJsonata(expr, ctx) },
+  );
+
+  if (match) {
+    const resolved = match.action || majorityAction(votes) || 'approved';
+    const upd2 = await pool.query(
+      `UPDATE ${wf}.wf_task SET decisions = $1, status = $2, decided_by = $3, decision = $4, decided_at = now()
+       WHERE id = $5 AND status = 'pending'`,
+      [
+        JSON.stringify(votes),
+        resolved,
+        actorId,
+        JSON.stringify({ outcome: resolved, matchedBranch: match.branch.id, votes, comment: decision.comment || null }),
+        task.id,
+      ],
+    );
+    if ((upd2.rowCount || 0) === 0) return false; // resolved concurrently
+    await logWfAction(schema, instanceId, decision.stepId, `decided:${resolved}`, actorId, {
+      comment: decision.comment || null,
+      matchedBranch: match.branch.id,
+    });
+  } else {
+    await logWfAction(schema, instanceId, decision.stepId, `vote:${decision.outcome}`, actorId, {
       comment: decision.comment || null,
     });
   }
-
-  // Placeholder progression: mark completed when every task is decided.
-  const pending = await pool.query(
-    `SELECT COUNT(*)::int AS n FROM ${wf}.wf_task WHERE instance_id = $1 AND status = 'pending'`,
-    [instanceId],
-  );
-  const remaining = pending.rows[0]?.n || 0;
-  if (remaining === 0) {
-    // Fire stage_exit events for the stage whose tasks were just decided
-    // (Workflow Event Plug-Ins). Failures are logged and tolerated.
-    if (decision?.stepId) {
-      await fireStageEvents(tenantId, schema, instanceId, dag, decision.stepId, 'stage_exit', decision.actorId || null, instance.vars || {});
-    }
-    await pool.query(
-      `UPDATE ${wf}.wf_instance SET state = 'completed', updated_at = now() WHERE id = $1`,
-      [instanceId],
-    );
-    await logWfAction(schema, instanceId, null, 'completed', null, {});
-    return { state: 'completed' };
-  }
-
-  return { state: 'running' };
+  return true;
 }
 
-/** List running (non-completed) instances for a definition across the tenant. */
+/** List running instances for a definition across the tenant (failed/completed excluded). */
 export async function countInstancesForDefinition(tenantId: string, defId: string): Promise<number> {
   const schema = await resolveTenantSchema(tenantId);
   if (!schema) return 0;
   try {
     const wf = quoteIdent(schema);
     const res = await pool.query(
-      `SELECT COUNT(*)::int AS n FROM ${wf}.wf_instance WHERE def_id = $1 AND state <> 'completed'`,
+      `SELECT COUNT(*)::int AS n FROM ${wf}.wf_instance WHERE def_id = $1 AND state = 'running'`,
       [defId],
     );
     return res.rows[0]?.n || 0;
@@ -358,5 +761,6 @@ export async function countInstancesForDefinition(tenantId: string, defId: strin
   }
 }
 
-export const WorkflowEngine = { startInstance, advanceInstance, countInstancesForDefinition, fireStageEvents };
+export const WorkflowEngine = { startInstance, proceedInstance, advanceInstance, countInstancesForDefinition, fireStageEvents, writeExecutionLog };
+export { ensureRuntimeTables };
 export default WorkflowEngine;
