@@ -108,6 +108,7 @@
   box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
   padding: 4px;
   z-index: 9999 !important;
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -143,7 +144,8 @@
 }
 
 .sails-custom-select__options-list {
-  max-height: 200px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
 }
 

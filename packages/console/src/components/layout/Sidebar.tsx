@@ -81,6 +81,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
     if (closeTimeoutRef.current[id]) clearTimeout(closeTimeoutRef.current[id]);
   };
 
+  // Keep flyout submenus inside the viewport: the flyout is anchored to the
+  // item's screen Y, so clamp it after it renders (and again on resize) so it
+  // can never extend past the browser bottom edge.
+  React.useEffect(() => {
+    const clampFlyouts = () => {
+      const flyouts = sidebarRef.current?.querySelectorAll<HTMLElement>('.sails-sidebar__submenu--flyout');
+      if (!flyouts) return;
+      flyouts.forEach((el) => {
+        if (!el.style.top) return;
+        const top = parseFloat(el.style.top);
+        if (isNaN(top)) return;
+        const maxTop = window.innerHeight - el.offsetHeight - 8;
+        if (top > maxTop) el.style.top = `${Math.max(8, maxTop)}px`;
+      });
+    };
+    clampFlyouts();
+    window.addEventListener('resize', clampFlyouts);
+    return () => window.removeEventListener('resize', clampFlyouts);
+  }, [openMenus]);
+
   // Auto-expand menu items if they contain the current path
   React.useEffect(() => {
     const currentPath = location.pathname;

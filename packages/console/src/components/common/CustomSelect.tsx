@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
+import { useDropdownPosition } from '../../hooks/useDropdownPosition';
 import './CustomSelect.css';
 
 export interface SelectOption {
@@ -36,11 +37,25 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [computedDropUp, setComputedDropUp] = useState(false);
-  const [dropPos, setDropPos] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Viewport-aware positioning: measures the panel content, picks the side
+  // that fits (down first, up when the space below is too small), clamps to
+  // the available space exactly, and keeps the direction stable while open.
+  const { position: dropPos, dropUp: computedDropUp } = useDropdownPosition({
+    isOpen,
+    triggerRef: containerRef,
+    panelRef: dropdownRef,
+    direction,
+    gap: 8,
+    deps: [searchQuery],
+    onClose: () => {
+      setIsOpen(false);
+      setSearchQuery('');
+    },
+  });
 
   const isValueMatch = (val1: string | number, val2: string | number) => {
     if (val1 === undefined || val1 === null || val2 === undefined || val2 === null) return false;
@@ -65,32 +80,16 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     : options;
 
   // The dropdown is portaled to <body> with fixed positioning so it can fly
-  // over modals / overflowing containers. Position is recomputed on open and
-  // tracked across scroll + resize.
+  // over modals / overflowing containers.
+  // Keep the selected option visible inside the scrollable list.
   useEffect(() => {
-    if (!isOpen || !containerRef.current) return;
-    const position = () => {
-      const el = containerRef.current!;
-      const rect = el.getBoundingClientRect();
-      let dropUp: boolean;
-      if (direction === 'up') dropUp = true;
-      else if (direction === 'down') dropUp = false;
-      else dropUp = window.innerHeight - rect.bottom < 220;
-      setComputedDropUp(dropUp);
-      setDropPos({
-        left: rect.left,
-        width: rect.width,
-        ...(dropUp ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 4 }),
-      });
-    };
-    position();
-    window.addEventListener('resize', position);
-    window.addEventListener('scroll', position, true);
-    return () => {
-      window.removeEventListener('resize', position);
-      window.removeEventListener('scroll', position, true);
-    };
-  }, [isOpen, direction]);
+    if (!isOpen || !dropdownRef.current) return;
+    const list = dropdownRef.current.querySelector<HTMLElement>('.sails-custom-select__options-list');
+    const selected = dropdownRef.current.querySelector<HTMLElement>('.sails-custom-select__option.is-selected');
+    if (list && selected) {
+      list.scrollTop = Math.max(0, selected.offsetTop - list.clientHeight / 2);
+    }
+  }, [isOpen, searchQuery]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -151,47 +150,51 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
       {isOpen && typeof document !== 'undefined' && createPortal(
         <div
-          ref={dropdownRef}
-          className="sails-custom-select__dropdown"
-          style={dropPos ? { position: 'fixed', left: dropPos.left, width: dropPos.width, ...(dropPos.top !== undefined ? { top: dropPos.top } : { bottom: dropPos.bottom }) } : undefined}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'none', overflow: 'hidden' }}
         >
-          {searchable && (
-            <div className="sails-custom-select__search-wrapper" onClick={e => e.stopPropagation()}>
-              <input
-                ref={searchInputRef}
-                type="text"
-                className="sails-custom-select__search-input"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
-            </div>
-          )}
-          <div className="sails-custom-select__options-list">
-            {filteredOptions.length === 0 ? (
-              <div className="sails-custom-select__no-results">No matches found</div>
-            ) : (
-              filteredOptions.map(option => {
-                const isSelected = isValueMatch(option.value, value);
-                return (
-                  <div
-                    key={String(option.value)}
-                    className={`sails-custom-select__option ${isSelected ? 'is-selected' : ''}`}
-                    onClick={() => {
-                      onChange(option.value);
-                      setIsOpen(false);
-                      setSearchQuery('');
-                    }}
-                  >
-                    <div className="sails-custom-select__option-content">
-                      {option.icon && <span className="sails-custom-select__option-icon">{option.icon}</span>}
-                      <span>{option.label}</span>
-                    </div>
-                    {isSelected && <Check size={14} className="sails-custom-select__check" />}
-                  </div>
-                );
-              })
+          <div
+            ref={dropdownRef}
+            className="sails-custom-select__dropdown"
+            style={dropPos ? { position: 'absolute', pointerEvents: 'auto', ...dropPos } : { visibility: 'hidden', position: 'absolute' }}
+          >
+            {searchable && (
+              <div className="sails-custom-select__search-wrapper" onClick={e => e.stopPropagation()}>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  className="sails-custom-select__search-input"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
             )}
+            <div className="sails-custom-select__options-list">
+              {filteredOptions.length === 0 ? (
+                <div className="sails-custom-select__no-results">No matches found</div>
+              ) : (
+                filteredOptions.map(option => {
+                  const isSelected = isValueMatch(option.value, value);
+                  return (
+                    <div
+                      key={String(option.value)}
+                      className={`sails-custom-select__option ${isSelected ? 'is-selected' : ''}`}
+                      onClick={() => {
+                        onChange(option.value);
+                        setIsOpen(false);
+                        setSearchQuery('');
+                      }}
+                    >
+                      <div className="sails-custom-select__option-content">
+                        {option.icon && <span className="sails-custom-select__option-icon">{option.icon}</span>}
+                        <span>{option.label}</span>
+                      </div>
+                      {isSelected && <Check size={14} className="sails-custom-select__check" />}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>,
         document.body

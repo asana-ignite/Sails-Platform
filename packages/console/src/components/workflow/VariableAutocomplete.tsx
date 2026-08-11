@@ -14,6 +14,8 @@ import {
   type TreeNode, type PickerVariable, type PickerSchemaMap,
 } from './variableTree';
 
+const POPUP_WIDTH = 300;
+
 interface Props {
   open: boolean;
   anchor: { left: number; top: number } | null;
@@ -39,25 +41,32 @@ export const VariableAutocomplete: React.FC<Props> = ({ open, anchor, query, var
     return level.list.filter((n) => !q || n.label.toLowerCase().includes(q) || (n.kind === 'index' && 'n'.includes(q)));
   }, [level]);
 
-  // Provisional position below the caret (clamped horizontally).
+  // Position the popup below the caret, then keep it inside the viewport:
+  // measure the real popup, flip above when there is not enough room below,
+  // clamp horizontally, and re-clamp on scroll/resize so it never floats
+  // off-screen while open.
   useEffect(() => {
     if (!open || !anchor) { setPos(null); return; }
-    setPos({ left: Math.max(8, Math.min(anchor.left, window.innerWidth - 316)), top: anchor.top + 4 });
-  }, [open, anchor]);
-
-  // Measure the real popup after mount and flip above / clamp to the viewport.
-  useEffect(() => {
-    if (!open || !pos || !popupRef.current) return;
-    const el = popupRef.current;
-    const r = el.getBoundingClientRect();
-    let top = pos.top;
-    let left = pos.left;
-    if (r.bottom > window.innerHeight - 8) top = Math.max(8, pos.top - r.height - 12);
-    if (r.right > window.innerWidth - 8) left = Math.max(8, window.innerWidth - r.width - 8);
-    if (left < 8) left = 8;
-    setPos((p) => (p && p.top === top && p.left === left ? p : { top, left }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, pos]);
+    const base = { left: Math.max(8, Math.min(anchor.left, window.innerWidth - POPUP_WIDTH - 8)), top: anchor.top + 4 };
+    const clamp = () => {
+      const el = popupRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      let top = base.top;
+      let left = base.left;
+      if (r.bottom > window.innerHeight - 8) top = Math.max(8, base.top - r.height - 12);
+      if (r.right > window.innerWidth - 8) left = Math.max(8, window.innerWidth - r.width - 8);
+      setPos((p) => (p && p.top === top && p.left === left ? p : { top, left }));
+    };
+    setPos(base);
+    clamp();
+    window.addEventListener('resize', clamp);
+    window.addEventListener('scroll', clamp, true);
+    return () => {
+      window.removeEventListener('resize', clamp);
+      window.removeEventListener('scroll', clamp, true);
+    };
+  }, [open, anchor, items.length]);
 
   useEffect(() => { setActive(0); }, [query, open]);
 
@@ -95,7 +104,7 @@ export const VariableAutocomplete: React.FC<Props> = ({ open, anchor, query, var
     <div
       ref={popupRef}
       className="wva-pop"
-      style={{ position: 'fixed', left: pos.left, top: pos.top, width: 300, zIndex: 95 }}
+      style={{ position: 'fixed', left: pos.left, top: pos.top, width: POPUP_WIDTH, zIndex: 95 }}
       onMouseDown={(e) => e.preventDefault()} // keep focus in the input
     >
       <div className="wva-pop__head">Variables</div>

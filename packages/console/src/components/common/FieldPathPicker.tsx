@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { GitFork, ChevronRight, ChevronDown, Search, X } from 'lucide-react';
+import { useDropdownPosition } from '../../hooks/useDropdownPosition';
 import './FieldPathPicker.css';
 
 export interface FieldDefinition {
@@ -90,41 +92,40 @@ export const FieldPathPicker: React.FC<FieldPathPickerProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [flyoutAlignRight, setFlyoutAlignRight] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const info = resolveChainDetails(rootModel, value, modelsSchemas, isOpen ? searchQuery : '');
 
-  // Detect boundary overflow to auto-align flyout right when near screen/modal right edge
-  useEffect(() => {
-    if (isOpen && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const parentModal = containerRef.current.closest('.qs-simple-widget, .sails-modal, .modal-content');
-      const parentRight = parentModal
-        ? parentModal.getBoundingClientRect().right
-        : window.innerWidth;
-
-      const estimatedFlyoutWidth = info.columns.length * 150 + 20;
-
-      if (align === 'right') {
-        setFlyoutAlignRight(true);
-      } else if (align === 'left') {
-        setFlyoutAlignRight(false);
-      } else {
-        // Auto alignment calculation
-        if (rect.left + estimatedFlyoutWidth > parentRight || rect.left > window.innerWidth * 0.55) {
-          setFlyoutAlignRight(true);
-        } else {
-          setFlyoutAlignRight(false);
-        }
-      }
-    }
-  }, [isOpen, info.columns.length, align]);
+  // Viewport-aware positioning: the flyout is portaled to <body>, uses its own
+  // natural width, flips above when there is not enough room below, re-aligns
+  // right when anchored near the right edge, and re-positions when the column
+  // count (width) or the search results change.
+  const { position: flyoutPos, dropUp } = useDropdownPosition({
+    isOpen,
+    triggerRef: containerRef,
+    panelRef,
+    // 'auto' behaves as left-anchored; the hook re-aligns right automatically
+    // when the panel would overflow the viewport right edge.
+    align: align === 'right' ? 'right' : 'left',
+    matchTriggerWidth: false,
+    gap: 8,
+    deps: [searchQuery, info.columns.length],
+    onClose: () => {
+      setIsOpen(false);
+      setSearchQuery('');
+    },
+  });
 
   // Close flyout menu on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const t = event.target as Node;
+      if (
+        containerRef.current && panelRef.current &&
+        !containerRef.current.contains(t) &&
+        !panelRef.current.contains(t)
+      ) {
         setIsOpen(false);
         setSearchQuery('');
       }
@@ -172,9 +173,14 @@ export const FieldPathPicker: React.FC<FieldPathPickerProps> = ({
         <ChevronDown size={14} className={`custom-select__arrow ${isOpen ? 'custom-select__arrow--open' : ''}`} />
       </div>
 
-      {/* Navigation Flyout Menu (Auto-positioned boundary detection) */}
-      {isOpen && (
-        <div className={`field-path-picker__flyout ${flyoutAlignRight ? 'field-path-picker__flyout--align-right' : ''}`}>
+      {/* Navigation Flyout Menu (portaled; viewport-aware positioning) */}
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'none', overflow: 'hidden' }}>
+          <div
+            ref={panelRef}
+            className={`field-path-picker__flyout ${dropUp ? 'field-path-picker__flyout--above' : ''}`}
+            style={flyoutPos ? { position: 'absolute', pointerEvents: 'auto', ...flyoutPos } : { visibility: 'hidden', position: 'absolute' }}
+          >
           <div className="field-path-picker__header">
             <div className="field-path-picker__search">
               <Search size={12} className="field-path-picker__search-icon" />
@@ -238,7 +244,9 @@ export const FieldPathPicker: React.FC<FieldPathPickerProps> = ({
               </div>
             ))}
           </div>
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

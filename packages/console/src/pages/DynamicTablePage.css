@@ -188,6 +188,23 @@
   gap: 6px;
 }
 
+/* Filter popovers are portaled into <body>, so the table-scoped rule above
+   no longer matches — this unscoped copy keeps them styled. */
+.ls-rth__filter-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  padding: 8px;
+  background: var(--sails-bg-card);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
+  box-shadow: var(--sails-shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .sails-dynamic-table .ls-rtd-row {
   border-bottom: 1px solid var(--sails-border-color);
   transition: var(--sails-transition);

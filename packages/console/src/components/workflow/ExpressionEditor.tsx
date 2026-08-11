@@ -11,6 +11,7 @@ import { JSONATA_SNIPPETS, fieldTypeMatches, type Snippet, type SnippetPlacehold
 import { describeJsonata } from './jsonataExplain';
 import { friendlyToJsonata, jsonataToFriendly, buildPlainSuggestions } from './jsonataFriendly';
 import { WorkflowVariablePicker, type PickerVariable, type PickerSchemaMap, type PickerColumn } from './WorkflowVariablePicker';
+import { useDropdownPosition } from '../../hooks/useDropdownPosition';
 import './ExpressionEditor.css';
 
 interface ExpressionEditorProps {
@@ -131,7 +132,6 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
 }) => {
   const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
   const [suggestIndex, setSuggestIndex] = useState(0);
-  const [popupPos, setPopupPos] = useState<{ left: number; top: number; width: number; flip: boolean } | null>(null);
   const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -143,6 +143,21 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   const [plainDraft, setPlainDraft] = useState(value);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const hlRef = useRef<HTMLPreElement | null>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
+
+  const suggestionsOpen = !!suggestions && suggestions.length > 0;
+
+  // Viewport-aware flyover positioning: measures the suggestion list, flips
+  // above the textarea when there is not enough room below, clamps to the
+  // viewport, and re-positions while the suggestions change.
+  const { position: popupPos, dropUp: popupFlip } = useDropdownPosition({
+    isOpen: suggestionsOpen,
+    triggerRef: taRef,
+    panelRef: popupRef,
+    gap: 8,
+    deps: [suggestions],
+    onClose: () => setSuggestions(null),
+  });
 
   const snippets = JSONATA_SNIPPETS;
   const filteredSnippets = useMemo(() => {
@@ -233,29 +248,6 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   }, [effectiveValue, assignment.evalExpr, jsonataLib, jsonataLoadError]);
 
   const validation = { ok: !jsonataParseError, message: jsonataParseError || (effectiveValue.trim() ? 'Expression OK' : '') };
-
-  /** Measure the textarea and anchor the flyover popup to it (viewport coords). */
-  const measurePopup = () => {
-    const el = taRef.current;
-    if (!el) { setPopupPos(null); return; }
-    const r = el.getBoundingClientRect();
-    const flip = window.innerHeight - r.bottom < 280;
-    setPopupPos({ left: r.left, top: r.bottom + 4, width: r.width, flip });
-  };
-
-  React.useEffect(() => {
-    if (!suggestions || suggestions.length === 0) return;
-    measurePopup();
-    const onScroll = () => measurePopup();
-    const onResize = () => measurePopup();
-    window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', onResize);
-    return () => {
-      window.removeEventListener('scroll', onScroll, true);
-      window.removeEventListener('resize', onResize);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [suggestions]);
 
   // ── Snippet insert + fill-the-blanks ──
   const insertSnippet = (s: Snippet) => {
@@ -509,12 +501,11 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             </div>
           )}
 
-          {suggestions && suggestions.length > 0 && popupPos && createPortal(
+          {suggestionsOpen && popupPos && createPortal(
             <div
-              className={`ex-editor__suggest ex-editor__suggest--flyover ${popupPos.flip ? 'ex-editor__suggest--above' : ''}`}
-              style={popupPos.flip
-                ? { left: popupPos.left, bottom: window.innerHeight - popupPos.top + 4, width: popupPos.width }
-                : { left: popupPos.left, top: popupPos.top, width: popupPos.width }}
+              ref={popupRef}
+              className={`ex-editor__suggest ex-editor__suggest--flyover ${popupFlip ? 'ex-editor__suggest--above' : ''}`}
+              style={{ ...popupPos }}
               onMouseDown={(e) => e.preventDefault()}
             >
               <div className="ex-editor__suggest-head">

@@ -19,6 +19,10 @@ export interface ActionContext {
   layoutId?: string;
   /** The nav menu path for this list, e.g. /test/testtype */
   menuPath?: string;
+  /** True when the list is rendered inside a Related List View block (detail
+   *  page). Actions that open records should stack the detail panel instead
+   *  of navigating the page. */
+  embedded?: boolean;
   /** Default detail layout system_name, for building record links */
   defaultDetailLayoutKey?: string;
   /** Selected record IDs (for bulk actions) */

@@ -535,9 +535,16 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
       }
       const createLayoutKey = defaultDetailLayoutKeyRef.current;
       const tn = tableNameRef.current;
+      const rel = relatedRef.current;
+      // Standalone list page: navigate directly to the new-record route
+      // instead of stacking the panel.
+      if (!rel && navigate && createLayoutKey && tn && menuPath) {
+        const base = menuPath.replace(/\/+$/, '');
+        navigate(`${base}/${createLayoutKey}/new`);
+        return;
+      }
       if (createLayoutKey && tn) {
         // Bind the parent FK when the create originates from a Related List block.
-        const rel = relatedRef.current;
         pushRecord({
           tableName: tn,
           layoutKey: createLayoutKey,
@@ -558,6 +565,7 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
         tableName: tableNameRef.current || '',
         layoutId: layout?.id,
         menuPath,
+        embedded: !!relatedRef.current,
         defaultDetailLayoutKey: defaultDetailLayoutKeyRef.current || undefined,
         navigate: navigate || (() => {}),
         refetch: () => doFetch(),

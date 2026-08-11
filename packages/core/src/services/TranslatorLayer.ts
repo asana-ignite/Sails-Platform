@@ -307,7 +307,7 @@ export class TranslatorLayer {
           logicalType: data.logicalType,
           physicalType: targetPhysicalType
         }),
-        ...(data.config !== undefined && { config: data.config })
+        ...(data.config !== undefined && { config: { ...((fieldDef.config as any) || {}), ...(data.config as any) } })
       }
     });
 

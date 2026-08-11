@@ -91,7 +91,7 @@
   position: absolute;
   top: calc(100% + 3px);
   left: 0;
-  min-width: 100%;
+  min-width: 0;
   max-width: calc(100vw - 32px);
   background: var(--sails-bg-card, #ffffff);
   border: 1px solid var(--sails-border-color, #e1e9ef);
@@ -103,6 +103,7 @@
   flex-direction: column;
   overflow: hidden;
   animation: fieldPathFadeIn 0.15s ease-out;
+  box-sizing: border-box;
 }
 
 .field-path-picker__flyout--align-right {
@@ -173,6 +174,11 @@
   display: flex;
   background: var(--sails-bg-card, #ffffff);
   width: 100%;
+  /* Shrink (and scroll internally per column) when the flyout is clamped to
+     the available viewport space. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .field-path-picker__column {

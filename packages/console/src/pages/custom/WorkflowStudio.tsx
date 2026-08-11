@@ -800,7 +800,7 @@ export const WorkflowStudio: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
-    fetchCached('/api/metadata/objects', undefined, 60000)
+    fetchCached('/api/metadata/objects', undefined, 5000)
       .then((data: any) => {
         if (!mounted) return;
         const rows = Array.isArray(data) ? data : (data?.rows || data?.data || []);
@@ -1513,19 +1513,30 @@ export const WorkflowStudio: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newVarOpen]);
 
-  // One-shot position correction after the popover mounts (measured height vs estimate).
+  // Position correction after the popover mounts (measured height vs estimate)
+  // and re-clamp while open: the popover stays inside the viewport across
+  // scroll and resize instead of floating off-screen.
   React.useEffect(() => {
     if (!newVarOpen) return;
-    const pop = varPopRef.current;
-    if (!pop) return;
-    const r = pop.getBoundingClientRect();
-    if (r.width === 0) return;
-    const W = 320;
-    let top = r.top;
-    let left = r.left;
-    if (r.bottom > window.innerHeight - 8) top = Math.max(8, r.top - r.height - 6);
-    if (r.right > window.innerWidth - 8) left = Math.max(8, window.innerWidth - W - 8);
-    if (top !== r.top || left !== r.left) setVarAddPos((prev) => (prev ? { top, left } : prev));
+    const clamp = () => {
+      const pop = varPopRef.current;
+      if (!pop) return;
+      const r = pop.getBoundingClientRect();
+      if (r.width === 0) return;
+      const W = 320;
+      let top = r.top;
+      let left = r.left;
+      if (r.bottom > window.innerHeight - 8) top = Math.max(8, r.top - r.height - 6);
+      if (r.right > window.innerWidth - 8) left = Math.max(8, window.innerWidth - W - 8);
+      setVarAddPos((prev) => (prev && (top !== prev.top || left !== prev.left) ? { top, left } : prev));
+    };
+    clamp();
+    window.addEventListener('resize', clamp);
+    window.addEventListener('scroll', clamp, true);
+    return () => {
+      window.removeEventListener('resize', clamp);
+      window.removeEventListener('scroll', clamp, true);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newVarOpen]);
 

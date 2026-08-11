@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Search, MoreHorizontal, Shield, Circle, UserPlus, Filter, ChevronUp, ChevronDown, ArrowUpDown, ChevronLeft, ChevronRight, Edit2, UserX, UserCheck, Key, Trash2, Copy, X } from 'lucide-react';
 import { useConsole } from '../../contexts/ConsoleContext';
 import { useDateTimePrefs, formatSystemDateTimeValue } from '../../utils/systemDateTime';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import SailsPopover from '../../components/common/SailsPopover';
 import { UserDetailsModal } from './UserDetailsModal';
 import { UiTableCard, UiTable, UiTh, UiTr, UiTd, UiActionsMenu, UiActionsItem, UiActionsDivider, UiPagination, UiCheckboxTh, UiCheckboxTd } from '../../components/ui';
 import './UserManager.css';
@@ -84,6 +85,7 @@ const UserManager: React.FC = () => {
 
   const { setHeaderActions, showAddUserDrawer, setShowAddUserDrawer } = useConsole();
   const selectAllRef = React.useRef<HTMLInputElement>(null);
+  const filterBtnRef = useRef<HTMLButtonElement>(null);
 
   // 1. Global Signal Bridge (Guaranteed Communication)
   useEffect(() => {
@@ -288,6 +290,7 @@ const UserManager: React.FC = () => {
         <div className="sails-user-manager__actions">
           <div className="sails-user-manager__filter-container">
             <button
+              ref={filterBtnRef}
               className={`sails-btn ${showFilters ? 'sails-btn--primary' : 'sails-btn--ghost'}`}
               onClick={() => setShowFilters(!showFilters)}
             >
@@ -296,9 +299,16 @@ const UserManager: React.FC = () => {
               {(activeFilters.role || activeFilters.status) && <span className="sails-btn__badge"></span>}
             </button>
 
-            {/* 1.1 Advanced Filter Popover */}
+            {/* 1.1 Advanced Filter Popover (portaled, viewport-aware) */}
             {showFilters && (
-              <div className="sails-user-manager__filter-popover">
+              <SailsPopover
+                open
+                triggerRef={filterBtnRef}
+                align="right"
+                width={360}
+                className="sails-user-manager__filter-popover"
+                onClose={() => setShowFilters(false)}
+              >
                 <div className="sails-user-manager__filter-group">
                   <label>Filter by Role</label>
                   <div className="sails-user-manager__filter-options">
@@ -344,7 +354,7 @@ const UserManager: React.FC = () => {
                     Clear Filters
                   </button>
                 </div>
-              </div>
+              </SailsPopover>
             )}
           </div>
         </div>

@@ -78,6 +78,12 @@
   backdrop-filter: blur(16px);
   font-family: var(--sails-font-family, system-ui, -apple-system, sans-serif);
   animation: sailsFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Flex column: when the popover is clamped to the viewport space, only the
+     day grid scrolls — the header, weekday row and footer stay fixed. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .sails-date-popover { width: 280px; }
@@ -90,6 +96,7 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .sails-popover__title {
@@ -127,6 +134,7 @@
   gap: 2px;
   margin-bottom: 6px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .sails-popover__weekday {
@@ -136,12 +144,45 @@
   padding: 4px 0;
 }
 
-/* Days grid */
+/* Days grid — the only scrollable part of the popover when clamped; the
+   header, weekday row and footer always stay visible. */
 .sails-popover__days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 3px;
   text-align: center;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.2s ease;
+}
+
+.sails-popover__days:hover {
+  scrollbar-color: var(--sails-border-color, #cbd5e1) transparent;
+}
+
+.sails-popover__days::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sails-popover__days::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sails-popover__days::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.sails-popover__days:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+.sails-popover__days::-webkit-scrollbar-thumb:hover {
+  background: var(--sails-primary, #0284c7);
 }
 
 .sails-popover__day {
@@ -224,12 +265,15 @@
   background: var(--sails-primary, #0284c7);
 }
 
-/* Hour/Minute two-column grid */
+/* Hour/Minute two-column grid — the flexible scrollable part of the time
+   popover (shrinks and scrolls internally when the popover is clamped). */
 .sails-popover__time-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   height: 160px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .sails-time-col__label {
@@ -265,6 +309,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .sails-popover__time-label {
@@ -357,11 +402,64 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--sails-border-color, #f1f5f9);
+  flex-shrink: 0;
 }
 
 .sails-popover__footer--compact {
   margin-top: 10px;
   padding-top: 8px;
+}
+
+/* ── Compact variants — applied while the popover is clamped to the viewport
+   space: tighten the calendar so a 5–6 week month fits without scrolling.
+   The day grid remains the only scrollable fallback. ── */
+.sails-date-popover--compact,
+.sails-time-popover--compact,
+.sails-datetime-popover--compact {
+  padding: 12px;
+}
+
+.sails-date-popover--compact .sails-popover__header--compact,
+.sails-datetime-popover--compact .sails-popover__header {
+  margin-bottom: 6px;
+}
+
+.sails-date-popover--compact .sails-popover__weekdays,
+.sails-datetime-popover--compact .sails-popover__weekdays {
+  gap: 2px;
+  margin-bottom: 3px;
+}
+
+.sails-date-popover--compact .sails-popover__weekday,
+.sails-datetime-popover--compact .sails-popover__weekday {
+  padding: 2px 0;
+}
+
+.sails-date-popover--compact .sails-popover__days,
+.sails-datetime-popover--compact .sails-popover__days {
+  gap: 2px;
+}
+
+.sails-date-popover--compact .sails-popover__day,
+.sails-datetime-popover--compact .sails-popover__day {
+  padding: 3px 0;
+  font-size: 11px;
+}
+
+.sails-date-popover--compact .sails-popover__footer,
+.sails-datetime-popover--compact .sails-popover__footer {
+  margin-top: 6px;
+  padding-top: 6px;
+}
+
+.sails-datetime-popover--compact .sails-popover__time-bar {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.sails-time-popover--compact .sails-popover__time-grid {
+  gap: 8px;
+  height: 140px;
 }
 
 .sails-popover__action {

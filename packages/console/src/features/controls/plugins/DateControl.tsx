@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useDateTimePrefs, resolveControlDisplayText } from '../../../utils/systemDateTime';
+import { useDropdownPosition } from '../../../hooks/useDropdownPosition';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import '../controls.css';
 
@@ -32,6 +34,20 @@ export const SailsDatePicker: React.FC<SailsDatePickerProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Viewport-aware positioning: the popover is portaled to <body> and opens
+  // upward when there is not enough room below, clamped to the viewport.
+  // When clamped, the --compact class tightens the calendar so it fits
+  // without scrolling.
+  const { position: popPos, isClamped } = useDropdownPosition({
+    isOpen,
+    triggerRef: containerRef,
+    panelRef,
+    width: 280,
+    gap: 8,
+    onClose: () => setIsOpen(false),
+  });
 
   // Parse current selected date or fallback to today
   const selectedDate = useMemo(() => {
@@ -59,10 +75,16 @@ export const SailsDatePicker: React.FC<SailsDatePickerProps> = ({
     }
   }, [selectedDate]);
 
-  // Close popover when clicking outside
+  // Close popover when clicking outside (the portaled panel is not a DOM
+  // descendant of the trigger container, so both must be checked)
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const t = e.target as Node;
+      if (
+        containerRef.current && panelRef.current &&
+        !containerRef.current.contains(t) &&
+        !panelRef.current.contains(t)
+      ) {
         setIsOpen(false);
       }
     };
@@ -156,8 +178,13 @@ export const SailsDatePicker: React.FC<SailsDatePickerProps> = ({
         )}
       </div>
 
-      {isOpen && (
-        <div className="sails-date-popover">
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'none', overflow: 'hidden' }}>
+          <div
+            ref={panelRef}
+            className={`sails-date-popover ${isClamped ? 'sails-date-popover--compact' : ''}`}
+            style={popPos ? { position: 'absolute', pointerEvents: 'auto', ...popPos } : { visibility: 'hidden', position: 'absolute' }}
+          >
           {/* Header */}
           <div className="sails-popover__header sails-popover__header--compact">
             <span className="sails-popover__title">
@@ -240,7 +267,9 @@ export const SailsDatePicker: React.FC<SailsDatePickerProps> = ({
               Today
             </button>
           </div>
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

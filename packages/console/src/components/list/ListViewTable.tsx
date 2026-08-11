@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import {
   ArrowUp,
   ArrowDown,
@@ -21,6 +21,7 @@ import { EmailControl } from '../../features/controls/plugins/EmailControl';
 import { LatLngControl } from '../../features/controls/plugins/LatLngControl';
 import { DetailFieldInput } from '../../features/controls/DetailFieldControl';
 import { useDateTimePrefs, isSystemDateTimeField, formatSystemDateTimeValue } from '../../utils/systemDateTime';
+import SailsPopover from '../common/SailsPopover';
 
 export interface RuntimeSortRule {
   fieldId: string;
@@ -216,6 +217,8 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
 }) => {
   const datetimePrefs = useDateTimePrefs();
   const { users: tenantUsers } = useTenantUsers();
+  /** Per-column header refs, used to anchor the filter popovers. */
+  const filterThRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
 
   const userDisplayName = useCallback((value: any): string => {
     if (typeof value === 'object' && value) return value?.name || value?.email || value?.id || '';
@@ -408,6 +411,7 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                     return (
                       <th
                         key={col.id}
+                        ref={(el) => { filterThRefs.current[col.id] = el; }}
                         className={`ls-rth ${col.allowSorting !== false ? 'ls-rth--sortable' : ''} ${isSorted ? 'ls-rth--sorted' : ''}`}
                         style={{ ...(col.width ? { width: `${col.width}${col.widthUnit || 'px'}` } : {}), textAlign: col.alignment || (f && NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}
                       >
@@ -440,28 +444,37 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                                 <Search size={11} />
                               </button>
                               {activePreviewFilter === col.fieldId && (
-                                <div className="ls-rth__filter-popover" onClick={(e) => e.stopPropagation()}>
-                                  <input
-                                    className="sails-input"
-                                    value={runtimeFilters[col.fieldId] || ''}
-                                    onChange={(e) => handleRuntimeFilter(col.fieldId, e.target.value)}
-                                    placeholder={`Filter ${label}...`}
-                                    autoFocus
-                                    style={{ fontSize: 12, padding: '5px 8px', width: 180 }}
-                                  />
-                                  {runtimeFilters[col.fieldId]?.trim() && (
-                                    <button
-                                      type="button"
-                                      className="ls-rth__filter-clear"
-                                      onClick={() => {
-                                        handleRuntimeFilter(col.fieldId, '');
-                                        onActivePreviewFilterChange(null);
-                                      }}
-                                    >
-                                      <X size={12} /> Clear
-                                    </button>
-                                  )}
-                                </div>
+                                <SailsPopover
+                                  open
+                                  triggerRef={{ current: filterThRefs.current[col.id] }}
+                                  align="right"
+                                  className="ls-rth__filter-popover"
+                                  deps={[!!runtimeFilters[col.fieldId]]}
+                                  onClose={() => onActivePreviewFilterChange(null)}
+                                >
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <input
+                                      className="sails-input"
+                                      value={runtimeFilters[col.fieldId] || ''}
+                                      onChange={(e) => handleRuntimeFilter(col.fieldId, e.target.value)}
+                                      placeholder={`Filter ${label}...`}
+                                      autoFocus
+                                      style={{ fontSize: 12, padding: '5px 8px', width: 180 }}
+                                    />
+                                    {runtimeFilters[col.fieldId]?.trim() && (
+                                      <button
+                                        type="button"
+                                        className="ls-rth__filter-clear"
+                                        onClick={() => {
+                                          handleRuntimeFilter(col.fieldId, '');
+                                          onActivePreviewFilterChange(null);
+                                        }}
+                                      >
+                                        <X size={12} /> Clear
+                                      </button>
+                                    )}
+                                  </div>
+                                </SailsPopover>
                               )}
                             </div>
                           )}

@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock, X } from 'lucide-react';
 import { useDateTimePrefs, resolveControlDisplayText } from '../../../utils/systemDateTime';
+import { useDropdownPosition } from '../../../hooks/useDropdownPosition';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import '../controls.css';
 
@@ -28,6 +30,20 @@ export const SailsTimePicker: React.FC<SailsTimePickerProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Viewport-aware positioning: the popover is portaled to <body> and opens
+  // upward when there is not enough room below, clamped to the viewport.
+  // When clamped, the --compact class tightens the layout so it fits
+  // without scrolling.
+  const { position: popPos, isClamped } = useDropdownPosition({
+    isOpen,
+    triggerRef: containerRef,
+    panelRef,
+    width: 190,
+    gap: 8,
+    onClose: () => setIsOpen(false),
+  });
 
   const [selectedHour, selectedMinute] = useMemo(() => {
     if (!value) return ['12', '00'];
@@ -37,10 +53,16 @@ export const SailsTimePicker: React.FC<SailsTimePickerProps> = ({
     return [h, m];
   }, [value]);
 
-  // Close popover when clicking outside
+  // Close popover when clicking outside (the portaled panel is not a DOM
+  // descendant of the trigger container, so both must be checked)
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const t = e.target as Node;
+      if (
+        containerRef.current && panelRef.current &&
+        !containerRef.current.contains(t) &&
+        !panelRef.current.contains(t)
+      ) {
         setIsOpen(false);
       }
     };
@@ -106,8 +128,13 @@ export const SailsTimePicker: React.FC<SailsTimePickerProps> = ({
         )}
       </div>
 
-      {isOpen && (
-        <div className="sails-time-popover">
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'none', overflow: 'hidden' }}>
+          <div
+            ref={panelRef}
+            className={`sails-time-popover ${isClamped ? 'sails-time-popover--compact' : ''}`}
+            style={popPos ? { position: 'absolute', pointerEvents: 'auto', ...popPos } : { visibility: 'hidden', position: 'absolute' }}
+          >
           <div className="sails-popover__header sails-popover__header--compact">
             <span className="sails-popover__title">
               Select Time ({selectedHour}:{selectedMinute})
@@ -160,7 +187,9 @@ export const SailsTimePicker: React.FC<SailsTimePickerProps> = ({
               Now
             </button>
           </div>
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

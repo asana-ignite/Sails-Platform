@@ -77,7 +77,6 @@
 [data-density='compact'] .sails-modal-wrapper,
 [data-density='compact'] .sails-drawer-overlay,
 [data-density='compact'] .sails-drawer,
-[data-density='compact'] .sails-custom-select__dropdown,
 [data-density='compact'] .sails-popover-content {
   zoom: 0.85;
 }
@@ -88,7 +87,6 @@
 [data-density='comfortable'] .sails-modal-wrapper,
 [data-density='comfortable'] .sails-drawer-overlay,
 [data-density='comfortable'] .sails-drawer,
-[data-density='comfortable'] .sails-custom-select__dropdown,
 [data-density='comfortable'] .sails-popover-content {
   zoom: 1.10;
 }

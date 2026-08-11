@@ -4,6 +4,7 @@ import { useDateTimePrefs, formatSystemDateTimeValue, formatGlobalPrefsValue } f
 import { createPortal } from 'react-dom';
 import { SailsTableDefinition, FieldTypeMetadata, FieldParameterDefinition, toSnakeCase, isSystemField } from '@sails/shared';
 import { useConsole } from '../../contexts/ConsoleContext';
+import { clearCache } from '../../api/client';
 import { 
   Database, 
   Plus, 
@@ -63,6 +64,7 @@ const SortIcon: React.FC<{ active: boolean; direction?: 'asc' | 'desc' }> = ({ a
 
 /** List View picker for the relation "Search List" display control. */
 const LayoutSelectParam: React.FC<{ targetTable: string; value: string; onChange: (v: string) => void }> = ({ targetTable, value, onChange }) => {
+  const { t } = useTranslation();
   const [options, setOptions] = useState<SelectOption[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -101,6 +103,7 @@ interface SelectOptionSourceConfigProps {
 }
 
 const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ values, onChange, tables }) => {
+  const { t } = useTranslation();
   const [showFilterBuilder, setShowFilterBuilder] = useState(false);
   const isLookup = values.sourceType === 'object';
   const selectCustom = () => onChange((prev: Record<string, any>) => ({ ...prev, sourceType: 'custom' }));
@@ -494,6 +497,9 @@ const ObjectManager: React.FC = () => {
         const data = await res.json();
         const rows = Array.isArray(data) ? data : (data.data || []);
         setTables(rows);
+        // Force other surfaces (Layout Studio, Workflow Studio) to refetch
+        // fresh metadata — their caches are now stale.
+        clearCache('metadata/objects');
 
         if (!hasInitializedRef.current) {
           hasInitializedRef.current = true;
@@ -757,13 +763,17 @@ const ObjectManager: React.FC = () => {
     const finalConfig: Record<string, any> = { ...editDynamicConfigValues };
     if (editFieldLogicalType === 'select') {
       if (finalConfig.sourceType !== 'object') {
-        if (typeof finalConfig.optionsText === 'string') {
+        if (typeof finalConfig.optionsText === 'string' && finalConfig.optionsText.trim()) {
           const optionsArr = finalConfig.optionsText
             .split('\n')
             .map((s: string) => s.trim())
             .filter(Boolean)
             .map((opt: string) => ({ label: opt, value: opt.toLowerCase().replace(/\s+/g, '_') }));
           finalConfig.options = optionsArr;
+        } else if (Array.isArray((editingField?.config || {}).options) && (editingField?.config || ({} as any)).options.length > 0) {
+          // Keep existing options when the textarea is empty — prevents
+          // accidental wipes on edits that only touch other fields.
+          finalConfig.options = [...(editingField!.config as any).options];
         }
         delete finalConfig.optionsText;
         delete finalConfig.sourceTable;

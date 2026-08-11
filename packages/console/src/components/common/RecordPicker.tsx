@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, ChevronDown, Check, Database } from 'lucide-react';
+import { useDropdownPosition } from '../../hooks/useDropdownPosition';
 import './RecordPicker.css';
 
 interface RecordPickerProps {
@@ -50,11 +52,28 @@ export const RecordPicker: React.FC<RecordPickerProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const fetchedRef = useRef<string | null>(null);
+
+  // Viewport-aware positioning: the dropdown is portaled to <body> and opens
+  // upward when there is not enough room below, clamped to the viewport.
+  const { position: dropPos } = useDropdownPosition({
+    isOpen,
+    triggerRef: containerRef,
+    panelRef,
+    gap: 8,
+    deps: [searchTerm],
+    onClose: () => setIsOpen(false),
+  });
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const t = e.target as Node;
+      if (
+        containerRef.current && panelRef.current &&
+        !containerRef.current.contains(t) &&
+        !panelRef.current.contains(t)
+      ) {
         setIsOpen(false);
       }
     };
@@ -104,8 +123,13 @@ export const RecordPicker: React.FC<RecordPickerProps> = ({
         <ChevronDown size={12} className="rp-trigger__chevron" />
       </button>
 
-      {isOpen && (
-        <div className="rp-dropdown">
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'none', overflow: 'hidden' }}>
+          <div
+            ref={panelRef}
+            className="rp-dropdown"
+            style={dropPos ? { position: 'absolute', pointerEvents: 'auto', ...dropPos } : { visibility: 'hidden', position: 'absolute' }}
+          >
           <div className="rp-dropdown__search">
             <Search size={12} className="rp-dropdown__search-icon" />
             <input
@@ -138,7 +162,9 @@ export const RecordPicker: React.FC<RecordPickerProps> = ({
               ))
             )}
           </div>
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

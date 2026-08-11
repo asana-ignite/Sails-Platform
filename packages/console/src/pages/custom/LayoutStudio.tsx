@@ -25,6 +25,7 @@ import { formatDateTimeValue, formatDecimalValue, normalizeFilters } from '@sail
 import { FilterBuilder } from '../../components/common/FilterBuilder';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import SailsPopover from '../../components/common/SailsPopover';
 import { FieldControlRegistry } from '../../features/controls/FieldControlRegistry';
 import { DetailFieldInput, DetailFieldDisplay, mockFieldValue } from '../../features/controls/DetailFieldControl';
 import { UserControl } from '../../features/controls/plugins/UserControl';
@@ -564,6 +565,8 @@ const LayoutStudio: React.FC = () => {
   const suppressHistoryRef = useRef(false);   // one-shot: undo/redo applies themselves
   const gestureActiveRef = useRef(false);     // sticky: live resize gestures (column / block width)
   const lastPushTimeRef = useRef(0);          // coalescing window anchor
+  /** Per-column header refs, used to anchor the list preview filter popovers. */
+  const filterThRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
 
   useEffect(() => {
     if (!tableId) { setFetchError('No table ID provided'); setFetchLoading(false); return; }
@@ -575,7 +578,7 @@ const LayoutStudio: React.FC = () => {
     }
     const fetchTable = async () => {
       try {
-        const data = await fetchCached('/api/metadata/objects', undefined, 60000);
+        const data = await fetchCached('/api/metadata/objects', undefined, 5000);
         const tables: any[] = Array.isArray(data) ? data : (data.data || []);
         const found = tables.find((t: any) => t.id === tableId);
         if (!found) throw new Error('Table not found');
@@ -2465,6 +2468,7 @@ const LayoutStudio: React.FC = () => {
                               const isFiltering = !!listRuntimeFilters[col.fieldId]?.trim();
                               return (
                                 <th key={col.id}
+                                  ref={(el) => { filterThRefs.current[col.id] = el; }}
                                   className={`ls-rth ${col.allowSorting ? 'ls-rth--sortable' : ''} ${isSorted ? 'ls-rth--sorted' : ''}`}
                                   style={{ ...(col.width ? { width: `${col.width}${col.widthUnit || 'px'}` } : {}), textAlign: col.alignment || (NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}>
                                   <div className="ls-rth__inner">
@@ -2488,17 +2492,26 @@ const LayoutStudio: React.FC = () => {
                                           onClick={(e) => { e.stopPropagation(); setListActivePreviewFilter(listActivePreviewFilter === col.fieldId ? null : col.fieldId); }}
                                           title="Filter this column"><Search size={11} /></button>
                                         {listActivePreviewFilter === col.fieldId && (
-                                          <div className="ls-rth__filter-popover" onClick={(e) => e.stopPropagation()}>
-                                            <input className="sails-input" value={listRuntimeFilters[col.fieldId] || ''}
-                                              onChange={(e) => handleListRuntimeFilter(col.fieldId, e.target.value)}
-                                              placeholder={`Filter ${col.labelOverride || f.name}...`} autoFocus
-                                              style={{ fontSize: 12, padding: '5px 8px', width: 180 }} />
-                                            {listRuntimeFilters[col.fieldId]?.trim() && (
-                                              <button className="ls-rth__filter-clear" onClick={() => { handleListRuntimeFilter(col.fieldId, ''); setListActivePreviewFilter(null); }}>
-                                                <X size={12} /> Clear
-                                              </button>
-                                            )}
-                                          </div>
+                                          <SailsPopover
+                                            open
+                                            triggerRef={{ current: filterThRefs.current[col.id] }}
+                                            align="right"
+                                            className="ls-rth__filter-popover"
+                                            deps={[!!listRuntimeFilters[col.fieldId]]}
+                                            onClose={() => setListActivePreviewFilter(null)}
+                                          >
+                                            <div onClick={(e) => e.stopPropagation()}>
+                                              <input className="sails-input" value={listRuntimeFilters[col.fieldId] || ''}
+                                                onChange={(e) => handleListRuntimeFilter(col.fieldId, e.target.value)}
+                                                placeholder={`Filter ${col.labelOverride || f.name}...`} autoFocus
+                                                style={{ fontSize: 12, padding: '5px 8px', width: 180 }} />
+                                              {listRuntimeFilters[col.fieldId]?.trim() && (
+                                                <button className="ls-rth__filter-clear" onClick={() => { handleListRuntimeFilter(col.fieldId, ''); setListActivePreviewFilter(null); }}>
+                                                  <X size={12} /> Clear
+                                                </button>
+                                              )}
+                                            </div>
+                                          </SailsPopover>
                                         )}
                                       </div>
                                     )}

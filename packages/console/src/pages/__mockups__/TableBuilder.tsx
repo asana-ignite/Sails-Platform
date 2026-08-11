@@ -5,7 +5,7 @@
  * Replaces the sections/blocks WYSIWYG canvas with a column picker +
  * filter builder + table preview for building saved list views.
  */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   GripVertical, Plus, X, Eye, EyeOff, Trash2,
   LayoutGrid, Settings, ArrowRight, Columns,
@@ -16,6 +16,7 @@ import {
 import type { SailsFieldDefinition } from '@sails/shared';
 import { MOCK_LEADS_FIELDS } from './sample-layout-data';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import SailsPopover from '../../components/common/SailsPopover';
 import './TableBuilder.css';
 
 // ─── Types ────────────────────────────────────────────────────
@@ -123,6 +124,8 @@ function buildDefaultColumns(): LayoutColumn[] {
 
 const TableBuilder: React.FC = () => {
   const allFields = MOCK_LEADS_FIELDS;
+  /** Per-column header refs, used to anchor the filter popovers. */
+  const filterThRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
 
   const [viewName, setViewName] = useState('Default List View');
   const [columns, setColumns] = useState<LayoutColumn[]>(buildDefaultColumns);
@@ -841,6 +844,7 @@ const TableBuilder: React.FC = () => {
                               return (
                                 <th
                                   key={col.id}
+                                  ref={(el) => { filterThRefs.current[col.id] = el; }}
                                   className={`tb-rth ${col.allowSorting ? 'tb-rth--sortable' : ''} ${isSorted ? 'tb-rth--sorted' : ''}`}
                                   style={{ ...(col.width ? { width: `${col.width}${col.widthUnit || 'px'}` } : {}), textAlign: col.alignment || 'left' }}
                                 >
@@ -879,27 +883,36 @@ const TableBuilder: React.FC = () => {
                                           <Search size={11} />
                                         </button>
                                         {activePreviewFilter === col.fieldId && (
-                                          <div className="tb-rth__filter-popover" onClick={(e) => e.stopPropagation()}>
-                                            <input
-                                              className="sails-input"
-                                              value={runtimeFilters[col.fieldId] || ''}
-                                              onChange={(e) => handleRuntimeFilter(col.fieldId, e.target.value)}
-                                              placeholder={`Filter ${col.labelOverride || f.name}...`}
-                                              autoFocus
-                                              style={{ fontSize: 12, padding: '5px 8px', width: 180 }}
-                                            />
-                                            {runtimeFilters[col.fieldId]?.trim() && (
-                                              <button
-                                                className="tb-rth__filter-clear"
-                                                onClick={() => {
-                                                  handleRuntimeFilter(col.fieldId, '');
-                                                  setActivePreviewFilter(null);
-                                                }}
-                                              >
-                                                <X size={12} /> Clear
-                                              </button>
-                                            )}
-                                          </div>
+                                          <SailsPopover
+                                            open
+                                            triggerRef={{ current: filterThRefs.current[col.id] }}
+                                            align="right"
+                                            className="tb-rth__filter-popover"
+                                            deps={[!!runtimeFilters[col.fieldId]]}
+                                            onClose={() => setActivePreviewFilter(null)}
+                                          >
+                                            <div onClick={(e) => e.stopPropagation()}>
+                                              <input
+                                                className="sails-input"
+                                                value={runtimeFilters[col.fieldId] || ''}
+                                                onChange={(e) => handleRuntimeFilter(col.fieldId, e.target.value)}
+                                                placeholder={`Filter ${col.labelOverride || f.name}...`}
+                                                autoFocus
+                                                style={{ fontSize: 12, padding: '5px 8px', width: 180 }}
+                                              />
+                                              {runtimeFilters[col.fieldId]?.trim() && (
+                                                <button
+                                                  className="tb-rth__filter-clear"
+                                                  onClick={() => {
+                                                    handleRuntimeFilter(col.fieldId, '');
+                                                    setActivePreviewFilter(null);
+                                                  }}
+                                                >
+                                                  <X size={12} /> Clear
+                                                </button>
+                                              )}
+                                            </div>
+                                          </SailsPopover>
                                         )}
                                       </div>
                                     )}
