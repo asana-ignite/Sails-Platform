@@ -88,6 +88,15 @@ This document serves as the single source of truth for system-wide architectural
 ### Module-First Shell
 - **`AppPluginShell`**: Wraps custom modules. Resolves context, metadata, injects plugin, and harmonizes layout.
 
+### Date/Time Display Format Standard (Ground Rule)
+- **Resolution order (MANDATORY):**
+  1. **Field type config** — user-defined date fields render via `formatDateTimeValue(value, field.config, logicalType)` from `@sails/shared` (uses the field's own `dateFormat`/`timeFormat`). Exempt from global settings.
+  2. **Personalization** — per-user display preferences (future). Exempt.
+  3. **Global settings** — everything else MUST render from Admin → General Settings (`CompanyProfile`: `dateFormat`, `timeFormat`, `timezone`) via `useDateTimePrefs()` + `formatSystemDateTimeValue(value, prefs)` (system timestamps, date+time) or `formatGlobalPrefsValue(value, prefs, logicalType)` (logicalType-aware).
+- **Banned APIs:** `new Date(x).toLocaleDateString()` / `toLocaleString()` / `Intl.DateTimeFormat` with hardcoded options for platform-generated timestamps (`created_at`, `updated_at`, `published_at`, `last_login_at`, audit timestamps, version history). Browser-locale formatting is NOT allowed.
+- **System timestamps always display date AND time** (e.g. Created / Last Modified columns in Layout, Workflow, Data Model, Users, Audit).
+- **Validated files:** `AdminViewManager`, `AdminWorkflowManager`, `ObjectManager`, `WorkflowStudio`, `LayoutStudio`, `UserManager`/`UserDetailsModal`, `AdminAuditLog`, `FilterBuilder`, `ListViewTable`/`ListViewMobile` (already compliant).
+
 ---
 
 ## 4. Future Constraint: PWA Offline-First Architecture (DO NOT IMPLEMENT YET)

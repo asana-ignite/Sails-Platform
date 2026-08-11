@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, RefreshCw, ChevronLeft, ChevronRight, Database, Shield, Wrench, Radio } from 'lucide-react';
 import Spinner from '../../components/common/Spinner';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { useDateTimePrefs, formatSystemDateTimeValue } from '../../utils/systemDateTime';
 import { useConsole } from '../../contexts/ConsoleContext';
 import './AdminAuditLog.css';
 
@@ -59,6 +60,7 @@ const SYSTEM_ACTION_OPTIONS = [
 ];
 
 const AdminAuditLog: React.FC = () => {
+  const datetimePrefs = useDateTimePrefs();
   const [activeTab, setActiveTab] = useState<TabType>('data');
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [page, setPage] = useState(1);
@@ -137,8 +139,7 @@ const AdminAuditLog: React.FC = () => {
     return () => setHeaderActions(null);
   }, [setHeaderActions, headerActions]);
 
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const formatDate = (iso: string) => formatSystemDateTimeValue(iso, datetimePrefs);
 
   const formatUser = (user?: { name?: string | null; email?: string } | null) => {
     if (!user) return 'System';

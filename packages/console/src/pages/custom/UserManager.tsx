@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Search, MoreHorizontal, Shield, Circle, UserPlus, Filter, ChevronUp, ChevronDown, ArrowUpDown, ChevronLeft, ChevronRight, Edit2, UserX, UserCheck, Key, Trash2, Copy, X } from 'lucide-react';
 import { useConsole } from '../../contexts/ConsoleContext';
+import { useDateTimePrefs, formatSystemDateTimeValue } from '../../utils/systemDateTime';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { UserDetailsModal } from './UserDetailsModal';
 import { UiTableCard, UiTable, UiTh, UiTr, UiTd, UiActionsMenu, UiActionsItem, UiActionsDivider, UiPagination, UiCheckboxTh, UiCheckboxTd } from '../../components/ui';
@@ -23,6 +24,7 @@ interface User {
 
 const UserManager: React.FC = () => {
   const { t } = useTranslation();
+  const datetimePrefs = useDateTimePrefs();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -63,7 +65,7 @@ const UserManager: React.FC = () => {
             positionText: posText,
             role: u.role === 'TENANT_ADMIN' || u.role === 'ADMIN' ? 'Admin' : u.role === 'MEMBER' ? 'Member' : 'Guest',
             status: u.isActive ? 'Active' : 'Inactive',
-            lastLogin: u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'Never',
+            lastLogin: u.lastLoginAt ? formatSystemDateTimeValue(u.lastLoginAt, datetimePrefs) : 'Never',
             avatar: u.image
           };
         });

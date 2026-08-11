@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useDateTimePrefs, formatSystemDateTimeValue } from '../../utils/systemDateTime';
 import { 
   X, User, Shield, Circle, Briefcase, Users, Database, 
   Mail, Phone, Calendar, Edit2, Award, Check, Minus, Lock,
@@ -73,6 +74,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
   onClose,
   onEdit
 }) => {
+  const datetimePrefs = useDateTimePrefs();
   const [activeTab, setActiveTab] = useState<'details' | 'team' | 'data_access'>('details');
   const [user, setUser] = useState<UserDetailsData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -330,7 +332,7 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                       <div className="sails-field-item">
                         <span className="sails-field-item__label">Last Login Activity</span>
                         <span className="sails-field-item__value">
-                          {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never logged in'}
+                          {user.lastLogin ? formatSystemDateTimeValue(user.lastLogin, datetimePrefs) : 'Never logged in'}
                         </span>
                       </div>
                     </div>

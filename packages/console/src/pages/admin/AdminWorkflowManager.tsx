@@ -5,6 +5,7 @@ import { Workflow, Search, Plus, Trash2, Database, X, ArrowUpDown, Calendar, Ale
 import Spinner from '../../components/common/Spinner';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { useConsole } from '../../contexts/ConsoleContext';
+import { useDateTimePrefs, formatSystemDateTimeValue } from '../../utils/systemDateTime';
 import { fetchCached } from '../../api/client';
 import { UiTableCard, UiTable, UiTh, UiTr, UiTd, UiNameCell, UiBadge, UiDateCell, UiActionsMenu, UiActionsItem, UiActionsDivider, UiPagination, UiConfirmDialog, UiToast } from '../../components/ui';
 import './AdminViewManager.css';
@@ -34,6 +35,7 @@ const STATUS_LABELS: Record<WorkflowRow['status'], { label: string; icon: React.
 
 const AdminWorkflowManager: React.FC = () => {
   const { t } = useTranslation();
+  const datetimePrefs = useDateTimePrefs();
   const [rows, setRows] = useState<WorkflowRow[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -352,10 +354,10 @@ const AdminWorkflowManager: React.FC = () => {
                       </UiBadge>
                     </UiTd>
                     <UiTd>
-                      <UiDateCell><Calendar size={13} />{new Date(row.createdAt).toLocaleDateString()}</UiDateCell>
+                      <UiDateCell><Calendar size={13} />{formatSystemDateTimeValue(row.createdAt, datetimePrefs)}</UiDateCell>
                     </UiTd>
                     <UiTd>
-                      <UiDateCell><Calendar size={13} />{new Date(row.updatedAt).toLocaleDateString()}</UiDateCell>
+                      <UiDateCell><Calendar size={13} />{formatSystemDateTimeValue(row.updatedAt, datetimePrefs)}</UiDateCell>
                     </UiTd>
                     <UiTd align="right" onClick={e => e.stopPropagation()}>
                       <UiActionsMenu open={activeMenuId === row.id} onToggle={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}>

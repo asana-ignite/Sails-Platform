@@ -9,6 +9,7 @@
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useDateTimePrefs, formatSystemDateTimeValue } from '../../utils/systemDateTime';
 import {
   GripVertical, Plus, X, Eye, EyeOff, Trash2, MoveUp, MoveDown,
   LayoutGrid, Settings, ArrowRight, ListTree, FolderKanban, Columns,
@@ -458,6 +459,7 @@ const LayoutStudio: React.FC = () => {
   const { tableId, layoutId } = useParams<{ tableId: string; layoutId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const datetimePrefs = useDateTimePrefs();
 
   const [tableMeta, setTableMeta] = useState<TableMeta | null>(null);
   const [fetchLoading, setFetchLoading] = useState(true);
@@ -3828,7 +3830,7 @@ const LayoutStudio: React.FC = () => {
                             <div className="ls-version-info">
                               <span className="ls-version-notes">{v.notes || '—'}</span>
                               <span className="ls-version-meta">
-                                {new Date(v.publishedAt).toLocaleString()}
+                                {formatSystemDateTimeValue(v.publishedAt, datetimePrefs)}
                                 {v.publishedBy ? ` · by ${v.publishedBy.slice(0, 8)}` : ''}
                               </span>
                             </div>

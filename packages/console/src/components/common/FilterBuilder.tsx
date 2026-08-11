@@ -7,7 +7,7 @@ import type { FieldDefinition as PickerField } from './FieldPathPicker';
 import type { FilterGroup, FilterRule, SailsFieldDefinition, FilterValueSource } from '@sails/shared';
 import { VariableTextInput } from '../workflow/VariableTextInput';
 import { CONTEXT_FLAT_OPTIONS, isNPeriodMacro } from '@sails/shared';
-import { useDateTimePrefs, resolveControlDisplayText } from '../../utils/systemDateTime';
+import { useDateTimePrefs, formatGlobalPrefsValue } from '../../utils/systemDateTime';
 import { SailsDatePicker } from '../../features/controls/plugins/DateControl';
 import { SailsDateTimePicker } from '../../features/controls/plugins/DateTimeControl';
 import { SailsTimePicker } from '../../features/controls/plugins/TimeControl';
@@ -294,7 +294,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
       return (
         <SailsDatePicker
           value={rule.value || ''}
-          displayText={resolveControlDisplayText(undefined, rule.value, dateTimePrefs, 'date')}
+          displayText={formatGlobalPrefsValue(rule.value, dateTimePrefs, 'date')}
           onChange={(v) => updateRule(rule.id, { value: v })}
           placeholder="Select date..."
         />
@@ -304,7 +304,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
       return (
         <SailsDateTimePicker
           value={rule.value || ''}
-          displayText={resolveControlDisplayText(undefined, rule.value, dateTimePrefs, 'datetime')}
+          displayText={formatGlobalPrefsValue(rule.value, dateTimePrefs, 'datetime')}
           onChange={(v) => updateRule(rule.id, { value: v })}
           placeholder="Select date & time..."
         />
@@ -314,7 +314,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
       return (
         <SailsTimePicker
           value={rule.value || ''}
-          displayText={resolveControlDisplayText(undefined, rule.value, dateTimePrefs, 'time')}
+          displayText={formatGlobalPrefsValue(rule.value, dateTimePrefs, 'time')}
           onChange={(v) => updateRule(rule.id, { value: v })}
           placeholder="Select time..."
         />

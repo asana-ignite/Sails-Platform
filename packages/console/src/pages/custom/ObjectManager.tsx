@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDateTimePrefs, formatSystemDateTimeValue, formatGlobalPrefsValue } from '../../utils/systemDateTime';
 import { createPortal } from 'react-dom';
 import { SailsTableDefinition, FieldTypeMetadata, FieldParameterDefinition, toSnakeCase, isSystemField } from '@sails/shared';
 import { useConsole } from '../../contexts/ConsoleContext';
@@ -255,6 +256,7 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
 
 const ObjectManager: React.FC = () => {
   const { t } = useTranslation();
+  const datetimePrefs = useDateTimePrefs();
   const [tables, setTables] = useState<SailsTableDefinition[]>([]);
   const [selectedTable, setSelectedTable] = useState<SailsTableDefinition | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
@@ -854,10 +856,10 @@ const ObjectManager: React.FC = () => {
         const fieldsStr = `${fieldsCount} fields`;
         const fieldsMatch = fieldsStr.toLowerCase().includes(q);
 
-        const dateStr = t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '';
+        const dateStr = t.createdAt ? formatSystemDateTimeValue(t.createdAt, datetimePrefs) : '';
         const dateMatch = dateStr.toLowerCase().includes(q);
 
-        const updatedDateStr = t.updatedAt ? new Date(t.updatedAt).toLocaleString() : (t.createdAt ? new Date(t.createdAt).toLocaleString() : '');
+        const updatedDateStr = t.updatedAt ? formatSystemDateTimeValue(t.updatedAt, datetimePrefs) : (t.createdAt ? formatSystemDateTimeValue(t.createdAt, datetimePrefs) : '');
         const updatedDateMatch = updatedDateStr.toLowerCase().includes(q);
 
         return nameMatch || dbNameMatch || descMatch || fieldsMatch || dateMatch || updatedDateMatch;
@@ -1058,8 +1060,8 @@ const ObjectManager: React.FC = () => {
                 {paginatedTables.map(table => {
                   const fieldsCount = table._count?.fields ?? table.fields?.length ?? 0;
                   const fieldsText = t('admin_object_manager.nFields', { count: fieldsCount });
-                  const dateText = table.createdAt ? new Date(table.createdAt).toLocaleDateString() : t('admin_object_manager.notAvailable');
-                  const updatedDateText = table.updatedAt ? new Date(table.updatedAt).toLocaleString() : (table.createdAt ? new Date(table.createdAt).toLocaleString() : t('admin_object_manager.notAvailable'));
+                  const dateText = table.createdAt ? formatSystemDateTimeValue(table.createdAt, datetimePrefs) : t('admin_object_manager.notAvailable');
+                  const updatedDateText = table.updatedAt ? formatSystemDateTimeValue(table.updatedAt, datetimePrefs) : (table.createdAt ? formatSystemDateTimeValue(table.createdAt, datetimePrefs) : t('admin_object_manager.notAvailable'));
 
                   return (
                     <UiTr key={table.id} onClick={() => selectRow(table)}>
@@ -1572,7 +1574,7 @@ const ObjectManager: React.FC = () => {
                               <td>
                                 <span className="om-date-cell">
                                   <Calendar size={14} style={{ marginRight: '4px' }} />
-                                  {new Date(layout.createdAt).toLocaleDateString()}
+                                  {formatSystemDateTimeValue(layout.createdAt, datetimePrefs)}
                                 </span>
                               </td>
                                <td style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>

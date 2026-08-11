@@ -197,16 +197,20 @@ function App() {
             <Route path="/table-builder" element={<TableBuilder />} />
             <Route path="/layout-studio/:tableId/:layoutId" element={
               <ProtectedRoute>
+                <DateTimePrefsProvider>
                 <Suspense fallback={<LoadingScreen />}>
                   <LayoutStudio />
                 </Suspense>
+                </DateTimePrefsProvider>
               </ProtectedRoute>
             } />
             <Route path="/workflow-studio/:workflowId" element={
               <ProtectedRoute>
+                <DateTimePrefsProvider>
                 <Suspense fallback={<LoadingScreen />}>
                   <WorkflowStudio />
                 </Suspense>
+                </DateTimePrefsProvider>
               </ProtectedRoute>
             } />
 

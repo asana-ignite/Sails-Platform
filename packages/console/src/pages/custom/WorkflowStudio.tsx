@@ -8,6 +8,7 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useDateTimePrefs, formatSystemDateTimeValue } from '../../utils/systemDateTime';
 import {
   Plus, X, Trash2, GitBranch, User, Users,
   Briefcase, Shield, Hash, Clock, Settings, Filter,
@@ -26,6 +27,7 @@ import type { FilterGroup, SailsTableDefinition } from '@sails/shared';
 import { collectionValueSchema, validateCollectionValue, WORKFLOW_SCALAR_TYPES, FIELD_TYPE_REGISTRY } from '@sails/shared';
 import { fetchCached } from '../../api/client';
 import jsonata from 'jsonata';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Unauthorized from '../Unauthorized';
 import LoadingScreen from '../../components/common/LoadingScreen';
@@ -657,7 +659,9 @@ function nearestPort(nodePos: Pt, pos: Pt): Port {
 // ─── Component ────────────────────────────────────────────────
 
 export const WorkflowStudio: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const datetimePrefs = useDateTimePrefs();
   const allowedRoles = ['SUPER_ADMIN', 'TENANT_ADMIN'];
 
   // URL param
@@ -2337,7 +2341,7 @@ export const WorkflowStudio: React.FC = () => {
                 <div key={v.id} className={`ws-version-item ${v.version === def?.currentVersion ? 'ws-version-item--current' : ''}`}>
                   <span className="ws-version-item__num">v{v.version}</span>
                   <span className="ws-version-item__info">{v.notes || '—'} {v.publishedBy ? `by ${v.publishedBy}` : ''}</span>
-                  <span className="ws-version-item__date">{new Date(v.publishedAt).toLocaleDateString()}</span>
+                  <span className="ws-version-item__date">{formatSystemDateTimeValue(v.publishedAt, datetimePrefs)}</span>
                   {!isReadonly && v.version !== def?.currentVersion && (
                     <button className="ws-icon-btn" title="Rollback to this version" onClick={() => doRollback(v.version)}><RotateCcw size={11} /></button>
                   )}
@@ -2835,9 +2839,14 @@ export const WorkflowStudio: React.FC = () => {
 
       {/* Toolbar */}
       <div className="ws-toolbar">
-        <span className="ws-toolbar__brand">
-          <Workflow size={15} /> Workflow Studio
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => navigate('/admin/workflow')} title="Back">
+            <ArrowLeft size={14} />
+          </button>
+          <span className="ws-toolbar__brand">
+            <Workflow size={15} /> Workflow Studio
+          </span>
+        </div>
         <input className="ws-toolbar__name" value={process.name} onChange={(e) => setProcess((p) => ({ ...p, name: e.target.value }))} disabled={isActive} placeholder="Process name" />
         {def && <span className={`ws-toolbar__status ws-toolbar__status--${def.status}`}>{def.status}</span>}
 

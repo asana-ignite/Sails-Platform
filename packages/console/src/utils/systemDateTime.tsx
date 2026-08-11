@@ -151,6 +151,36 @@ export function resolveControlDisplayText(
   return formatDateTimeValue(value, field?.config, field?.logicalType || fallbackLogicalType || '');
 }
 
+/**
+ * Format a value using the GLOBAL General Settings date/time config, but
+ * respect the given logical type for the time portion:
+ *  - 'date'        → date token only
+ *  - 'time'        → time token only
+ *  - datetime/timestamp → date + time tokens
+ * Timezone-aware when prefs.timezone is set. Used where no field config is
+ * available (e.g. filter chips, audit timestamps, version history).
+ */
+export function formatGlobalPrefsValue(value: any, prefs?: GeneralDateTimePrefs, logicalType?: string): string {
+  if (value === undefined || value === null || value === '') return '';
+
+  let date: Date | null = typeof value === 'string' ? parseAsUtcInstant(value) : null;
+  if (!date) date = parseDateTimeValue(value);
+  if (!date) return '';
+
+  const lt = (logicalType || '').toLowerCase();
+  const isDateOnly = lt === 'date';
+  const isTimeOnly = lt === 'time';
+
+  const tokenFormat = isDateOnly
+    ? resolveDateToken(prefs)
+    : isTimeOnly
+      ? resolveTimeToken(prefs)
+      : `${resolveDateToken(prefs)} ${resolveTimeToken(prefs)}`;
+
+  if (prefs?.timezone) return formatInTimezone(date, tokenFormat, prefs.timezone);
+  return formatDateTokens(date, tokenFormat);
+}
+
 // ── Global provider: makes the Admin General Settings date/time prefs
 //    available to control plugins (read-only system fields) and pages. ──
 
