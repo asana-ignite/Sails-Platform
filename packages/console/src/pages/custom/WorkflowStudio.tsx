@@ -177,6 +177,8 @@ interface RoutingProcess {
   /** Canvas position of the Start node (persisted with the config). */
   startX?: number;
   startY?: number;
+  /** Last editor mode used (persisted so canvas-arranged workflows reopen in Canvas). */
+  viewMode?: 'chain' | 'canvas';
 }
 
 type StartMode = 'record' | 'rest' | 'scheduled';
@@ -942,6 +944,16 @@ export const WorkflowStudio: React.FC = () => {
           if (typeof source.startX === 'number' && typeof source.startY === 'number') {
             setStartPos({ x: source.startX, y: source.startY });
           }
+          // Default the editor mode: configs arranged in Canvas mode (stages
+          // carry x/y, or the config records viewMode) reopen in Canvas.
+          const hasCanvasPositions = (source?.stages || []).some(
+            (s: any) => typeof s.x === 'number' && typeof s.y === 'number'
+          ) || (typeof source?.startX === 'number' && typeof source?.startY === 'number');
+          const initialMode: LayoutMode =
+            source?.viewMode === 'chain' ? 'chain'
+            : source?.viewMode === 'canvas' ? 'canvas'
+            : hasCanvasPositions ? 'canvas' : 'chain';
+          setLayoutMode(initialMode);
         } else {
           setProcess((p) => ({ ...p, name: d.name, description: d.description || '', tableId: d.tableId || null } as any));
         }
@@ -1967,7 +1979,7 @@ export const WorkflowStudio: React.FC = () => {
   // ── Serialize / Deserialize ──
   // The Start node's canvas position lives in local state — fold it into the
   // persisted config so it survives saves/reloads alongside the stage x/y.
-  const serializeProcess = (): RoutingProcess => ({ ...process, startX: startPos.x, startY: startPos.y });
+  const serializeProcess = (): RoutingProcess => ({ ...process, startX: startPos.x, startY: startPos.y, viewMode: layoutMode });
 
   // ── Undo / Redo engine ──
 
