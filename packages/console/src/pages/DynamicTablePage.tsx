@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { Layers, AlertCircle } from 'lucide-react';
 import { useConsole } from '../contexts/ConsoleContext';
@@ -14,6 +15,7 @@ import './custom/LayoutStudio.css';
 import './custom/layouts-responsive.css';
 
 const DynamicTablePage: React.FC = () => {
+  const { t } = useTranslation();
   const { apps, navigationItems } = useConsole();
   const location = useLocation();
   const navigate = useNavigate();

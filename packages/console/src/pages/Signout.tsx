@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import './Login.css';
 import './Signout.css';
 import { ShieldCheck, RotateCcw } from 'lucide-react';
@@ -7,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 const REDIRECT_SECONDS = 5;
 
 const Signout: React.FC = () => {
+  const { t } = useTranslation();
   const { logoLightUrl, logoDarkUrl, themeMode } = useTheme();
   const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
   const [signedOut, setSignedOut] = useState(false);
@@ -56,26 +58,26 @@ const Signout: React.FC = () => {
               <ShieldCheck size={28} />
             </div>
             <div>
-              <h2 className="sails-auth-title">Signed Out</h2>
+              <h2 className="sails-auth-title">{t('auth.signout.signedOut')}</h2>
               <p className="sails-auth-subtitle">
-                Your session has been ended securely. All local authentication tokens have been cleared.
+                {t('auth.signout.sessionEnded')}
               </p>
             </div>
           </div>
 
           <a href="/login" className="sails-signout-button">
             <RotateCcw size={16} />
-            <span>Sign In Again</span>
+            <span>{t('auth.signout.signInAgain')}</span>
           </a>
 
           {signedOut && (
             <p className="sails-signout-hint">
-              Redirecting to the sign-in page in {countdown}s...
+              {t('auth.signout.redirecting', { seconds: countdown })}
             </p>
           )}
 
           <div className="sails-login-footer">
-            <p>© 2026 Ignite Idea. Sails Internal Platform.</p>
+            <p>{t('auth.copyright')}</p>
           </div>
         </div>
       </div>
@@ -85,7 +87,7 @@ const Signout: React.FC = () => {
         <div className="sails-hero-gradient-overlay" />
 
         <div className="sails-auth-hero-content">
-          <h1 className="sails-hero-greeting">See you next time!</h1>
+          <h1 className="sails-hero-greeting">{t('auth.signout.seeYouNextTime')}</h1>
           <p className="sails-hero-subtext">
             Thank you for using the Sails Platform. Your data stays secure while you're away — sign back in whenever you're ready.
           </p>

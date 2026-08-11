@@ -42,4 +42,14 @@ export const AdminPluginRegistry: Record<string, any> = {
   // Fallbacks & Tests
   AdminPlaceholder: lazy(() => import('../../pages/admin/AdminPlaceholder')),
   TestPlugin: lazy(() => import('../../pages/admin/AdminTestPlugin')),
+
+  // Sales Package Admin
+  SalesTargetsAdmin: lazy(() => import('../../pages/admin/sales/SalesTargetsAdmin')),
+  SalesForecastAdmin: lazy(() => import('../../pages/admin/sales/SalesForecastAdmin')),
+  PipelineStagesAdmin: lazy(() => import('../../pages/admin/sales/PipelineStagesAdmin')),
+
+  // Customer Service Package Admin
+  // LineIntegrationAdmin: lazy(() => import('../../pages/admin/cs/LineIntegrationAdmin')),
+  // AutoReplyRulesAdmin: lazy(() => import('../../pages/admin/cs/AutoReplyRulesAdmin')),
+  // AgentRoutingAdmin: lazy(() => import('../../pages/admin/cs/AgentRoutingAdmin')),
 };

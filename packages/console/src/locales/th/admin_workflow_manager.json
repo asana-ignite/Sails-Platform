@@ -1,0 +1,75 @@
+{
+  "admin_workflow_manager": {
+    "title": "เวิร์กโฟลว์",
+    "actions": {
+      "createWorkflow": "สร้างเวิร์กโฟลว์",
+      "designWorkflow": "ออกแบบเวิร์กโฟลว์",
+      "activate": "เปิดใช้งาน",
+      "activating": "กำลังเปิดใช้งาน...",
+      "deactivate": "ปิดใช้งาน",
+      "deactivating": "กำลังปิดใช้งาน...",
+      "delete": "ลบ",
+      "deleting": "กำลังลบ..."
+    },
+    "table": {
+      "columns": {
+        "workflow": "เวิร์กโฟลว์",
+        "description": "คำอธิบาย",
+        "model": "โมเดล",
+        "versions": "เวอร์ชัน",
+        "status": "สถานะ",
+        "createdAt": "สร้างเมื่อ",
+        "lastModified": "แก้ไขล่าสุด"
+      },
+      "searchPlaceholder": "ค้นหาเวิร์กโฟลว์ตามชื่อ...",
+      "noWorkflowsTitle": "ยังไม่มีเวิร์กโฟลว์",
+      "noWorkflowsText": "สร้างเวิร์กโฟลว์แรกของคุณเพื่อทำให้กระบวนการอนุมัติเป็นอัตโนมัติในโมเดลของคุณ",
+      "loading": "กำลังโหลดเวิร์กโฟลว์...",
+      "default": "ค่าเริ่มต้น",
+      "status": {
+        "active": "ทำงาน",
+        "draft": "ฉบับร่าง",
+        "deactivated": "ปิดใช้งานแล้ว"
+      }
+    },
+    "modal": {
+      "createTitle": "สร้างเวิร์กโฟลว์",
+      "createSubtitle": "กำหนดเวิร์กโฟลว์การอนุมัติสำหรับโมเดลข้อมูล",
+      "nameLabel": "ชื่อ *",
+      "namePlaceholder": "เช่น การตรวจสอบสัญญา",
+      "systemNameLabel": "ชื่อระบบ *",
+      "systemNamePlaceholder": "เช่น contract_review",
+      "systemNameHint": "ใช้ snake_case เท่านั้น (เช่น contract_review)",
+      "systemNameError": "ชื่อระบบต้องอยู่ในรูปแบบ snake_case ที่ถูกต้อง (เช่น contract_review)",
+      "descriptionLabel": "คำอธิบาย",
+      "descriptionPlaceholder": "คำอธิบายเพิ่มเติมของเวิร์กโฟลว์นี้",
+      "modelLabel": "โมเดล (ไม่บังคับ)",
+      "modelPlaceholder": "เลือกโมเดล...",
+      "modelHint": "โมเดลข้อมูลที่เวิร์กโฟลว์นี้ทำงานบน เว้นว่างไว้สำหรับเวิร์กโฟลว์แบบสแตนด์อโลน",
+      "creating": "กำลังสร้าง...",
+      "createError": "ไม่สามารถโหลดเวิร์กโฟลว์ได้"
+    },
+    "confirm": {
+      "deleteTitle": "ลบเวิร์กโฟลว์",
+      "deleteBody": "คุณแน่ใจหรือไม่ว่าต้องการลบ <1>{{name}}</1>? การดำเนินการนี้ไม่สามารถเรียกคืนได้",
+      "deleteLabel": "ลบ",
+      "deletingLabel": "กำลังลบ...",
+      "deleteError": "ไม่สามารถลบเวิร์กโฟลว์ได้",
+      "activateTitle": "เปิดใช้งานเวิร์กโฟลว์",
+      "activateBody": "เผยแพร่ <1>{{name}}</1> เป็นเวอร์ชัน {{version}}? อินสแตนซ์ที่กำลังทำงานจะคงเวอร์ชันที่ตรึงไว้ — อินสแตนซ์ใหม่จะใช้เวอร์ชันนี้",
+      "activateLabel": "เปิดใช้งาน v{{version}}",
+      "activatingLabel": "กำลังเปิดใช้งาน...",
+      "activateError": "ไม่สามารถเปิดใช้งานเวิร์กโฟลว์ได้",
+      "deactivateTitle": "ปิดใช้งานเวิร์กโฟลว์",
+      "deactivateBody": "ปิดใช้งาน <1>{{name}}</1>? ไม่สามารถเริ่มอินสแตนซ์ใหม่ได้ อินสแตนซ์ที่กำลังทำงานที่มีอยู่จะดำเนินต่อไปในเวอร์ชันที่ตรึงไว้จนกว่าจะเสร็จสิ้น",
+      "deactivateLabel": "ปิดใช้งาน",
+      "deactivatingLabel": "กำลังปิดใช้งาน...",
+      "deactivateError": "ไม่สามารถปิดใช้งานเวิร์กโฟลว์ได้"
+    },
+    "toast": {
+      "deleted": "ลบเวิร์กโฟลว์สำเร็จแล้ว",
+      "activated": "เปิดใช้งานเวิร์กโฟลว์แล้ว — เผยแพร่เวอร์ชัน {{version}}",
+      "deactivated": "ปิดใช้งานเวิร์กโฟลว์แล้ว อินสแตนซ์ที่กำลังทำงานจะดำเนินต่อไปในเวอร์ชันที่ตรึงไว้"
+    }
+  }
+}

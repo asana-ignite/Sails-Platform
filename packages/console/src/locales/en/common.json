@@ -1,0 +1,68 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "loadingWorkspace": "Loading Workspace...",
+    "syncing": "Syncing...",
+    "back": "Back",
+    "copy": "Copy",
+    "pagination": {
+      "showing": "Showing",
+      "to": "to",
+      "of": "of",
+      "records": "records",
+      "recordsPerPage": "Records per page"
+    },
+    "close": "Close",
+    "confirm": "Confirm",
+    "noData": "No data available",
+    "error": "Error",
+    "success": "Success",
+    "submit": "Submit",
+    "reset": "Reset",
+    "export": "Export",
+    "import": "Import",
+    "filter": "Filter",
+    "sort": "Sort",
+    "actions": "Actions",
+    "status": "Status",
+    "settings": "Setting",
+    "logout": "Logout",
+    "profile": "Profile",
+    "guest": "Guest",
+    "role": {
+      "user": "User",
+      "member": "Member",
+      "administrator": "Administrator",
+      "super_administrator": "Super Administrator"
+    },
+    "appSwitcher": "App Switcher",
+    "loadingApps": "Loading Apps...",
+    "searchPlaceholder": "Search leads, contacts, orders...",
+    "coreSystemVersion": "Core System v1.0",
+    "dashboard": {
+      "title": "Dashboard",
+      "welcome": "Welcome back, here's what's happening with your leads today.",
+      "totalLeads": "Total Leads",
+      "conversionRate": "Conversion Rate",
+      "revenue": "Revenue",
+      "avgResponse": "Avg. Response",
+      "recentActivity": "Recent Activity",
+      "noActivity": "Your recent activity will appear here..."
+    },
+    "unauthorized": {
+      "title": "Unauthorized Access",
+      "message": "Oops! You don't have the necessary permissions to view this page.",
+      "goBack": "Go Back",
+      "dashboard": "Dashboard"
+    },
+    "adminPlaceholder": {
+      "message": "This administrative module is part of the Phase 6 Roadmap. Currently connected to the {{path}} endpoint."
+    }
+  }
+}

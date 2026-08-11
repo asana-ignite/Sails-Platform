@@ -1,0 +1,24 @@
+{
+  "admin_audit_log": {
+    "title": "Audit History",
+    "noRecords": "No audit records found.",
+    "tableHeaders": {
+      "action": "Action",
+      "object": "Object",
+      "recordId": "Record ID",
+      "user": "User",
+      "timestamp": "Timestamp",
+      "details": "Details"
+    },
+    "filters": {
+      "allActions": "All Actions",
+      "create": "Create",
+      "update": "Update",
+      "delete": "Delete",
+      "alterSchema": "Alter Schema",
+      "allObjects": "All Objects",
+      "allUsers": "All Users",
+      "dateRange": "Date Range"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "admin_user_manager": {
+    "title": "ผู้ใช้",
+    "addUser": "เพิ่มผู้ใช้",
+    "editUser": "แก้ไขผู้ใช้",
+    "deleteUser": "ลบผู้ใช้",
+    "inviteUser": "เชิญผู้ใช้",
+    "resetPassword": "รีเซ็ตรหัสผ่าน",
+    "searchUsers": "ค้นหาผู้ใช้...",
+    "noUsers": "ไม่พบผู้ใช้",
+    "confirmDelete": "คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้นี้?",
+    "columns": {
+      "name": "ชื่อ",
+      "email": "อีเมล",
+      "role": "บทบาท",
+      "phone": "โทรศัพท์",
+      "title": "ตำแหน่ง",
+      "status": "สถานะ",
+      "lastLogin": "เข้าสู่ระบบล่าสุด",
+      "actions": "การดำเนินการ"
+    },
+    "status": {
+      "active": "ใช้งาน",
+      "inactive": "ไม่ใช้งาน",
+      "pending": "รอดำเนินการ"
+    },
+    "form": {
+      "firstName": "ชื่อ",
+      "lastName": "นามสกุล",
+      "email": "อีเมล",
+      "role": "บทบาท",
+      "phone": "โทรศัพท์",
+      "title": "ตำแหน่ง",
+      "password": "รหัสผ่าน",
+      "confirmPassword": "ยืนยันรหัสผ่าน"
+    },
+    "toast": {
+      "created": "สร้างผู้ใช้สำเร็จ",
+      "updated": "อัปเดตผู้ใช้สำเร็จ",
+      "deleted": "ลบผู้ใช้สำเร็จ",
+      "passwordReset": "ส่งลิงก์รีเซ็ตรหัสผ่านแล้ว"
+    }
+  }
+}

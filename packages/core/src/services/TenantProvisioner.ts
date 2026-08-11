@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 import { ConnectionManager } from '../core/engine/ConnectionManager';
 import { ProvisionTenantResponse } from '@sails/shared';
 import { TranslatorLayer } from './TranslatorLayer';
+import { PACKAGE_MANIFESTS, getAllPackageCapabilityDefinitions } from '@sails/shared';
 import bcrypt from 'bcryptjs';
 
 export class TenantProvisioner {
@@ -100,6 +101,7 @@ export class TenantProvisioner {
       data: {
         tenantId,
         name: 'Settings & Admin',
+        translationKey: 'app.settings_admin',
         icon: 'Settings',
         order: 99,
         isSystem: true,
@@ -107,54 +109,54 @@ export class TenantProvisioner {
         menus: {
           create: [
             {
-              label: 'General', icon: 'Sliders', order: 0, actionType: 'plugin', tenantId,
+              label: 'General', translationKey: 'menu.general', icon: 'Sliders', order: 0, actionType: 'plugin', tenantId,
               children: {
                 create: [
-                  { label: 'Company Profile', icon: 'Building', path: '/admin/profile', order: 0, requiredCapability: 'system.settings.profile', componentKey: 'AdminCompanyProfile', actionType: 'plugin', tenantId },
-                  { label: 'General Settings', icon: 'Settings', path: '/admin/general', order: 1, requiredCapability: 'system.settings.edit', componentKey: 'AdminGeneralSettings', actionType: 'plugin', tenantId },
-                  { label: 'Subscription & Billing', icon: 'CreditCard', path: '/admin/billing', order: 2, requiredCapability: 'system.billing.manage', componentKey: 'AdminBilling', actionType: 'plugin', tenantId }
+                  { label: 'Company Profile', translationKey: 'menu.company_profile', icon: 'Building', path: '/admin/profile', order: 0, requiredCapability: 'system.settings.profile', componentKey: 'AdminCompanyProfile', actionType: 'plugin', tenantId },
+                  { label: 'General Settings', translationKey: 'menu.general_settings', icon: 'Settings', path: '/admin/general', order: 1, requiredCapability: 'system.settings.edit', componentKey: 'AdminGeneralSettings', actionType: 'plugin', tenantId },
+                  { label: 'Subscription & Billing', translationKey: 'menu.subscription_billing', icon: 'CreditCard', path: '/admin/billing', order: 2, requiredCapability: 'system.billing.manage', componentKey: 'AdminBilling', actionType: 'plugin', tenantId }
                 ]
               }
             },
             {
-              label: 'Users & Team', icon: 'Users', order: 1, actionType: 'plugin', tenantId,
+              label: 'Users & Team', translationKey: 'menu.users_team', icon: 'Users', order: 1, actionType: 'plugin', tenantId,
               children: {
                 create: [
-                  { label: 'Users', icon: 'UserPlus', path: '/admin/users', order: 0, requiredCapability: 'system.users.manage', componentKey: 'AdminUserManager', actionType: 'plugin', tenantId },
-                  { label: 'Positions', icon: 'Award', path: '/admin/positions', order: 1, requiredCapability: 'system.users.manage', componentKey: 'AdminPositionManager', actionType: 'plugin', tenantId },
-                  { label: 'Teams', icon: 'GitBranch', path: '/admin/teams', order: 2, requiredCapability: 'system.teams.manage', componentKey: 'AdminTeamManager', actionType: 'plugin', tenantId },
-                  { label: 'Access Roles', icon: 'ShieldCheck', path: '/admin/roles', order: 3, requiredCapability: 'system.roles.assign', componentKey: 'AdminPermissions', actionType: 'plugin', tenantId }
+                  { label: 'Users', translationKey: 'menu.users', icon: 'UserPlus', path: '/admin/users', order: 0, requiredCapability: 'system.users.manage', componentKey: 'AdminUserManager', actionType: 'plugin', tenantId },
+                  { label: 'Positions', translationKey: 'menu.positions', icon: 'Award', path: '/admin/positions', order: 1, requiredCapability: 'system.users.manage', componentKey: 'AdminPositionManager', actionType: 'plugin', tenantId },
+                  { label: 'Teams', translationKey: 'menu.teams', icon: 'GitBranch', path: '/admin/teams', order: 2, requiredCapability: 'system.teams.manage', componentKey: 'AdminTeamManager', actionType: 'plugin', tenantId },
+                  { label: 'Access Roles', translationKey: 'menu.access_roles', icon: 'ShieldCheck', path: '/admin/roles', order: 3, requiredCapability: 'system.roles.assign', componentKey: 'AdminPermissions', actionType: 'plugin', tenantId }
                 ]
               }
             },
             {
-              label: 'Platform Studio', icon: 'Layout', order: 2, actionType: 'plugin', tenantId,
+              label: 'Platform Studio', translationKey: 'menu.platform_studio', icon: 'Layout', order: 2, actionType: 'plugin', tenantId,
               children: {
                 create: [
-                  { label: 'Data Model', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', componentKey: 'AdminEntityManager', actionType: 'plugin', tenantId },
-                  { label: 'Layouts', icon: 'LayoutTemplate', path: '/admin/views', order: 1, requiredCapability: 'system.schema.manage', componentKey: 'AdminViewManager', actionType: 'plugin', tenantId },
-                  { label: 'Workflow', icon: 'Workflow', path: '/admin/workflow', order: 2, requiredCapability: 'system.schema.manage', componentKey: 'AdminWorkflowManager', actionType: 'plugin', tenantId },
-                  { label: 'Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 3, requiredCapability: 'system.apps.manage', componentKey: 'AdminAppManager', actionType: 'plugin', tenantId }
+                  { label: 'Data Model', translationKey: 'menu.data_model', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', componentKey: 'AdminEntityManager', actionType: 'plugin', tenantId },
+                  { label: 'Layouts', translationKey: 'menu.layouts', icon: 'LayoutTemplate', path: '/admin/views', order: 1, requiredCapability: 'system.schema.manage', componentKey: 'AdminViewManager', actionType: 'plugin', tenantId },
+                  { label: 'Workflow', translationKey: 'menu.workflow', icon: 'Workflow', path: '/admin/workflow', order: 2, requiredCapability: 'system.schema.manage', componentKey: 'AdminWorkflowManager', actionType: 'plugin', tenantId },
+                  { label: 'Apps', translationKey: 'menu.apps', icon: 'LayoutGrid', path: '/admin/apps', order: 3, requiredCapability: 'system.apps.manage', componentKey: 'AdminAppManager', actionType: 'plugin', tenantId }
                 ]
               }
             },
             {
-              label: 'Login & Security', icon: 'ShieldCheck', order: 3, actionType: 'plugin', tenantId,
+              label: 'Login & Security', translationKey: 'menu.login_security', icon: 'ShieldCheck', order: 3, actionType: 'plugin', tenantId,
               children: {
                 create: [
-                  { label: 'Login & Single Sign-On', icon: 'Key', path: '/admin/sso', order: 0, requiredCapability: 'system.security.sso', componentKey: 'AdminSSOConfig', actionType: 'plugin', tenantId },
-                  { label: 'API & Service Tokens', icon: 'FileDigit', path: '/admin/tokens', order: 1, requiredCapability: 'system.security.tokens', componentKey: 'AdminApiTokens', actionType: 'plugin', tenantId },
-                  { label: 'Audit History', icon: 'FileClock', path: '/admin/audit', order: 2, requiredCapability: 'system.audit.view', componentKey: 'AdminAuditLog', actionType: 'plugin', tenantId }
+                  { label: 'Login & Single Sign-On', translationKey: 'menu.login_sso', icon: 'Key', path: '/admin/sso', order: 0, requiredCapability: 'system.security.sso', componentKey: 'AdminSSOConfig', actionType: 'plugin', tenantId },
+                  { label: 'API & Service Tokens', translationKey: 'menu.api_tokens', icon: 'FileDigit', path: '/admin/tokens', order: 1, requiredCapability: 'system.security.tokens', componentKey: 'AdminApiTokens', actionType: 'plugin', tenantId },
+                  { label: 'Audit History', translationKey: 'menu.audit_history', icon: 'FileClock', path: '/admin/audit', order: 2, requiredCapability: 'system.audit.view', componentKey: 'AdminAuditLog', actionType: 'plugin', tenantId }
                 ]
               }
             },
             {
-              label: 'Integrations & Apps', icon: 'Blocks', order: 4, actionType: 'plugin', tenantId,
+              label: 'Integrations & Apps', translationKey: 'menu.integrations_apps', icon: 'Blocks', order: 4, actionType: 'plugin', tenantId,
               children: {
                 create: [
-                  { label: 'Connected Apps', icon: 'Link', path: '/admin/connected-apps', order: 0, requiredCapability: 'system.security.apps', componentKey: 'AdminConnectedApps', actionType: 'plugin', tenantId },
-                  { label: 'API & Webhooks', icon: 'Webhook', path: '/admin/integrations', order: 1, requiredCapability: 'system.integrations.api', componentKey: 'AdminIntegrations', actionType: 'plugin', tenantId },
-                  { label: 'Custom Modules (BYOC)', icon: 'Code2', path: '/admin/byoc', order: 2, requiredCapability: 'system.extensions.byoc', componentKey: 'AdminByocModules', actionType: 'plugin', tenantId }
+                  { label: 'Connected Apps', translationKey: 'menu.connected_apps', icon: 'Link', path: '/admin/connected-apps', order: 0, requiredCapability: 'system.security.apps', componentKey: 'AdminConnectedApps', actionType: 'plugin', tenantId },
+                  { label: 'API & Webhooks', translationKey: 'menu.api_webhooks', icon: 'Webhook', path: '/admin/integrations', order: 1, requiredCapability: 'system.integrations.api', componentKey: 'AdminIntegrations', actionType: 'plugin', tenantId },
+                  { label: 'Custom Modules (BYOC)', translationKey: 'menu.custom_modules_byoc', icon: 'Code2', path: '/admin/byoc', order: 2, requiredCapability: 'system.extensions.byoc', componentKey: 'AdminByocModules', actionType: 'plugin', tenantId }
                 ]
               }
             }
@@ -189,8 +191,8 @@ export class TenantProvisioner {
     if (!existingNames.includes('Dashboard')) {
       await db.consoleApp.create({
         data: {
-          tenantId, name: 'Dashboard', icon: 'LayoutDashboard', order: 0,
-          menus: { create: [{ label: 'Overview', icon: 'Activity', path: '/dashboard', order: 0, actionType: 'plugin', tenantId }] }
+          tenantId, name: 'Dashboard', translationKey: 'app.dashboard', icon: 'LayoutDashboard', order: 0,
+          menus: { create: [{ label: 'Overview', translationKey: 'menu.overview', icon: 'Activity', path: '/dashboard', order: 0, actionType: 'plugin', tenantId }] }
         }
       });
     }
@@ -199,24 +201,24 @@ export class TenantProvisioner {
     if (!existingNames.includes('CRM')) {
       await db.consoleApp.create({
         data: {
-          tenantId, name: 'CRM', icon: 'Users', order: 1,
+          tenantId, name: 'CRM', translationKey: 'app.crm', icon: 'Users', order: 1,
           menus: {
             create: [
               {
-                label: 'Intelligence', icon: 'Zap', order: 0, actionType: 'plugin', tenantId,
+                label: 'Intelligence', translationKey: 'menu.intelligence', icon: 'Zap', order: 0, actionType: 'plugin', tenantId,
                 children: {
                   create: [
-                    { label: 'Leads', icon: 'Target', path: '/crm/leads', order: 0, actionType: 'table', tenantId },
-                    { label: 'Pipeline', icon: 'GitMerge', path: '/crm/pipeline', order: 1, actionType: 'plugin', tenantId }
+                    { label: 'Leads', translationKey: 'menu.leads', icon: 'Target', path: '/crm/leads', order: 0, actionType: 'table', tenantId },
+                    { label: 'Pipeline', translationKey: 'menu.pipeline', icon: 'GitMerge', path: '/crm/pipeline', order: 1, actionType: 'plugin', tenantId }
                   ]
                 }
               },
               {
-                label: 'Accounts', icon: 'Building', order: 1, actionType: 'plugin', tenantId,
+                label: 'Accounts', translationKey: 'menu.accounts', icon: 'Building', order: 1, actionType: 'plugin', tenantId,
                 children: {
                   create: [
-                    { label: 'Customers', icon: 'UserCheck', path: '/crm/customers', order: 0, actionType: 'table', tenantId },
-                    { label: 'Companies', icon: 'Briefcase', path: '/crm/companies', order: 1, actionType: 'table', tenantId }
+                    { label: 'Customers', translationKey: 'menu.customers', icon: 'UserCheck', path: '/crm/customers', order: 0, actionType: 'table', tenantId },
+                    { label: 'Companies', translationKey: 'menu.companies', icon: 'Briefcase', path: '/crm/companies', order: 1, actionType: 'table', tenantId }
                   ]
                 }
               }
@@ -230,15 +232,15 @@ export class TenantProvisioner {
     if (!existingNames.includes('Sales')) {
       await db.consoleApp.create({
         data: {
-          tenantId, name: 'Sales', icon: 'DollarSign', order: 2,
+          tenantId, name: 'Sales', translationKey: 'app.sales', icon: 'DollarSign', order: 2,
           menus: {
             create: [
               {
-                label: 'Transactions', icon: 'ShoppingCart', order: 0, actionType: 'plugin', tenantId,
+                label: 'Transactions', translationKey: 'menu.transactions', icon: 'ShoppingCart', order: 0, actionType: 'plugin', tenantId,
                 children: {
                   create: [
-                    { label: 'Orders', icon: 'sales/orders', order: 0, actionType: 'table', tenantId },
-                    { label: 'Invoices', icon: 'sales/invoices', order: 1, actionType: 'table', tenantId }
+                    { label: 'Orders', translationKey: 'menu.orders', icon: 'sales/orders', order: 0, actionType: 'table', tenantId },
+                    { label: 'Invoices', translationKey: 'menu.invoices', icon: 'sales/invoices', order: 1, actionType: 'table', tenantId }
                   ]
                 }
               }
@@ -272,6 +274,7 @@ export class TenantProvisioner {
         {
           tenantId,
           label: 'Quick Accept',
+          translationKey: 'widget.quick_accept',
           icon: 'CheckCircle',
           componentKey: 'OmniChannelQuickAccept',
           openIn: 'bar',
@@ -283,6 +286,7 @@ export class TenantProvisioner {
         {
           tenantId,
           label: 'Agent Chat',
+          translationKey: 'widget.agent_chat',
           icon: 'MessageSquare',
           componentKey: 'AgentChatWindows',
           openIn: 'bar',
@@ -319,6 +323,102 @@ export class TenantProvisioner {
           console.warn(`[PROVISIONER] Could not provision standard model ${model.name}:`, e?.message);
         }
       }
+    }
+  }
+
+  async activatePackage(tenantId: string, packageId: string) {
+    const manifest = PACKAGE_MANIFESTS[packageId];
+    if (!manifest) {
+      throw new Error(`Unknown package: ${packageId}`);
+    }
+
+    const adminApp = await db.consoleApp.findFirst({
+      where: { tenantId, name: 'Settings & Admin' }
+    });
+    if (!adminApp) {
+      throw new Error('Settings & Admin app not found for this tenant. Provisioning may not be complete.');
+    }
+
+    const existingSection = await db.consoleMenu.findFirst({
+      where: { appId: adminApp.id, label: manifest.category, tenantId }
+    });
+    if (existingSection) {
+      console.log(`[PROVISIONER] Package "${packageId}" admin section already exists for tenant ${tenantId}.`);
+      return existingSection;
+    }
+
+    const maxOrder = await db.consoleMenu.aggregate({
+      where: { appId: adminApp.id, parentId: null, tenantId },
+      _max: { order: true }
+    });
+    const nextOrder = (maxOrder._max.order ?? 0) + 1;
+
+    await db.consoleMenu.create({
+      data: {
+        appId: adminApp.id,
+        tenantId,
+        label: manifest.category,
+        icon: manifest.icon,
+        order: nextOrder,
+        isSystem: true,
+        actionType: 'plugin',
+        children: {
+          create: manifest.adminMenus.map(menu => ({
+            tenantId,
+            label: menu.label,
+            icon: menu.icon,
+            path: menu.path,
+            order: 0,
+            actionType: 'plugin',
+            componentKey: menu.componentKey,
+            requiredCapability: menu.requiredCapability,
+          }))
+        }
+      }
+    });
+
+    console.log(`[PROVISIONER] Activated package "${packageId}" for tenant ${tenantId}`);
+  }
+
+  async getActivePackages(tenantId: string): Promise<string[]> {
+    const adminApp = await db.consoleApp.findFirst({
+      where: { tenantId, name: 'Settings & Admin' }
+    });
+    if (!adminApp) return [];
+
+    const sections = await db.consoleMenu.findMany({
+      where: { appId: adminApp.id, parentId: null, tenantId },
+      select: { label: true }
+    });
+
+    const active: string[] = [];
+    for (const [pkgId, manifest] of Object.entries(PACKAGE_MANIFESTS)) {
+      if (sections.some(s => s.label === manifest.category)) {
+        active.push(pkgId);
+      }
+    }
+    return active;
+  }
+
+  async seedPackageCapabilityDefinitions(packageId: string) {
+    const manifest = PACKAGE_MANIFESTS[packageId];
+    if (!manifest) {
+      throw new Error(`Unknown package: ${packageId}`);
+    }
+
+    for (const cap of manifest.capabilities) {
+      await db.capabilityDefinition.upsert({
+        where: { key: cap.key },
+        update: { label: cap.label, description: cap.description, category: manifest.category },
+        create: {
+          key: cap.key,
+          label: cap.label,
+          description: cap.description,
+          category: manifest.category,
+          packageId: packageId,
+          isSystem: false,
+        }
+      });
     }
   }
 }

@@ -1,0 +1,44 @@
+{
+  "admin_user_manager": {
+    "title": "Users",
+    "addUser": "Add User",
+    "editUser": "Edit User",
+    "deleteUser": "Delete User",
+    "inviteUser": "Invite User",
+    "resetPassword": "Reset Password",
+    "searchUsers": "Search users...",
+    "noUsers": "No users found.",
+    "confirmDelete": "Are you sure you want to delete this user?",
+    "columns": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "phone": "Phone",
+      "title": "Title",
+      "status": "Status",
+      "lastLogin": "Last Login",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending"
+    },
+    "form": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "role": "Role",
+      "phone": "Phone",
+      "title": "Title",
+      "password": "Password",
+      "confirmPassword": "Confirm Password"
+    },
+    "toast": {
+      "created": "User created successfully.",
+      "updated": "User updated successfully.",
+      "deleted": "User deleted successfully.",
+      "passwordReset": "Password reset link sent."
+    }
+  }
+}

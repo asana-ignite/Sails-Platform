@@ -1,0 +1,128 @@
+{
+  "admin_team_manager": {
+    "title": "Teams",
+    "treeLabel": "Team Hierarchy",
+    "addTeam": "Add Team",
+    "editTeam": "Edit Team",
+    "deleteTeam": "Delete Team",
+    "confirmDelete": "Are you sure you want to delete this team?",
+    "noTeams": "No teams configured.",
+    "tabs": {
+      "members": "Members",
+      "positions": "Positions",
+      "systemCapabilities": "System Capabilities",
+      "dataAccess": "Data Access"
+    },
+    "members": {
+      "addMember": "Add Member",
+      "removeMember": "Remove Member",
+      "searchMembers": "Search members...",
+      "noMembers": "No members in this team.",
+      "leader": "Team Leader",
+      "member": "Member",
+      "unlinkMember": "Unlink Member",
+      "titleName": "Name",
+      "titleEmail": "Email",
+      "titleRole": "Role",
+      "titleActions": "Actions",
+      "demoteHint": "Click to demote to regular member",
+      "promoteHint": "Click to promote to Team Leader"
+    },
+    "positions": {
+      "addPosition": "Add Position",
+      "removePosition": "Remove Position",
+      "noPositions": "No positions assigned.",
+      "unlinkPosition": "Unlink Position",
+      "addPositionToTeam": "Add Position to Team",
+      "titlePrefix": "Prefix",
+      "titlePositionName": "Position Name",
+      "titleHeadcount": "Headcount / Slots",
+      "titleActions": "Actions",
+      "occupiedSlots": "{{occupied}} / {{headCount}} Occupied",
+      "headcountSlots": "{{count}} Headcount Slots",
+      "noPositionsMapped": "No positions mapped to this team yet.",
+      "allAdded": "All positions have been added to this team.",
+      "mappedToTeamDesc": "Positions mapped to {{name}} determine role structures and slot occupancies."
+    },
+    "capabilities": {
+      "grantCapability": "Grant Capability",
+      "noCapabilities": "No system capabilities assigned.",
+      "noSystemCapabilities": "No system capabilities available."
+    },
+    "dataAccess": {
+      "grantAccess": "Grant Access",
+      "noAccess": "No data access rules configured.",
+      "objectName": "Object",
+      "canCreate": "Create",
+      "canRead": "Read",
+      "canUpdate": "Update",
+      "canDelete": "Delete",
+      "viewAllData": "View All",
+      "modifyAllData": "Modify All",
+      "manageDataAccess": "Manage Data Access",
+      "configureScopesDesc": "Configure granular visibility and modify scopes for {{type}}",
+      "searchDataObject": "Search data object...",
+      "noDataModels": "No data models defined in system.",
+      "visibilityScope": "Visibility Scope",
+      "modifyScopeLabel": "Modify Scope",
+      "viewHierarchy": "View Hierarchy",
+      "modifyHierarchy": "Modify Hierarchy",
+      "noneOption": "-- None --",
+      "ownerOption": "Owner"
+    },
+    "form": {
+      "name": "Team Name",
+      "parentTeam": "Parent Team",
+      "none": "None (Top Level)",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "saveChanges": "Save Changes",
+      "creating": "Creating...",
+      "createTeam": "Create Team",
+      "adding": "Adding...",
+      "addSelected": "Add Selected ({{count}})",
+      "dismiss": "Dismiss",
+      "teamNamePlaceholder": "e.g. Frontend Engineering",
+      "parentTeamOptional": "Parent Team (Optional)",
+      "selectParentTeam": "Select Parent Team"
+    },
+    "tree": {
+      "selectTeamHint": "Select a team from the sidebar to view details."
+    },
+    "contextMenu": {
+      "teamOptions": "Team Options"
+    },
+    "modal": {
+      "createNewTeam": "Create New Team",
+      "addMembersTo": "Add Members to {{name}}",
+      "addPositionsTo": "Add Positions to {{name}}",
+      "deleteTeamTitle": "Delete Team",
+      "deleteTeamConfirm": "Are you sure you want to delete the team \"{{name}}\"? All associated user memberships and permissions for this team will be removed.",
+      "searchUserPlaceholder": "Search user by name or email...",
+      "searchPositionPlaceholder": "Search position by name or prefix..."
+    },
+    "notification": {
+      "createTeamFailed": "Create Team Failed",
+      "failedToCreateTeam": "Failed to create team.",
+      "error": "Error",
+      "unexpectedError": "An unexpected error occurred.",
+      "deleteFailed": "Delete Failed",
+      "failedToDeleteTeam": "Failed to delete team.",
+      "addMembersFailed": "Add Members Failed",
+      "failedToAddMembers": "Failed to add selected members.",
+      "failedToAddPositions": "Failed to add positions to team.",
+      "permissionsSaved": "Permissions Saved",
+      "dataAccessSaved": "Data access permissions for {{name}} saved successfully.",
+      "objectPermissionsSaved": "Object permissions for {{name}} saved successfully.",
+      "saveFailed": "Save Failed",
+      "failedToSaveTeamObjectPerms": "Failed to save team object permissions.",
+      "failedToSaveIndividualPerm": "Failed to save individual object permission",
+      "failedToSaveDataAccess": "Failed to save data access permissions."
+    },
+    "toast": {
+      "created": "Team created successfully.",
+      "updated": "Team updated successfully.",
+      "deleted": "Team deleted successfully."
+    }
+  }
+}

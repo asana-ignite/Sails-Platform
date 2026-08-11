@@ -1,0 +1,75 @@
+{
+  "admin_workflow_manager": {
+    "title": "Workflows",
+    "actions": {
+      "createWorkflow": "Create Workflow",
+      "designWorkflow": "Design Workflow",
+      "activate": "Activate",
+      "activating": "Activating...",
+      "deactivate": "Deactivate",
+      "deactivating": "Deactivating...",
+      "delete": "Delete",
+      "deleting": "Deleting..."
+    },
+    "table": {
+      "columns": {
+        "workflow": "Workflow",
+        "description": "Description",
+        "model": "Model",
+        "versions": "Versions",
+        "status": "Status",
+        "createdAt": "Created At",
+        "lastModified": "Last Modified"
+      },
+      "searchPlaceholder": "Search workflows by name...",
+      "noWorkflowsTitle": "No workflows yet",
+      "noWorkflowsText": "Create your first workflow to automate approval processes across your models.",
+      "loading": "Loading workflows...",
+      "default": "Default",
+      "status": {
+        "active": "Active",
+        "draft": "Draft",
+        "deactivated": "Deactivated"
+      }
+    },
+    "modal": {
+      "createTitle": "Create Workflow",
+      "createSubtitle": "Define an approval workflow for a data model.",
+      "nameLabel": "Name *",
+      "namePlaceholder": "e.g. Contract Review",
+      "systemNameLabel": "System Name *",
+      "systemNamePlaceholder": "e.g. contract_review",
+      "systemNameHint": "Snake case only (e.g. contract_review).",
+      "systemNameError": "System Name must be in valid snake_case (e.g. contract_review).",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Optional description of this workflow",
+      "modelLabel": "Model (optional)",
+      "modelPlaceholder": "Select a model...",
+      "modelHint": "The data model this workflow runs on. Leave empty for a standalone workflow.",
+      "creating": "Creating...",
+      "createError": "Failed to load workflows"
+    },
+    "confirm": {
+      "deleteTitle": "Delete Workflow",
+      "deleteBody": "Are you sure you want to delete <1>{{name}}</1>? This cannot be undone.",
+      "deleteLabel": "Delete",
+      "deletingLabel": "Deleting...",
+      "deleteError": "Failed to delete workflow",
+      "activateTitle": "Activate Workflow",
+      "activateBody": "Publish <1>{{name}}</1> as version {{version}}? Running instances keep their pinned version — new instances will use this one.",
+      "activateLabel": "Activate v{{version}}",
+      "activatingLabel": "Activating...",
+      "activateError": "Failed to activate workflow",
+      "deactivateTitle": "Deactivate Workflow",
+      "deactivateBody": "Deactivate <1>{{name}}</1>? No new instances can start. Existing running instances continue on their pinned version until completed.",
+      "deactivateLabel": "Deactivate",
+      "deactivatingLabel": "Deactivating...",
+      "deactivateError": "Failed to deactivate workflow"
+    },
+    "toast": {
+      "deleted": "Workflow deleted successfully.",
+      "activated": "Workflow activated — version {{version}} published.",
+      "deactivated": "Workflow deactivated. Running instances continue on their pinned version."
+    }
+  }
+}

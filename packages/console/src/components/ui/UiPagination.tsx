@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const UiPagination: React.FC<{
@@ -10,7 +11,8 @@ export const UiPagination: React.FC<{
   onPageChange: (p: number) => void;
   onPageSizeChange?: (n: number) => void;
   pageSizeOptions?: number[];
-}> = ({ page, totalPages, total, pageSize, label = 'records', onPageChange, onPageSizeChange, pageSizeOptions = [10, 25, 50] }) => {
+}> = ({ page, totalPages, total, pageSize, label, onPageChange, onPageSizeChange, pageSizeOptions = [10, 25, 50] }) => {
+  const { t } = useTranslation();
   const startRecord = total > 0 ? (page - 1) * pageSize + 1 : 0;
   const endRecord = Math.min(page * pageSize, total);
 
@@ -18,11 +20,11 @@ export const UiPagination: React.FC<{
     <div className="ui-pagination">
       <div className="ui-pagination__info">
         <span className="ui-pagination__range">
-          Showing <strong>{startRecord}</strong> to <strong>{endRecord}</strong> of <strong>{total}</strong> {label}
+          {t('common.pagination.showing')} <strong>{startRecord}</strong> {t('common.pagination.to')} <strong>{endRecord}</strong> {t('common.pagination.of')} <strong>{total}</strong> {label || t('common.pagination.records')}
         </span>
         {onPageSizeChange && (
           <div className="ui-pagination__page-size">
-            <span className="ui-pagination__page-size-label">Records per page:</span>
+            <span className="ui-pagination__page-size-label">{t('common.pagination.recordsPerPage')}:</span>
             <select
               className="sails-input"
               style={{ width: 'auto', padding: '4px 8px', fontSize: 12, height: 30 }}

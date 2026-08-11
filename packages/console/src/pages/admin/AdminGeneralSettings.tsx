@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { HexColorPicker } from 'react-colorful';
 import { hexToHSL, hslToHex, computeBackgroundTint, computeMatchingPalette, ColorMatchingTechnique } from '../../utils/colorUtils';
 import { 
@@ -26,20 +27,17 @@ import { useAuth } from '../../contexts/AuthContext';
 import './AdminGeneralSettings.css';
 
 export interface GeneralSettingsData {
-  // Section 1: Branding & Theme
   logoLightUrl: string;
   logoDarkUrl: string;
   primaryAccentColor: string;
   loginTagline: string;
 
-  // Section 2: Localization & Financials
   baseCurrency: string;
   fiscalYearStartMonth: string;
   timezone: string;
   dateFormat: string;
   timeFormat: string;
 
-  // Section 3: System Security & Governance
   allowSelfRegistration: boolean;
   allowedEmailDomains: string;
   defaultUserRole: string;
@@ -47,7 +45,6 @@ export interface GeneralSettingsData {
   inactivityTimeoutMinutes: string;
   maxFileUploadMb: string;
 
-  // Section 4: Maintenance & Announcement
   maintenanceMode: boolean;
   announcementBannerText: string;
   announcementType: 'info' | 'warning' | 'critical';
@@ -183,6 +180,8 @@ interface ColorAccentFieldProps {
   onChange: (color: string) => void;
   onReset?: () => void;
   showPicker?: boolean;
+  autoLabel: string;
+  resetTooltip: string;
 }
 
 const ColorAccentField: React.FC<ColorAccentFieldProps> = ({
@@ -192,7 +191,9 @@ const ColorAccentField: React.FC<ColorAccentFieldProps> = ({
   autoValue,
   onChange,
   onReset,
-  showPicker = true
+  showPicker = true,
+  autoLabel,
+  resetTooltip,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -200,7 +201,6 @@ const ColorAccentField: React.FC<ColorAccentFieldProps> = ({
   const displayValue = isAuto ? autoValue : value;
   const showReset = onReset && !isAuto;
 
-  // Click outside closes popover
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: MouseEvent) => {
@@ -242,9 +242,9 @@ const ColorAccentField: React.FC<ColorAccentFieldProps> = ({
             className="sails-btn sails-btn--ghost"
             style={{ fontSize: '0.7rem', padding: '2px 8px', flexShrink: 0 }}
             onClick={onReset}
-            title="Reset to auto-calculated"
+            title={resetTooltip}
           >
-            Auto
+            {autoLabel}
           </button>
         )}
       </div>
@@ -260,6 +260,7 @@ const PALETTE_TECHNIQUE_OPTIONS = [
 ];
 
 const AdminGeneralSettings: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { primaryAccentColor, setPrimaryAccentColor, secondaryAccentColor, setSecondaryAccentColor, backgroundAccentColor, setBackgroundAccentColor, fontAccentColor, setFontAccentColor, enableGradient, setEnableGradient, displayDensity, setDisplayDensity, setLogoLightUrl, setLogoDarkUrl, saveBrandingToServer, commitTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<'branding' | 'localization' | 'security' | 'maintenance' | 'tenant'>('branding');
@@ -314,12 +315,12 @@ const AdminGeneralSettings: React.FC = () => {
 
     const allowedTypes = ['image/jpeg', 'image/png', 'image/svg+xml', 'image/gif'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Invalid image format. Supported formats: JPG, PNG, SVG, GIF');
+      alert(t('admin_general_settings.validation.invalidImageFormat'));
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      alert('File size exceeds 2MB limit.');
+      alert(t('admin_general_settings.validation.fileSizeLimit'));
       return;
     }
 
@@ -332,7 +333,6 @@ const AdminGeneralSettings: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  // Initial fetch for all General Settings fields from server (with localStorage fallback)
   useEffect(() => {
     let cancelled = false;
     const fetchGeneralSettings = async () => {
@@ -432,10 +432,10 @@ const AdminGeneralSettings: React.FC = () => {
         throw new Error(json.error || 'Failed to save settings to server.');
       }
 
-      setSavedSuccessMsg('General Settings saved successfully.');
+      setSavedSuccessMsg(t('admin_general_settings.footer.saveSuccess'));
     } catch (err: any) {
       console.error('Error saving General Settings:', err);
-      setSavedSuccessMsg(err.message || 'Error saving General Settings.');
+      setSavedSuccessMsg(err.message || t('admin_general_settings.footer.saveError'));
     } finally {
       setIsSaving(false);
       setTimeout(() => setSavedSuccessMsg(null), 4000);
@@ -444,7 +444,6 @@ const AdminGeneralSettings: React.FC = () => {
 
   return (
     <div className="sails-general-settings sails-page-container">
-      {/* Tab Navigation */}
       <nav className="sails-general-settings__nav">
         <button
           type="button"
@@ -452,7 +451,7 @@ const AdminGeneralSettings: React.FC = () => {
           onClick={() => setActiveTab('branding')}
         >
           <Palette size={16} />
-          <span>Branding & Theme</span>
+          <span>{t('admin_general_settings.tabs.branding')}</span>
         </button>
         <button
           type="button"
@@ -460,7 +459,7 @@ const AdminGeneralSettings: React.FC = () => {
           onClick={() => setActiveTab('localization')}
         >
           <Globe2 size={16} />
-          <span>Localization & Currency</span>
+          <span>{t('admin_general_settings.tabs.localization')}</span>
         </button>
         <button
           type="button"
@@ -468,7 +467,7 @@ const AdminGeneralSettings: React.FC = () => {
           onClick={() => setActiveTab('security')}
         >
           <Lock size={16} />
-          <span>Security & Governance</span>
+          <span>{t('admin_general_settings.tabs.security')}</span>
         </button>
         <button
           type="button"
@@ -476,7 +475,7 @@ const AdminGeneralSettings: React.FC = () => {
           onClick={() => setActiveTab('maintenance')}
         >
           <AlertTriangle size={16} />
-          <span>Maintenance & Alerts</span>
+          <span>{t('admin_general_settings.tabs.maintenance')}</span>
         </button>
         <button
           type="button"
@@ -484,14 +483,12 @@ const AdminGeneralSettings: React.FC = () => {
           onClick={() => setActiveTab('tenant')}
         >
           <Building2 size={16} />
-          <span>Tenant Information</span>
+          <span>{t('admin_general_settings.tabs.tenant')}</span>
         </button>
       </nav>
 
-      {/* Form Container */}
       <form onSubmit={handleSave}>
         <div className="sails-card sails-general-settings__card">
-          {/* TAB 1: Branding & Theme */}
           {activeTab === 'branding' && (
             <div>
               <div className="sails-gs-section-header">
@@ -499,17 +496,16 @@ const AdminGeneralSettings: React.FC = () => {
                   <Palette size={20} />
                 </div>
                 <div>
-                  <h3 className="sails-gs-section-title">Branding & Theme Customization</h3>
+                  <h3 className="sails-gs-section-title">{t('admin_general_settings.branding.title')}</h3>
                   <p className="sails-gs-section-subtitle">
-                    Upload organization logos and configure primary theme accent colors.
+                    {t('admin_general_settings.branding.subtitle')}
                   </p>
                 </div>
               </div>
 
               <div className="sails-gs-grid-2">
-                {/* Light Mode Logo Attachment */}
                 <div className="sails-gs-group">
-                  <label className="sails-gs-label">Main Logo Attachment (Light Mode)</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.branding.logoLight')}</label>
                   
                   <div className="sails-gs-logo-preview-box">
                     <img 
@@ -519,7 +515,7 @@ const AdminGeneralSettings: React.FC = () => {
                     />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-                        {formData.logoLightUrl && !formData.logoLightUrl.startsWith('/assets/') ? 'Custom Uploaded Logo' : 'Standard Platform Sailboat Logo (Default)'}
+                        {formData.logoLightUrl && !formData.logoLightUrl.startsWith('/assets/') ? t('admin_general_settings.branding.logoCustomUploaded') : t('admin_general_settings.branding.logoDefault')}
                       </span>
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <span className="sails-gs-format-badge">JPG</span>
@@ -531,7 +527,7 @@ const AdminGeneralSettings: React.FC = () => {
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <label className="sails-btn sails-btn--secondary" style={{ cursor: 'pointer', fontSize: '0.8rem', padding: '6px 12px' }}>
                         <Upload size={14} style={{ marginRight: '4px' }} />
-                        <span>{formData.logoLightUrl && !formData.logoLightUrl.startsWith('/assets/') ? 'Change' : 'Upload Custom'}</span>
+                        <span>{formData.logoLightUrl && !formData.logoLightUrl.startsWith('/assets/') ? t('admin_general_settings.branding.change') : t('admin_general_settings.branding.uploadCustom')}</span>
                         <input
                           type="file"
                           accept=".jpg,.jpeg,.png,.svg,.gif"
@@ -545,19 +541,20 @@ const AdminGeneralSettings: React.FC = () => {
                           className="sails-btn sails-btn--ghost"
                           style={{ fontSize: '0.8rem', padding: '6px 10px', color: 'var(--sails-text-muted)' }}
                           onClick={() => handleInputChange('logoLightUrl', '/assets/logo-standard.jpg')}
-                          title="Reset to standard default platform logo"
+                          title={t('admin_general_settings.branding.resetToDefault')}
                         >
-                          Reset
+                          {t('admin_general_settings.branding.reset')}
                         </button>
                       )}
                     </div>
                   </div>
-                  <span className="sails-gs-help">Recommended Dimensions: <strong>200 × 50 px</strong> (Max 2MB)</span>
+                  <span className="sails-gs-help">
+                    <Trans i18nKey="admin_general_settings.branding.recommendedDimensions" components={{ 1: <strong /> }} />
+                  </span>
                 </div>
 
-                {/* Dark Mode Logo Attachment */}
                 <div className="sails-gs-group">
-                  <label className="sails-gs-label">Dark Mode Logo Attachment</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.branding.logoDark')}</label>
                   
                   <div className="sails-gs-logo-preview-box" style={{ background: '#1e293b' }}>
                     <img 
@@ -567,7 +564,7 @@ const AdminGeneralSettings: React.FC = () => {
                     />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                       <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#f8fafc' }}>
-                        {formData.logoDarkUrl && !formData.logoDarkUrl.startsWith('/assets/') ? 'Custom Uploaded Logo' : 'Standard Platform Sailboat Logo (Default)'}
+                        {formData.logoDarkUrl && !formData.logoDarkUrl.startsWith('/assets/') ? t('admin_general_settings.branding.logoCustomUploaded') : t('admin_general_settings.branding.logoDefault')}
                       </span>
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <span className="sails-gs-format-badge">JPG</span>
@@ -579,7 +576,7 @@ const AdminGeneralSettings: React.FC = () => {
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <label className="sails-btn sails-btn--secondary" style={{ cursor: 'pointer', fontSize: '0.8rem', padding: '6px 12px' }}>
                         <Upload size={14} style={{ marginRight: '4px' }} />
-                        <span>{formData.logoDarkUrl && !formData.logoDarkUrl.startsWith('/assets/') ? 'Change' : 'Upload Custom'}</span>
+                        <span>{formData.logoDarkUrl && !formData.logoDarkUrl.startsWith('/assets/') ? t('admin_general_settings.branding.change') : t('admin_general_settings.branding.uploadCustom')}</span>
                         <input
                           type="file"
                           accept=".jpg,.jpeg,.png,.svg,.gif"
@@ -593,22 +590,23 @@ const AdminGeneralSettings: React.FC = () => {
                           className="sails-btn sails-btn--ghost"
                           style={{ fontSize: '0.8rem', padding: '6px 10px', color: '#94a3b8' }}
                           onClick={() => handleInputChange('logoDarkUrl', '/assets/logo-standard.jpg')}
-                          title="Reset to standard default platform logo"
+                          title={t('admin_general_settings.branding.resetToDefault')}
                         >
-                          Reset
+                          {t('admin_general_settings.branding.reset')}
                         </button>
                       )}
                     </div>
                   </div>
-                  <span className="sails-gs-help">Recommended Dimensions: <strong>200 × 50 px</strong> (Max 2MB)</span>
+                  <span className="sails-gs-help">
+                    <Trans i18nKey="admin_general_settings.branding.recommendedDimensions" components={{ 1: <strong /> }} />
+                  </span>
                 </div>
 
-                {/* Gradient Theme Toggle Row */}
                 <div className="sails-gs-toggle-row" style={{ gridColumn: '1 / -1', marginBottom: '8px' }}>
                   <div>
-                    <div className="sails-gs-toggle-title">Enable Gradient Theme Accents</div>
+                    <div className="sails-gs-toggle-title">{t('admin_general_settings.branding.enableGradientTitle')}</div>
                     <div className="sails-gs-toggle-desc">
-                      Apply smooth dual-tone gradients across primary action buttons, page header accents, and site backgrounds.
+                      {t('admin_general_settings.branding.enableGradientDesc')}
                     </div>
                   </div>
                   <label className="sails-gs-switch">
@@ -621,9 +619,8 @@ const AdminGeneralSettings: React.FC = () => {
                   </label>
                 </div>
 
-                {/* Color Palette Matching Technique Dropdown */}
                 <div className="sails-gs-group" style={{ gridColumn: '1 / -1', marginBottom: '4px' }}>
-                  <label className="sails-gs-label">Color Palette Matching Technique</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.branding.paletteTechnique')}</label>
                   <CustomSelect
                     size="md"
                     value={paletteTechnique}
@@ -631,22 +628,23 @@ const AdminGeneralSettings: React.FC = () => {
                     onChange={val => setPaletteTechnique(val as ColorMatchingTechnique)}
                   />
                   <span className="sails-gs-help">
-                    Color theory algorithm used to calculate auto-suggested secondary, background, and font contrast.
+                    {t('admin_general_settings.branding.paletteTechniqueHelp')}
                   </span>
                 </div>
 
-                {/* Primary — Secondary — Background — Font Accent Row */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '20px', gridColumn: '1 / -1' }}>
                   <ColorAccentField
-                    label="Primary Accent"
-                    help="Main brand color"
+                    label={t('admin_general_settings.branding.primaryAccent')}
+                    help={t('admin_general_settings.branding.primaryAccentHelp')}
                     value={formData.primaryAccentColor}
                     autoValue={computedPalette.secondary}
                     onChange={color => handleInputChange('primaryAccentColor', color)}
+                    autoLabel={t('admin_general_settings.branding.auto')}
+                    resetTooltip={t('admin_general_settings.branding.resetToAuto')}
                   />
                   <ColorAccentField
-                    label="Secondary Accent"
-                    help={`${paletteTechnique.charAt(0).toUpperCase() + paletteTechnique.slice(1)} derived`}
+                    label={t('admin_general_settings.branding.secondaryAccent')}
+                    help={t('admin_general_settings.branding.secondaryAccentHelp', { technique: paletteTechnique.charAt(0).toUpperCase() + paletteTechnique.slice(1) })}
                     value={customSecondary || ''}
                     autoValue={computedPalette.secondary}
                     onChange={val => {
@@ -655,10 +653,12 @@ const AdminGeneralSettings: React.FC = () => {
                     }}
                     onReset={() => resetToAuto('secondary')}
                     showPicker={true}
+                    autoLabel={t('admin_general_settings.branding.auto')}
+                    resetTooltip={t('admin_general_settings.branding.resetToAuto')}
                   />
                   <ColorAccentField
-                    label="Background Accent"
-                    help="Warm / cool greyed-white tint"
+                    label={t('admin_general_settings.branding.backgroundAccent')}
+                    help={t('admin_general_settings.branding.backgroundAccentHelp')}
                     value={customBackground || ''}
                     autoValue={computedPalette.background}
                     onChange={val => {
@@ -667,10 +667,12 @@ const AdminGeneralSettings: React.FC = () => {
                     }}
                     onReset={() => resetToAuto('background')}
                     showPicker={true}
+                    autoLabel={t('admin_general_settings.branding.auto')}
+                    resetTooltip={t('admin_general_settings.branding.resetToAuto')}
                   />
                   <ColorAccentField
-                    label="Font Accent"
-                    help="Auto contrast text color"
+                    label={t('admin_general_settings.branding.fontAccent')}
+                    help={t('admin_general_settings.branding.fontAccentHelp')}
                     value={customFont || ''}
                     autoValue={computedPalette.font}
                     onChange={val => {
@@ -679,29 +681,29 @@ const AdminGeneralSettings: React.FC = () => {
                     }}
                     onReset={() => resetToAuto('font')}
                     showPicker={true}
+                    autoLabel={t('admin_general_settings.branding.auto')}
+                    resetTooltip={t('admin_general_settings.branding.resetToAuto')}
                   />
                 </div>
 
-                {/* Custom Login Tagline */}
                 <div className="sails-gs-group" style={{ gridColumn: 'span 2' }}>
-                  <label className="sails-gs-label">Custom Login Tagline</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.branding.loginTagline')}</label>
                   <input
                     type="text"
                     className="sails-input"
                     value={formData.loginTagline}
                     onChange={e => handleInputChange('loginTagline', e.target.value)}
-                    placeholder="Enter custom slogan displayed on user sign-in page"
+                    placeholder={t('admin_general_settings.branding.loginTaglinePlaceholder')}
                   />
                 </div>
 
-                {/* Display Density */}
                 <div className="sails-gs-group" style={{ gridColumn: 'span 2' }}>
-                  <label className="sails-gs-label">Display Density</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.branding.displayDensity')}</label>
                   <div style={{ display: 'flex', gap: '16px', paddingTop: '4px' }}>
                     {([
-                      { value: 'comfortable' as const, label: 'Larger Text' },
-                      { value: 'default' as const, label: 'Default' },
-                      { value: 'compact' as const, label: 'More Space' },
+                      { value: 'comfortable' as const, label: t('admin_general_settings.branding.displayDensityOptions.comfortable') },
+                      { value: 'default' as const, label: t('admin_general_settings.branding.displayDensityOptions.default') },
+                      { value: 'compact' as const, label: t('admin_general_settings.branding.displayDensityOptions.compact') },
                     ]).map(({ value, label }) => (
                       <label key={value} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--sails-text-main)' }}>
                         <input
@@ -721,7 +723,6 @@ const AdminGeneralSettings: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 2: Localization & Financials */}
           {activeTab === 'localization' && (
             <div>
               <div className="sails-gs-section-header">
@@ -729,16 +730,16 @@ const AdminGeneralSettings: React.FC = () => {
                   <Globe2 size={20} />
                 </div>
                 <div>
-                  <h3 className="sails-gs-section-title">Localization & Financial Preferences</h3>
+                  <h3 className="sails-gs-section-title">{t('admin_general_settings.localization.title')}</h3>
                   <p className="sails-gs-section-subtitle">
-                    Set base operational currency, fiscal calendar starting month, timezone, and date formats.
+                    {t('admin_general_settings.localization.subtitle')}
                   </p>
                 </div>
               </div>
 
               <div className="sails-gs-grid-2">
                 <div className="sails-gs-group">
-                  <label className="sails-gs-label">Primary Base Currency *</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.localization.baseCurrency')}</label>
                   <CustomSelect
                     size="md"
                     value={formData.baseCurrency}
@@ -746,22 +747,22 @@ const AdminGeneralSettings: React.FC = () => {
                     searchable={true}
                     onChange={val => handleInputChange('baseCurrency', val)}
                   />
-                  <span className="sails-gs-help">Default currency used across financial calculations and reporting</span>
+                  <span className="sails-gs-help">{t('admin_general_settings.localization.baseCurrencyHelp')}</span>
                 </div>
 
                 <div className="sails-gs-group">
-                  <label className="sails-gs-label">Fiscal Year Start Month</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.localization.fiscalYearStart')}</label>
                   <CustomSelect
                     size="md"
                     value={formData.fiscalYearStartMonth}
                     options={MONTH_OPTIONS}
                     onChange={val => handleInputChange('fiscalYearStartMonth', val)}
                   />
-                  <span className="sails-gs-help">Beginning month of fiscal annual reporting</span>
+                  <span className="sails-gs-help">{t('admin_general_settings.localization.fiscalYearStartHelp')}</span>
                 </div>
 
                 <div className="sails-gs-group" style={{ gridColumn: 'span 2' }}>
-                  <label className="sails-gs-label">System Timezone (All Standard World Timezones)</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.localization.timezone')}</label>
                   <CustomSelect
                     size="md"
                     value={formData.timezone}
@@ -769,11 +770,11 @@ const AdminGeneralSettings: React.FC = () => {
                     searchable={true}
                     onChange={val => handleInputChange('timezone', val)}
                   />
-                  <span className="sails-gs-help">Standard IANA timezone list covering all global regions (400+ world timezones)</span>
+                  <span className="sails-gs-help">{t('admin_general_settings.localization.timezoneHelp')}</span>
                 </div>
 
                 <div className="sails-gs-group">
-                  <label className="sails-gs-label">Date Display Format</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.localization.dateFormat')}</label>
                   <CustomSelect
                     size="md"
                     value={formData.dateFormat}
@@ -783,7 +784,7 @@ const AdminGeneralSettings: React.FC = () => {
                 </div>
 
                 <div className="sails-gs-group">
-                  <label className="sails-gs-label">Time Display Format</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.localization.timeFormat')}</label>
                   <CustomSelect
                     size="md"
                     value={formData.timeFormat}
@@ -795,7 +796,6 @@ const AdminGeneralSettings: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 3: System Security & Governance */}
           {activeTab === 'security' && (
             <div>
               <div className="sails-gs-section-header">
@@ -803,9 +803,9 @@ const AdminGeneralSettings: React.FC = () => {
                   <Lock size={20} />
                 </div>
                 <div>
-                  <h3 className="sails-gs-section-title">Security & User Access Governance</h3>
+                  <h3 className="sails-gs-section-title">{t('admin_general_settings.security.title')}</h3>
                   <p className="sails-gs-section-subtitle">
-                    Self-registration rules, allowed domain whitelists, default roles, and timeout limits.
+                    {t('admin_general_settings.security.subtitle')}
                   </p>
                 </div>
               </div>
@@ -813,8 +813,8 @@ const AdminGeneralSettings: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div className="sails-gs-toggle-row">
                   <div>
-                    <div className="sails-gs-toggle-title">Allow User Self-Registration</div>
-                    <div className="sails-gs-toggle-desc">Allow users to sign up without an explicit admin invitation</div>
+                    <div className="sails-gs-toggle-title">{t('admin_general_settings.security.allowSelfRegistration')}</div>
+                    <div className="sails-gs-toggle-desc">{t('admin_general_settings.security.allowSelfRegistrationDesc')}</div>
                   </div>
                   <label className="sails-gs-switch">
                     <input
@@ -828,19 +828,19 @@ const AdminGeneralSettings: React.FC = () => {
 
                 <div className="sails-gs-grid-2">
                   <div className="sails-gs-group">
-                    <label className="sails-gs-label">Allowed Self-Signup Email Domains</label>
+                    <label className="sails-gs-label">{t('admin_general_settings.security.allowedDomains')}</label>
                     <input
                       type="text"
                       className="sails-input"
                       value={formData.allowedEmailDomains}
                       onChange={e => handleInputChange('allowedEmailDomains', e.target.value)}
-                      placeholder="e.g. company.com, partner.org"
+                      placeholder={t('admin_general_settings.security.allowedDomainsPlaceholder')}
                     />
-                    <span className="sails-gs-help">Comma-separated list of allowed email domains</span>
+                    <span className="sails-gs-help">{t('admin_general_settings.security.allowedDomainsHelp')}</span>
                   </div>
 
                   <div className="sails-gs-group">
-                    <label className="sails-gs-label">Default Role for New Users</label>
+                    <label className="sails-gs-label">{t('admin_general_settings.security.defaultRole')}</label>
                     <CustomSelect
                       size="md"
                       value={formData.defaultUserRole}
@@ -850,7 +850,7 @@ const AdminGeneralSettings: React.FC = () => {
                   </div>
 
                   <div className="sails-gs-group">
-                    <label className="sails-gs-label">Default Post-Login Landing Page</label>
+                    <label className="sails-gs-label">{t('admin_general_settings.security.defaultLandingPage')}</label>
                     <CustomSelect
                       size="md"
                       value={formData.defaultLandingPage}
@@ -860,7 +860,7 @@ const AdminGeneralSettings: React.FC = () => {
                   </div>
 
                   <div className="sails-gs-group">
-                    <label className="sails-gs-label">Inactivity Session Timeout</label>
+                    <label className="sails-gs-label">{t('admin_general_settings.security.inactivityTimeout')}</label>
                     <CustomSelect
                       size="md"
                       value={formData.inactivityTimeoutMinutes}
@@ -870,7 +870,7 @@ const AdminGeneralSettings: React.FC = () => {
                   </div>
 
                   <div className="sails-gs-group">
-                    <label className="sails-gs-label">Max Attachment File Upload Limit</label>
+                    <label className="sails-gs-label">{t('admin_general_settings.security.maxFileUpload')}</label>
                     <CustomSelect
                       size="md"
                       value={formData.maxFileUploadMb}
@@ -883,7 +883,6 @@ const AdminGeneralSettings: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 4: Maintenance & Alerts */}
           {activeTab === 'maintenance' && (
             <div>
               <div className="sails-gs-section-header">
@@ -891,9 +890,9 @@ const AdminGeneralSettings: React.FC = () => {
                   <AlertTriangle size={20} />
                 </div>
                 <div>
-                  <h3 className="sails-gs-section-title">System Maintenance & Announcement Banners</h3>
+                  <h3 className="sails-gs-section-title">{t('admin_general_settings.maintenance.title')}</h3>
                   <p className="sails-gs-section-subtitle">
-                    Emergency system lockouts and global announcement banner broadcasts.
+                    {t('admin_general_settings.maintenance.subtitle')}
                   </p>
                 </div>
               </div>
@@ -902,10 +901,10 @@ const AdminGeneralSettings: React.FC = () => {
                 <div className="sails-gs-toggle-row" style={{ borderColor: formData.maintenanceMode ? 'rgba(239, 68, 68, 0.4)' : undefined, background: formData.maintenanceMode ? 'rgba(239, 68, 68, 0.08)' : undefined }}>
                   <div>
                     <div className="sails-gs-toggle-title" style={{ color: formData.maintenanceMode ? '#fca5a5' : undefined }}>
-                      {formData.maintenanceMode ? '🔴 System Maintenance Mode Active' : 'System Maintenance Mode'}
+                      {formData.maintenanceMode ? `🔴 ${t('admin_general_settings.maintenance.maintenanceModeActive')}` : t('admin_general_settings.maintenance.maintenanceMode')}
                     </div>
                     <div className="sails-gs-toggle-desc">
-                      When enabled, non-admin users will be blocked from accessing the console and shown a maintenance page.
+                      {t('admin_general_settings.maintenance.maintenanceModeDesc')}
                     </div>
                   </div>
                   <label className="sails-gs-switch">
@@ -920,19 +919,19 @@ const AdminGeneralSettings: React.FC = () => {
 
                 <div className="sails-gs-grid-2">
                   <div className="sails-gs-group" style={{ gridColumn: 'span 2' }}>
-                    <label className="sails-gs-label">Broadcast Announcement Banner Text</label>
+                    <label className="sails-gs-label">{t('admin_general_settings.maintenance.announcementText')}</label>
                     <input
                       type="text"
                       className="sails-input"
                       value={formData.announcementBannerText}
                       onChange={e => handleInputChange('announcementBannerText', e.target.value)}
-                      placeholder="e.g. System upgrade scheduled tonight..."
+                      placeholder={t('admin_general_settings.maintenance.announcementTextPlaceholder')}
                     />
-                    <span className="sails-gs-help">Displayed at top of all user screens when text is non-empty</span>
+                    <span className="sails-gs-help">{t('admin_general_settings.maintenance.announcementTextHelp')}</span>
                   </div>
 
                   <div className="sails-gs-group">
-                    <label className="sails-gs-label">Announcement Banner Type</label>
+                    <label className="sails-gs-label">{t('admin_general_settings.maintenance.announcementType')}</label>
                     <CustomSelect
                       size="md"
                       value={formData.announcementType}
@@ -943,7 +942,7 @@ const AdminGeneralSettings: React.FC = () => {
 
                   {formData.announcementBannerText && (
                     <div className="sails-gs-group" style={{ gridColumn: 'span 2' }}>
-                      <label className="sails-gs-label">Announcement Banner Live Preview</label>
+                      <label className="sails-gs-label">{t('admin_general_settings.maintenance.announcementPreview')}</label>
                       <div className={`sails-gs-banner-preview sails-gs-banner-preview--${formData.announcementType}`}>
                         <Megaphone size={18} />
                         <span>{formData.announcementBannerText}</span>
@@ -955,7 +954,6 @@ const AdminGeneralSettings: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 5: Tenant Information */}
           {activeTab === 'tenant' && (
             <div>
               <div className="sails-gs-section-header">
@@ -963,16 +961,16 @@ const AdminGeneralSettings: React.FC = () => {
                   <Building2 size={20} />
                 </div>
                 <div>
-                  <h3 className="sails-gs-section-title">Tenant Identity & Architectural Zone</h3>
+                  <h3 className="sails-gs-section-title">{t('admin_general_settings.tenant.title')}</h3>
                   <p className="sails-gs-section-subtitle">
-                    Overview of tenant identity, assigned architectural zone, and deployment properties.
+                    {t('admin_general_settings.tenant.subtitle')}
                   </p>
                 </div>
               </div>
 
               <div className="sails-gs-grid-2">
                 <div className="sails-gs-group">
-                  <label className="sails-gs-label">Tenant ID</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.tenant.tenantId')}</label>
                   <input
                     type="text"
                     className="sails-input"
@@ -980,64 +978,63 @@ const AdminGeneralSettings: React.FC = () => {
                     readOnly
                     style={{ fontFamily: 'monospace', opacity: 0.9 }}
                   />
-                  <span className="sails-gs-help">Unique platform CUID identifier for this tenant organization.</span>
+                  <span className="sails-gs-help">{t('admin_general_settings.tenant.tenantIdHelp')}</span>
                 </div>
 
                 <div className="sails-gs-group">
-                  <label className="sails-gs-label">Tenant Name</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.tenant.tenantName')}</label>
                   <input
                     type="text"
                     className="sails-input"
                     value="Primary Organization"
                     readOnly
                   />
-                  <span className="sails-gs-help">Registered organization name.</span>
+                  <span className="sails-gs-help">{t('admin_general_settings.tenant.tenantNameHelp')}</span>
                 </div>
 
                 <div className="sails-gs-group">
-                  <label className="sails-gs-label">Tenant Zone</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.tenant.tenantZone')}</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '8px', border: '1px solid rgba(168, 85, 247, 0.2)', color: '#a855f7', fontWeight: 600 }}>
                     <Layers size={16} />
-                    <span>Zone 01 (Primary Region)</span>
+                    <span>{t('admin_general_settings.tenant.tenantZoneValue')}</span>
                   </div>
-                  <span className="sails-gs-help">Assigned cellular deployment zone.</span>
+                  <span className="sails-gs-help">{t('admin_general_settings.tenant.tenantZoneHelp')}</span>
                 </div>
 
                 <div className="sails-gs-group">
-                  <label className="sails-gs-label">Tenant Isolation Type</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.tenant.isolationType')}</label>
                   <input
                     type="text"
                     className="sails-input"
-                    value="Shared Multi-Tenant (Schema-Per-Tenant)"
+                    value={t('admin_general_settings.tenant.isolationTypeValue')}
                     readOnly
                   />
-                  <span className="sails-gs-help">Database & environment isolation mode.</span>
+                  <span className="sails-gs-help">{t('admin_general_settings.tenant.isolationTypeHelp')}</span>
                 </div>
 
                 <div className="sails-gs-group">
-                  <label className="sails-gs-label">Environment Mode</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.tenant.environmentMode')}</label>
                   <input
                     type="text"
                     className="sails-input"
-                    value="Standalone (Baseline)"
+                    value={t('admin_general_settings.tenant.environmentModeValue')}
                     readOnly
                   />
-                  <span className="sails-gs-help">Operating deployment configuration.</span>
+                  <span className="sails-gs-help">{t('admin_general_settings.tenant.environmentModeHelp')}</span>
                 </div>
 
                 <div className="sails-gs-group">
-                  <label className="sails-gs-label">System Health & Status</label>
+                  <label className="sails-gs-label">{t('admin_general_settings.tenant.systemHealth')}</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981', fontWeight: 600 }}>
                     <ShieldCheck size={16} />
-                    <span>Active & Healthy</span>
+                    <span>{t('admin_general_settings.tenant.systemHealthValue')}</span>
                   </div>
-                  <span className="sails-gs-help">Real-time status of tenant data services.</span>
+                  <span className="sails-gs-help">{t('admin_general_settings.tenant.systemHealthHelp')}</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Footer Save Actions (Hidden on read-only Tenant Information tab) */}
           {activeTab !== 'tenant' && (
             <div className="sails-gs-footer">
               <div>
@@ -1055,7 +1052,7 @@ const AdminGeneralSettings: React.FC = () => {
                 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
                 <Save size={16} />
-                <span>{isSaving ? 'Saving Settings...' : 'Save General Settings'}</span>
+                <span>{isSaving ? t('admin_general_settings.footer.saving') : t('admin_general_settings.footer.saveButton')}</span>
               </button>
             </div>
           )}

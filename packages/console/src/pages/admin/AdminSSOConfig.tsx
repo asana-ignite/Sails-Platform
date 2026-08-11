@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { 
   ShieldCheck, 
@@ -109,10 +110,9 @@ const SESSION_TIMEOUT_OPTIONS: SelectOption[] = [
 type TabKey = 'policy' | 'providers' | 'domains' | 'safeguards';
 
 const AdminSSOConfig: React.FC = () => {
-  // Active Tab State
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabKey>('policy');
 
-  // 1. Tab 1 State & Saved Baseline
   const [allowPasswordLogin, setAllowPasswordLogin] = useState(true);
   const [ssoEnforcement, setSsoEnforcement] = useState<'optional' | 'mandatory'>('optional');
   const [jitProvisioning, setJitProvisioning] = useState(true);
@@ -125,22 +125,18 @@ const AdminSSOConfig: React.FC = () => {
     defaultRole: 'Member'
   });
 
-  // Check if Tab 1 is dirty
   const isPolicyDirty = 
     allowPasswordLogin !== savedPolicy.allowPasswordLogin ||
     ssoEnforcement !== savedPolicy.ssoEnforcement ||
     jitProvisioning !== savedPolicy.jitProvisioning ||
     defaultRole !== savedPolicy.defaultRole;
 
-  // 2. Tab 2 State (Providers)
   const [providers, setProviders] = useState(DEFAULT_PROVIDERS);
   const [activeDrawerProvider, setActiveDrawerProvider] = useState<'google' | 'entra' | 'saml' | null>(null);
 
-  // 3. Tab 3 State (Domains)
   const [domains, setDomains] = useState<VerifiedDomain[]>(DEFAULT_DOMAINS);
   const [newDomainInput, setNewDomainInput] = useState('');
 
-  // 4. Tab 4 State (Safeguards) & Saved Baseline
   const [breakGlassAdmins, setBreakGlassAdmins] = useState('bancha@int.ignite-idea.com, super.admin@sails.io');
   const [sessionTimeoutHours, setSessionTimeoutHours] = useState('24');
 
@@ -149,29 +145,24 @@ const AdminSSOConfig: React.FC = () => {
     sessionTimeoutHours: '24'
   });
 
-  // Check if Tab 4 is dirty
   const isSafeguardsDirty = 
     breakGlassAdmins !== savedSafeguards.breakGlassAdmins ||
     sessionTimeoutHours !== savedSafeguards.sessionTimeoutHours;
 
-  // Helper to check if current active tab is dirty
   const isCurrentTabDirty = () => {
     if (activeTab === 'policy') return isPolicyDirty;
     if (activeTab === 'safeguards') return isSafeguardsDirty;
     return false;
   };
 
-  // Unsaved Changes Interception Modal State
   const [pendingTabSwitch, setPendingTabSwitch] = useState<TabKey | null>(null);
 
-  // Drawer Form State
   const [drawerForm, setDrawerForm] = useState<ProviderConfig | null>(null);
   const [showSecret, setShowSecret] = useState(false);
   const [copiedCallback, setCopiedCallback] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Per-Tab Loading State
   const [isSavingTab, setIsSavingTab] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -180,7 +171,6 @@ const AdminSSOConfig: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Tab Switch Handler with Unsaved Changes Guard
   const handleTabClick = (targetTab: TabKey) => {
     if (targetTab === activeTab) return;
     if (isCurrentTabDirty()) {
@@ -191,7 +181,6 @@ const AdminSSOConfig: React.FC = () => {
   };
 
   const handleDiscardAndSwitch = () => {
-    // Reset dirty tab to saved baseline
     if (activeTab === 'policy') {
       setAllowPasswordLogin(savedPolicy.allowPasswordLogin);
       setSsoEnforcement(savedPolicy.ssoEnforcement);
@@ -221,7 +210,6 @@ const AdminSSOConfig: React.FC = () => {
     }
   };
 
-  // Save Handlers Per Tab
   const savePolicySettings = () => {
     setIsSavingTab(true);
     setTimeout(() => {
@@ -232,7 +220,7 @@ const AdminSSOConfig: React.FC = () => {
         defaultRole
       });
       setIsSavingTab(false);
-      triggerToast('Authentication Policy settings saved!');
+      triggerToast(t('admin_sso_config.toast.policySaved'));
     }, 500);
   };
 
@@ -244,11 +232,10 @@ const AdminSSOConfig: React.FC = () => {
         sessionTimeoutHours
       });
       setIsSavingTab(false);
-      triggerToast('Emergency Safeguard settings saved!');
+      triggerToast(t('admin_sso_config.toast.safeguardsSaved'));
     }, 500);
   };
 
-  // Provider Drawer Handlers
   const handleOpenDrawer = (providerKey: 'google' | 'entra' | 'saml') => {
     setDrawerForm({ ...providers[providerKey] });
     setShowSecret(false);
@@ -268,7 +255,7 @@ const AdminSSOConfig: React.FC = () => {
       ...prev,
       [drawerForm.id]: { ...drawerForm }
     }));
-    triggerToast(`Saved configuration for ${drawerForm.name}`);
+    triggerToast(t('admin_sso_config.toast.providerSaved', { name: drawerForm.name }));
     handleCloseDrawer();
   };
 
@@ -282,12 +269,12 @@ const AdminSSOConfig: React.FC = () => {
       if (drawerForm.clientId || drawerForm.metadataUrl) {
         setTestResult({
           success: true,
-          message: `Connection successful! Handshake verified with ${drawerForm.name}.`
+          message: t('admin_sso_config.drawer.connectSuccess', { provider: drawerForm.name }),
         });
       } else {
         setTestResult({
           success: false,
-          message: `Connection failed: Please enter a valid Client ID or Metadata URL.`
+          message: t('admin_sso_config.drawer.connectFailed'),
         });
       }
     }, 1000);
@@ -311,38 +298,36 @@ const AdminSSOConfig: React.FC = () => {
     };
     setDomains([...domains, newEntry]);
     setNewDomainInput('');
-    triggerToast(`Domain ${cleanDomain} added.`);
+    triggerToast(t('admin_sso_config.domains.domainAdded', { domain: cleanDomain }));
   };
 
   const handleDeleteDomain = (id: string, domainName: string) => {
     setDomains(domains.filter(d => d.id !== id));
-    triggerToast(`Removed domain ${domainName}`);
+    triggerToast(t('admin_sso_config.domains.domainRemoved', { domain: domainName }));
   };
 
   return (
     <div className="sails-sso-config">
-      {/* Header (Clean title, no Save All button) */}
       <div className="sails-sso-header">
         <div>
           <h1 className="sails-sso-header__title">
             <ShieldCheck size={26} style={{ color: 'var(--sails-primary-dark)' }} />
-            <span>Login & Single Sign-On (SSO)</span>
+            <span>{t('admin_sso_config.title')}</span>
           </h1>
           <p className="sails-sso-header__subtitle">
-            Configure authentication rules, connect enterprise Identity Providers (Google / Entra ID / SAML), manage verified corporate domains, and set emergency access policies.
+            {t('admin_sso_config.subtitle')}
           </p>
         </div>
       </div>
 
-      {/* Top Tab Navigation Bar with Unsaved Dirty Indicators */}
       <div className="sails-sso-tabs">
         <button 
           className={`sails-sso-tab-btn ${activeTab === 'policy' ? 'sails-sso-tab-btn--active' : ''}`}
           onClick={() => handleTabClick('policy')}
         >
           <Lock size={18} />
-          <span>General & Login Policy</span>
-          {isPolicyDirty && <span className="sails-sso-dirty-dot" title="Unsaved changes" />}
+          <span>{t('admin_sso_config.tabs.policy')}</span>
+          {isPolicyDirty && <span className="sails-sso-dirty-dot" title={t('admin_sso_config.modal.unsavedDot')} />}
         </button>
 
         <button 
@@ -350,7 +335,7 @@ const AdminSSOConfig: React.FC = () => {
           onClick={() => handleTabClick('providers')}
         >
           <Globe size={18} />
-          <span>Identity Providers (SSO)</span>
+          <span>{t('admin_sso_config.tabs.providers')}</span>
         </button>
 
         <button 
@@ -358,7 +343,7 @@ const AdminSSOConfig: React.FC = () => {
           onClick={() => handleTabClick('domains')}
         >
           <Building size={18} />
-          <span>Domain Discovery</span>
+          <span>{t('admin_sso_config.tabs.domains')}</span>
         </button>
 
         <button 
@@ -366,26 +351,24 @@ const AdminSSOConfig: React.FC = () => {
           onClick={() => handleTabClick('safeguards')}
         >
           <ShieldAlert size={18} />
-          <span>Emergency Safeguards</span>
-          {isSafeguardsDirty && <span className="sails-sso-dirty-dot" title="Unsaved changes" />}
+          <span>{t('admin_sso_config.tabs.safeguards')}</span>
+          {isSafeguardsDirty && <span className="sails-sso-dirty-dot" title={t('admin_sso_config.modal.unsavedDot')} />}
         </button>
       </div>
 
-      {/* TAB 1: GENERAL & LOGIN POLICY */}
       {activeTab === 'policy' && (
         <div className="sails-sso-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h2 className="sails-sso-section__title" style={{ borderBottom: 'none', paddingBottom: 0 }}>
                 <Lock size={20} style={{ color: 'var(--sails-primary)' }} />
-                <span>Authentication Policies & Enforcement</span>
+                <span>{t('admin_sso_config.policy.title')}</span>
               </h2>
               <p className="sails-sso-section__subtitle" style={{ marginTop: '4px', marginBottom: 0 }}>
-                Control internal password access, mandatory SSO routing, and automated user provisioning settings.
+                {t('admin_sso_config.policy.subtitle')}
               </p>
             </div>
 
-            {/* Per-Screen Save Button */}
             <button 
               className="sails-btn sails-btn--primary"
               onClick={savePolicySettings}
@@ -393,17 +376,16 @@ const AdminSSOConfig: React.FC = () => {
               style={{ gap: '6px', padding: '8px 18px', opacity: isPolicyDirty ? 1 : 0.6 }}
             >
               {isSavingTab ? <RefreshCw size={16} className="sails-spin" /> : <Save size={16} />}
-              <span>{isSavingTab ? 'Saving...' : 'Save Policy Settings'}</span>
+              <span>{isSavingTab ? t('admin_sso_config.policy.saving') : t('admin_sso_config.policy.saveButton')}</span>
             </button>
           </div>
 
           <div className="sails-sso-policy-grid" style={{ marginTop: '16px' }}>
-            {/* Allow Email & Password Toggle */}
             <div className="sails-sso-setting-row">
               <div className="sails-sso-setting-info">
-                <span className="sails-sso-setting-label">Allow Internal Password Login</span>
+                <span className="sails-sso-setting-label">{t('admin_sso_config.policy.allowPasswordLogin')}</span>
                 <span className="sails-sso-setting-desc">
-                  When enabled, internal team members can sign in using their email address and password.
+                  {t('admin_sso_config.policy.allowPasswordLoginDesc')}
                 </span>
               </div>
               <label className="sails-sso-toggle">
@@ -416,12 +398,11 @@ const AdminSSOConfig: React.FC = () => {
               </label>
             </div>
 
-            {/* Just-In-Time (JIT) Provisioning */}
             <div className="sails-sso-setting-row">
               <div className="sails-sso-setting-info">
-                <span className="sails-sso-setting-label">Just-In-Time (JIT) Provisioning</span>
+                <span className="sails-sso-setting-label">{t('admin_sso_config.policy.jitProvisioning')}</span>
                 <span className="sails-sso-setting-desc">
-                  Automatically create a user account when an authorized employee logs in via SSO for the first time.
+                  {t('admin_sso_config.policy.jitProvisioningDesc')}
                 </span>
               </div>
               <label className="sails-sso-toggle">
@@ -435,10 +416,9 @@ const AdminSSOConfig: React.FC = () => {
             </div>
           </div>
 
-          {/* SSO Enforcement Options */}
           <div style={{ marginTop: '10px' }}>
             <label className="sails-form-label" style={{ marginBottom: '10px' }}>
-              SSO Enforcement Strategy
+              {t('admin_sso_config.policy.ssoEnforcement')}
             </label>
             <div className="sails-sso-radio-group">
               <div 
@@ -453,9 +433,9 @@ const AdminSSOConfig: React.FC = () => {
                   onChange={() => setSsoEnforcement('optional')}
                 />
                 <div>
-                  <strong style={{ color: 'var(--sails-text-main)', fontSize: '0.92rem' }}>Optional SSO (Flexible Login)</strong>
+                  <strong style={{ color: 'var(--sails-text-main)', fontSize: '0.92rem' }}>{t('admin_sso_config.policy.optionalSso')}</strong>
                   <p style={{ fontSize: '0.82rem', color: 'var(--sails-text-muted)', margin: '2px 0 0 0' }}>
-                    Users can freely choose to log in via either standard password or any enabled Identity Provider.
+                    {t('admin_sso_config.policy.optionalSsoDesc')}
                   </p>
                 </div>
               </div>
@@ -472,21 +452,20 @@ const AdminSSOConfig: React.FC = () => {
                   onChange={() => setSsoEnforcement('mandatory')}
                 />
                 <div>
-                  <strong style={{ color: 'var(--sails-text-main)', fontSize: '0.92rem' }}>Mandatory SSO (Strict Domain Enforcement)</strong>
+                  <strong style={{ color: 'var(--sails-text-main)', fontSize: '0.92rem' }}>{t('admin_sso_config.policy.mandatorySso')}</strong>
                   <p style={{ fontSize: '0.82rem', color: 'var(--sails-text-muted)', margin: '2px 0 0 0' }}>
-                    Password login is disabled for users with corporate email domains matching verified SSO domains.
+                    {t('admin_sso_config.policy.mandatorySsoDesc')}
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Default Role Selection */}
           <div style={{ marginTop: '10px', maxWidth: '400px' }}>
             <div className="sails-form-group">
               <label className="sails-form-label">
-                <span>Default JIT Provisioning Role</span>
-                <span className="sails-form-help">Assigned on first login</span>
+                <span>{t('admin_sso_config.policy.defaultRole')}</span>
+                <span className="sails-form-help">{t('admin_sso_config.policy.defaultRoleHelp')}</span>
               </label>
               <CustomSelect
                 value={defaultRole}
@@ -498,48 +477,46 @@ const AdminSSOConfig: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: IDENTITY PROVIDERS (SSO CONNECTORS) */}
       {activeTab === 'providers' && (
         <div className="sails-sso-section">
           <h2 className="sails-sso-section__title">
             <Globe size={20} style={{ color: 'var(--sails-primary)' }} />
-            <span>Configured Identity Providers</span>
+            <span>{t('admin_sso_config.providers.title')}</span>
           </h2>
           <p className="sails-sso-section__subtitle">
-            Configure OAuth2 / OIDC credentials and SAML metadata for your corporate Identity Providers.
+            {t('admin_sso_config.providers.subtitle')}
           </p>
 
           <div className="sails-idp-grid">
-            {/* 1. Google Workspace */}
             <div className="sails-idp-card">
               <div>
                 <div className="sails-idp-card__top">
                   <div className="sails-idp-card__identity">
                     <div className={`sails-idp-card__icon ${providers.google.iconClass}`}>G</div>
                     <div>
-                      <div className="sails-idp-card__name">{providers.google.name}</div>
-                      <div className="sails-idp-card__type">{providers.google.type}</div>
+                      <div className="sails-idp-card__name">{t('admin_sso_config.providers.google.name')}</div>
+                      <div className="sails-idp-card__type">{t('admin_sso_config.providers.google.type')}</div>
                     </div>
                   </div>
                   <span className={`sails-idp-card__badge ${providers.google.enabled ? 'sails-idp-card__badge--enabled' : 'sails-idp-card__badge--disabled'}`}>
                     {providers.google.enabled ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                    <span>{providers.google.enabled ? 'Enabled' : 'Disabled'}</span>
+                    <span>{providers.google.enabled ? t('admin_sso_config.providers.enabled') : t('admin_sso_config.providers.disabled')}</span>
                   </span>
                 </div>
 
                 <p className="sails-idp-card__desc" style={{ marginTop: '14px' }}>
-                  Allow internal employees to sign in seamlessly using their Google Workspace or G Suite accounts.
+                  {t('admin_sso_config.providers.google.desc')}
                 </p>
               </div>
 
               <div className="sails-idp-card__details">
                 <div className="sails-idp-card__detail-item">
-                  <span>Client ID:</span>
-                  <span className="sails-idp-card__detail-value">{providers.google.clientId || 'Not configured'}</span>
+                  <span>{t('admin_sso_config.providers.google.clientIdLabel')}</span>
+                  <span className="sails-idp-card__detail-value">{providers.google.clientId || t('admin_sso_config.providers.google.notConfigured')}</span>
                 </div>
                 <div className="sails-idp-card__detail-item">
-                  <span>Allowed Domains:</span>
-                  <span className="sails-idp-card__detail-value">{providers.google.allowedDomains || 'All'}</span>
+                  <span>{t('admin_sso_config.providers.google.allowedDomainsLabel')}</span>
+                  <span className="sails-idp-card__detail-value">{providers.google.allowedDomains || t('admin_sso_config.providers.google.all')}</span>
                 </div>
               </div>
 
@@ -549,40 +526,39 @@ const AdminSSOConfig: React.FC = () => {
                 style={{ width: '100%', justifyContent: 'center', gap: '8px' }}
               >
                 <Settings size={16} />
-                <span>Configure Google SSO</span>
+                <span>{t('admin_sso_config.providers.google.configureButton')}</span>
               </button>
             </div>
 
-            {/* 2. Microsoft Entra ID */}
             <div className="sails-idp-card">
               <div>
                 <div className="sails-idp-card__top">
                   <div className="sails-idp-card__identity">
                     <div className={`sails-idp-card__icon ${providers.entra.iconClass}`}>M</div>
                     <div>
-                      <div className="sails-idp-card__name">{providers.entra.name}</div>
-                      <div className="sails-idp-card__type">{providers.entra.type}</div>
+                      <div className="sails-idp-card__name">{t('admin_sso_config.providers.entra.name')}</div>
+                      <div className="sails-idp-card__type">{t('admin_sso_config.providers.entra.type')}</div>
                     </div>
                   </div>
                   <span className={`sails-idp-card__badge ${providers.entra.enabled ? 'sails-idp-card__badge--enabled' : 'sails-idp-card__badge--disabled'}`}>
                     {providers.entra.enabled ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                    <span>{providers.entra.enabled ? 'Enabled' : 'Disabled'}</span>
+                    <span>{providers.entra.enabled ? t('admin_sso_config.providers.enabled') : t('admin_sso_config.providers.disabled')}</span>
                   </span>
                 </div>
 
                 <p className="sails-idp-card__desc" style={{ marginTop: '14px' }}>
-                  Authenticate staff via Microsoft 365, Azure Active Directory, or corporate Entra ID app registrations.
+                  {t('admin_sso_config.providers.entra.desc')}
                 </p>
               </div>
 
               <div className="sails-idp-card__details">
                 <div className="sails-idp-card__detail-item">
-                  <span>Tenant ID:</span>
-                  <span className="sails-idp-card__detail-value">{providers.entra.tenantId || 'Not configured'}</span>
+                  <span>{t('admin_sso_config.providers.entra.tenantIdLabel')}</span>
+                  <span className="sails-idp-card__detail-value">{providers.entra.tenantId || t('admin_sso_config.providers.google.notConfigured')}</span>
                 </div>
                 <div className="sails-idp-card__detail-item">
-                  <span>App Client ID:</span>
-                  <span className="sails-idp-card__detail-value">{providers.entra.clientId || 'Not configured'}</span>
+                  <span>{t('admin_sso_config.providers.entra.appClientIdLabel')}</span>
+                  <span className="sails-idp-card__detail-value">{providers.entra.clientId || t('admin_sso_config.providers.google.notConfigured')}</span>
                 </div>
               </div>
 
@@ -592,40 +568,39 @@ const AdminSSOConfig: React.FC = () => {
                 style={{ width: '100%', justifyContent: 'center', gap: '8px' }}
               >
                 <Settings size={16} />
-                <span>Configure Entra ID SSO</span>
+                <span>{t('admin_sso_config.providers.entra.configureButton')}</span>
               </button>
             </div>
 
-            {/* 3. Custom SAML 2.0 / OIDC */}
             <div className="sails-idp-card">
               <div>
                 <div className="sails-idp-card__top">
                   <div className="sails-idp-card__identity">
-                    <div className={`sails-idp-card__icon ${providers.saml.iconClass}`}>🔒</div>
+                    <div className={`sails-idp-card__icon ${providers.saml.iconClass}`}>&#x1F512;</div>
                     <div>
-                      <div className="sails-idp-card__name">{providers.saml.name}</div>
-                      <div className="sails-idp-card__type">{providers.saml.type}</div>
+                      <div className="sails-idp-card__name">{t('admin_sso_config.providers.saml.name')}</div>
+                      <div className="sails-idp-card__type">{t('admin_sso_config.providers.saml.type')}</div>
                     </div>
                   </div>
                   <span className={`sails-idp-card__badge ${providers.saml.enabled ? 'sails-idp-card__badge--enabled' : 'sails-idp-card__badge--disabled'}`}>
                     {providers.saml.enabled ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                    <span>{providers.saml.enabled ? 'Enabled' : 'Disabled'}</span>
+                    <span>{providers.saml.enabled ? t('admin_sso_config.providers.enabled') : t('admin_sso_config.providers.disabled')}</span>
                   </span>
                 </div>
 
                 <p className="sails-idp-card__desc" style={{ marginTop: '14px' }}>
-                  Connect custom enterprise identity providers including Okta, PingIdentity, OneLogin, or custom SAML.
+                  {t('admin_sso_config.providers.saml.desc')}
                 </p>
               </div>
 
               <div className="sails-idp-card__details">
                 <div className="sails-idp-card__detail-item">
-                  <span>Metadata URL:</span>
-                  <span className="sails-idp-card__detail-value">{providers.saml.metadataUrl || 'Not configured'}</span>
+                  <span>{t('admin_sso_config.providers.saml.metadataUrlLabel')}</span>
+                  <span className="sails-idp-card__detail-value">{providers.saml.metadataUrl || t('admin_sso_config.providers.google.notConfigured')}</span>
                 </div>
                 <div className="sails-idp-card__detail-item">
-                  <span>Status:</span>
-                  <span className="sails-idp-card__detail-value">{providers.saml.enabled ? 'Active' : 'Inactive'}</span>
+                  <span>{t('admin_sso_config.providers.saml.statusLabel')}</span>
+                  <span className="sails-idp-card__detail-value">{providers.saml.enabled ? t('admin_sso_config.providers.saml.active') : t('admin_sso_config.providers.saml.inactive')}</span>
                 </div>
               </div>
 
@@ -635,30 +610,28 @@ const AdminSSOConfig: React.FC = () => {
                 style={{ width: '100%', justifyContent: 'center', gap: '8px' }}
               >
                 <Settings size={16} />
-                <span>Configure SAML / OIDC</span>
+                <span>{t('admin_sso_config.providers.saml.configureButton')}</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 3: DOMAIN DISCOVERY & VERIFICATION */}
       {activeTab === 'domains' && (
         <div className="sails-sso-section">
           <h2 className="sails-sso-section__title">
             <Building size={20} style={{ color: 'var(--sails-primary)' }} />
-            <span>Corporate Domain Routing & Verification</span>
+            <span>{t('admin_sso_config.domains.title')}</span>
           </h2>
           <p className="sails-sso-section__subtitle">
-            Verified email domains automatically redirect users entering their email during login to your configured SSO provider.
+            {t('admin_sso_config.domains.subtitle')}
           </p>
 
-          {/* Add Domain Input Bar */}
           <div style={{ display: 'flex', gap: '12px', maxWidth: '540px' }}>
             <input 
               type="text" 
               className="sails-input-text" 
-              placeholder="e.g. acme-corp.com"
+              placeholder={t('admin_sso_config.domains.addDomainPlaceholder')}
               value={newDomainInput}
               onChange={(e) => setNewDomainInput(e.target.value)}
             />
@@ -668,20 +641,19 @@ const AdminSSOConfig: React.FC = () => {
               style={{ gap: '6px', whiteSpace: 'nowrap' }}
             >
               <Plus size={16} />
-              <span>Add Domain</span>
+              <span>{t('admin_sso_config.domains.addButton')}</span>
             </button>
           </div>
 
-          {/* Verified Domains Table */}
           <div style={{ marginTop: '10px' }}>
             <UiTableCard>
             <table className="ui-table" style={{ width: '100%' }}>
               <thead>
                 <tr>
-                  <UiTh>Corporate Domain</UiTh>
-                  <UiTh>Verification Status</UiTh>
-                  <UiTh>Required DNS TXT Record</UiTh>
-                  <UiTh>Added On</UiTh>
+                  <UiTh>{t('admin_sso_config.domains.columns.domain')}</UiTh>
+                  <UiTh>{t('admin_sso_config.domains.columns.status')}</UiTh>
+                  <UiTh>{t('admin_sso_config.domains.columns.txtRecord')}</UiTh>
+                  <UiTh>{t('admin_sso_config.domains.columns.addedOn')}</UiTh>
                   <th style={{ textAlign: 'right', width: 48 }}></th>
                 </tr>
               </thead>
@@ -721,21 +693,19 @@ const AdminSSOConfig: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 4: EMERGENCY SAFEGUARDS */}
       {activeTab === 'safeguards' && (
         <div className="sails-sso-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h2 className="sails-sso-section__title" style={{ borderBottom: 'none', paddingBottom: 0 }}>
                 <ShieldAlert size={20} style={{ color: 'var(--sails-danger)' }} />
-                <span>Emergency Access & Security Safeguards</span>
+                <span>{t('admin_sso_config.safeguards.title')}</span>
               </h2>
               <p className="sails-sso-section__subtitle" style={{ marginTop: '4px', marginBottom: 0 }}>
-                Configure break-glass admin accounts to prevent tenant lockout if your Identity Provider suffers an outage.
+                {t('admin_sso_config.safeguards.subtitle')}
               </p>
             </div>
 
-            {/* Per-Screen Save Button */}
             <button 
               className="sails-btn sails-btn--primary"
               onClick={saveSafeguardsSettings}
@@ -743,34 +713,32 @@ const AdminSSOConfig: React.FC = () => {
               style={{ gap: '6px', padding: '8px 18px', opacity: isSafeguardsDirty ? 1 : 0.6 }}
             >
               {isSavingTab ? <RefreshCw size={16} className="sails-spin" /> : <Save size={16} />}
-              <span>{isSavingTab ? 'Saving...' : 'Save Safeguards'}</span>
+              <span>{isSavingTab ? t('admin_sso_config.policy.saving') : t('admin_sso_config.safeguards.saveButton')}</span>
             </button>
           </div>
 
           <div className="sails-sso-policy-grid" style={{ marginTop: '16px' }}>
-            {/* Break-Glass Admins */}
             <div className="sails-form-group" style={{ gridColumn: 'span 2' }}>
               <label className="sails-form-label">
-                <span>Break-Glass Emergency Super Admins</span>
-                <span className="sails-form-help">Comma-separated emails</span>
+                <span>{t('admin_sso_config.safeguards.breakGlassAdmins')}</span>
+                <span className="sails-form-help">{t('admin_sso_config.safeguards.breakGlassHelp')}</span>
               </label>
               <input 
                 type="text" 
                 className="sails-input-text"
                 value={breakGlassAdmins}
                 onChange={(e) => setBreakGlassAdmins(e.target.value)}
-                placeholder="super.admin@company.com"
+                placeholder={t('admin_sso_config.safeguards.breakGlassPlaceholder')}
               />
               <p style={{ fontSize: '0.8rem', color: 'var(--sails-text-muted)', marginTop: '4px' }}>
-                Designated emergency admin accounts retain password authentication access even when <strong>Mandatory SSO</strong> is enforced.
+                {t('admin_sso_config.safeguards.breakGlassDesc')}
               </p>
             </div>
 
-            {/* Session Timeout */}
             <div className="sails-form-group">
               <label className="sails-form-label">
-                <span>SSO Session Duration</span>
-                <span className="sails-form-help">Maximum active session time</span>
+                <span>{t('admin_sso_config.safeguards.sessionDuration')}</span>
+                <span className="sails-form-help">{t('admin_sso_config.safeguards.sessionDurationHelp')}</span>
               </label>
               <CustomSelect
                 value={sessionTimeoutHours}
@@ -780,36 +748,34 @@ const AdminSSOConfig: React.FC = () => {
             </div>
           </div>
 
-          {/* Revoke Sessions Action */}
           <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--sails-border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <strong style={{ color: 'var(--sails-text-main)', fontSize: '0.92rem' }}>Revoke All Active SSO Sessions</strong>
+              <strong style={{ color: 'var(--sails-text-main)', fontSize: '0.92rem' }}>{t('admin_sso_config.safeguards.revokeSessions')}</strong>
               <p style={{ fontSize: '0.82rem', color: 'var(--sails-text-muted)', margin: '2px 0 0 0' }}>
-                Immediately terminate all active SSO user sessions across the entire platform. Users will be prompted to re-authenticate.
+                {t('admin_sso_config.safeguards.revokeSessionsDesc')}
               </p>
             </div>
             <button 
               className="sails-btn" 
-              onClick={() => triggerToast('All active SSO sessions have been revoked.')}
+              onClick={() => triggerToast(t('admin_sso_config.safeguards.revokeSuccess'))}
               style={{ background: 'var(--sails-danger-light)', color: 'var(--sails-danger)', border: '1px solid rgba(253, 97, 97, 0.3)', gap: '6px' }}
             >
               <ShieldAlert size={16} />
-              <span>Revoke Sessions</span>
+              <span>{t('admin_sso_config.safeguards.revokeButton')}</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Unsaved Changes Confirmation Modal (Portaled) */}
       {pendingTabSwitch && createPortal(
         <div className="sails-modal-overlay">
           <div className="sails-confirm-modal">
             <div className="sails-confirm-modal__header">
               <AlertCircle size={22} style={{ color: 'var(--sails-warning)' }} />
-              <span>Unsaved Changes</span>
+              <span>{t('admin_sso_config.modal.unsavedChanges')}</span>
             </div>
             <div className="sails-confirm-modal__body">
-              You have unsaved changes in this tab. If you switch tabs without saving, your modifications will be discarded.
+              {t('admin_sso_config.modal.unsavedBody')}
             </div>
             <div className="sails-confirm-modal__footer">
               <button 
@@ -817,7 +783,7 @@ const AdminSSOConfig: React.FC = () => {
                 className="sails-btn sails-btn--ghost"
                 onClick={() => setPendingTabSwitch(null)}
               >
-                Stay on Tab
+                {t('admin_sso_config.modal.stayOnTab')}
               </button>
               <button 
                 type="button" 
@@ -825,14 +791,14 @@ const AdminSSOConfig: React.FC = () => {
                 onClick={handleDiscardAndSwitch}
                 style={{ background: 'var(--sails-danger-light)', color: 'var(--sails-danger)', border: '1px solid rgba(253, 97, 97, 0.3)' }}
               >
-                Discard Changes
+                {t('admin_sso_config.modal.discardChanges')}
               </button>
               <button 
                 type="button" 
                 className="sails-btn sails-btn--primary"
                 onClick={handleSaveAndSwitch}
               >
-                Save & Switch
+                {t('admin_sso_config.modal.saveAndSwitch')}
               </button>
             </div>
           </div>
@@ -840,28 +806,24 @@ const AdminSSOConfig: React.FC = () => {
         document.body
       )}
 
-      {/* Portaled Slide-Over Drawer for Provider Settings */}
       {activeDrawerProvider && drawerForm && createPortal(
         <div className="sails-sso-drawer-overlay" onClick={handleCloseDrawer}>
           <div className="sails-sso-drawer" onClick={(e) => e.stopPropagation()}>
-            {/* Drawer Header */}
             <div className="sails-sso-drawer__header">
               <div className="sails-sso-drawer__title">
                 <Settings size={20} style={{ color: 'var(--sails-primary-dark)' }} />
-                <span>Configure {drawerForm.name}</span>
+                <span>{t('admin_sso_config.drawer.title', { provider: drawerForm.name })}</span>
               </div>
               <button className="sails-sso-drawer__close" onClick={handleCloseDrawer}>
                 <X size={20} />
               </button>
             </div>
 
-            {/* Drawer Body */}
             <div className="sails-sso-drawer__body">
-              {/* Enable Switch */}
               <div className="sails-sso-setting-row" style={{ background: 'rgba(157, 206, 224, 0.08)', borderColor: 'rgba(157, 206, 224, 0.4)' }}>
                 <div className="sails-sso-setting-info">
-                  <span className="sails-sso-setting-label">Enable {drawerForm.name} Authentication</span>
-                  <span className="sails-sso-setting-desc">Activate or suspend SSO logins for this provider</span>
+                  <span className="sails-sso-setting-label">{t('admin_sso_config.drawer.enableAuth', { provider: drawerForm.name })}</span>
+                  <span className="sails-sso-setting-desc">{t('admin_sso_config.drawer.enableAuthDesc')}</span>
                 </div>
                 <label className="sails-sso-toggle">
                   <input 
@@ -873,11 +835,10 @@ const AdminSSOConfig: React.FC = () => {
                 </label>
               </div>
 
-              {/* Redirect / Callback URI Helper */}
               <div className="sails-form-group">
                 <label className="sails-form-label">
-                  <span>Redirect / Callback URI (Read-only)</span>
-                  <span className="sails-form-help">Copy to your IdP portal</span>
+                  <span>{t('admin_sso_config.drawer.callbackUrl')}</span>
+                  <span className="sails-form-help">{t('admin_sso_config.drawer.callbackUrlHelp')}</span>
                 </label>
                 <div className="sails-input-copy-wrapper">
                   <input 
@@ -892,24 +853,23 @@ const AdminSSOConfig: React.FC = () => {
                     onClick={() => handleCopyCallback(drawerForm.callbackUrl)}
                   >
                     {copiedCallback ? <Check size={14} style={{ color: 'var(--sails-success)' }} /> : <Copy size={14} />}
-                    <span>{copiedCallback ? 'Copied!' : 'Copy'}</span>
+                    <span>{copiedCallback ? 'Copied!' : t('common.copy')}</span>
                   </button>
                 </div>
               </div>
 
-              {/* Provider Specific Inputs */}
               {drawerForm.id === 'entra' && (
                 <div className="sails-form-group">
                   <label className="sails-form-label">
-                    <span>Directory (Tenant) ID</span>
-                    <span className="sails-form-help">Azure AD Directory ID</span>
+                    <span>{t('admin_sso_config.drawer.directoryTenantId')}</span>
+                    <span className="sails-form-help">{t('admin_sso_config.drawer.directoryTenantIdHelp')}</span>
                   </label>
                   <input 
                     type="text" 
                     className="sails-input-text"
                     value={drawerForm.tenantId || ''}
                     onChange={(e) => setDrawerForm({ ...drawerForm, tenantId: e.target.value })}
-                    placeholder="e.g. 3f2b1098-7654-3210-fedc-ba9876543210"
+                    placeholder={t('admin_sso_config.drawer.directoryTenantIdPlaceholder')}
                   />
                 </div>
               )}
@@ -918,20 +878,20 @@ const AdminSSOConfig: React.FC = () => {
                 <>
                   <div className="sails-form-group">
                     <label className="sails-form-label">
-                      <span>Application (Client) ID</span>
+                      <span>{t('admin_sso_config.drawer.clientId')}</span>
                     </label>
                     <input 
                       type="text" 
                       className="sails-input-text"
                       value={drawerForm.clientId}
                       onChange={(e) => setDrawerForm({ ...drawerForm, clientId: e.target.value })}
-                      placeholder="Enter Client ID from Identity Provider"
+                      placeholder={t('admin_sso_config.drawer.clientIdPlaceholder')}
                     />
                   </div>
 
                   <div className="sails-form-group">
                     <label className="sails-form-label">
-                      <span>Client Secret</span>
+                      <span>{t('admin_sso_config.drawer.clientSecret')}</span>
                     </label>
                     <div className="sails-input-password-wrapper">
                       <input 
@@ -939,7 +899,7 @@ const AdminSSOConfig: React.FC = () => {
                         className="sails-input-text"
                         value={drawerForm.clientSecret}
                         onChange={(e) => setDrawerForm({ ...drawerForm, clientSecret: e.target.value })}
-                        placeholder="Enter Client Secret"
+                        placeholder={t('admin_sso_config.drawer.clientSecretPlaceholder')}
                         style={{ paddingRight: '40px' }}
                       />
                       <button 
@@ -955,33 +915,32 @@ const AdminSSOConfig: React.FC = () => {
               ) : (
                 <div className="sails-form-group">
                   <label className="sails-form-label">
-                    <span>SAML Metadata URL or Endpoint</span>
+                    <span>{t('admin_sso_config.drawer.metadataUrl')}</span>
                   </label>
                   <input 
                     type="text" 
                     className="sails-input-text"
                     value={drawerForm.metadataUrl || ''}
                     onChange={(e) => setDrawerForm({ ...drawerForm, metadataUrl: e.target.value })}
-                    placeholder="https://idp.example.com/app/sso/saml/metadata"
+                    placeholder={t('admin_sso_config.drawer.metadataUrlPlaceholder')}
                   />
                 </div>
               )}
 
               <div className="sails-form-group">
                 <label className="sails-form-label">
-                  <span>Allowed Hosted Domains</span>
-                  <span className="sails-form-help">Comma-separated</span>
+                  <span>{t('admin_sso_config.drawer.allowedDomains')}</span>
+                  <span className="sails-form-help">{t('admin_sso_config.drawer.allowedDomainsHelp')}</span>
                 </label>
                 <input 
                   type="text" 
                   className="sails-input-text"
                   value={drawerForm.allowedDomains}
                   onChange={(e) => setDrawerForm({ ...drawerForm, allowedDomains: e.target.value })}
-                  placeholder="e.g. ignite-idea.com, sails.io"
+                  placeholder={t('admin_sso_config.drawer.allowedDomainsPlaceholder')}
                 />
               </div>
 
-              {/* Test Handshake Result */}
               {testResult && (
                 <div 
                   style={{
@@ -1002,7 +961,6 @@ const AdminSSOConfig: React.FC = () => {
               )}
             </div>
 
-            {/* Drawer Footer */}
             <div className="sails-sso-drawer__footer">
               <button 
                 type="button"
@@ -1012,7 +970,7 @@ const AdminSSOConfig: React.FC = () => {
                 style={{ gap: '6px' }}
               >
                 {testingConnection ? <RefreshCw size={16} className="sails-spin" /> : <Sparkles size={16} />}
-                <span>{testingConnection ? 'Testing...' : 'Test Connection'}</span>
+                <span>{testingConnection ? t('admin_sso_config.drawer.testing') : t('admin_sso_config.drawer.testConnection')}</span>
               </button>
 
               <div style={{ display: 'flex', gap: '10px' }}>
@@ -1021,7 +979,7 @@ const AdminSSOConfig: React.FC = () => {
                   className="sails-btn sails-btn--ghost" 
                   onClick={handleCloseDrawer}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button 
                   type="button"
@@ -1030,7 +988,7 @@ const AdminSSOConfig: React.FC = () => {
                   style={{ gap: '6px' }}
                 >
                   <Save size={16} />
-                  <span>Save Provider</span>
+                  <span>{t('admin_sso_config.drawer.saveProvider')}</span>
                 </button>
               </div>
             </div>
@@ -1039,7 +997,6 @@ const AdminSSOConfig: React.FC = () => {
         document.body
       )}
 
-      {/* Floating Toast Feedback */}
       {toastMessage && (
         <div className="sails-sso-toast">
           <CheckCircle2 size={18} style={{ color: 'var(--sails-primary)' }} />

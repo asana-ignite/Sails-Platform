@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import {
   Plus, Edit2, Trash2, Shield, X, Eye, EyeOff, Search,
@@ -20,6 +21,7 @@ type DetailTab = 'general' | 'navigation' | 'widget' | 'permission';
 const EMPTY_MENU: ConsoleMenu = { id: '', label: '', icon: 'Circle', path: '', actionType: 'data_model', order: 0 };
 
 const AdminAppManager: React.FC = () => {
+  const { t } = useTranslation();
   const { setHeaderActions } = useConsole();
   const [apps, setApps] = useState<ConsoleApp[]>([]);
   const [loading, setLoading] = useState(true);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Search, MoreHorizontal, Shield, Circle, UserPlus, Filter, ChevronUp, ChevronDown, ArrowUpDown, ChevronLeft, ChevronRight, Edit2, UserX, UserCheck, Key, Trash2, Copy, X } from 'lucide-react';
 import { useConsole } from '../../contexts/ConsoleContext';
@@ -21,6 +22,7 @@ interface User {
 }
 
 const UserManager: React.FC = () => {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -98,7 +100,7 @@ const UserManager: React.FC = () => {
       onClick={() => setShowAddUserDrawer(true)}
     >
       <UserPlus size={18} />
-      <span>Add User</span>
+      <span>{t('admin_user_manager.addUser')}</span>
     </button>
   ), [setShowAddUserDrawer]);
 
@@ -272,7 +274,7 @@ const UserManager: React.FC = () => {
           <Search size={18} className="sails-user-manager__search-icon" />
           <input
             type="text"
-            placeholder="Search users..."
+            placeholder={t('admin_user_manager.searchUsers')}
             className="sails-user-manager__search-input"
             value={searchTerm}
             onChange={(e) => {
@@ -358,8 +360,8 @@ const UserManager: React.FC = () => {
               />
               <UiTh sortable sortState={sortConfig?.key === 'name' ? sortConfig.direction : 'idle'} onSort={() => handleSort('name')}>User Identity</UiTh>
               <UiTh sortable sortState={sortConfig?.key === 'role' ? sortConfig.direction : 'idle'} onSort={() => handleSort('role')}>Name & Title</UiTh>
-              <UiTh sortable sortState={sortConfig?.key === 'status' ? sortConfig.direction : 'idle'} onSort={() => handleSort('status')}>Status</UiTh>
-              <UiTh sortable sortState={sortConfig?.key === 'lastLogin' ? sortConfig.direction : 'idle'} onSort={() => handleSort('lastLogin')}>Last Activity</UiTh>
+              <UiTh sortable sortState={sortConfig?.key === 'status' ? sortConfig.direction : 'idle'} onSort={() => handleSort('status')}>{t('admin_user_manager.columns.status')}</UiTh>
+              <UiTh sortable sortState={sortConfig?.key === 'lastLogin' ? sortConfig.direction : 'idle'} onSort={() => handleSort('lastLogin')}>{t('admin_user_manager.columns.lastLogin')}</UiTh>
               <th style={{ textAlign: 'right', width: 48 }}></th>
             </tr>
           </thead>
@@ -374,7 +376,7 @@ const UserManager: React.FC = () => {
             ) : paginatedUsers.length === 0 ? (
               <tr>
                 <td colSpan={6} style={{ textAlign: 'center', padding: '100px' }}>
-                  <p style={{ color: 'var(--sails-text-muted)' }}>No users found matching your criteria.</p>
+                  <p style={{ color: 'var(--sails-text-muted)' }}>{t('admin_user_manager.noUsers')}</p>
                 </td>
               </tr>
             ) : paginatedUsers.map((user) => (
@@ -418,20 +420,20 @@ const UserManager: React.FC = () => {
                 <UiTd align="right" onClick={(e) => e.stopPropagation()}>
                   <UiActionsMenu open={activeMenuUserId === user.id} onToggle={() => setActiveMenuUserId(activeMenuUserId === user.id ? null : user.id)}>
                     <UiActionsItem onClick={() => handleAction('edit', user)}>
-                      <Edit2 size={14} /> Edit Details
+                      <Edit2 size={14} /> {t('admin_user_manager.editUser')}
                     </UiActionsItem>
                     <UiActionsItem onClick={() => handleAction(user.status === 'Active' ? 'deactivate' : 'activate', user)}>
                       {user.status === 'Active' ? (<><UserX size={14} /> Deactivate User</>) : (<><UserCheck size={14} /> Activate User</>)}
                     </UiActionsItem>
                     <UiActionsItem onClick={() => handleAction('reset_password', user)}>
-                      <Key size={14} /> Reset Password
+                      <Key size={14} /> {t('admin_user_manager.resetPassword')}
                     </UiActionsItem>
                     <UiActionsDivider />
                     <UiActionsItem onClick={() => handleAction('copy_id', user)}>
                       <Copy size={14} /> Copy User ID
                     </UiActionsItem>
                     <UiActionsItem danger onClick={() => handleAction('remove', user)}>
-                      <Trash2 size={14} /> Remove User
+                      <Trash2 size={14} /> {t('admin_user_manager.deleteUser')}
                     </UiActionsItem>
                   </UiActionsMenu>
                 </UiTd>
@@ -458,7 +460,7 @@ const UserManager: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <UserPlus size={20} color="var(--sails-primary)" />
-                {editingUserId ? 'Edit User Details' : 'Add New User'}
+                {editingUserId ? t('admin_user_manager.editUser') : t('admin_user_manager.addUser')}
               </h3>
               <button 
                 onClick={() => {
@@ -475,7 +477,7 @@ const UserManager: React.FC = () => {
             <div style={{ marginBottom: '24px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div className="sails-form-group">
-                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Full Name</label>
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>{t('admin_user_manager.form.firstName')}</label>
                   <input 
                     type="text" 
                     className="sails-input" 
@@ -488,7 +490,7 @@ const UserManager: React.FC = () => {
                 </div>
 
                 <div className="sails-form-group">
-                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Email Address</label>
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>{t('admin_user_manager.form.email')}</label>
                   <input 
                     type="email" 
                     className="sails-input" 
@@ -502,7 +504,7 @@ const UserManager: React.FC = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div className="sails-form-group">
-                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Phone Number</label>
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>{t('admin_user_manager.form.phone')}</label>
                   <input 
                     type="tel" 
                     className="sails-input" 
@@ -514,7 +516,7 @@ const UserManager: React.FC = () => {
                 </div>
 
                 <div className="sails-form-group">
-                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>Job Title</label>
+                  <label className="sails-label" style={{ display: 'block', marginBottom: '6px' }}>{t('admin_user_manager.form.title')}</label>
                   <input 
                     type="text" 
                     className="sails-input" 
@@ -615,10 +617,10 @@ const UserManager: React.FC = () => {
               </div>
               <div style={{ flex: 1 }}>
                 <h3 style={{ margin: '0 0 6px 0', fontSize: '1.2rem', fontWeight: 600, color: 'var(--sails-text-main)' }}>
-                  Remove User Account
+                  {t('admin_user_manager.deleteUser')}
                 </h3>
                 <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--sails-text-muted)', lineHeight: 1.5 }}>
-                  Are you sure you want to remove <strong>"{deleteConfirmUser.name}"</strong> from the platform? This action cannot be undone.
+                  {t('admin_user_manager.confirmDelete')}
                 </p>
               </div>
             </div>
@@ -648,7 +650,7 @@ const UserManager: React.FC = () => {
                   }
                 }}
               >
-                Remove User
+                {t('admin_user_manager.deleteUser')}
               </button>
             </div>
           </div>

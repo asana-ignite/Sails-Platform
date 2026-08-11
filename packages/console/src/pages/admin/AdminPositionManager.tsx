@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { 
   Plus, Trash2, Award, Users, Search, Filter, X, 
@@ -87,6 +88,7 @@ interface UserPickerModalProps {
 }
 
 function UserPickerModal({ slotId, tenantUsers, currentUserId, onSelectUser, onClose }: UserPickerModalProps) {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   const filtered = useMemo(() => {
@@ -112,10 +114,10 @@ function UserPickerModal({ slotId, tenantUsers, currentUserId, onSelectUser, onC
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
           <div>
             <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--sails-text-main)' }}>
-              Map User to Slot {slotId}
+              {t('admin_position_manager.picker.title', { slotId })}
             </h3>
             <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--sails-text-muted)' }}>
-              Select a user from your organization
+              {t('admin_position_manager.picker.subtitle')}
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
@@ -129,7 +131,7 @@ function UserPickerModal({ slotId, tenantUsers, currentUserId, onSelectUser, onC
             type="text"
             className="sails-input"
             style={{ width: '100%', paddingLeft: '36px', fontSize: '0.85rem' }}
-            placeholder="Search user by name or email..."
+            placeholder={t('admin_position_manager.picker.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus
@@ -146,12 +148,12 @@ function UserPickerModal({ slotId, tenantUsers, currentUserId, onSelectUser, onC
               onClose();
             }}
           >
-            -- Vacant (Unassigned) --
+            {t('admin_position_manager.picker.vacant')}
           </button>
 
           {filtered.length === 0 ? (
             <div style={{ padding: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--sails-text-muted)' }}>
-              No users found matching your search.
+              {t('admin_position_manager.picker.noUsersFound')}
             </div>
           ) : (
             filtered.map((u) => (
@@ -197,7 +199,7 @@ interface PositionDetailsModalProps {
 }
 
 function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: PositionDetailsModalProps) {
-  // Local state for slot mappings: slotId -> userId | null
+  const { t } = useTranslation();
   const [slotMap, setSlotMap] = useState<Record<string, string | null>>(() => {
     const map: Record<string, string | null> = {};
     pos.slots.forEach((s) => {
@@ -245,7 +247,6 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
           position: 'relative'
         }}
       >
-        {/* Modal Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--sails-border-color)' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -264,7 +265,7 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
               </h3>
             </div>
             <p style={{ margin: 0, fontSize: '0.825rem', color: 'var(--sails-text-muted)' }}>
-              {pos.description || 'No description provided'}
+              {pos.description || t('admin_position_manager.details.noDescription')}
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer', padding: '4px' }}>
@@ -272,26 +273,24 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
           </button>
         </div>
 
-        {/* Position Summary Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '20px' }}>
           <div style={{ padding: '10px 12px', background: 'var(--sails-bg-body)', borderRadius: '10px', border: '1px solid var(--sails-border-color)' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--sails-text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Headcount</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--sails-text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{t('admin_position_manager.details.headcount')}</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '2px' }}>{pos.headCount}</div>
           </div>
           <div style={{ padding: '10px 12px', background: 'rgba(34,197,94,0.08)', borderRadius: '10px', border: '1px solid rgba(34,197,94,0.2)' }}>
-            <div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600, textTransform: 'uppercase' }}>Occupied</div>
+            <div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600, textTransform: 'uppercase' }}>{t('admin_position_manager.details.occupied')}</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>{occupiedCount}</div>
           </div>
           <div style={{ padding: '10px 12px', background: 'var(--sails-bg-body)', borderRadius: '10px', border: '1px solid var(--sails-border-color)' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--sails-text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Vacant</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--sails-text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{t('admin_position_manager.details.vacant')}</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '2px' }}>{vacantCount}</div>
           </div>
         </div>
 
-        {/* Slots Detail Section */}
         <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', fontWeight: 700, color: 'var(--sails-text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Users size={16} />
-          <span>Head Count Slots Mapping</span>
+          <span>{t('admin_position_manager.details.slotsTitle')}</span>
         </h4>
 
         <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', marginBottom: '16px' }}>
@@ -326,7 +325,7 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
                         </>
                       ) : (
                         <div style={{ fontSize: '0.825rem', color: 'var(--sails-text-muted)', fontStyle: 'italic' }}>
-                          Vacant Slot
+                          {t('admin_position_manager.details.vacantSlot')}
                         </div>
                       )}
                     </div>
@@ -341,7 +340,7 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
                           style={{ fontSize: '0.75rem', padding: '4px 8px' }}
                           onClick={() => setActiveSearchSlotId(slot.id)}
                         >
-                          Change
+                          {t('admin_position_manager.details.change')}
                         </button>
                         <button
                           type="button"
@@ -349,7 +348,7 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
                           style={{ fontSize: '0.75rem', padding: '4px 8px', color: 'var(--sails-danger)' }}
                           onClick={() => handleSelectUserForSlot(slot.id, null)}
                         >
-                          Unmap
+                          {t('admin_position_manager.details.unmap')}
                         </button>
                       </>
                     ) : (
@@ -360,7 +359,7 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
                         onClick={() => setActiveSearchSlotId(slot.id)}
                       >
                         <UserPlus size={14} style={{ marginRight: '4px' }} />
-                        Map User
+                        {t('admin_position_manager.details.mapUser')}
                       </button>
                     )}
                   </div>
@@ -370,7 +369,6 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
           </div>
         </div>
 
-        {/* User Search Picker Sub-Modal Popup */}
         {activeSearchSlotId && (
           <UserPickerModal
             slotId={activeSearchSlotId}
@@ -381,13 +379,12 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
           />
         )}
 
-        {/* Footer with Explicit Save */}
         <div style={{ paddingTop: '14px', borderTop: '1px solid var(--sails-border-color)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
           <button className="sails-btn sails-btn--secondary" onClick={onClose} disabled={isSaving}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button className="sails-btn sails-btn--primary" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving ? t('admin_position_manager.actions.saving') : t('admin_position_manager.actions.saveChanges')}
           </button>
         </div>
       </div>
@@ -397,6 +394,7 @@ function PositionDetailsModal({ pos, tenantUsers, onSaveAssignments, onClose }: 
 }
 
 export default function AdminPositionManager() {
+  const { t } = useTranslation();
   const { setHeaderActions } = useConsole();
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -407,14 +405,12 @@ export default function AdminPositionManager() {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Position; direction: 'asc' | 'desc' } | null>(null);
 
-  // Modal State
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [editingPositionId, setEditingPositionId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: '', prefix: '', description: '', headCount: 1 });
   const [isPrefixCustomized, setIsPrefixCustomized] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Position Details Modal State
   const [selectedPositionDetails, setSelectedPositionDetails] = useState<Position | null>(null);
   const [tenantUsers, setTenantUsers] = useState<{ id: string; name: string; email: string }[]>([]);
 
@@ -479,7 +475,7 @@ export default function AdminPositionManager() {
         className="sails-btn sails-btn--primary"
         onClick={handleOpenCreateModal}
       >
-        <Plus size={16} /> New Position
+        <Plus size={16} /> {t('admin_position_manager.actions.newPosition')}
       </button>
     );
     return () => setHeaderActions(null);
@@ -520,7 +516,7 @@ export default function AdminPositionManager() {
 
       if (!res.ok) {
         const err = await res.json();
-        setErrorMsg(err.error || 'Failed to save position');
+        setErrorMsg(err.error || t('admin_position_manager.modal.errorSave'));
         return;
       }
 
@@ -529,12 +525,12 @@ export default function AdminPositionManager() {
       setFormData({ name: '', prefix: '', description: '', headCount: 1 });
       fetchPositions();
     } catch (e: any) {
-      setErrorMsg(e.message || 'An error occurred');
+      setErrorMsg(e.message || t('admin_position_manager.modal.genericError'));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this position and all its slots?')) return;
+    if (!confirm(t('admin_position_manager.modal.confirmDelete'))) return;
     try {
       const res = await fetch(`/api/tenant/positions/${id}`, { method: 'DELETE' });
       if (res.ok) {
@@ -545,7 +541,6 @@ export default function AdminPositionManager() {
     }
   };
 
-  // Filter & Sort
   const filteredPositions = useMemo(() => {
     return positions.filter((p) => {
       const query = searchTerm.toLowerCase();
@@ -568,7 +563,6 @@ export default function AdminPositionManager() {
     });
   }, [filteredPositions, sortConfig]);
 
-  // Pagination
   const totalCount = sortedPositions.length;
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
   const paginatedPositions = useMemo(() => {
@@ -579,7 +573,6 @@ export default function AdminPositionManager() {
   const startRange = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endRange = Math.min(currentPage * pageSize, totalCount);
 
-  // Selection
   const toggleSelectAll = () => {
     if (selectedIds.size === paginatedPositions.length && paginatedPositions.length > 0) {
       setSelectedIds(new Set());
@@ -605,13 +598,12 @@ export default function AdminPositionManager() {
 
   return (
     <div className="sails-user-manager sails-position-manager">
-      {/* 1. Header Toolbar */}
       <div className="sails-user-manager__toolbar">
         <div className="sails-user-manager__search-wrapper">
           <Search size={18} className="sails-user-manager__search-icon" />
           <input
             type="text"
-            placeholder="Search positions..."
+            placeholder={t('admin_position_manager.table.searchPlaceholder')}
             className="sails-user-manager__search-input"
             value={searchTerm}
             onChange={(e) => {
@@ -623,12 +615,11 @@ export default function AdminPositionManager() {
         <div className="sails-user-manager__actions">
           <button className="sails-btn sails-btn--ghost">
             <Filter size={16} />
-            <span>Filters</span>
+            <span>{t('admin_position_manager.actions.filters')}</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Position Data Table */}
       <UiTableCard>
         <UiTable>
           <thead>
@@ -637,9 +628,9 @@ export default function AdminPositionManager() {
                 checked={paginatedPositions.length > 0 && selectedIds.size === paginatedPositions.length}
                 onChange={toggleSelectAll}
               />
-              <UiTh sortable sortState={sortConfig?.key === 'prefix' ? sortConfig.direction : 'idle'} onSort={() => handleSort('prefix')}>PREFIX</UiTh>
-              <UiTh sortable sortState={sortConfig?.key === 'name' ? sortConfig.direction : 'idle'} onSort={() => handleSort('name')}>POSITION NAME</UiTh>
-              <UiTh sortable sortState={sortConfig?.key === 'headCount' ? sortConfig.direction : 'idle'} onSort={() => handleSort('headCount')}>HEADCOUNT / SLOTS</UiTh>
+              <UiTh sortable sortState={sortConfig?.key === 'prefix' ? sortConfig.direction : 'idle'} onSort={() => handleSort('prefix')}>{t('admin_position_manager.table.columns.prefix')}</UiTh>
+              <UiTh sortable sortState={sortConfig?.key === 'name' ? sortConfig.direction : 'idle'} onSort={() => handleSort('name')}>{t('admin_position_manager.table.columns.positionName')}</UiTh>
+              <UiTh sortable sortState={sortConfig?.key === 'headCount' ? sortConfig.direction : 'idle'} onSort={() => handleSort('headCount')}>{t('admin_position_manager.table.columns.headcountSlots')}</UiTh>
               <th style={{ textAlign: 'right', width: 48 }}></th>
             </tr>
           </thead>
@@ -648,13 +639,13 @@ export default function AdminPositionManager() {
               <tr>
                 <td colSpan={5} style={{ textAlign: 'center', padding: '80px' }}>
                   <div className="sails-loading-spinner"></div>
-                  <p style={{ marginTop: '16px', color: 'var(--sails-text-muted)' }}>Fetching positions...</p>
+                  <p style={{ marginTop: '16px', color: 'var(--sails-text-muted)' }}>{t('admin_position_manager.table.loading')}</p>
                 </td>
               </tr>
             ) : paginatedPositions.length === 0 ? (
               <tr>
                 <td colSpan={5} style={{ textAlign: 'center', padding: '80px' }}>
-                  <p style={{ color: 'var(--sails-text-muted)' }}>No positions found matching your criteria.</p>
+                  <p style={{ color: 'var(--sails-text-muted)' }}>{t('admin_position_manager.table.noResults')}</p>
                 </td>
               </tr>
             ) : (
@@ -699,17 +690,17 @@ export default function AdminPositionManager() {
                       border: '1px solid rgba(34,197,94,0.2)'
                     }}>
                       <Users size={14} />
-                      {pos.slots.filter((s) => s.userId).length} / {pos.headCount} Occupied
+                      {t('admin_position_manager.table.occupiedSlots', { occupied: pos.slots.filter((s) => s.userId).length, total: pos.headCount })}
                     </span>
                   </UiTd>
                   <UiTd align="right" onClick={(e) => e.stopPropagation()}>
                     <UiActionsMenu open={activeMenuId === pos.id} onToggle={() => setActiveMenuId(activeMenuId === pos.id ? null : pos.id)}>
                       <UiActionsItem onClick={() => { setActiveMenuId(null); handleOpenEditModal(pos); }}>
-                        <Edit2 size={14} /> Edit Details
+                        <Edit2 size={14} /> {t('admin_position_manager.actions.editDetails')}
                       </UiActionsItem>
                       <UiActionsDivider />
                       <UiActionsItem danger onClick={() => { setActiveMenuId(null); handleDelete(pos.id); }}>
-                        <Trash2 size={14} /> Delete Position
+                        <Trash2 size={14} /> {t('admin_position_manager.actions.deletePosition')}
                       </UiActionsItem>
                     </UiActionsMenu>
                   </UiTd>
@@ -731,13 +722,12 @@ export default function AdminPositionManager() {
         />
       </UiTableCard>
 
-      {/* Create / Edit Modal */}
       {showCreateModal && createPortal(
         <div className="sails-modal-overlay" style={{ zIndex: 9999 }}>
           <div className="sails-card" style={{ width: '460px', padding: '28px', borderRadius: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
-                {editingPositionId ? 'Edit Position' : 'Create New Position'}
+                {editingPositionId ? t('admin_position_manager.actions.editPosition') : t('admin_position_manager.actions.createPosition')}
               </h3>
               <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
                 <X size={20} />
@@ -752,12 +742,12 @@ export default function AdminPositionManager() {
 
             <form onSubmit={handleSave}>
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>Position Name</label>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>{t('admin_position_manager.form.positionName')}</label>
                 <input
                   type="text"
                   className="sails-input"
                   style={{ width: '100%' }}
-                  placeholder="e.g. Senior Software Engineer"
+                  placeholder={t('admin_position_manager.form.positionNamePlaceholder')}
                   value={formData.name}
                   onChange={(e) => {
                     const newName = e.target.value;
@@ -771,14 +761,14 @@ export default function AdminPositionManager() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600 }}>Prefix</label>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--sails-primary, #3b82f6)', fontWeight: 500 }}>Auto-Generated</span>
+                    <label style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600 }}>{t('admin_position_manager.form.prefix')}</label>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--sails-primary, #3b82f6)', fontWeight: 500 }}>{t('admin_position_manager.form.autoGenerated')}</span>
                   </div>
                   <input
                     type="text"
                     className="sails-input"
                     style={{ width: '100%', textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700 }}
-                    placeholder="SSE"
+                    placeholder={t('admin_position_manager.form.prefixPlaceholder')}
                     maxLength={10}
                     value={formData.prefix}
                     onChange={(e) => {
@@ -789,7 +779,7 @@ export default function AdminPositionManager() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>Head Count (Slots)</label>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>{t('admin_position_manager.form.headCount')}</label>
                   <input
                     type="number"
                     min={1}
@@ -804,11 +794,11 @@ export default function AdminPositionManager() {
               </div>
 
               <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>Description</label>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>{t('admin_position_manager.form.description')}</label>
                 <textarea
                   className="sails-input"
                   style={{ width: '100%', minHeight: '80px', fontFamily: 'inherit' }}
-                  placeholder="Responsibilities and position details..."
+                  placeholder={t('admin_position_manager.form.descriptionPlaceholder')}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
@@ -816,10 +806,10 @@ export default function AdminPositionManager() {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                 <button type="button" className="sails-btn sails-btn--secondary" onClick={() => setShowCreateModal(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button type="submit" className="sails-btn sails-btn--primary">
-                  {editingPositionId ? 'Save Changes' : 'Create Position'}
+                  {editingPositionId ? t('admin_position_manager.actions.saveChanges') : t('admin_position_manager.actions.createButton')}
                 </button>
               </div>
             </form>
@@ -828,7 +818,6 @@ export default function AdminPositionManager() {
         document.body
       )}
 
-      {/* Position Details Modal */}
       {selectedPositionDetails && (
         <PositionDetailsModal
           pos={selectedPositionDetails}

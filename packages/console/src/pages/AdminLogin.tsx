@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import './Login.css';
 import { 
   Lock, 
@@ -49,6 +50,7 @@ const getRandomBenefits = (): Benefit[] => {
 };
 
 const AdminLogin: React.FC = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -118,7 +120,7 @@ const AdminLogin: React.FC = () => {
         <div className="sails-auth-form-wrapper">
           <button className="sails-auth-back-btn" onClick={() => navigate('/login')}>
             <ArrowLeft size={16} />
-            <span>Back to User Login</span>
+            <span>{t('auth.adminLogin.backToUserLogin')}</span>
           </button>
 
           <div className="sails-auth-brand">
@@ -127,8 +129,8 @@ const AdminLogin: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="sails-auth-title">Admin Portal</h2>
-            <p className="sails-auth-subtitle">System Administrator authentication for Sails Core.</p>
+            <h2 className="sails-auth-title">{t('auth.adminLogin.title')}</h2>
+            <p className="sails-auth-subtitle">{t('auth.adminLogin.subtitle')}</p>
           </div>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -138,7 +140,7 @@ const AdminLogin: React.FC = () => {
               <Mail size={18} />
               <input 
                 type="email" 
-                placeholder="Admin Email" 
+                placeholder={t('auth.adminLogin.adminEmail')} 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -149,7 +151,7 @@ const AdminLogin: React.FC = () => {
               <Lock size={18} />
               <input 
                 type="password" 
-                placeholder="Password" 
+                placeholder={t('auth.passwordPlaceholder')} 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -162,12 +164,12 @@ const AdminLogin: React.FC = () => {
               disabled={isLoading} 
               style={{ backgroundColor: 'var(--sails-primary-dark)', color: 'white', border: 'none', padding: '12px', marginTop: '4px' }}
             >
-              <span>{isLoading ? 'Verifying Credentials...' : 'Sign In to Admin Portal'}</span>
+              <span>{isLoading ? t('auth.adminLogin.verifyingCredentials') : t('auth.adminLogin.signInToAdminPortal')}</span>
             </button>
           </form>
 
           <div className="sails-login-footer" style={{ marginTop: '20px' }}>
-            <p>© 2026 Ignite Idea. System Administration.</p>
+            <p>{t('auth.adminLogin.copyright')}</p>
           </div>
         </div>
       </div>

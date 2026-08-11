@@ -21,6 +21,9 @@ const COMMANDS: Record<string, string> = {
   'db:clean':        'Drop orphaned schemas and clean metadata.',
   'db:check':        'Verify metadata matches physical schemas.',
   'seed:system-fields': 'Backfill system field definitions (created_at, updated_at, owner_id) for all existing tables.',
+  'package:seed':    'Seed package capability definitions globally. Usage: package:seed <packageId>',
+  'package:activate':'Activate a package for a tenant. Usage: package:activate <tenantId> <packageId>',
+  'package:list':    'List available packages and their activation status.',
   'help':            'Show this help message.',
 };
 
@@ -270,6 +273,49 @@ async function tenantRelocate(tenantId: string, targetDbUrl: string) {
   }
 }
 
+async function packageSeed(packageId: string) {
+  const pool = getPool();
+  try {
+    const provisioner = new TenantProvisioner(pool);
+    await provisioner.seedPackageCapabilityDefinitions(packageId);
+    console.log(`  ✅ Package "${packageId}" capability definitions seeded.`);
+  } finally {
+    await pool.end();
+  }
+}
+
+async function packageActivate(tenantId: string, packageId: string) {
+  const pool = getPool();
+  try {
+    const provisioner = new TenantProvisioner(pool);
+    await provisioner.seedPackageCapabilityDefinitions(packageId);
+    await provisioner.activatePackage(tenantId, packageId);
+    console.log(`  ✅ Package "${packageId}" activated for tenant ${tenantId}.`);
+  } finally {
+    await pool.end();
+  }
+}
+
+async function packageList() {
+  const pool = getPool();
+  const provisioner = new TenantProvisioner(pool);
+  const { getAllPackageCapabilityDefinitions } = await import('@sails/shared');
+  const defs = getAllPackageCapabilityDefinitions();
+  const packages = [...new Set(defs.map(d => d.packageId))];
+  console.log('');
+  console.log('  Available Packages:');
+  console.log('');
+  for (const pkgId of packages) {
+    const caps = defs.filter(d => d.packageId === pkgId);
+    console.log(`    📦 ${pkgId} (${caps.length} capabilities)`);
+    for (const cap of caps) {
+      console.log(`       └─ ${cap.key}`);
+    }
+    console.log('');
+  }
+  await pool.end();
+}
+
 // ─── Entry Point ──────────────────────────────────────────
 
 async function main() {
@@ -316,6 +362,28 @@ async function main() {
         break;
       case 'seed:system-fields':
         await seedSystemFields();
+        break;
+      case 'package:seed': {
+        const pkgId = args[1];
+        if (!pkgId) {
+          console.error('  ❌ Usage: package:seed <packageId>');
+          process.exit(1);
+        }
+        await packageSeed(pkgId);
+        break;
+      }
+      case 'package:activate': {
+        const tenantId = args[1];
+        const pkgId = args[2];
+        if (!tenantId || !pkgId) {
+          console.error('  ❌ Usage: package:activate <tenantId> <packageId>');
+          process.exit(1);
+        }
+        await packageActivate(tenantId, pkgId);
+        break;
+      }
+      case 'package:list':
+        await packageList();
         break;
       default:
         console.error(`  ❌ Unknown command: ${command}`);

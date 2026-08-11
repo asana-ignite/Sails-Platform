@@ -67,8 +67,12 @@ export async function GET() {
     let userCapabilities: string[] = [];
 
     if (isSystemAdmin) {
-      // Super Admin & Tenant Admin get full access to Admin & Settings apps and menus
-      userCapabilities = Object.keys(SYSTEM_PERMISSION_REGISTRY);
+      const systemCaps = Object.keys(SYSTEM_PERMISSION_REGISTRY);
+      const pkgCaps = await db.capabilityDefinition.findMany({
+        where: { isSystem: false },
+        select: { key: true }
+      });
+      userCapabilities = [...systemCaps, ...pkgCaps.map(p => p.key)];
     } else {
       // Regular End-Users get ONLY business capabilities explicitly assigned to their active teams
       const userTeamMemberships = user?.id ? await db.userTeam.findMany({
@@ -169,12 +173,14 @@ function getMockData() {
     {
       id: 'mock-app-dashboard',
       name: 'Dashboard',
+      translationKey: 'app.dashboard',
       icon: 'LayoutDashboard',
       order: 0,
       menus: [
         {
           id: 'mock-menu-overview',
           label: 'Overview',
+          translationKey: 'menu.overview',
           icon: 'Activity',
           path: '/',
           actionType: 'plugin',
@@ -186,12 +192,14 @@ function getMockData() {
     {
       id: 'mock-app-crm',
       name: 'CRM',
+      translationKey: 'app.crm',
       icon: 'Users',
       order: 1,
       menus: [
         {
           id: 'mock-menu-leads',
           label: 'Leads',
+          translationKey: 'menu.leads',
           icon: 'Target',
           path: '/table/leads',
           actionType: 'table',
@@ -201,6 +209,7 @@ function getMockData() {
         {
           id: 'mock-menu-customers',
           label: 'Customers',
+          translationKey: 'menu.customers',
           icon: 'UserCheck',
           path: '/table/customers',
           actionType: 'table',
@@ -212,6 +221,7 @@ function getMockData() {
     {
       id: 'mock-app-admin',
       name: 'Settings & Admin',
+      translationKey: 'app.settings_admin',
       icon: 'Settings',
       order: 99,
       isSystem: true,
@@ -219,35 +229,38 @@ function getMockData() {
         {
           id: 'mock-menu-general',
           label: 'General',
+          translationKey: 'menu.general',
           icon: 'Sliders',
           order: 0,
           children: [
-            { id: 'm-prof', label: 'Company Profile', icon: 'Building', path: '/admin/profile', order: 0, requiredCapability: 'system.settings.profile', actionType: 'plugin', componentKey: 'AdminCompanyProfile' },
-            { id: 'm-gen', label: 'General Settings', icon: 'Settings', path: '/admin/general', order: 1, requiredCapability: 'system.settings.edit', actionType: 'plugin', componentKey: 'AdminGeneralSettings' },
-            { id: 'm-bill', label: 'Subscription & Billing', icon: 'CreditCard', path: '/admin/billing', order: 2, requiredCapability: 'system.billing.manage', actionType: 'plugin', componentKey: 'AdminBilling' }
+            { id: 'm-prof', label: 'Company Profile', translationKey: 'menu.company_profile', icon: 'Building', path: '/admin/profile', order: 0, requiredCapability: 'system.settings.profile', actionType: 'plugin', componentKey: 'AdminCompanyProfile' },
+            { id: 'm-gen', label: 'General Settings', translationKey: 'menu.general_settings', icon: 'Settings', path: '/admin/general', order: 1, requiredCapability: 'system.settings.edit', actionType: 'plugin', componentKey: 'AdminGeneralSettings' },
+            { id: 'm-bill', label: 'Subscription & Billing', translationKey: 'menu.subscription_billing', icon: 'CreditCard', path: '/admin/billing', order: 2, requiredCapability: 'system.billing.manage', actionType: 'plugin', componentKey: 'AdminBilling' }
           ]
         },
         {
           id: 'mock-menu-users',
           label: 'Users & Team',
+          translationKey: 'menu.users_team',
           icon: 'Users',
           order: 1,
           children: [
-            { id: 'm-users', label: 'Users', icon: 'UserPlus', path: '/admin/users', order: 0, requiredCapability: 'system.users.manage', actionType: 'plugin', componentKey: 'AdminUserManager' },
-            { id: 'm-teams', label: 'Teams', icon: 'GitBranch', path: '/admin/teams', order: 1, requiredCapability: 'system.teams.manage', actionType: 'plugin', componentKey: 'AdminTeamManager' },
-            { id: 'm-roles', label: 'Access Roles', icon: 'ShieldCheck', path: '/admin/roles', order: 2, requiredCapability: 'system.roles.assign', actionType: 'plugin', componentKey: 'AdminPermissions' }
+            { id: 'm-users', label: 'Users', translationKey: 'menu.users', icon: 'UserPlus', path: '/admin/users', order: 0, requiredCapability: 'system.users.manage', actionType: 'plugin', componentKey: 'AdminUserManager' },
+            { id: 'm-teams', label: 'Teams', translationKey: 'menu.teams', icon: 'GitBranch', path: '/admin/teams', order: 1, requiredCapability: 'system.teams.manage', actionType: 'plugin', componentKey: 'AdminTeamManager' },
+            { id: 'm-roles', label: 'Access Roles', translationKey: 'menu.access_roles', icon: 'ShieldCheck', path: '/admin/roles', order: 2, requiredCapability: 'system.roles.assign', actionType: 'plugin', componentKey: 'AdminPermissions' }
           ]
         },
         {
           id: 'mock-menu-platform',
           label: 'Platform Studio',
+          translationKey: 'menu.platform_studio',
           icon: 'Layout',
           order: 2,
           children: [
-            { id: 'm-schema', label: 'Data Model', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminEntityManager' },
-            { id: 'm-views', label: 'Layouts', icon: 'LayoutTemplate', path: '/admin/views', order: 1, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminViewManager' },
-            { id: 'm-workflow', label: 'Workflow', icon: 'Workflow', path: '/admin/workflow', order: 2, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminWorkflowManager' },
-            { id: 'm-apps', label: 'Apps', icon: 'LayoutGrid', path: '/admin/apps', order: 3, requiredCapability: 'system.apps.manage', actionType: 'plugin', componentKey: 'AdminAppManager' }
+            { id: 'm-schema', label: 'Data Model', translationKey: 'menu.data_model', icon: 'Database', path: '/admin/schema', order: 0, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminEntityManager' },
+            { id: 'm-views', label: 'Layouts', translationKey: 'menu.layouts', icon: 'LayoutTemplate', path: '/admin/views', order: 1, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminViewManager' },
+            { id: 'm-workflow', label: 'Workflow', translationKey: 'menu.workflow', icon: 'Workflow', path: '/admin/workflow', order: 2, requiredCapability: 'system.schema.manage', actionType: 'plugin', componentKey: 'AdminWorkflowManager' },
+            { id: 'm-apps', label: 'Apps', translationKey: 'menu.apps', icon: 'LayoutGrid', path: '/admin/apps', order: 3, requiredCapability: 'system.apps.manage', actionType: 'plugin', componentKey: 'AdminAppManager' }
           ]
         }
       ]

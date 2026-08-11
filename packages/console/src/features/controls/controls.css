@@ -76,7 +76,7 @@
   border: 1px solid var(--sails-border-color, #e2e8f0);
   box-shadow: 0 12px 36px rgba(15, 23, 42, 0.14), 0 4px 12px rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(16px);
-  font-family: var(--sails-font-sans, system-ui, -apple-system, sans-serif);
+  font-family: var(--sails-font-family, system-ui, -apple-system, sans-serif);
   animation: sailsFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -301,7 +301,7 @@ input[type="date"],
 input[type="datetime-local"],
 input[type="time"] {
   color-scheme: light;
-  font-family: var(--sails-font-sans, inherit) !important;
+  font-family: var(--sails-font-family, inherit) !important;
   background-color: var(--sails-bg-card, #ffffff) !important;
   color: var(--sails-text-main, #0f172a) !important;
   border: 1px solid var(--sails-border-color, #cbd5e1) !important;

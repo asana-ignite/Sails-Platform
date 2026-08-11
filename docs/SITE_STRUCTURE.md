@@ -22,3 +22,9 @@
 - `features/`: Business logic implementations.
 - `hooks/`: Reusable React hooks.
 - `types/` & `utils/`: Legacy structure. **Migrate common items to Shared Kernel.**
+
+## Package Admin Menus
+- **Modular, runtime-activatable admin menus** under Settings & Admin (Salesforce-style).
+- Each optional package (Sales, Customer Service, etc.) ships with its own capabilities and admin pages.
+- Packages activate per-tenant via CLI or API — no deploy required.
+- Full reference: `docs/PACKAGE_ADMIN_MENUS.md`

@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
    Search, Bell, User, LayoutGrid,
-   Menu, Settings, LogOut, ChevronDown
+   Menu, Settings, LogOut, ChevronDown, Languages
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { safeT as translate } from '../../lib/translate';
 import { useConsole } from '../../contexts/ConsoleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useI18nLocale } from '../../contexts/I18nContext';
 import { useNavigate } from 'react-router-dom';
 import DynamicIcon from '../common/DynamicIcon';
 import './Topbar.css';
@@ -20,6 +23,8 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
   const { apps, activeApp, setActiveApp, isLoading } = useConsole();
   const { user, logout } = useAuth();
   const { logoLightUrl, logoDarkUrl, themeMode } = useTheme();
+  const { t } = useTranslation();
+  const { locale, setLocale, availableLocales } = useI18nLocale();
   const navigate = useNavigate();
   
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
@@ -81,12 +86,12 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
   }, []);
 
   const formatRole = (role: string | undefined) => {
-    if (!role) return 'User';
+    if (!role) return t('common.role.user');
     switch (role.toUpperCase()) {
-      case 'MEMBER': return 'Member';
-      case 'TENANT_ADMIN': return 'Administrator';
-      case 'SUPER_ADMIN': return 'Super Administrator';
-      case 'ADMIN': return 'Administrator';
+      case 'MEMBER': return t('common.role.member');
+      case 'TENANT_ADMIN': return t('common.role.administrator');
+      case 'SUPER_ADMIN': return t('common.role.super_administrator');
+      case 'ADMIN': return t('common.role.administrator');
       default: return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
     }
   };
@@ -109,7 +114,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
           <input
             type="text"
             className="sails-topbar__search-input"
-            placeholder="Search leads, contacts, orders..."
+            placeholder={t('common.searchPlaceholder')}
           />
         </div>
       </div>
@@ -123,7 +128,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
         >
           <button
             className={`sails-topbar__action ${isSwitcherOpen ? 'sails-topbar__action--active' : ''}`}
-            title="App Switcher"
+            title={t('common.appSwitcher')}
           >
             <LayoutGrid size={20} />
           </button>
@@ -132,7 +137,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
             <div className={`sails-app-switcher ${isClosing ? 'sails-app-switcher--closing' : ''}`}>
               {isLoading ? (
                 <div className="sails-app-switcher__loading">
-                  <Spinner size={32} label="Loading Apps..." />
+                  <Spinner size={32} label={t('common.loadingApps')} />
                 </div>
               ) : (
                 <div className="sails-app-switcher__grid">
@@ -145,7 +150,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
                       <div className="sails-app-switcher__icon">
                         <DynamicIcon name={app.icon || 'Box'} size={20} />
                       </div>
-                      <span className="sails-app-switcher__name">{app.name}</span>
+                      <span className="sails-app-switcher__name">{translate(app.translationKey, app.name)}</span>
                     </div>
                   ))}
                 </div>
@@ -172,7 +177,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
               )}
             </div>
             <div className="sails-topbar__user-info">
-              <span className="sails-topbar__user-name">{user?.name || 'Guest'}</span>
+              <span className="sails-topbar__user-name">{user?.name || t('common.guest')}</span>
               <span className="sails-topbar__user-role">{formatRole(user?.role)}</span>
             </div>
             <ChevronDown size={14} className={`sails-topbar__profile-chevron ${isProfileOpen ? 'sails-topbar__profile-chevron--active' : ''}`} />
@@ -180,13 +185,26 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
 
           {isProfileOpen && (
             <div className="sails-profile-dropdown">
+              <div className="sails-profile-dropdown__section">
+                {availableLocales.map((l) => (
+                  <div
+                    key={l.code}
+                    className={`sails-profile-dropdown__item ${locale === l.code ? 'sails-profile-dropdown__item--active' : ''}`}
+                    onClick={() => { setLocale(l.code); }}
+                  >
+                    <Languages size={16} />
+                    <span>{l.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="sails-profile-dropdown__divider" />
               <div className="sails-profile-dropdown__item" onClick={() => { navigate('/settings/profile'); setIsProfileOpen(false); }}>
                 <Settings size={16} />
-                <span>Setting</span>
+                <span>{t('common.settings')}</span>
               </div>
               <div className="sails-profile-dropdown__item sails-profile-dropdown__item--danger" onClick={logout}>
                 <LogOut size={16} />
-                <span>Logout</span>
+                <span>{t('common.logout')}</span>
               </div>
             </div>
           )}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import './Login.css';
 import { 
   Lock, 
@@ -69,6 +70,7 @@ const getRememberedName = (): string | null => {
 };
 
 const Login: React.FC = () => {
+  const { t } = useTranslation();
   const [ssoConfig, setSsoConfig] = useState<SSOConfigState>(DEFAULT_SSO_CONFIG);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -163,7 +165,7 @@ const Login: React.FC = () => {
         window.location.href = '/dashboard';
       } else {
         const data = await response.json();
-        setError(data.error || 'Invalid credentials');
+        setError(data.error || t('auth.invalidCredentials'));
       }
     } catch (err) {
       setError('An error occurred during login');
@@ -183,8 +185,8 @@ const Login: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="sails-auth-title">Sign In</h2>
-            <p className="sails-auth-subtitle">Access your admin dashboard & operating system.</p>
+            <h2 className="sails-auth-title">{t('auth.signIn')}</h2>
+            <p className="sails-auth-subtitle">{t('auth.signInSubtitle')}</p>
           </div>
 
           {error && <div className="login-error">{error}</div>}
@@ -193,7 +195,7 @@ const Login: React.FC = () => {
             {ssoConfig.googleEnabled && (
               <button className="google-login-button" onClick={() => handleSSOLogin('google')}>
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
-                <span>Sign in with Google</span>
+                <span>{t('auth.signInWithGoogle')}</span>
               </button>
             )}
 
@@ -205,14 +207,14 @@ const Login: React.FC = () => {
                   <rect x="1" y="12" width="10" height="10" fill="#00A4EF"/>
                   <rect x="12" y="12" width="10" height="10" fill="#FFB900"/>
                 </svg>
-                <span>Sign in with Microsoft</span>
+                <span>{t('auth.signInWithMicrosoft')}</span>
               </button>
             )}
 
             {ssoConfig.samlEnabled && (
               <button className="saml-login-button" onClick={() => handleSSOLogin('saml')}>
                 <Key size={18} style={{ color: 'var(--sails-info)' }} />
-                <span>Sign in with Enterprise SAML</span>
+                <span>{t('auth.signInWithSaml')}</span>
               </button>
             )}
           </div>
@@ -221,7 +223,7 @@ const Login: React.FC = () => {
             <>
               {(ssoConfig.googleEnabled || ssoConfig.entraEnabled || ssoConfig.samlEnabled) && (
                 <div className="login-divider">
-                  <span>or sign in with email</span>
+                  <span>{t('auth.orSignInWithEmail')}</span>
                 </div>
               )}
 
@@ -230,7 +232,7 @@ const Login: React.FC = () => {
                   <Mail size={18} />
                   <input 
                     type="email" 
-                    placeholder="name@example.com" 
+                    placeholder={t('auth.emailPlaceholder')} 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -241,7 +243,7 @@ const Login: React.FC = () => {
                   <Lock size={18} />
                   <input 
                     type="password" 
-                    placeholder="Password" 
+                    placeholder={t('auth.passwordPlaceholder')} 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -255,10 +257,10 @@ const Login: React.FC = () => {
                       checked={rememberMe} 
                       onChange={(e) => setRememberMe(e.target.checked)} 
                     />
-                    <span>Remember me</span>
+                    <span>{t('auth.rememberMe')}</span>
                   </label>
                   <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Please contact your administrator to reset your password.'); }} className="sails-auth-forgot">
-                    Forgot password?
+                    {t('auth.forgotPassword')}
                   </a>
                 </div>
 
@@ -268,7 +270,7 @@ const Login: React.FC = () => {
                   disabled={isLoading} 
                   style={{ backgroundColor: 'var(--sails-primary-dark)', color: 'white', border: 'none', padding: '13px' }}
                 >
-                  <span>{isLoading ? 'Verifying...' : 'Sign In'}</span>
+                  <span>{isLoading ? t('auth.verifying') : t('auth.signInButton')}</span>
                 </button>
               </form>
             </>
@@ -276,7 +278,7 @@ const Login: React.FC = () => {
 
 
           <div className="sails-login-footer" style={{ marginTop: '10px' }}>
-            <p>© 2026 Ignite Idea. Sails Internal Platform.</p>
+            <p>{t('auth.copyright')}</p>
           </div>
         </div>
       </div>
@@ -301,7 +303,7 @@ const Login: React.FC = () => {
 
         <div className="sails-auth-hero-content">
           <h1 className="sails-hero-greeting" style={{ fontSize: '2.5rem' }}>
-            {rememberedName ? `Welcome back, ${rememberedName}!` : 'Welcome to Sails Platform'}
+            {rememberedName ? t('auth.welcomeBack', { name: rememberedName }) : t('auth.welcomeToSails')}
           </h1>
           <p className="sails-hero-subtext">
             Manage customers, sales pipelines, and business workflows with the enterprise-grade CRM application — flexibly configured to fit your organization.

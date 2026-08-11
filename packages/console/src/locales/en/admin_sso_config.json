@@ -1,0 +1,132 @@
+{
+  "admin_sso_config": {
+    "title": "Login & Single Sign-On (SSO)",
+    "subtitle": "Configure authentication rules, connect enterprise Identity Providers (Google / Entra ID / SAML), manage verified corporate domains, and set emergency access policies.",
+    "tabs": {
+      "policy": "General & Login Policy",
+      "providers": "Identity Providers (SSO)",
+      "domains": "Domain Discovery",
+      "safeguards": "Emergency Safeguards"
+    },
+    "policy": {
+      "title": "Authentication Policies & Enforcement",
+      "subtitle": "Control internal password access, mandatory SSO routing, and automated user provisioning settings.",
+      "allowPasswordLogin": "Allow Internal Password Login",
+      "allowPasswordLoginDesc": "When enabled, internal team members can sign in using their email address and password.",
+      "jitProvisioning": "Just-In-Time (JIT) Provisioning",
+      "jitProvisioningDesc": "Automatically create a user account when an authorized employee logs in via SSO for the first time.",
+      "ssoEnforcement": "SSO Enforcement Strategy",
+      "optionalSso": "Optional SSO (Flexible Login)",
+      "optionalSsoDesc": "Users can freely choose to log in via either standard password or any enabled Identity Provider.",
+      "mandatorySso": "Mandatory SSO (Strict Domain Enforcement)",
+      "mandatorySsoDesc": "Password login is disabled for users with corporate email domains matching verified SSO domains.",
+      "defaultRole": "Default JIT Provisioning Role",
+      "defaultRoleHelp": "Assigned on first login",
+      "saveButton": "Save Policy Settings",
+      "saving": "Saving..."
+    },
+    "providers": {
+      "title": "Configured Identity Providers",
+      "subtitle": "Configure OAuth2 / OIDC credentials and SAML metadata for your corporate Identity Providers.",
+      "google": {
+        "name": "Google Workspace",
+        "type": "OpenID Connect (OIDC)",
+        "desc": "Allow internal employees to sign in seamlessly using their Google Workspace or G Suite accounts.",
+        "clientIdLabel": "Client ID:",
+        "allowedDomainsLabel": "Allowed Domains:",
+        "notConfigured": "Not configured",
+        "all": "All",
+        "configureButton": "Configure Google SSO"
+      },
+      "entra": {
+        "name": "Microsoft Entra ID",
+        "type": "Azure AD / OAuth2",
+        "desc": "Authenticate staff via Microsoft 365, Azure Active Directory, or corporate Entra ID app registrations.",
+        "tenantIdLabel": "Tenant ID:",
+        "appClientIdLabel": "App Client ID:",
+        "configureButton": "Configure Entra ID SSO"
+      },
+      "saml": {
+        "name": "Enterprise SAML 2.0 / OIDC",
+        "type": "Generic Okta / Ping / OneLogin",
+        "desc": "Connect custom enterprise identity providers including Okta, PingIdentity, OneLogin, or custom SAML.",
+        "metadataUrlLabel": "Metadata URL:",
+        "statusLabel": "Status:",
+        "active": "Active",
+        "inactive": "Inactive",
+        "configureButton": "Configure SAML / OIDC"
+      },
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "domains": {
+      "title": "Corporate Domain Routing & Verification",
+      "subtitle": "Verified email domains automatically redirect users entering their email during login to your configured SSO provider.",
+      "addDomainPlaceholder": "e.g. acme-corp.com",
+      "addButton": "Add Domain",
+      "domainAdded": "Domain {{domain}} added.",
+      "domainRemoved": "Removed domain {{domain}}",
+      "columns": {
+        "domain": "Corporate Domain",
+        "status": "Verification Status",
+        "txtRecord": "Required DNS TXT Record",
+        "addedOn": "Added On"
+      }
+    },
+    "safeguards": {
+      "title": "Emergency Access & Security Safeguards",
+      "subtitle": "Configure break-glass admin accounts to prevent tenant lockout if your Identity Provider suffers an outage.",
+      "breakGlassAdmins": "Break-Glass Emergency Super Admins",
+      "breakGlassHelp": "Comma-separated emails",
+      "breakGlassPlaceholder": "super.admin@company.com",
+      "breakGlassDesc": "Designated emergency admin accounts retain password authentication access even when Mandatory SSO is enforced.",
+      "sessionDuration": "SSO Session Duration",
+      "sessionDurationHelp": "Maximum active session time",
+      "saveButton": "Save Safeguards",
+      "revokeSessions": "Revoke All Active SSO Sessions",
+      "revokeSessionsDesc": "Immediately terminate all active SSO user sessions across the entire platform. Users will be prompted to re-authenticate.",
+      "revokeButton": "Revoke Sessions",
+      "revokeSuccess": "All active SSO sessions have been revoked."
+    },
+    "drawer": {
+      "title": "Configure {{provider}}",
+      "enableAuth": "Enable {{provider}} Authentication",
+      "enableAuthDesc": "Activate or suspend SSO logins for this provider",
+      "callbackUrl": "Redirect / Callback URI (Read-only)",
+      "callbackUrlHelp": "Copy to your IdP portal",
+      "directoryTenantId": "Directory (Tenant) ID",
+      "directoryTenantIdHelp": "Azure AD Directory ID",
+      "directoryTenantIdPlaceholder": "e.g. 3f2b1098-7654-3210-fedc-ba9876543210",
+      "clientId": "Application (Client) ID",
+      "clientIdPlaceholder": "Enter Client ID from Identity Provider",
+      "clientSecret": "Client Secret",
+      "clientSecretPlaceholder": "Enter Client Secret",
+      "metadataUrl": "SAML Metadata URL or Endpoint",
+      "metadataUrlPlaceholder": "https://idp.example.com/app/sso/saml/metadata",
+      "allowedDomains": "Allowed Hosted Domains",
+      "allowedDomainsHelp": "Comma-separated",
+      "allowedDomainsPlaceholder": "e.g. ignite-idea.com, sails.io",
+      "testConnection": "Test Connection",
+      "testing": "Testing...",
+      "saveProvider": "Save Provider",
+      "connectSuccess": "Connection successful! Handshake verified with {{provider}}.",
+      "connectFailed": "Connection failed: Please enter a valid Client ID or Metadata URL."
+    },
+    "modal": {
+      "unsavedChanges": "Unsaved Changes",
+      "unsavedBody": "You have unsaved changes in this tab. If you switch tabs without saving, your modifications will be discarded.",
+      "stayOnTab": "Stay on Tab",
+      "discardChanges": "Discard Changes",
+      "saveAndSwitch": "Save & Switch",
+      "unsavedDot": "Unsaved changes"
+    },
+    "toast": {
+      "saved": "SSO configuration saved successfully.",
+      "testSuccess": "Connection test successful.",
+      "testFailed": "Connection test failed.",
+      "policySaved": "Authentication Policy settings saved!",
+      "safeguardsSaved": "Emergency Safeguard settings saved!",
+      "providerSaved": "Saved configuration for {{name}}"
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { LayoutTemplate, Search, Plus, ChevronLeft, ChevronRight, MoreHorizontal, Trash2, Database, List, FileText, ClipboardList, X, ArrowUpDown, ChevronUp, ChevronDown, Calendar, AlertTriangle, CheckCircle2, Clock, Zap } from 'lucide-react';
 import Spinner from '../../components/common/Spinner';
@@ -20,6 +21,7 @@ const VIEW_TYPE_LABELS: Record<ViewType, { label: string; icon: React.ElementTyp
 };
 
 const AdminViewManager: React.FC = () => {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<LayoutRow[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -48,12 +50,12 @@ const AdminViewManager: React.FC = () => {
       if (q) params.set('search', q);
 
       const json = await fetchCached(`/api/console/layouts?${params}`);
-      if (!json.success) throw new Error(json.error || 'Failed to load layouts');
+      if (!json.success) throw new Error(json.error || t('admin_view_manager.modal.createError'));
       setRows(json.data.rows);
       setTotal(json.data.total);
       setTotalPages(json.data.totalPages);
     } catch (err: any) {
-      setError(err.message || 'Failed to load layouts');
+      setError(err.message || t('admin_view_manager.modal.createError'));
     } finally {
       setLoading(false);
     }
@@ -114,9 +116,9 @@ const AdminViewManager: React.FC = () => {
   const headerActions = useMemo(() => (
     <button className="sails-btn sails-btn--primary" onClick={(e) => { e.stopPropagation(); setShowCreateModal(true); }}>
       <Plus size={16} />
-      <span>Create Layout</span>
+      <span>{t('admin_view_manager.actions.createLayout')}</span>
     </button>
-  ), []);
+  ), [t]);
 
   useEffect(() => {
     setHeaderActions(headerActions);
@@ -140,10 +142,10 @@ const AdminViewManager: React.FC = () => {
       if (!json.success) throw new Error(json.error);
       setRows(prev => prev.filter(r => r.id !== id));
       setTotal(prev => prev - 1);
-      setDeletedSuccessMsg('Layout deleted successfully.');
+      setDeletedSuccessMsg(t('admin_view_manager.toast.deleted'));
       setTimeout(() => setDeletedSuccessMsg(null), 4000);
     } catch (err: any) {
-      setDeleteError(err.message || 'Failed to delete layout');
+      setDeleteError(err.message || t('admin_view_manager.confirm.deleteError'));
     } finally {
       setDeleting(null);
     }
@@ -171,10 +173,10 @@ const AdminViewManager: React.FC = () => {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       setRows(prev => prev.map(r => r.id === id ? { ...r, status: json.data.status, publishedConfig: json.data.publishedConfig } : r));
-      setDeletedSuccessMsg('Layout activated successfully.');
+      setDeletedSuccessMsg(t('admin_view_manager.toast.activated'));
       setTimeout(() => setDeletedSuccessMsg(null), 4000);
     } catch (err: any) {
-      setActivateError(err.message || 'Failed to activate layout');
+      setActivateError(err.message || t('admin_view_manager.confirm.activateError'));
     } finally {
       setActivating(null);
     }
@@ -218,7 +220,7 @@ const AdminViewManager: React.FC = () => {
           <input
             type="text"
             className="sails-layout-studio__search-input"
-            placeholder="Search layouts by name or table..."
+            placeholder={t('admin_view_manager.table.searchPlaceholder')}
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
@@ -227,7 +229,7 @@ const AdminViewManager: React.FC = () => {
 
       {loading ? (
         <div className="sails-layout-studio__loading">
-          <Spinner size={32} label="Loading layouts..." />
+          <Spinner size={32} label={t('admin_view_manager.table.loading')} />
         </div>
       ) : error ? (
         <div className="sails-layout-studio__error">{error}</div>
@@ -236,13 +238,13 @@ const AdminViewManager: React.FC = () => {
           <div className="sails-layout-studio__empty-icon">
             <LayoutTemplate size={28} />
           </div>
-          <h3 className="sails-layout-studio__empty-title">No layouts yet</h3>
+          <h3 className="sails-layout-studio__empty-title">{t('admin_view_manager.table.noLayoutsTitle')}</h3>
           <p className="sails-layout-studio__empty-text">
-            Create your first layout to define how data is displayed in list, detail, and form views.
+            {t('admin_view_manager.table.noLayoutsText')}
           </p>
     <button className="sails-btn sails-btn--primary" onClick={(e) => { e.stopPropagation(); setShowCreateModal(true); }}>
             <Plus size={16} />
-            <span>Create Layout</span>
+            <span>{t('admin_view_manager.actions.createLayout')}</span>
           </button>
         </div>
       ) : (
@@ -251,13 +253,13 @@ const AdminViewManager: React.FC = () => {
             <UiTable>
               <thead>
                 <tr>
-                  <UiTh sortable sortState={sortConfig?.key === 'name' ? sortConfig.direction : 'idle'} onSort={() => handleSort('name')}>Name</UiTh>
-                  <UiTh sortable sortState={sortConfig?.key === 'description' ? sortConfig.direction : 'idle'} onSort={() => handleSort('description')}>Description</UiTh>
-                  <UiTh sortable sortState={sortConfig?.key === 'tableName' ? sortConfig.direction : 'idle'} onSort={() => handleSort('tableName')}>Model</UiTh>
-                  <UiTh sortable sortState={sortConfig?.key === 'viewType' ? sortConfig.direction : 'idle'} onSort={() => handleSort('viewType')}>View Type</UiTh>
-                  <UiTh sortable sortState={sortConfig?.key === 'status' ? sortConfig.direction : 'idle'} onSort={() => handleSort('status')}>Status</UiTh>
-                  <UiTh sortable sortState={sortConfig?.key === 'createdAt' ? sortConfig.direction : 'idle'} onSort={() => handleSort('createdAt')}>Created At</UiTh>
-                  <UiTh sortable sortState={sortConfig?.key === 'updatedAt' ? sortConfig.direction : 'idle'} onSort={() => handleSort('updatedAt')}>Last Modified</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'name' ? sortConfig.direction : 'idle'} onSort={() => handleSort('name')}>{t('admin_view_manager.table.columns.name')}</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'description' ? sortConfig.direction : 'idle'} onSort={() => handleSort('description')}>{t('admin_view_manager.table.columns.description')}</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'tableName' ? sortConfig.direction : 'idle'} onSort={() => handleSort('tableName')}>{t('admin_view_manager.table.columns.model')}</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'viewType' ? sortConfig.direction : 'idle'} onSort={() => handleSort('viewType')}>{t('admin_view_manager.table.columns.viewType')}</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'status' ? sortConfig.direction : 'idle'} onSort={() => handleSort('status')}>{t('admin_view_manager.table.columns.status')}</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'createdAt' ? sortConfig.direction : 'idle'} onSort={() => handleSort('createdAt')}>{t('admin_view_manager.table.columns.createdAt')}</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'updatedAt' ? sortConfig.direction : 'idle'} onSort={() => handleSort('updatedAt')}>{t('admin_view_manager.table.columns.lastModified')}</UiTh>
                   <th style={{ textAlign: 'right', width: 48 }}></th>
                 </tr>
               </thead>
@@ -288,23 +290,23 @@ const AdminViewManager: React.FC = () => {
                           <span className="ui-name-cell" style={{ gap: 8 }}>
                             <Database size={12} />
                             {renderHighlightedText(row.table.name, search)}
-                            {row.isDefault && <UiBadge tone="default">Default</UiBadge>}
+                            {row.isDefault && <UiBadge tone="default">{t('admin_view_manager.table.default')}</UiBadge>}
                           </span>
                         ) : (
-                          <UiBadge tone="neutral">Custom</UiBadge>
+                          <UiBadge tone="neutral">{t('admin_view_manager.table.custom')}</UiBadge>
                         )}
                       </UiTd>
                       <UiTd>
                         <UiBadge tone="info">
                           <ViewIcon size={11} />
-                          {viewTypeInfo.label}
+                          {viewTypeInfo.label === 'List' ? t('admin_view_manager.table.viewType.list') : viewTypeInfo.label === 'Detail' ? t('admin_view_manager.table.viewType.detail') : t('admin_view_manager.table.viewType.form')}
                         </UiBadge>
                       </UiTd>
                       <UiTd>
                         {row.status === 'active' ? (
-                          <UiBadge tone="success"><CheckCircle2 size={11} /> Active</UiBadge>
+                          <UiBadge tone="success"><CheckCircle2 size={11} /> {t('admin_view_manager.table.status.active')}</UiBadge>
                         ) : (
-                          <UiBadge tone="warning"><Clock size={11} /> Draft</UiBadge>
+                          <UiBadge tone="warning"><Clock size={11} /> {t('admin_view_manager.table.status.draft')}</UiBadge>
                         )}
                       </UiTd>
                       <UiTd>
@@ -316,14 +318,14 @@ const AdminViewManager: React.FC = () => {
                       <UiTd align="right" onClick={e => e.stopPropagation()}>
                         <UiActionsMenu open={activeMenuId === row.id} onToggle={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}>
                           <UiActionsItem onClick={() => { setActiveMenuId(null); handleOpenLayoutStudio(row); }}>
-                            <LayoutTemplate size={14} /> Design in Layout Studio
+                            <LayoutTemplate size={14} /> {t('admin_view_manager.actions.designInStudio')}
                           </UiActionsItem>
 
                           {row.status === 'draft' && (
                             <>
                               <UiActionsDivider />
                               <UiActionsItem onClick={() => { setActiveMenuId(null); handleActivate(row.id); }} disabled={activating === row.id}>
-                                <Zap size={14} /> {activating === row.id ? 'Activating...' : 'Activate'}
+                                <Zap size={14} /> {activating === row.id ? t('admin_view_manager.actions.activating') : t('admin_view_manager.actions.activate')}
                               </UiActionsItem>
                             </>
                           )}
@@ -331,7 +333,7 @@ const AdminViewManager: React.FC = () => {
                           <UiActionsDivider />
 
                           <UiActionsItem danger onClick={() => { setActiveMenuId(null); handleDelete(row.id); }} disabled={deleting === row.id}>
-                            <Trash2 size={14} /> Delete
+                            <Trash2 size={14} /> {t('admin_view_manager.actions.delete')}
                           </UiActionsItem>
                         </UiActionsMenu>
                       </UiTd>
@@ -369,11 +371,11 @@ const AdminViewManager: React.FC = () => {
 
       <UiConfirmDialog
         open={!!deleteConfirmId && !!deleteTargetRow}
-        title="Delete Layout"
+        title={t('admin_view_manager.confirm.deleteTitle')}
         icon={<AlertTriangle size={20} style={{ color: 'var(--sails-danger, #ef4444)' }} />}
-        body={<>Are you sure you want to delete <strong>{deleteTargetRow?.name}</strong>? This cannot be undone.</>}
+        body={<Trans i18nKey="admin_view_manager.confirm.deleteBody" values={{ name: deleteTargetRow?.name }} components={{ 1: <strong /> }} />}
         error={deleteError}
-        confirmLabel={deleting ? 'Deleting...' : 'Delete'}
+        confirmLabel={deleting ? t('admin_view_manager.confirm.deletingLabel') : t('admin_view_manager.confirm.deleteLabel')}
         loading={!!deleting}
         onConfirm={doDelete}
         onCancel={() => setDeleteConfirmId(null)}
@@ -381,11 +383,11 @@ const AdminViewManager: React.FC = () => {
 
       <UiConfirmDialog
         open={!!activateConfirmId && !!activateTargetRow}
-        title="Activate Layout"
+        title={t('admin_view_manager.confirm.activateTitle')}
         icon={<Zap size={20} style={{ color: 'var(--sails-primary, #3b82f6)' }} />}
-        body={<>This will activate <strong>{activateTargetRow?.name}</strong> as the current layout. The published version will be overwritten with the current draft configuration. Continue?</>}
+        body={<Trans i18nKey="admin_view_manager.confirm.activateBody" values={{ name: activateTargetRow?.name }} components={{ 1: <strong /> }} />}
         error={activateError}
-        confirmLabel={activating ? 'Activating...' : 'Activate'}
+        confirmLabel={activating ? t('admin_view_manager.confirm.activatingLabel') : t('admin_view_manager.confirm.activateLabel')}
         tone="primary"
         loading={!!activating}
         onConfirm={doActivate}
@@ -403,6 +405,7 @@ interface CreateLayoutModalProps {
 }
 
 const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreated }) => {
+  const { t } = useTranslation();
   const [tables, setTables] = useState<{ id: string; name: string }[]>([]);
   const [tableId, setTableId] = useState('');
   const [name, setName] = useState('');
@@ -434,7 +437,7 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
   const validateSystemName = (val: string): string | null => {
     if (!val) return null;
     if (!/^[a-z0-9]+(_[a-z0-9]+)*$/.test(val)) {
-      return 'System Name must be in valid snake_case (e.g. customer_list_view).';
+      return t('admin_view_manager.modal.systemNameError');
     }
     return null;
   };
@@ -484,8 +487,8 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
               <LayoutTemplate size={24} />
             </div>
             <div>
-              <h2 className="sails-layout-dialog__title">Create Layout</h2>
-              <p className="sails-layout-dialog__subtitle">Define a new layout for displaying data.</p>
+              <h2 className="sails-layout-dialog__title">{t('admin_view_manager.modal.createTitle')}</h2>
+              <p className="sails-layout-dialog__subtitle">{t('admin_view_manager.modal.createSubtitle')}</p>
             </div>
           </div>
           <button className="sails-layout-dialog__close" onClick={onClose}><X size={20} /></button>
@@ -493,11 +496,11 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
         <div className="sails-layout-dialog__body">
           <div className="sails-layout-dialog__row">
             <div className="sails-layout-dialog__field">
-              <label className="sails-layout-dialog__label">Name *</label>
+              <label className="sails-layout-dialog__label">{t('admin_view_manager.modal.nameLabel')}</label>
               <input
                 type="text"
                 className="sails-input"
-                placeholder="e.g. Lead List Default"
+                placeholder={t('admin_view_manager.modal.namePlaceholder')}
                 value={name}
                 onChange={e => {
                   const val = e.target.value;
@@ -509,11 +512,11 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
               />
             </div>
             <div className="sails-layout-dialog__field">
-              <label className="sails-layout-dialog__label">System Name *</label>
+              <label className="sails-layout-dialog__label">{t('admin_view_manager.modal.systemNameLabel')}</label>
               <input
                 type="text"
                 className={`sails-input ${systemNameError ? 'sails-layout-modal__input-error' : ''}`}
-                placeholder="e.g. leadlistdefault"
+                placeholder={t('admin_view_manager.modal.systemNamePlaceholder')}
                 value={systemName}
                 onChange={e => {
                   const val = e.target.value;
@@ -522,51 +525,51 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
                   setSubmitError(null);
                 }}
               />
-              <span className="sails-layout-dialog__hint">Alphanumeric only (e.g. leadlistdefault).</span>
+              <span className="sails-layout-dialog__hint">{t('admin_view_manager.modal.systemNameHint')}</span>
             </div>
           </div>
           <div className="sails-layout-dialog__field">
-            <label className="sails-layout-dialog__label">Description</label>
+            <label className="sails-layout-dialog__label">{t('admin_view_manager.modal.descriptionLabel')}</label>
             <textarea
               className="sails-input"
-              placeholder="Optional description of this layout"
+              placeholder={t('admin_view_manager.modal.descriptionPlaceholder')}
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={5}
             />
           </div>
           <div className="sails-layout-dialog__field">
-            <label className="sails-layout-dialog__label">Layout Type</label>
+            <label className="sails-layout-dialog__label">{t('admin_view_manager.modal.layoutTypeLabel')}</label>
             <div className="sails-layout-modal__toggle">
               <button
                 className={`sails-layout-modal__toggle-option ${layoutType === 'data' ? 'sails-layout-modal__toggle-option--active' : ''}`}
                 onClick={() => { setLayoutType('data'); }}
               >
                 <Database size={16} />
-                Data
+                {t('admin_view_manager.modal.layoutTypeData')}
               </button>
               <button
                 className={`sails-layout-modal__toggle-option ${layoutType === 'custom' ? 'sails-layout-modal__toggle-option--active' : ''}`}
                 onClick={() => { setLayoutType('custom'); setTableId(''); }}
               >
                 <LayoutTemplate size={16} />
-                Custom
+                {t('admin_view_manager.modal.layoutTypeCustom')}
               </button>
             </div>
           </div>
           <div className="sails-layout-dialog__field">
-            <label className="sails-layout-dialog__label">Model</label>
+            <label className="sails-layout-dialog__label">{t('admin_view_manager.modal.modelLabel')}</label>
             <CustomSelect
               value={tableId}
               options={tables.map(t => ({ value: t.id, label: t.name }))}
               onChange={(val) => { setTableId(String(val)); setSubmitError(null); }}
-              placeholder={isCustom ? 'Not applicable for custom layouts' : 'Select a model...'}
+              placeholder={isCustom ? t('admin_view_manager.modal.modelDisabledPlaceholder') : t('admin_view_manager.modal.modelPlaceholder')}
               searchable={true}
               disabled={isCustom}
             />
           </div>
           <div className="sails-layout-dialog__field">
-            <label className="sails-layout-dialog__label">View Type</label>
+            <label className="sails-layout-dialog__label">{t('admin_view_manager.modal.viewTypeLabel')}</label>
             <div className="sails-layout-modal__view-options">
               {(['LIST', 'DETAIL'] as ViewType[]).map(vt => {
                 const info = VIEW_TYPE_LABELS[vt];
@@ -578,7 +581,7 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
                     onClick={() => setViewType(vt)}
                   >
                     <Icon size={20} />
-                    <span>{info.label}</span>
+                    <span>{info.label === 'List' ? t('admin_view_manager.table.viewType.list') : info.label === 'Detail' ? t('admin_view_manager.table.viewType.detail') : t('admin_view_manager.table.viewType.form')}</span>
                   </button>
                 );
               })}
@@ -591,18 +594,18 @@ const CreateLayoutModal: React.FC<CreateLayoutModalProps> = ({ onClose, onCreate
               checked={isDefault}
               onChange={e => setIsDefault(e.target.checked)}
             />
-            Set as default view
+            {t('admin_view_manager.modal.setAsDefault')}
           </label>
           {submitError && <div className="sails-confirm-modal__error">{submitError}</div>}
         </div>
         <div className="sails-layout-dialog__footer">
-          <button className="sails-btn sails-btn--ghost" onClick={onClose}>Cancel</button>
+          <button className="sails-btn sails-btn--ghost" onClick={onClose}>{t('common.cancel')}</button>
           <button
             className="sails-btn sails-btn--primary"
             onClick={handleCreate}
             disabled={!name || !systemName || (!isCustom && !tableId) || submitting}
           >
-            {submitting ? 'Creating...' : 'Create Layout'}
+            {submitting ? t('admin_view_manager.modal.creating') : t('admin_view_manager.actions.createLayout')}
           </button>
         </div>
       </div>

@@ -76,6 +76,7 @@ To provision these via the **SAILS Core** API, use the following patterns:
 POST /api/console/apps
 {
   "name": "Projects",
+  "translationKey": "app.projects",
   "icon": "Briefcase",
   "order": 1
 }
@@ -87,9 +88,15 @@ POST /api/console/menus
 {
   "appId": "UUID_FROM_ABOVE",
   "label": "Active Projects",
+  "translationKey": "menu.active_projects",
   "icon": "FolderKanban",
   "path": "/table/projects",
   "actionType": "table",
   "order": 0
 }
 ```
+
+> [!NOTE]
+> `translationKey` is optional. Supply it for system or plugin menus that need
+> multi-language support. Leave it empty for customer-created menus where the
+> admin has already typed the label in their preferred language.

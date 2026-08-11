@@ -1,0 +1,86 @@
+{
+  "admin_view_manager": {
+    "title": "หน้าจอ",
+    "columns": {
+      "type": "ประเภท"
+    },
+    "status": {
+      "draft": "ฉบับร่าง"
+    },
+    "actions": {
+      "createLayout": "สร้างหน้าจอ",
+      "designInStudio": "ออกแบบใน Layout Studio",
+      "activate": "เปิดใช้งาน",
+      "activating": "กำลังเปิดใช้งาน...",
+      "delete": "ลบ",
+      "deleting": "กำลังลบ..."
+    },
+    "table": {
+      "columns": {
+        "name": "ชื่อ",
+        "description": "คำอธิบาย",
+        "model": "โมเดล",
+        "viewType": "ประเภทมุมมอง",
+        "status": "สถานะ",
+        "createdAt": "สร้างเมื่อ",
+        "lastModified": "แก้ไขล่าสุด"
+      },
+      "searchPlaceholder": "ค้นหาหน้าจอตามชื่อหรือตาราง...",
+      "noLayoutsTitle": "ยังไม่มีหน้าจอ",
+      "noLayoutsText": "สร้างหน้าจอแรกของคุณเพื่อกำหนดวิธีการแสดงข้อมูลในมุมมองรายการ รายละเอียด และฟอร์ม",
+      "loading": "กำลังโหลดหน้าจอ...",
+      "default": "ค่าเริ่มต้น",
+      "custom": "กำหนดเอง",
+      "status": {
+        "active": "ทำงาน",
+        "draft": "ฉบับร่าง"
+      },
+      "viewType": {
+        "list": "รายการ",
+        "detail": "รายละเอียด",
+        "form": "ฟอร์ม"
+      }
+    },
+    "modal": {
+      "createTitle": "สร้างหน้าจอ",
+      "createSubtitle": "กำหนดหน้าจอใหม่สำหรับการแสดงข้อมูล",
+      "nameLabel": "ชื่อ *",
+      "namePlaceholder": "เช่น รายการลูกค้าเป้าหมายเริ่มต้น",
+      "systemNameLabel": "ชื่อระบบ *",
+      "systemNamePlaceholder": "เช่น leadlistdefault",
+      "systemNameHint": "ตัวอักษรและตัวเลขเท่านั้น (เช่น leadlistdefault)",
+      "systemNameError": "ชื่อระบบต้องอยู่ในรูปแบบ snake_case ที่ถูกต้อง (เช่น customer_list_view)",
+      "descriptionLabel": "คำอธิบาย",
+      "descriptionPlaceholder": "คำอธิบายเพิ่มเติมของหน้าจอนี้",
+      "layoutTypeLabel": "ประเภทหน้าจอ",
+      "layoutTypeData": "ข้อมูล",
+      "layoutTypeCustom": "กำหนดเอง",
+      "modelLabel": "โมเดล",
+      "modelPlaceholder": "เลือกโมเดล...",
+      "modelDisabledPlaceholder": "ไม่เกี่ยวข้องกับหน้าจอแบบกำหนดเอง",
+      "viewTypeLabel": "ประเภทมุมมอง",
+      "setAsDefault": "ตั้งเป็นมุมมองเริ่มต้น",
+      "creating": "กำลังสร้าง...",
+      "createError": "ไม่สามารถโหลดหน้าจอได้",
+      "checkbox": {
+        "setDefaultView": "ตั้งเป็นมุมมองเริ่มต้น"
+      }
+    },
+    "confirm": {
+      "deleteTitle": "ลบหน้าจอ",
+      "deleteBody": "คุณแน่ใจหรือไม่ว่าต้องการลบ <1>{{name}}</1>? การดำเนินการนี้ไม่สามารถเรียกคืนได้",
+      "deleteLabel": "ลบ",
+      "deletingLabel": "กำลังลบ...",
+      "deleteError": "ไม่สามารถลบหน้าจอได้",
+      "activateTitle": "เปิดใช้งานหน้าจอ",
+      "activateBody": "การดำเนินการนี้จะเปิดใช้งาน <1>{{name}}</1> เป็นหน้าจอปัจจุบัน เวอร์ชันที่เผยแพร่จะถูกเขียนทับด้วยการกำหนดค่าฉบับร่างปัจจุบัน ดำเนินการต่อหรือไม่?",
+      "activateLabel": "เปิดใช้งาน",
+      "activatingLabel": "กำลังเปิดใช้งาน...",
+      "activateError": "ไม่สามารถเปิดใช้งานหน้าจอได้"
+    },
+    "toast": {
+      "deleted": "ลบหน้าจอสำเร็จแล้ว",
+      "activated": "เปิดใช้งานหน้าจอสำเร็จแล้ว"
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "admin_company_profile": {
+    "title": "โปรไฟล์บริษัท",
+    "tabs": {
+      "organization": "รายละเอียดองค์กร",
+      "contact": "ข้อมูลติดต่อและที่อยู่"
+    },
+    "sections": {
+      "organization": {
+        "title": "รายละเอียดองค์กร",
+        "subtitle": "การจดทะเบียนตามกฎหมาย ชื่อทางการค้า รหัสประจำตัวผู้เสียภาษี และโปรไฟล์ธุรกิจสาธารณะ"
+      },
+      "contact": {
+        "title": "ข้อมูลติดต่อและที่ตั้งองค์กร",
+        "subtitle": "รายละเอียดการติดต่อองค์กรและที่ตั้งธุรกิจตามที่จดทะเบียน"
+      }
+    },
+    "fields": {
+      "legalName": "ชื่อตามกฎหมายอย่างเป็นทางการ",
+      "legalNameRequired": "ชื่อตามกฎหมายอย่างเป็นทางการ *",
+      "legalNameHelp": "ชื่อนิติบุคคลที่จดทะเบียนตามที่แสดงในหนังสือรับรองภาษี",
+      "legalNamePlaceholder": "เช่น บริษัท อัคเม คอร์ปอเรชั่น จำกัด",
+      "tradingName": "ชื่อทางการค้า / ชื่อที่แสดง",
+      "tradingNameRequired": "ชื่อทางการค้า / ชื่อที่แสดง *",
+      "tradingNameHelp": "ชื่อที่แสดงในเมนูแพลตฟอร์มและใบแจ้งหนี้",
+      "tradingNamePlaceholder": "เช่น อัคเม ซอฟต์แวร์",
+      "taxId": "เลขประจำตัวผู้เสียภาษี / เลขทะเบียนธุรกิจ",
+      "taxIdHelp": "เลขประจำตัวผู้เสียภาษีอย่างเป็นทางการของรัฐบาล",
+      "taxIdPlaceholder": "เช่น 0105566012345",
+      "websiteUrl": "URL เว็บไซต์องค์กร",
+      "websiteUrlPlaceholder": "https://example.com",
+      "industry": "ภาคอุตสาหกรรม",
+      "companySize": "ขนาดบริษัท",
+      "businessContactPerson": "บุคคลที่ติดต่อทางธุรกิจ",
+      "businessContactName": "ชื่อผู้ติดต่อทางธุรกิจ",
+      "businessContactNamePlaceholder": "เช่น จอห์น โด",
+      "email": "อีเมล",
+      "corporateEmailPlaceholder": "john@company.com",
+      "phoneNumber": "หมายเลขโทรศัพท์",
+      "phonePlaceholder": "+66 2 123 4567",
+      "supportContactPerson": "บุคคลที่ติดต่อด้านการสนับสนุน",
+      "supportContactName": "ชื่อผู้ติดต่อด้านการสนับสนุน",
+      "supportContactNamePlaceholder": "เช่น เจน สมิธ / หัวหน้าฝ่ายสนับสนุน",
+      "supportEmailPlaceholder": "support@company.com",
+      "supportPhoneNumber": "หมายเลขโทรศัพท์ฝ่ายสนับสนุน",
+      "supportPhonePlaceholder": "+66 2 123 4568",
+      "addressLine1": "ที่อยู่ บรรทัดที่ 1",
+      "addressLine1Required": "ที่อยู่ บรรทัดที่ 1 *",
+      "addressLine1Placeholder": "ที่อยู่ถนน ตู้ ปณ. อาคาร ห้องชุด ยูนิต ฯลฯ",
+      "addressLine2": "ที่อยู่ บรรทัดที่ 2",
+      "addressLine2Optional": "ที่อยู่ บรรทัดที่ 2 (ไม่บังคับ)",
+      "addressLine2Placeholder": "อพาร์ทเมนท์ ห้องชุด ยูนิต อาคาร ชั้น ฯลฯ",
+      "city": "เมือง / จังหวัด / รัฐ",
+      "cityPlaceholder": "เช่น ซานฟรานซิสโก / กรุงเทพฯ / บาวาเรีย",
+      "country": "ประเทศ",
+      "countryPlaceholder": "เลือกหรือค้นหาประเทศ...",
+      "postalCode": "รหัสไปรษณีย์",
+      "postalCodePlaceholder": "เช่น 94105 / 10110",
+      "optional": "(ไม่บังคับ)"
+    },
+    "buttons": {
+      "saveChanges": "บันทึกการเปลี่ยนแปลงโปรไฟล์",
+      "saving": "กำลังบันทึกการเปลี่ยนแปลง..."
+    },
+    "validation": {
+      "invalidEmail": "กรุณากรอกที่อยู่อีเมลที่ถูกต้อง (เช่น name@domain.com)",
+      "invalidEmailShort": "กรุณากรอกที่อยู่อีเมลที่ถูกต้อง",
+      "fixEmailFormats": "กรุณาแก้ไขรูปแบบอีเมลที่ไม่ถูกต้องที่ไฮไลท์ด้านล่างก่อนบันทึก"
+    },
+    "messages": {
+      "loadError": "ไม่สามารถโหลดโปรไฟล์บริษัทจากเซิร์ฟเวอร์ได้",
+      "saveSuccess": "อัปเดตโปรไฟล์บริษัทสำเร็จแล้ว",
+      "saveError": "ไม่สามารถบันทึกโปรไฟล์บริษัทได้",
+      "saveServerError": "ไม่สามารถบันทึกโปรไฟล์บริษัทไปยังเซิร์ฟเวอร์ได้"
+    }
+  }
+}

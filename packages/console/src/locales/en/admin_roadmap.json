@@ -1,0 +1,11 @@
+{
+  "admin_roadmap": {
+    "billing": "This is the <strong>Subscription & Billing</strong> plugin.",
+    "apiTokens": "This is the <strong>API & Service Tokens</strong> management module.",
+    "connectedApps": "This is the <strong>Connected Apps</strong> configuration.",
+    "byocModules": "This is the <strong>Custom Modules (BYOC)</strong> dashboard.",
+    "integrations": "This is the <strong>API & Webhooks</strong> integration manager.",
+    "phaseMessage": "This administrative module is part of the <strong>Phase 6 Roadmap</strong>.",
+    "endpointMessage": "Currently connected to the <strong>{{path}}</strong> endpoint."
+  }
+}

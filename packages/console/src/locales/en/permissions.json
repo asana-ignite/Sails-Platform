@@ -1,0 +1,20 @@
+{
+  "perm": {
+    "manage_users": "Manage Users",
+    "manage_teams": "Manage Teams",
+    "assign_roles": "Assign Roles",
+    "manage_schema": "Manage Schema",
+    "manage_apps": "Manage Console Apps",
+    "manage_navigation": "Manage Navigation",
+    "manage_workflows": "Manage Workflows",
+    "security_sso": "Login & Single Sign-On",
+    "security_tokens": "API & Service Tokens",
+    "security_apps": "Connected Apps",
+    "extensions_byoc": "Custom Modules (BYOC)",
+    "integrations_api": "API & Webhooks",
+    "settings_profile": "Company Profile",
+    "settings_edit": "Edit Tenant Settings",
+    "audit_view": "View Audit Logs",
+    "billing_manage": "Manage Billing"
+  }
+}

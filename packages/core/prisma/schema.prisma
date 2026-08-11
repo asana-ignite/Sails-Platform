@@ -148,6 +148,7 @@ model ConsoleApp {
   updatedAt          DateTime      @default(now()) @updatedAt @map("updated_at")
   requiredCapability String?       @map("required_capability")
   widgetBarEnabled   Boolean       @default(false) @map("widget_bar_enabled")
+  translationKey    String?       @map("translation_key")
   tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   menus              ConsoleMenu[]
   widgets            ConsoleWidget[]
@@ -174,6 +175,7 @@ model ConsoleMenu {
   componentKey       String?          @map("component_key")
   dataModelId        String?          @map("data_model_id")
   listViewId         String?          @map("list_view")
+  translationKey    String?          @map("translation_key")
   app                ConsoleApp?      @relation(fields: [appId], references: [id], onDelete: Cascade)
   parent             ConsoleMenu?     @relation("MenuHierarchy", fields: [parentId], references: [id])
   children           ConsoleMenu[]    @relation("MenuHierarchy")
@@ -199,6 +201,7 @@ model ConsoleWidget {
   enabled            Boolean    @default(true)
   isSystem           Boolean    @default(false) @map("is_system")
   requiredCapability String?    @map("required_capability")
+  translationKey    String?    @map("translation_key")
   createdAt          DateTime   @default(now()) @map("created_at")
   updatedAt          DateTime   @default(now()) @updatedAt @map("updated_at")
 
@@ -302,6 +305,7 @@ model User {
   /// Fine-grained RBAC is delegated to ObjectPermission via teamId.
   role            String           @default("MEMBER")
   isActive        Boolean          @default(true) @map("is_active")
+  locale          String?          @default("en")
   phone           String?
   title           String?
   metadata        Json             @default("{}")
@@ -532,6 +536,7 @@ model CompanyProfile {
   timezone                 String?  @default("Asia/Bangkok") @map("timezone")
   dateFormat               String?  @default("YYYY-MM-DD") @map("date_format")
   timeFormat               String?  @default("24h") @map("time_format")
+  defaultLocale             String?  @default("en")  @map("default_locale")
 
   // System Security & Governance Settings
   loginTagline             String?  @map("login_tagline")
@@ -684,5 +689,20 @@ model EmailConnection {
 
   @@index([tenantId, isActive])
   @@map("email_connections")
+  @@schema("core")
+}
+
+model CapabilityDefinition {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  description String?
+  category    String
+  packageId   String   @map("package_id")
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now())  @map("created_at")
+  updatedAt   DateTime @updatedAt      @map("updated_at")
+
+  @@map("capability_definitions")
   @@schema("core")
 }

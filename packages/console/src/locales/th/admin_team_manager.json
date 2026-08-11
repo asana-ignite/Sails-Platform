@@ -1,0 +1,128 @@
+{
+  "admin_team_manager": {
+    "title": "ทีม",
+    "treeLabel": "ลำดับชั้นทีม",
+    "addTeam": "เพิ่มทีม",
+    "editTeam": "แก้ไขทีม",
+    "deleteTeam": "ลบทีม",
+    "confirmDelete": "คุณแน่ใจหรือไม่ว่าต้องการลบทีมนี้?",
+    "noTeams": "ยังไม่ได้กำหนดค่าทีม",
+    "tabs": {
+      "members": "สมาชิก",
+      "positions": "ตำแหน่ง",
+      "systemCapabilities": "ความสามารถของระบบ",
+      "dataAccess": "การเข้าถึงข้อมูล"
+    },
+    "members": {
+      "addMember": "เพิ่มสมาชิก",
+      "removeMember": "ลบสมาชิก",
+      "searchMembers": "ค้นหาสมาชิก...",
+      "noMembers": "ไม่มีสมาชิกในทีมนี้",
+      "leader": "หัวหน้าทีม",
+      "member": "สมาชิก",
+      "unlinkMember": "ยกเลิกการเชื่อมโยงสมาชิก",
+      "titleName": "ชื่อ",
+      "titleEmail": "อีเมล",
+      "titleRole": "บทบาท",
+      "titleActions": "การดำเนินการ",
+      "demoteHint": "คลิกเพื่อลดระดับเป็นสมาชิกทั่วไป",
+      "promoteHint": "คลิกเพื่อเลื่อนระดับเป็นหัวหน้าทีม"
+    },
+    "positions": {
+      "addPosition": "เพิ่มตำแหน่ง",
+      "removePosition": "ลบตำแหน่ง",
+      "noPositions": "ไม่มีตำแหน่งที่ได้รับมอบหมาย",
+      "unlinkPosition": "ยกเลิกการเชื่อมโยงตำแหน่ง",
+      "addPositionToTeam": "เพิ่มตำแหน่งให้ทีม",
+      "titlePrefix": "คำนำหน้า",
+      "titlePositionName": "ชื่อตำแหน่ง",
+      "titleHeadcount": "จำนวนอัตรา / สล็อต",
+      "titleActions": "การดำเนินการ",
+      "occupiedSlots": "{{occupied}} / {{headCount}} มีผู้ครอง",
+      "headcountSlots": "{{count}} สล็อตอัตรากำลัง",
+      "noPositionsMapped": "ยังไม่มีตำแหน่งที่เชื่อมโยงกับทีมนี้",
+      "allAdded": "เพิ่มตำแหน่งทั้งหมดให้ทีมนี้แล้ว",
+      "mappedToTeamDesc": "ตำแหน่งที่เชื่อมโยงกับ {{name}} กำหนดโครงสร้างบทบาทและการครองสล็อต"
+    },
+    "capabilities": {
+      "grantCapability": "มอบความสามารถ",
+      "noCapabilities": "ไม่มีความสามารถของระบบที่ได้รับมอบหมาย",
+      "noSystemCapabilities": "ไม่มีความสามารถของระบบที่พร้อมใช้งาน"
+    },
+    "dataAccess": {
+      "grantAccess": "มอบสิทธิ์การเข้าถึง",
+      "noAccess": "ยังไม่ได้กำหนดค่ากฎการเข้าถึงข้อมูล",
+      "objectName": "อ็อบเจ็กต์",
+      "canCreate": "สร้าง",
+      "canRead": "อ่าน",
+      "canUpdate": "อัปเดต",
+      "canDelete": "ลบ",
+      "viewAllData": "ดูทั้งหมด",
+      "modifyAllData": "แก้ไขทั้งหมด",
+      "manageDataAccess": "จัดการการเข้าถึงข้อมูล",
+      "configureScopesDesc": "กำหนดค่าขอบเขตการมองเห็นและการแก้ไขแบบละเอียดสำหรับ {{type}}",
+      "searchDataObject": "ค้นหาอ็อบเจ็กต์ข้อมูล...",
+      "noDataModels": "ไม่มีโมเดลข้อมูลที่กำหนดในระบบ",
+      "visibilityScope": "ขอบเขตการมองเห็น",
+      "modifyScopeLabel": "ขอบเขตการแก้ไข",
+      "viewHierarchy": "ลำดับชั้นการดู",
+      "modifyHierarchy": "ลำดับชั้นการแก้ไข",
+      "noneOption": "-- ไม่มี --",
+      "ownerOption": "เจ้าของ"
+    },
+    "form": {
+      "name": "ชื่อทีม",
+      "parentTeam": "ทีมแม่",
+      "none": "ไม่มี (ระดับบนสุด)",
+      "cancel": "ยกเลิก",
+      "saving": "กำลังบันทึก...",
+      "saveChanges": "บันทึกการเปลี่ยนแปลง",
+      "creating": "กำลังสร้าง...",
+      "createTeam": "สร้างทีม",
+      "adding": "กำลังเพิ่ม...",
+      "addSelected": "เพิ่มที่เลือก ({{count}})",
+      "dismiss": "ปิด",
+      "teamNamePlaceholder": "เช่น ทีมพัฒนาฟร้อนท์เอนด์",
+      "parentTeamOptional": "ทีมแม่ (ไม่บังคับ)",
+      "selectParentTeam": "เลือกทีมแม่"
+    },
+    "tree": {
+      "selectTeamHint": "เลือกทีมจากแถบด้านข้างเพื่อดูรายละเอียด"
+    },
+    "contextMenu": {
+      "teamOptions": "ตัวเลือกทีม"
+    },
+    "modal": {
+      "createNewTeam": "สร้างทีมใหม่",
+      "addMembersTo": "เพิ่มสมาชิกให้ {{name}}",
+      "addPositionsTo": "เพิ่มตำแหน่งให้ {{name}}",
+      "deleteTeamTitle": "ลบทีม",
+      "deleteTeamConfirm": "คุณแน่ใจหรือไม่ว่าต้องการลบทีม \"{{name}}\"? การเป็นสมาชิกและสิทธิ์ที่เกี่ยวข้องทั้งหมดของทีมนี้จะถูกลบออก",
+      "searchUserPlaceholder": "ค้นหาผู้ใช้ตามชื่อหรืออีเมล...",
+      "searchPositionPlaceholder": "ค้นหาตำแหน่งตามชื่อหรือคำนำหน้า..."
+    },
+    "notification": {
+      "createTeamFailed": "สร้างทีมไม่สำเร็จ",
+      "failedToCreateTeam": "ไม่สามารถสร้างทีมได้",
+      "error": "ข้อผิดพลาด",
+      "unexpectedError": "เกิดข้อผิดพลาดที่ไม่คาดคิด",
+      "deleteFailed": "ลบไม่สำเร็จ",
+      "failedToDeleteTeam": "ไม่สามารถลบทีมได้",
+      "addMembersFailed": "เพิ่มสมาชิกไม่สำเร็จ",
+      "failedToAddMembers": "ไม่สามารถเพิ่มสมาชิกที่เลือกได้",
+      "failedToAddPositions": "ไม่สามารถเพิ่มตำแหน่งให้ทีมได้",
+      "permissionsSaved": "บันทึกสิทธิ์แล้ว",
+      "dataAccessSaved": "บันทึกสิทธิ์การเข้าถึงข้อมูลสำหรับ {{name}} สำเร็จแล้ว",
+      "objectPermissionsSaved": "บันทึกสิทธิ์อ็อบเจ็กต์สำหรับ {{name}} สำเร็จแล้ว",
+      "saveFailed": "บันทึกไม่สำเร็จ",
+      "failedToSaveTeamObjectPerms": "ไม่สามารถบันทึกสิทธิ์อ็อบเจ็กต์ของทีมได้",
+      "failedToSaveIndividualPerm": "ไม่สามารถบันทึกสิทธิ์อ็อบเจ็กต์รายการได้",
+      "failedToSaveDataAccess": "ไม่สามารถบันทึกสิทธิ์การเข้าถึงข้อมูลได้"
+    },
+    "toast": {
+      "created": "สร้างทีมสำเร็จแล้ว",
+      "updated": "อัปเดตทีมสำเร็จแล้ว",
+      "deleted": "ลบทีมสำเร็จแล้ว"
+    }
+  }
+}

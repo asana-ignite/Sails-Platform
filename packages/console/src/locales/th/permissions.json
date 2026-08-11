@@ -1,0 +1,20 @@
+{
+  "perm": {
+    "manage_users": "จัดการผู้ใช้",
+    "manage_teams": "จัดการทีม",
+    "assign_roles": "กำหนดบทบาท",
+    "manage_schema": "จัดการ Schema",
+    "manage_apps": "จัดการแอปคอนโซล",
+    "manage_navigation": "จัดการการนำทาง",
+    "manage_workflows": "จัดการเวิร์กโฟลว์",
+    "security_sso": "เข้าสู่ระบบ & Single Sign-On",
+    "security_tokens": "API & โทเค็นบริการ",
+    "security_apps": "แอปที่เชื่อมต่อ",
+    "extensions_byoc": "โมดูลที่กำหนดเอง (BYOC)",
+    "integrations_api": "API & Webhooks",
+    "settings_profile": "ข้อมูลบริษัท",
+    "settings_edit": "แก้ไขการตั้งค่า Tenant",
+    "audit_view": "ดูบันทึกการตรวจสอบ",
+    "billing_manage": "จัดการการเรียกเก็บเงิน"
+  }
+}

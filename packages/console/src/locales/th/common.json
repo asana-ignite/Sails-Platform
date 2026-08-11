@@ -1,0 +1,67 @@
+{
+  "common": {
+    "save": "บันทึก",
+    "cancel": "ยกเลิก",
+    "delete": "ลบ",
+    "edit": "แก้ไข",
+    "create": "สร้าง",
+    "search": "ค้นหา",
+    "loading": "กำลังโหลด...",
+    "loadingWorkspace": "กำลังโหลดพื้นที่ทำงาน...",
+    "syncing": "กำลังซิงค์...",
+    "back": "กลับ",
+    "pagination": {
+      "showing": "แสดง",
+      "to": "ถึง",
+      "of": "จาก",
+      "records": "ระเบียน",
+      "recordsPerPage": "จำนวนระเบียนต่อหน้า"
+    },
+    "close": "ปิด",
+    "confirm": "ยืนยัน",
+    "noData": "ไม่มีข้อมูล",
+    "error": "ข้อผิดพลาด",
+    "success": "สำเร็จ",
+    "submit": "ส่ง",
+    "reset": "รีเซ็ต",
+    "export": "ส่งออก",
+    "import": "นำเข้า",
+    "filter": "ตัวกรอง",
+    "sort": "เรียงลำดับ",
+    "actions": "การดำเนินการ",
+    "status": "สถานะ",
+    "settings": "ตั้งค่า",
+    "logout": "ออกจากระบบ",
+    "profile": "โปรไฟล์",
+    "guest": "ผู้เยี่ยมชม",
+    "role": {
+      "user": "ผู้ใช้",
+      "member": "สมาชิก",
+      "administrator": "ผู้ดูแลระบบ",
+      "super_administrator": "ผู้ดูแลระบบสูงสุด"
+    },
+    "appSwitcher": "สลับแอป",
+    "loadingApps": "กำลังโหลดแอป...",
+    "searchPlaceholder": "ค้นหาลีด, ผู้ติดต่อ, คำสั่งซื้อ...",
+    "coreSystemVersion": "Core System v1.0",
+    "dashboard": {
+      "title": "แดชบอร์ด",
+      "welcome": "ยินดีต้อนรับกลับ นี่คือสิ่งที่เกิดขึ้นกับลีดของคุณวันนี้",
+      "totalLeads": "ลีดทั้งหมด",
+      "conversionRate": "อัตราการแปลง",
+      "revenue": "รายได้",
+      "avgResponse": "เวลาตอบกลับเฉลี่ย",
+      "recentActivity": "กิจกรรมล่าสุด",
+      "noActivity": "กิจกรรมล่าสุดของคุณจะปรากฏที่นี่..."
+    },
+    "unauthorized": {
+      "title": "การเข้าถึงไม่ได้รับอนุญาต",
+      "message": "คุณไม่มีสิทธิ์ที่จำเป็นในการดูหน้านี้",
+      "goBack": "กลับ",
+      "dashboard": "แดชบอร์ด"
+    },
+    "adminPlaceholder": {
+      "message": "โมดูลผู้ดูแลนี้เป็นส่วนหนึ่งของแผนงานระยะที่ 6 ขณะนี้เชื่อมต่อกับปลายทาง {{path}}"
+    }
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "admin_general_settings": {
+    "title": "General Settings",
+    "tabs": {
+      "branding": "Branding & Theme",
+      "localization": "Localization & Currency",
+      "security": "Security & Governance",
+      "maintenance": "Maintenance & Alerts",
+      "tenant": "Tenant Information"
+    },
+    "branding": {
+      "title": "Branding & Theme Customization",
+      "subtitle": "Upload organization logos and configure primary theme accent colors.",
+      "logoLight": "Main Logo Attachment (Light Mode)",
+      "logoDark": "Dark Mode Logo Attachment",
+      "logoCustomUploaded": "Custom Uploaded Logo",
+      "logoDefault": "Standard Platform Sailboat Logo (Default)",
+      "recommendedDimensions": "Recommended Dimensions: <1>200 × 50 px</1> (Max 2MB)",
+      "uploadCustom": "Upload Custom",
+      "change": "Change",
+      "enableGradientTitle": "Enable Gradient Theme Accents",
+      "enableGradientDesc": "Apply smooth dual-tone gradients across primary action buttons, page header accents, and site backgrounds.",
+      "paletteTechnique": "Color Palette Matching Technique",
+      "paletteTechniqueHelp": "Color theory algorithm used to calculate auto-suggested secondary, background, and font contrast.",
+      "primaryAccent": "Primary Accent",
+      "primaryAccentHelp": "Main brand color",
+      "secondaryAccent": "Secondary Accent",
+      "secondaryAccentHelp": "{{technique}} derived",
+      "backgroundAccent": "Background Accent",
+      "backgroundAccentHelp": "Warm / cool greyed-white tint",
+      "fontAccent": "Font Accent",
+      "fontAccentHelp": "Auto contrast text color",
+      "loginTagline": "Custom Login Tagline",
+      "loginTaglinePlaceholder": "Enter custom slogan displayed on user sign-in page",
+      "displayDensity": "Display Density",
+      "displayDensityOptions": {
+        "comfortable": "Larger Text",
+        "default": "Default",
+        "compact": "More Space"
+      },
+      "reset": "Reset",
+      "resetToDefault": "Reset to standard default platform logo",
+      "auto": "Auto",
+      "resetToAuto": "Reset to auto-calculated"
+    },
+    "localization": {
+      "title": "Localization & Financial Preferences",
+      "subtitle": "Set base operational currency, fiscal calendar starting month, timezone, and date formats.",
+      "baseCurrency": "Primary Base Currency *",
+      "baseCurrencyHelp": "Default currency used across financial calculations and reporting",
+      "fiscalYearStart": "Fiscal Year Start Month",
+      "fiscalYearStartHelp": "Beginning month of fiscal annual reporting",
+      "timezone": "System Timezone (All Standard World Timezones)",
+      "timezoneHelp": "Standard IANA timezone list covering all global regions (400+ world timezones)",
+      "dateFormat": "Date Display Format",
+      "timeFormat": "Time Display Format"
+    },
+    "security": {
+      "title": "Security & User Access Governance",
+      "subtitle": "Self-registration rules, allowed domain whitelists, default roles, and timeout limits.",
+      "allowSelfRegistration": "Allow User Self-Registration",
+      "allowSelfRegistrationDesc": "Allow users to sign up without an explicit admin invitation",
+      "allowedDomains": "Allowed Self-Signup Email Domains",
+      "allowedDomainsHelp": "Comma-separated list of allowed email domains",
+      "allowedDomainsPlaceholder": "e.g. company.com, partner.org",
+      "defaultRole": "Default Role for New Users",
+      "defaultLandingPage": "Default Post-Login Landing Page",
+      "inactivityTimeout": "Inactivity Session Timeout",
+      "maxFileUpload": "Max Attachment File Upload Limit"
+    },
+    "maintenance": {
+      "title": "System Maintenance & Announcement Banners",
+      "subtitle": "Emergency system lockouts and global announcement banner broadcasts.",
+      "maintenanceMode": "System Maintenance Mode",
+      "maintenanceModeActive": "System Maintenance Mode Active",
+      "maintenanceModeDesc": "When enabled, non-admin users will be blocked from accessing the console and shown a maintenance page.",
+      "announcementText": "Broadcast Announcement Banner Text",
+      "announcementTextHelp": "Displayed at top of all user screens when text is non-empty",
+      "announcementTextPlaceholder": "e.g. System upgrade scheduled tonight...",
+      "announcementType": "Announcement Banner Type",
+      "announcementPreview": "Announcement Banner Live Preview"
+    },
+    "tenant": {
+      "title": "Tenant Identity & Architectural Zone",
+      "subtitle": "Overview of tenant identity, assigned architectural zone, and deployment properties.",
+      "tenantId": "Tenant ID",
+      "tenantIdHelp": "Unique platform CUID identifier for this tenant organization.",
+      "tenantName": "Tenant Name",
+      "tenantNameHelp": "Registered organization name.",
+      "tenantZone": "Tenant Zone",
+      "tenantZoneValue": "Zone 01 (Primary Region)",
+      "tenantZoneHelp": "Assigned cellular deployment zone.",
+      "isolationType": "Tenant Isolation Type",
+      "isolationTypeValue": "Shared Multi-Tenant (Schema-Per-Tenant)",
+      "isolationTypeHelp": "Database & environment isolation mode.",
+      "environmentMode": "Environment Mode",
+      "environmentModeValue": "Standalone (Baseline)",
+      "environmentModeHelp": "Operating deployment configuration.",
+      "systemHealth": "System Health & Status",
+      "systemHealthValue": "Active & Healthy",
+      "systemHealthHelp": "Real-time status of tenant data services."
+    },
+    "footer": {
+      "saveButton": "Save General Settings",
+      "saving": "Saving Settings...",
+      "saveSuccess": "General Settings saved successfully.",
+      "saveError": "Error saving General Settings."
+    },
+    "validation": {
+      "invalidImageFormat": "Invalid image format. Supported formats: JPG, PNG, SVG, GIF",
+      "fileSizeLimit": "File size exceeds 2MB limit."
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { SailsTableDefinition, FieldTypeMetadata, FieldParameterDefinition, toSnakeCase, isSystemField } from '@sails/shared';
 import { useConsole } from '../../contexts/ConsoleContext';
@@ -73,7 +74,7 @@ const LayoutSelectParam: React.FC<{ targetTable: string; value: string; onChange
       .then(data => {
         if (cancelled) return;
         const rows: any[] = data?.data?.rows || [];
-        setOptions(rows.map(l => ({ value: l.id, label: `${l.name}${l.status === 'active' ? '' : ' (draft)'}` })));
+        setOptions(rows.map(l => ({ value: l.id, label: `${l.name}${l.status === 'active' ? '' : ` (${t('admin_view_manager.status.draft')})`}` })));
       })
       .catch(() => { if (!cancelled) setOptions([]); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -85,9 +86,9 @@ const LayoutSelectParam: React.FC<{ targetTable: string; value: string; onChange
       size="md"
       searchable
       value={value || ''}
-      options={[{ value: '', label: 'Default List View' }, ...options]}
+      options={[{ value: '', label: t('admin_object_manager.fieldConfig.defaultListView') }, ...options]}
       onChange={onChange}
-      placeholder={loading ? 'Loading List Views...' : 'Choose List View...'}
+      placeholder={loading ? t('admin_object_manager.fieldConfig.loadingListViews') : t('admin_object_manager.fieldConfig.chooseListView')}
     />
   );
 };
@@ -127,7 +128,7 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
             onChange={e => onChange(prev => ({ ...prev, allowMultiple: e.target.checked }))}
             style={{ width: 'auto' }}
           />
-          <label className="om-field-label" style={{ margin: 0 }}>Allow Multi-Select</label>
+          <label className="om-field-label" style={{ margin: 0 }}>{t('admin_object_manager.fieldConfig.allowMultiple')}</label>
         </div>
       </div>
 
@@ -143,10 +144,10 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
             checked={!isLookup}
             onClick={selectCustom}
           />
-          <span className="om-source-zone__title">Custom Entered Options List</span>
+          <span className="om-source-zone__title">{t('admin_object_manager.fieldConfig.customOptions')}</span>
         </label>
         <div className="om-source-zone__body">
-          <label className="om-field-label">Custom Options (One Per Line) *</label>
+          <label className="om-field-label">{t('admin_object_manager.fieldConfig.customOptionsLabel')}</label>
           <textarea
             className="sails-input"
             placeholder={'Draft\nIn Review\nApproved\nClosed'}
@@ -156,7 +157,7 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
             onChange={e => onChange(prev => ({ ...prev, optionsText: e.target.value }))}
             style={{ resize: 'vertical', minHeight: '180px' }}
           />
-          <span className="om-field-hint">Enter choices on separate lines (one option per line).</span>
+          <span className="om-field-hint">{t('admin_object_manager.fieldConfig.customOptionsHint')}</span>
         </div>
       </div>
 
@@ -172,11 +173,11 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
             checked={isLookup}
             onClick={selectObject}
           />
-          <span className="om-source-zone__title">Lookup Values from Data Model</span>
+          <span className="om-source-zone__title">{t('admin_object_manager.fieldConfig.lookupValues')}</span>
         </label>
         <div className="om-source-zone__body">
           <div className="om-field-group" style={{ marginBottom: 12 }}>
-            <label className="om-field-label">Source Data Model *</label>
+            <label className="om-field-label">{t('admin_object_manager.fieldConfig.sourceModel')}</label>
             <CustomSelect
               size="md"
               searchable
@@ -189,11 +190,11 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
                 sourceColumn: '',
                 sourceFilter: undefined
               }))}
-              placeholder="Select Source Data Model"
+              placeholder={t('admin_object_manager.fieldConfig.selectSourceModel')}
             />
           </div>
           <div className="om-field-group" style={{ marginBottom: 0 }}>
-            <label className="om-field-label">Source Field / Column *</label>
+            <label className="om-field-label">{t('admin_object_manager.fieldConfig.sourceField')}</label>
             <CustomSelect
               size="md"
               searchable
@@ -201,7 +202,7 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
               value={values.sourceColumn || ''}
               options={lookupFieldOptions}
               onChange={val => onChange(prev => ({ ...prev, sourceColumn: val }))}
-              placeholder={lookupSourceTable ? "Select Source Field" : "Select Data Model First"}
+              placeholder={lookupSourceTable ? t('admin_object_manager.fieldConfig.selectSourceField') : t('admin_object_manager.fieldConfig.selectModelFirst')}
             />
           </div>
 
@@ -212,7 +213,7 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
               onClick={() => setShowFilterBuilder(true)}
             >
               <Filter size={13} style={{ marginRight: 6 }} />
-              {filterRuleCount > 0 ? `Filter (${filterRuleCount} ${filterRuleCount === 1 ? 'Rule' : 'Rules'})` : 'Filter'}
+              {filterRuleCount > 0 ? `${t('common.filter')} (${filterRuleCount} ${filterRuleCount === 1 ? t('admin_object_manager.fieldConfig.rule') : t('admin_object_manager.fieldConfig.rules')})` : t('common.filter')}
             </button>
           )}
         </div>
@@ -224,9 +225,9 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
           <div className="om-modal om-qstudio-modal sails-qstudio-modal" onClick={(e) => e.stopPropagation()}>
             <div className="om-qstudio-modal__header">
               <h3 className="om-qstudio-modal__title">
-                <Filter size={14} /> Filter Dropdown Values
+                <Filter size={14} /> {t('admin_object_manager.fieldConfig.filterDropdown')}
               </h3>
-              <button type="button" className="om-modal-close" onClick={() => setShowFilterBuilder(false)} aria-label="Close Query Studio">
+              <button type="button" className="om-modal-close" onClick={() => setShowFilterBuilder(false)} aria-label={t('admin_object_manager.fieldConfig.closeQueryStudio')}>
                 <X size={14} />
               </button>
             </div>
@@ -236,7 +237,7 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
                 rootTableName={values.sourceTable}
                 initialGroups={values.sourceFilter ?? []}
                 showHeader={false}
-                title="Filter Dropdown Values"
+                title={t('admin_object_manager.fieldConfig.filterDropdown')}
                 onApply={groups => {
                   onChange(prev => ({ ...prev, sourceFilter: groups }));
                   setShowFilterBuilder(false);
@@ -253,6 +254,7 @@ const SelectOptionSourceConfig: React.FC<SelectOptionSourceConfigProps> = ({ val
 };
 
 const ObjectManager: React.FC = () => {
+  const { t } = useTranslation();
   const [tables, setTables] = useState<SailsTableDefinition[]>([]);
   const [selectedTable, setSelectedTable] = useState<SailsTableDefinition | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
@@ -395,14 +397,14 @@ const ObjectManager: React.FC = () => {
         body: JSON.stringify({ nextValue: resetSeqValue })
       });
       if (res.ok) {
-        setResetSeqSuccessMsg(`Sequence counter successfully reset to ${resetSeqValue}.`);
+        setResetSeqSuccessMsg(t('admin_object_manager.toast.sequenceReset', { value: resetSeqValue }));
         fetchTables();
       } else {
         const data = await res.json();
-        setErrorMsg(data.error || 'Failed to reset sequence counter');
+        setErrorMsg(data.error || t('admin_object_manager.error.sequenceResetFailed'));
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error resetting sequence counter');
+      setErrorMsg(err.message || t('admin_object_manager.error.sequenceResetError'));
     } finally {
       setIsResettingSeq(false);
     }
@@ -458,7 +460,7 @@ const ObjectManager: React.FC = () => {
   useEffect(() => {
     if (viewMode === 'detail' && selectedTable) {
       setPageTitle(selectedTable.name);
-      setPageSubtitle(selectedTable.description || 'Data model schema definition and field structure.');
+      setPageSubtitle(selectedTable.description || t('admin_object_manager.detailSubtitle'));
     } else {
       setPageTitle(null);
       setPageSubtitle(null);
@@ -546,7 +548,7 @@ const ObjectManager: React.FC = () => {
         fetchTables();
       } else {
         const data = await res.json();
-        setErrorMsg(data.error || 'Failed to update data model');
+        setErrorMsg(data.error || t('admin_object_manager.error.updateTableFailed'));
       }
     } catch (error) {
       console.error('Error updating table:', error);
@@ -586,7 +588,7 @@ const ObjectManager: React.FC = () => {
         fetchTables();
       } else {
         const data = await res.json();
-        setErrorMsg(data.error || 'Failed to delete table');
+        setErrorMsg(data.error || t('admin_object_manager.error.deleteTableFailed'));
       }
     } catch (error) {
       console.error('Error deleting table:', error);
@@ -603,7 +605,7 @@ const ObjectManager: React.FC = () => {
         fetchTables();
       } else {
         const data = await res.json();
-        setErrorMsg(data.error || 'Failed to delete field');
+        setErrorMsg(data.error || t('admin_object_manager.error.deleteFieldFailed'));
       }
     } catch (error) {
       console.error('Error deleting field:', error);
@@ -617,7 +619,7 @@ const ObjectManager: React.FC = () => {
     const dbNameRegex = /^[a-z0-9]+(_[a-z0-9]+)*$/;
 
     if (!dbNameRegex.test(newTableDbName)) {
-      setErrorMsg('System Name must be in snake_case (e.g. customer_table, sales_leads).');
+      setErrorMsg(t('admin_object_manager.error.snakeCaseTable'));
       return;
     }
     
@@ -639,7 +641,7 @@ const ObjectManager: React.FC = () => {
         fetchTables();
       } else {
         const data = await res.json();
-        setErrorMsg(data.error || 'Failed to create table');
+        setErrorMsg(data.error || t('admin_object_manager.error.createTableFailed'));
       }
     } catch (error) {
       console.error('Error creating table:', error);
@@ -653,7 +655,7 @@ const ObjectManager: React.FC = () => {
     const dbNameRegex = /^[a-z0-9]+(_[a-z0-9]+)*$/;
 
     if (!dbNameRegex.test(newFieldDbName)) {
-      setErrorMsg('System Name must be in snake_case (e.g. email_address, total_amount).');
+      setErrorMsg(t('admin_object_manager.error.snakeCaseField'));
       return;
     }
 
@@ -705,7 +707,7 @@ const ObjectManager: React.FC = () => {
         fetchTables();
       } else {
         const data = await res.json();
-        setErrorMsg(data.error || 'Failed to create field');
+        setErrorMsg(data.error || t('admin_object_manager.error.createFieldFailed'));
       }
     } catch (error) {
       console.error('Error creating field:', error);
@@ -807,11 +809,11 @@ const ObjectManager: React.FC = () => {
         setEditingField(null);
       } else {
         const data = await res.json();
-        setErrorMsg(data.error || 'Failed to update field');
+        setErrorMsg(data.error || t('admin_object_manager.error.updateFieldFailed'));
       }
     } catch (error) {
       console.error('Error updating field:', error);
-      setErrorMsg('Error updating field');
+      setErrorMsg(t('admin_object_manager.error.updateFieldError'));
     }
   };
 
@@ -986,7 +988,7 @@ const ObjectManager: React.FC = () => {
           onClick={() => setIsCreatingTable(true)}
         >
           <Plus size={18} />
-           <span>Create Model</span>
+           <span>{t('admin_object_manager.addTable')}</span>
         </button>
       );
     } else {
@@ -997,7 +999,7 @@ const ObjectManager: React.FC = () => {
             onClick={() => { setViewMode('list'); setSelectedTable(null); window.history.pushState({}, '', '/admin/schema'); }}
           >
             <ArrowLeft size={18} />
-            <span>Back to Data Models</span>
+            <span>{t('admin_object_manager.backToDataModels')}</span>
           </button>
         </div>
       );
@@ -1030,7 +1032,7 @@ const ObjectManager: React.FC = () => {
               <Search size={18} className="om-search-icon" />
               <input
                 type="text"
-                placeholder="Search data models by name, description, fields, date..."
+                placeholder={t('admin_object_manager.searchModels')}
                 className="om-search-input"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
@@ -1043,21 +1045,21 @@ const ObjectManager: React.FC = () => {
             <UiTable>
               <thead>
                 <tr>
-                  <UiTh sortable sortState={tableSortConfig?.key === 'name' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('name')}>Model</UiTh>
-                  <UiTh sortable sortState={tableSortConfig?.key === 'description' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('description')}>Description</UiTh>
-                  <UiTh sortable sortState={tableSortConfig?.key === 'isSystem' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('isSystem')}>Model Type</UiTh>
-                  <UiTh sortable sortState={tableSortConfig?.key === 'fields' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('fields')}>Fields</UiTh>
-                  <UiTh sortable sortState={tableSortConfig?.key === 'createdAt' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('createdAt')}>Created At</UiTh>
-                  <UiTh sortable sortState={tableSortConfig?.key === 'updatedAt' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('updatedAt')}>Last Modified</UiTh>
+                  <UiTh sortable sortState={tableSortConfig?.key === 'name' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('name')}>{t('admin_object_manager.columns.name')}</UiTh>
+                  <UiTh sortable sortState={tableSortConfig?.key === 'description' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('description')}>{t('admin_object_manager.columns.description')}</UiTh>
+                  <UiTh sortable sortState={tableSortConfig?.key === 'isSystem' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('isSystem')}>{t('admin_object_manager.columns.modelType')}</UiTh>
+                  <UiTh sortable sortState={tableSortConfig?.key === 'fields' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('fields')}>{t('admin_object_manager.columns.fields')}</UiTh>
+                  <UiTh sortable sortState={tableSortConfig?.key === 'createdAt' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('createdAt')}>{t('admin_object_manager.columns.createdAt')}</UiTh>
+                  <UiTh sortable sortState={tableSortConfig?.key === 'updatedAt' ? tableSortConfig.direction : 'idle'} onSort={() => handleTableSort('updatedAt')}>{t('admin_object_manager.columns.lastModified')}</UiTh>
                   <th style={{ textAlign: 'right', width: 48 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedTables.map(table => {
                   const fieldsCount = table._count?.fields ?? table.fields?.length ?? 0;
-                  const fieldsText = `${fieldsCount} Fields`;
-                  const dateText = table.createdAt ? new Date(table.createdAt).toLocaleDateString() : 'N/A';
-                  const updatedDateText = table.updatedAt ? new Date(table.updatedAt).toLocaleString() : (table.createdAt ? new Date(table.createdAt).toLocaleString() : 'N/A');
+                  const fieldsText = t('admin_object_manager.nFields', { count: fieldsCount });
+                  const dateText = table.createdAt ? new Date(table.createdAt).toLocaleDateString() : t('admin_object_manager.notAvailable');
+                  const updatedDateText = table.updatedAt ? new Date(table.updatedAt).toLocaleString() : (table.createdAt ? new Date(table.createdAt).toLocaleString() : t('admin_object_manager.notAvailable'));
 
                   return (
                     <UiTr key={table.id} onClick={() => selectRow(table)}>
@@ -1076,9 +1078,9 @@ const ObjectManager: React.FC = () => {
                       </UiTd>
                       <UiTd>
                         {table.isSystem ? (
-                          <UiBadge tone="info">System Model</UiBadge>
+                          <UiBadge tone="info">{t('admin_object_manager.systemModel')}</UiBadge>
                         ) : (
-                          <UiBadge tone="neutral">Custom Model</UiBadge>
+                          <UiBadge tone="neutral">{t('admin_object_manager.customModel')}</UiBadge>
                         )}
                       </UiTd>
                       <UiTd>
@@ -1099,16 +1101,16 @@ const ObjectManager: React.FC = () => {
                       <UiTd align="right" onClick={(e) => e.stopPropagation()}>
                         <UiActionsMenu open={activeMenuTableId === table.id} onToggle={() => setActiveMenuTableId(activeMenuTableId === table.id ? null : table.id)}>
                           <UiActionsItem onClick={() => { setActiveMenuTableId(null); selectRow(table, 'general'); }}>
-                            <Edit2 size={14} /> Edit Details
+                            <Edit2 size={14} /> {t('admin_object_manager.editDetails')}
                           </UiActionsItem>
                           <UiActionsItem onClick={() => { setActiveMenuTableId(null); selectRow(table, 'fields'); }}>
-                            <Layers size={14} /> Manage Fields
+                            <Layers size={14} /> {t('admin_object_manager.manageFields')}
                           </UiActionsItem>
                           {!table.isSystem && (
                             <>
                               <UiActionsDivider />
                               <UiActionsItem danger onClick={() => { setActiveMenuTableId(null); triggerDeleteTable(table); }}>
-                                <Trash2 size={14} /> Remove
+                                <Trash2 size={14} /> {t('admin_object_manager.remove')}
                               </UiActionsItem>
                             </>
                           )}
@@ -1121,8 +1123,8 @@ const ObjectManager: React.FC = () => {
                   <tr>
                     <td colSpan={6} className="om-empty-state-row">
                       <Database size={40} className="om-empty-icon" />
-                      <h3>No Data Models Found</h3>
-                      <p>Create a new database table to get started.</p>
+                      <h3>{t('admin_object_manager.noDataModels')}</h3>
+                      <p>{t('admin_object_manager.noDataModelsDesc')}</p>
                     </td>
                   </tr>
                 )}
@@ -1134,7 +1136,7 @@ const ObjectManager: React.FC = () => {
               totalPages={totalPages}
               total={totalCount}
               pageSize={pageSize === totalCount ? 50 : pageSize}
-              label="data models"
+              label={t('common.pagination.records')}
               onPageChange={(p) => setCurrentPage(p)}
               onPageSizeChange={(n) => { setPageSize(n); setCurrentPage(1); }}
               pageSizeOptions={[10, 25, 50]}
@@ -1147,16 +1149,16 @@ const ObjectManager: React.FC = () => {
             {/* Stats grid */}
             <div className="om-stats-grid-full">
               <div className="sails-card om-stat-card-full">
-                <label>Total Fields</label>
-                <div className="stat-value">{selectedTable.fields?.length || 0} Fields</div>
+                <label>{t('admin_object_manager.stats.totalFields')}</label>
+                <div className="stat-value">{t('admin_object_manager.nFields', { count: selectedTable.fields?.length || 0 })}</div>
               </div>
               <div className="sails-card om-stat-card-full">
-                <label>Total Layout</label>
-                <div className="stat-value">{layouts.length} Layouts</div>
+                <label>{t('admin_object_manager.stats.totalLayouts')}</label>
+                <div className="stat-value">{t('admin_object_manager.nLayouts', { count: layouts.length })}</div>
               </div>
               <div className="sails-card om-stat-card-full">
-                <label>Total Permission</label>
-                <div className="stat-value">Coming Soon</div>
+                <label>{t('admin_object_manager.stats.totalPermissions')}</label>
+                <div className="stat-value">{t('admin_object_manager.comingSoon')}</div>
               </div>
             </div>
 
@@ -1169,12 +1171,12 @@ const ObjectManager: React.FC = () => {
                   onClick={() => handleDetailTabClick(tab)}
                 >
                   <span>
-                    {tab === 'general' && 'Settings'}
-                    {tab === 'fields' && 'Fields'}
-                    {tab === 'layout' && 'Layout'}
-                    {tab === 'permission' && 'Permission'}
+                    {tab === 'general' && t('admin_object_manager.tabs.general')}
+                    {tab === 'fields' && t('admin_object_manager.tabs.fields')}
+                    {tab === 'layout' && t('admin_object_manager.tabs.layouts')}
+                    {tab === 'permission' && t('admin_object_manager.tabs.permission')}
                   </span>
-                  {tab === 'general' && isDetailDirty && <span className="om-detail-tab__dirty-dot" title="Unsaved changes" />}
+                  {tab === 'general' && isDetailDirty && <span className="om-detail-tab__dirty-dot" title={t('admin_object_manager.unsavedChanges.dot')} />}
                 </button>
               ))}
             </nav>
@@ -1185,7 +1187,7 @@ const ObjectManager: React.FC = () => {
                 <div className="om-detail-tab-section">
                   <div className="om-form-grid-2">
                     <div className="om-field-group">
-                      <label className="om-field-label">Data Model Name *</label>
+                      <label className="om-field-label">{t('admin_object_manager.form.tableName')}</label>
                       <input
                         type="text"
                         className="sails-input"
@@ -1194,7 +1196,7 @@ const ObjectManager: React.FC = () => {
                       />
                     </div>
                     <div className="om-field-group">
-                      <label className="om-field-label">System Name</label>
+                      <label className="om-field-label">{t('admin_object_manager.columns.systemName')}</label>
                       <input
                         type="text"
                         className="sails-input"
@@ -1202,17 +1204,17 @@ const ObjectManager: React.FC = () => {
                         disabled
                         style={{ opacity: 0.6, cursor: 'not-allowed' }}
                       />
-                      <span className="om-field-hint">Physical DB name cannot be altered.</span>
+                      <span className="om-field-hint">{t('admin_object_manager.form.systemNameHint')}</span>
                     </div>
                   </div>
                   <div className="om-field-group">
-                    <label className="om-field-label">Description</label>
+                    <label className="om-field-label">{t('admin_object_manager.columns.description')}</label>
                     <textarea
                       className="sails-input"
                       rows={3}
                       value={detailDesc}
                       onChange={e => setDetailDesc(e.target.value)}
-                      placeholder="Describe the data model's purpose..."
+                      placeholder={t('admin_object_manager.form.descriptionPlaceholder')}
                       style={{ resize: 'vertical', minHeight: '80px' }}
                     />
                   </div>
@@ -1232,7 +1234,7 @@ const ObjectManager: React.FC = () => {
                         style={{ marginLeft: '12px' }}
                       >
                         <Trash2 size={16} />
-                        <span>Delete Model</span>
+                        <span>{t('admin_object_manager.deleteTable')}</span>
                       </button>
                     )}
                   </div>
@@ -1246,7 +1248,7 @@ const ObjectManager: React.FC = () => {
                       <Search size={18} className="om-search-icon" />
                       <input
                         type="text"
-                        placeholder="Search fields by name, column name, type, required status..."
+                        placeholder={t('admin_object_manager.searchFields')}
                         className="om-search-input"
                         value={fieldSearchTerm}
                         onChange={e => setFieldSearchTerm(e.target.value)}
@@ -1258,7 +1260,7 @@ const ObjectManager: React.FC = () => {
                       style={{ marginLeft: '12px' }}
                     >
                       <Plus size={18} />
-                      <span>Add Field</span>
+                      <span>{t('admin_object_manager.addField')}</span>
                     </button>
                   </div>
 
@@ -1268,31 +1270,31 @@ const ObjectManager: React.FC = () => {
                         <tr>
                           <th className="om-th-sortable" onClick={() => handleFieldSort('name')}>
                             <div className="om-th-content">
-                              <span>Name</span>
+                              <span>{t('admin_object_manager.columns.name')}</span>
                               {getFieldSortIcon('name')}
                             </div>
                           </th>
                           <th className="om-th-sortable" onClick={() => handleFieldSort('description')}>
                             <div className="om-th-content">
-                              <span>Description</span>
+                              <span>{t('admin_object_manager.columns.description')}</span>
                               {getFieldSortIcon('description')}
                             </div>
                           </th>
                           <th className="om-th-sortable" onClick={() => handleFieldSort('logicalType')}>
                             <div className="om-th-content">
-                              <span>Type</span>
+                              <span>{t('admin_object_manager.columns.type')}</span>
                               {getFieldSortIcon('logicalType')}
                             </div>
                           </th>
                           <th className="om-th-sortable" onClick={() => handleFieldSort('isSystem')}>
                             <div className="om-th-content">
-                              <span>Category</span>
+                              <span>{t('admin_object_manager.columns.category')}</span>
                               {getFieldSortIcon('isSystem')}
                             </div>
                           </th>
                           <th className="om-th-sortable" onClick={() => handleFieldSort('isRequired')}>
                             <div className="om-th-content">
-                              <span>Required</span>
+                              <span>{t('admin_object_manager.columns.required')}</span>
                               {getFieldSortIcon('isRequired')}
                             </div>
                           </th>
@@ -1323,7 +1325,7 @@ const ObjectManager: React.FC = () => {
                               </td>
                               <td>
                                 <div style={{ color: 'var(--sails-text-main)', fontSize: '0.85rem', maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={field.description || ''}>
-                                  {field.description ? renderHighlightedText(field.description, fieldSearchTerm) : <span style={{ color: 'var(--sails-text-muted)', fontStyle: 'italic' }}>No description</span>}
+                                  {field.description ? renderHighlightedText(field.description, fieldSearchTerm) : <span style={{ color: 'var(--sails-text-muted)', fontStyle: 'italic' }}>{t('admin_object_manager.noDescription')}</span>}
                                 </div>
                               </td>
                               <td>
@@ -1334,11 +1336,11 @@ const ObjectManager: React.FC = () => {
                               <td>
                                 {field.isSystem ? (
                                   <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.15)', color: 'var(--sails-primary)', border: '1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.3)' }}>
-                                    System Field
+                                    {t('admin_object_manager.form.isSystem')}
                                   </span>
                                 ) : (
                                   <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--sails-text-main)', border: '1px solid var(--sails-border-color)' }}>
-                                    Custom Field
+                                    {t('admin_object_manager.customField')}
                                   </span>
                                 )}
                               </td>
@@ -1346,11 +1348,11 @@ const ObjectManager: React.FC = () => {
                               {field.isRequired ? (
                                 <span className="om-status-tag om-status-tag--required">
                                   <CheckCircle2 size={12} />
-                                  {renderHighlightedText('Required', fieldSearchTerm)}
+                                  {renderHighlightedText(t('admin_object_manager.form.required'), fieldSearchTerm)}
                                 </span>
                               ) : (
                                 <span className="om-status-tag om-status-tag--optional">
-                                  {renderHighlightedText('Optional', fieldSearchTerm)}
+                                  {renderHighlightedText(t('admin_object_manager.form.optional'), fieldSearchTerm)}
                                 </span>
                               )}
                             </td>
@@ -1362,8 +1364,8 @@ const ObjectManager: React.FC = () => {
                                     e.stopPropagation();
                                     setActiveMenuFieldId(activeMenuFieldId === field.id ? null : field.id);
                                   }} 
-                                  title="Options" 
-                                  aria-label="Options"
+                                  title={t('admin_object_manager.options')} 
+                                   aria-label={t('admin_object_manager.options')}
                                 >
                                   <MoreHorizontal size={18} />
                                 </button>
@@ -1373,7 +1375,7 @@ const ObjectManager: React.FC = () => {
                                     {field.isSystem ? (
                                       <div className="om-context-item" style={{ opacity: 0.6, cursor: 'not-allowed' }}>
                                         <ShieldAlert size={14} />
-                                        <span>System Field (Locked)</span>
+                                        <span>{t('admin_object_manager.systemFieldLocked')}</span>
                                       </div>
                                     ) : (
                                       <>
@@ -1385,7 +1387,7 @@ const ObjectManager: React.FC = () => {
                                           }}
                                         >
                                           <Edit2 size={14} />
-                                          <span>Edit</span>
+                                          <span>{t('common.edit')}</span>
                                         </button>
 
                                         <div className="om-context-divider"></div>
@@ -1398,7 +1400,7 @@ const ObjectManager: React.FC = () => {
                                           }}
                                         >
                                           <Trash2 size={14} />
-                                          <span>Remove Field</span>
+                                          <span>{t('admin_object_manager.deleteField')}</span>
                                         </button>
                                       </>
                                     )}
@@ -1413,8 +1415,8 @@ const ObjectManager: React.FC = () => {
                           <tr>
                             <td colSpan={5} className="om-empty-state-row">
                               <Info size={40} className="om-empty-icon" />
-                              <h3>No Fields Found</h3>
-                              <p>Click "Add Field" to define new column structure.</p>
+                              <h3>{t('admin_object_manager.noFieldsFound')}</h3>
+                              <p>{t('admin_object_manager.noFieldsFoundDesc')}</p>
                             </td>
                           </tr>
                         )}
@@ -1425,10 +1427,10 @@ const ObjectManager: React.FC = () => {
                     <div className="sails-user-manager__pagination" style={{ borderTop: '1px solid var(--sails-border-color)' }}>
                       <div className="sails-user-manager__pagination-info">
                         <span className="sails-user-manager__pagination-range">
-                          Showing <strong>{fieldStartRange}</strong> to <strong>{fieldEndRange}</strong> of <strong>{totalFieldCount}</strong> fields
+                          {t('admin_object_manager.pagination.showingRange', { from: fieldStartRange, to: fieldEndRange, total: totalFieldCount })}
                         </span>
                         <div className="sails-user-manager__page-size">
-                          <span className="sails-user-manager__page-size-label">Records per page:</span>
+                          <span className="sails-user-manager__page-size-label">{t('admin_object_manager.pagination.recordsPerPage')}</span>
                           <CustomSelect
                             size="sm"
                             value={fieldPageSize === totalFieldCount ? 'all' : fieldPageSize}
@@ -1485,19 +1487,19 @@ const ObjectManager: React.FC = () => {
                       onClick={() => selectedTable && window.open(`/layout-studio/${selectedTable.id}/_new`, '_blank')}
                     >
                       <Plus size={18} />
-                      <span>Create Layout</span>
+                      <span>{t('admin_view_manager.title')}</span>
                     </button>
                   </div>
 
                   {layoutsLoading ? (
                     <div style={{ textAlign: 'center', padding: '48px', color: 'var(--sails-text-muted)' }}>
-                      Loading layouts...
+                      {t('admin_object_manager.layouts.loading')}
                     </div>
                   ) : layouts.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '48px', color: 'var(--sails-text-muted)' }}>
                       <LayoutTemplate size={40} style={{ marginBottom: '16px', opacity: 0.3 }} />
-                      <h3 style={{ marginBottom: '8px', color: 'var(--sails-text-main)' }}>No Layouts Found</h3>
-                      <p>Create a layout to define how this data model is displayed.</p>
+                      <h3 style={{ marginBottom: '8px', color: 'var(--sails-text-main)' }}>{t('admin_object_manager.layouts.noneFound')}</h3>
+                      <p>{t('admin_object_manager.layouts.noneFoundDesc')}</p>
                     </div>
                   ) : (
                     <div className="sails-card om-table-card">
@@ -1506,22 +1508,22 @@ const ObjectManager: React.FC = () => {
                           <tr>
                             <th>
                               <div className="om-th-content">
-                                <span>Name</span>
+                                <span>{t('admin_object_manager.columns.name')}</span>
                               </div>
                             </th>
                             <th>
                               <div className="om-th-content">
-                                <span>View Type</span>
+                                <span>{t('admin_view_manager.columns.type')}</span>
                               </div>
                             </th>
                             <th>
                               <div className="om-th-content">
-                                <span>Default</span>
+                                <span>{t('admin_object_manager.default')}</span>
                               </div>
                             </th>
                             <th>
                               <div className="om-th-content">
-                                <span>Created</span>
+                                <span>{t('admin_object_manager.columns.createdAt')}</span>
                               </div>
                             </th>
                             <th style={{ textAlign: 'right' }}></th>
@@ -1562,7 +1564,7 @@ const ObjectManager: React.FC = () => {
                               </td>
                               <td>
                                 {layout.isDefault ? (
-                                  <span style={{ fontSize: '0.8rem', color: 'var(--sails-primary)' }}>Default</span>
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--sails-primary)' }}>{t('admin_object_manager.default')}</span>
                                 ) : (
                                   <span style={{ fontSize: '0.8rem', color: 'var(--sails-text-muted)' }}>—</span>
                                 )}
@@ -1577,7 +1579,7 @@ const ObjectManager: React.FC = () => {
                                 <button
                                   className="sails-btn sails-btn--ghost"
                                   onClick={() => selectedTable && window.open(`/layout-studio/${selectedTable.id}/${layout.id}`, '_blank')}
-                                  title="Open in Layout Studio"
+                                  title={t('admin_object_manager.layouts.openInStudio')}
                                 >
                                   <ExternalLink size={16} />
                                 </button>
@@ -1598,10 +1600,10 @@ const ObjectManager: React.FC = () => {
                     <ShieldCheck size={48} style={{ color: 'var(--sails-text-muted)', opacity: 0.4 }} />
                   </div>
                   <h4 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--sails-text-main)', marginBottom: '8px' }}>
-                    Permission Settings
+                    {t('admin_object_manager.permission.title')}
                   </h4>
                   <p style={{ color: 'var(--sails-text-muted)', marginBottom: '16px' }}>
-                    Role-based access control and field-level permission management will be available here.
+                    {t('admin_object_manager.permission.description')}
                   </p>
                   <span style={{
                     fontSize: '0.8rem',
@@ -1611,7 +1613,7 @@ const ObjectManager: React.FC = () => {
                     color: 'var(--sails-primary)',
                     border: '1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.2)',
                   }}>
-                    Coming Soon
+                    {t('admin_object_manager.comingSoon')}
                   </span>
                 </div>
               )}
@@ -1623,15 +1625,15 @@ const ObjectManager: React.FC = () => {
                 <div className="sails-app-confirm-dialog">
                   <div className="sails-app-confirm-dialog__header">
                     <AlertCircle size={22} style={{ color: 'var(--sails-warning)' }} />
-                    <span>Unsaved Changes</span>
+                    <span>{t('admin_object_manager.unsavedChanges.title')}</span>
                   </div>
                   <div className="sails-app-confirm-dialog__body">
-                    You have unsaved changes in the General Information tab. If you switch tabs without saving, your modifications will be discarded.
+                    {t('admin_object_manager.unsavedChanges.message')}
                   </div>
                   <div className="sails-app-confirm-dialog__footer">
-                    <button className="sails-btn sails-btn--ghost" onClick={() => setPendingDetailTabSwitch(null)}>Stay on Tab</button>
-                    <button className="sails-btn sails-app-confirm-dialog__btn-discard" onClick={handleDiscardDetailAndSwitch}>Discard Changes</button>
-                    <button className="sails-btn sails-btn--primary" onClick={handleSaveDetailAndSwitch}>Save &amp; Switch</button>
+                    <button className="sails-btn sails-btn--ghost" onClick={() => setPendingDetailTabSwitch(null)}>{t('admin_object_manager.unsavedChanges.stay')}</button>
+                    <button className="sails-btn sails-app-confirm-dialog__btn-discard" onClick={handleDiscardDetailAndSwitch}>{t('admin_object_manager.unsavedChanges.discard')}</button>
+                    <button className="sails-btn sails-btn--primary" onClick={handleSaveDetailAndSwitch}>{t('admin_object_manager.unsavedChanges.saveAndSwitch')}</button>
                   </div>
                 </div>
               </div>,
@@ -1651,9 +1653,9 @@ const ObjectManager: React.FC = () => {
                   <Database size={24} />
                 </div>
                 <div>
-                  <h2 className="om-modal-title">Create New Data Model</h2>
+                  <h2 className="om-modal-title">{t('admin_object_manager.createTable')}</h2>
                   <p className="om-modal-subtitle">
-                    Define a new database table and schema definition for your workspace.
+                    {t('admin_object_manager.createTableDesc')}
                   </p>
                 </div>
               </div>
@@ -1673,11 +1675,11 @@ const ObjectManager: React.FC = () => {
             <div className="om-modal-body">
               <div className="om-form-grid-2">
                 <div className="om-field-group">
-                  <label className="om-field-label">Data Model Name *</label>
+                  <label className="om-field-label">{t('admin_object_manager.form.tableName')}</label>
                   <input 
                     type="text" 
                     className="sails-input" 
-                    placeholder="e.g. Sales Opportunities" 
+                    placeholder={t('admin_object_manager.form.tableNamePlaceholder')} 
                     autoFocus 
                     value={newTableName}
                     onChange={e => {
@@ -1689,23 +1691,23 @@ const ObjectManager: React.FC = () => {
                 </div>
 
                 <div className="om-field-group">
-                  <label className="om-field-label">System Name (DB Table) *</label>
+                  <label className="om-field-label">{t('admin_object_manager.columns.systemName')}</label>
                   <input 
                     type="text" 
                     className="sails-input" 
-                    placeholder="e.g. sales_opportunities" 
+                    placeholder={t('admin_object_manager.form.systemNamePlaceholder')} 
                     value={newTableDbName}
                     onChange={e => setNewTableDbName(e.target.value)}
                   />
-                  <span className="om-field-hint">snake_case only (e.g. sales_opportunities).</span>
+                  <span className="om-field-hint">{t('admin_object_manager.form.snakeCaseHint')}</span>
                 </div>
               </div>
 
               <div className="om-field-group">
-                <label className="om-field-label">Description</label>
+                <label className="om-field-label">{t('admin_object_manager.columns.description')}</label>
                 <textarea 
                   className="sails-input" 
-                  placeholder="Describe the data model's purpose..." 
+                  placeholder={t('admin_object_manager.form.descriptionPlaceholder')} 
                   rows={3}
                   value={newTableDesc}
                   onChange={e => setNewTableDesc(e.target.value)}
@@ -1715,8 +1717,8 @@ const ObjectManager: React.FC = () => {
             </div>
 
             <div className="om-modal-footer">
-              <button className="sails-btn sails-btn--ghost" onClick={() => setIsCreatingTable(false)}>Cancel</button>
-              <button className="sails-btn sails-btn--primary" onClick={handleCreateTable}>Create Model</button>
+              <button className="sails-btn sails-btn--ghost" onClick={() => setIsCreatingTable(false)}>{t('common.cancel')}</button>
+              <button className="sails-btn sails-btn--primary" onClick={handleCreateTable}>{t('admin_object_manager.addTable')}</button>
             </div>
           </div>
         </div>,
@@ -1734,12 +1736,12 @@ const ObjectManager: React.FC = () => {
                 </div>
                 <div>
                   <h2 className="om-modal-title">
-                    Add New Field {fieldWizardStep === 1 ? '(Step 1 of 2)' : '(Step 2 of 2)'}
+                    Add New Field {fieldWizardStep === 1 ? t('admin_object_manager.wizard.step1of2') : t('admin_object_manager.wizard.step2of2')}
                   </h2>
                   <p className="om-modal-subtitle">
                     {fieldWizardStep === 1 
-                      ? `Define general info and select field data type for model ${selectedTable?.name}.`
-                      : `Configure type parameters and rules for field ${newFieldName} (${newFieldLogicalType.toUpperCase().replace('_', ' ')}).`}
+                      ? t('admin_object_manager.wizard.createFieldStep1Desc', { model: selectedTable?.name })
+                      : t('admin_object_manager.wizard.createFieldStep2Desc', { field: newFieldName, type: newFieldLogicalType.toUpperCase().replace('_', ' ') })}
                   </p>
                 </div>
               </div>
@@ -1760,11 +1762,11 @@ const ObjectManager: React.FC = () => {
                   {/* General Information */}
                   <div className="om-form-grid-2">
                     <div className="om-field-group">
-                      <label className="om-field-label">Display Name *</label>
+                      <label className="om-field-label">{t('admin_object_manager.form.fieldName')}</label>
                       <input 
                         type="text" 
                         className="sails-input" 
-                        placeholder="e.g. Total Amount" 
+                        placeholder={t('admin_object_manager.form.fieldNamePlaceholder')} 
                         autoFocus 
                         value={newFieldName}
                         onChange={e => {
@@ -1776,15 +1778,15 @@ const ObjectManager: React.FC = () => {
                     </div>
 
                     <div className="om-field-group">
-                      <label className="om-field-label">System Name (Column Name) *</label>
+                      <label className="om-field-label">{t('admin_object_manager.columns.systemName')}</label>
                       <input 
                         type="text" 
                         className="sails-input" 
-                        placeholder="e.g. total_amount" 
+                        placeholder={t('admin_object_manager.form.fieldSystemNamePlaceholder')} 
                         value={newFieldDbName}
                         onChange={e => setNewFieldDbName(e.target.value)}
                       />
-                      <span className="om-field-hint">snake_case only (e.g. total_amount).</span>
+                      <span className="om-field-hint">{t('admin_object_manager.form.fieldSnakeCaseHint')}</span>
                     </div>
                   </div>
 
@@ -1796,15 +1798,15 @@ const ObjectManager: React.FC = () => {
                       onChange={e => setNewFieldRequired(e.target.checked)}
                       style={{ width: 'auto' }}
                     />
-                    <label className="om-field-label" style={{ margin: 0 }}>Required Field (Must not be null)</label>
+                    <label className="om-field-label" style={{ margin: 0 }}>{t('admin_object_manager.form.required')}</label>
                   </div>
 
                   <div className="om-field-group">
-                    <label className="om-field-label">Description (Optional)</label>
+                    <label className="om-field-label">{t('admin_object_manager.columns.description')}</label>
                     <input 
                       type="text"
                       className="sails-input" 
-                      placeholder="Describe the purpose of this field..." 
+                      placeholder={t('admin_object_manager.form.fieldDescriptionPlaceholder')} 
                       value={newFieldDesc}
                       onChange={e => setNewFieldDesc(e.target.value)}
                     />
@@ -1812,7 +1814,7 @@ const ObjectManager: React.FC = () => {
 
                   {/* Logical Type Visual Grid (Dynamic from Registry Schema) */}
                   <div className="om-field-group">
-                    <label className="om-field-label">Field Data Type *</label>
+                    <label className="om-field-label">{t('admin_object_manager.form.fieldType')}</label>
                     <div className="om-type-grid">
                       {fieldTypeMetadataList.map(t => {
                         const isActive = newFieldLogicalType === t.type;
@@ -1850,7 +1852,7 @@ const ObjectManager: React.FC = () => {
                           />
                         ) : (!activeFieldTypeMeta?.parametersSchema || activeFieldTypeMeta.parametersSchema.length === 0) ? (
                           <p style={{ color: 'var(--sails-text-muted)', fontSize: '0.875rem', margin: 0 }}>
-                            This field type does not require additional parameters.
+                            {t('admin_object_manager.wizard.noParams')}
                           </p>
                         ) : (
                           <div>
@@ -1864,10 +1866,10 @@ const ObjectManager: React.FC = () => {
                               }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sails-primary)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
                                   <Sparkles size={16} />
-                                  <span>Format Pattern & Date Token Guidance</span>
+                                  <span>{t('admin_object_manager.wizard.autoNumberGuidance')}</span>
                                 </div>
                                 <p style={{ margin: '0 0 8px 0', fontSize: '0.8125rem', color: 'var(--sails-text-main)', lineHeight: '1.4' }}>
-                                  Enter zeros (e.g. <code>0000</code>) to auto-detect padding digits. Insert date tokens anywhere in pattern.
+                                  {t('admin_object_manager.wizard.autoNumberHelp')}
                                 </p>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                                   <div><code>INV-0000</code> ➔ 4 digits (<code>INV-0001</code>)</div>
@@ -1971,7 +1973,7 @@ const ObjectManager: React.FC = () => {
                                         value={dynamicConfigValues[param.name] || ''}
                                         options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
                                         onChange={val => setDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
-                                        placeholder="Search Target Model..."
+                                        placeholder={t('admin_object_manager.form.searchTargetModel')}
                                       />
                                       {param.description && (
                                         <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
@@ -2064,14 +2066,14 @@ const ObjectManager: React.FC = () => {
                       resetFieldParams();
                     }}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button 
                     className="sails-btn sails-btn--primary" 
                     disabled={!newFieldName || !newFieldDbName}
                     onClick={() => setFieldWizardStep(2)}
                   >
-                    Next
+                    {t('admin_object_manager.wizard.next')}
                   </button>
                 </>
               ) : (
@@ -2080,13 +2082,13 @@ const ObjectManager: React.FC = () => {
                     className="sails-btn sails-btn--ghost" 
                     onClick={() => setFieldWizardStep(1)}
                   >
-                    Back
+                    {t('common.back')}
                   </button>
                   <button 
                     className="sails-btn sails-btn--primary" 
                     onClick={handleCreateField}
                   >
-                    Create Field
+                    {t('admin_object_manager.addField')}
                   </button>
                 </>
               )}
@@ -2107,12 +2109,12 @@ const ObjectManager: React.FC = () => {
                 </div>
                 <div>
                   <h2 className="om-modal-title">
-                    Edit Field: {editingField.name} {editFieldWizardStep === 1 ? '(Step 1 of 2)' : '(Step 2 of 2)'}
+                    {t('admin_object_manager.editField')}: {editingField.name} {editFieldWizardStep === 1 ? t('admin_object_manager.wizard.step1of2') : t('admin_object_manager.wizard.step2of2')}
                   </h2>
                   <p className="om-modal-subtitle">
                     {editFieldWizardStep === 1 
-                      ? `Update general information and required rules for field ${editingField.fieldName}.`
-                      : `Modify parameter settings for field type (${editFieldLogicalType.toUpperCase().replace('_', ' ')}).`}
+                      ? t('admin_object_manager.wizard.editFieldStep1Desc', { field: editingField.fieldName })
+                      : t('admin_object_manager.wizard.editFieldStep2Desc', { type: editFieldLogicalType.toUpperCase().replace('_', ' ') })}
                   </p>
                 </div>
               </div>
@@ -2130,11 +2132,11 @@ const ObjectManager: React.FC = () => {
                   {/* General Information */}
                   <div className="om-form-grid-2">
                     <div className="om-field-group">
-                      <label className="om-field-label">Display Name *</label>
+                      <label className="om-field-label">{t('admin_object_manager.form.fieldName')}</label>
                       <input 
                         type="text" 
                         className="sails-input" 
-                        placeholder="e.g. Total Amount" 
+                        placeholder={t('admin_object_manager.form.fieldNamePlaceholder')} 
                         autoFocus 
                         value={editFieldName}
                         onChange={e => {
@@ -2146,15 +2148,15 @@ const ObjectManager: React.FC = () => {
                     </div>
 
                     <div className="om-field-group">
-                      <label className="om-field-label">System Name (Column Name) *</label>
+                      <label className="om-field-label">{t('admin_object_manager.columns.systemName')}</label>
                       <input 
                         type="text" 
                         className="sails-input" 
-                        placeholder="e.g. total_amount" 
+                        placeholder={t('admin_object_manager.form.fieldSystemNamePlaceholder')} 
                         value={editFieldDbName}
                         onChange={e => setEditFieldDbName(e.target.value)}
                       />
-                      <span className="om-field-hint">snake_case only (e.g. total_amount).</span>
+                      <span className="om-field-hint">{t('admin_object_manager.form.fieldSnakeCaseHint')}</span>
                     </div>
                   </div>
 
@@ -2166,15 +2168,15 @@ const ObjectManager: React.FC = () => {
                       onChange={e => setEditFieldRequired(e.target.checked)}
                       style={{ width: 'auto' }}
                     />
-                    <label className="om-field-label" style={{ margin: 0 }}>Required Field (Must not be null)</label>
+                    <label className="om-field-label" style={{ margin: 0 }}>{t('admin_object_manager.form.required')}</label>
                   </div>
 
                   <div className="om-field-group">
-                    <label className="om-field-label">Description (Optional)</label>
+                    <label className="om-field-label">{t('admin_object_manager.columns.description')}</label>
                     <input 
                       type="text"
                       className="sails-input" 
-                      placeholder="Describe the purpose of this field..." 
+                      placeholder={t('admin_object_manager.form.fieldDescriptionPlaceholder')} 
                       value={editFieldDesc}
                       onChange={e => setEditFieldDesc(e.target.value)}
                     />
@@ -2183,9 +2185,9 @@ const ObjectManager: React.FC = () => {
                   {/* Selectable Field Data Type Grid */}
                   <div className="om-field-group">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <label className="om-field-label">Field Data Type *</label>
+                      <label className="om-field-label">{t('admin_object_manager.form.fieldType')}</label>
                       <span className="om-badge" style={{ fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--sails-text-muted)' }}>
-                        Pre-save audits validate row data before applying DDL
+                        {t('admin_object_manager.editFieldValidationNote')}
                       </span>
                     </div>
                     <div className="om-type-grid">
@@ -2224,7 +2226,7 @@ const ObjectManager: React.FC = () => {
                           />
                         ) : (!activeFieldTypeMeta?.parametersSchema || activeFieldTypeMeta.parametersSchema.length === 0) ? (
                           <p style={{ color: 'var(--sails-text-muted)', fontSize: '0.875rem', margin: 0 }}>
-                            This field type does not require additional parameters.
+                            {t('admin_object_manager.wizard.noParams')}
                           </p>
                         ) : (
                           <div>
@@ -2238,10 +2240,10 @@ const ObjectManager: React.FC = () => {
                               }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sails-primary)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
                                   <Sparkles size={16} />
-                                  <span>Format Pattern & Date Token Guidance</span>
+                                  <span>{t('admin_object_manager.wizard.autoNumberGuidance')}</span>
                                 </div>
                                 <p style={{ margin: '0 0 8px 0', fontSize: '0.8125rem', color: 'var(--sails-text-main)', lineHeight: '1.4' }}>
-                                  Enter zeros (e.g. <code>0000</code>) to auto-detect padding digits. Insert date tokens anywhere in pattern.
+                                  {t('admin_object_manager.wizard.autoNumberHelp')}
                                 </p>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                                   <div><code>INV-0000</code> ➔ 4 digits (<code>INV-0001</code>)</div>
@@ -2345,7 +2347,7 @@ const ObjectManager: React.FC = () => {
                                         value={editDynamicConfigValues[param.name] || ''}
                                         options={tables.map(t => ({ value: t.tableName, label: `${t.name} (${t.tableName})` }))}
                                         onChange={val => setEditDynamicConfigValues(prev => ({ ...prev, [param.name]: val }))}
-                                        placeholder="Search Target Model..."
+                                        placeholder={t('admin_object_manager.form.searchTargetModel')}
                                       />
                                       {param.description && (
                                         <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
@@ -2430,10 +2432,10 @@ const ObjectManager: React.FC = () => {
                               }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#eab308', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
                                   <RefreshCw size={16} />
-                                  <span>Admin Action: Reset Sequence Counter</span>
+                                  <span>{t('admin_object_manager.resetSequenceTitle')}</span>
                                 </div>
                                 <p style={{ margin: '0 0 10px 0', fontSize: '0.8125rem', color: '#cbd5e1', lineHeight: '1.4' }}>
-                                  Restart the sequence number counter for new records. The next created record will start at this value.
+                                  {t('admin_object_manager.resetSequenceDesc')}
                                 </p>
                                 {resetSeqSuccessMsg && (
                                   <div style={{ margin: '0 0 10px 0', padding: '8px 12px', backgroundColor: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', borderRadius: '4px', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2479,14 +2481,14 @@ const ObjectManager: React.FC = () => {
                     className="sails-btn sails-btn--ghost" 
                     onClick={() => setEditingField(null)}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button 
                     className="sails-btn sails-btn--primary" 
                     disabled={!editFieldName || !editFieldDbName}
                     onClick={() => setEditFieldWizardStep(2)}
                   >
-                    Next
+                    {t('admin_object_manager.wizard.next')}
                   </button>
                 </>
               ) : (
@@ -2495,13 +2497,13 @@ const ObjectManager: React.FC = () => {
                     className="sails-btn sails-btn--ghost" 
                     onClick={() => setEditFieldWizardStep(1)}
                   >
-                    Back
+                    {t('common.back')}
                   </button>
                   <button 
                     className="sails-btn sails-btn--primary" 
                     onClick={handleUpdateField}
                   >
-                    Save Changes
+                    {t('admin_object_manager.saveChanges')}
                   </button>
                 </>
               )}
@@ -2518,7 +2520,7 @@ const ObjectManager: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: 'var(--sails-danger, #ef4444)' }}>
               <XCircle size={48} />
             </div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: '0 0 8px 0', color: 'white' }}>Action Failed</h2>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: '0 0 8px 0', color: 'white' }}>{t('admin_object_manager.error.title')}</h2>
             <p style={{ fontSize: '0.9rem', color: 'var(--sails-text-muted)', margin: '0 0 24px 0', lineHeight: 1.5 }}>
               {errorMsg}
             </p>
@@ -2528,7 +2530,7 @@ const ObjectManager: React.FC = () => {
                 onClick={() => setErrorMsg(null)}
                 style={{ minWidth: '120px' }}
               >
-                Dismiss
+                {t('admin_object_manager.error.dismiss')}
               </button>
             </div>
           </div>
@@ -2554,16 +2556,16 @@ const ObjectManager: React.FC = () => {
               </div>
               <div style={{ flex: 1 }}>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 600, margin: '0 0 8px 0', color: 'white' }}>
-                  {deleteConfirmTarget.type === 'table' ? 'Delete Data Model' : 'Remove Field'}
+                  {deleteConfirmTarget.type === 'table' ? t('admin_object_manager.deleteTable') : t('admin_object_manager.deleteField')}
                 </h2>
                 <p style={{ fontSize: '0.875rem', color: 'var(--sails-text-muted)', margin: '0 0 24px 0', lineHeight: 1.5 }}>
                   {deleteConfirmTarget.type === 'table' ? (
                     <>
-                      Are you sure you want to delete the data model <strong>"{deleteConfirmTarget.name}"</strong>? This will physically drop the physical database table <code>{deleteConfirmTarget.extra}</code> and permanently destroy all records. This action cannot be undone.
+                      {t('admin_object_manager.confirmDeleteTableMsg', { name: deleteConfirmTarget.name, tableName: deleteConfirmTarget.extra })}
                     </>
                   ) : (
                     <>
-                      Are you sure you want to remove the field <strong>"{deleteConfirmTarget.name}"</strong> from this data model? This will drop the physical column from the database. This action cannot be undone.
+                      {t('admin_object_manager.confirmDeleteFieldMsg', { name: deleteConfirmTarget.name })}
                     </>
                   )}
                 </p>
@@ -2572,7 +2574,7 @@ const ObjectManager: React.FC = () => {
                     className="sails-btn sails-btn--ghost" 
                     onClick={() => setDeleteConfirmTarget(null)}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button 
                     className="sails-btn" 

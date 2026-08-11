@@ -1,0 +1,86 @@
+{
+  "admin_view_manager": {
+    "title": "Layouts",
+    "columns": {
+      "type": "Type"
+    },
+    "status": {
+      "draft": "Draft"
+    },
+    "actions": {
+      "createLayout": "Create Layout",
+      "designInStudio": "Design in Layout Studio",
+      "activate": "Activate",
+      "activating": "Activating...",
+      "delete": "Delete",
+      "deleting": "Deleting..."
+    },
+    "table": {
+      "columns": {
+        "name": "Name",
+        "description": "Description",
+        "model": "Model",
+        "viewType": "View Type",
+        "status": "Status",
+        "createdAt": "Created At",
+        "lastModified": "Last Modified"
+      },
+      "searchPlaceholder": "Search layouts by name or table...",
+      "noLayoutsTitle": "No layouts yet",
+      "noLayoutsText": "Create your first layout to define how data is displayed in list, detail, and form views.",
+      "loading": "Loading layouts...",
+      "default": "Default",
+      "custom": "Custom",
+      "status": {
+        "active": "Active",
+        "draft": "Draft"
+      },
+      "viewType": {
+        "list": "List",
+        "detail": "Detail",
+        "form": "Form"
+      }
+    },
+    "modal": {
+      "createTitle": "Create Layout",
+      "createSubtitle": "Define a new layout for displaying data.",
+      "nameLabel": "Name *",
+      "namePlaceholder": "e.g. Lead List Default",
+      "systemNameLabel": "System Name *",
+      "systemNamePlaceholder": "e.g. leadlistdefault",
+      "systemNameHint": "Alphanumeric only (e.g. leadlistdefault).",
+      "systemNameError": "System Name must be in valid snake_case (e.g. customer_list_view).",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Optional description of this layout",
+      "layoutTypeLabel": "Layout Type",
+      "layoutTypeData": "Data",
+      "layoutTypeCustom": "Custom",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model...",
+      "modelDisabledPlaceholder": "Not applicable for custom layouts",
+      "viewTypeLabel": "View Type",
+      "setAsDefault": "Set as default view",
+      "creating": "Creating...",
+      "createError": "Failed to load layouts",
+      "checkbox": {
+        "setDefaultView": "Set as default view"
+      }
+    },
+    "confirm": {
+      "deleteTitle": "Delete Layout",
+      "deleteBody": "Are you sure you want to delete <1>{{name}}</1>? This cannot be undone.",
+      "deleteLabel": "Delete",
+      "deletingLabel": "Deleting...",
+      "deleteError": "Failed to delete layout",
+      "activateTitle": "Activate Layout",
+      "activateBody": "This will activate <1>{{name}}</1> as the current layout. The published version will be overwritten with the current draft configuration. Continue?",
+      "activateLabel": "Activate",
+      "activatingLabel": "Activating...",
+      "activateError": "Failed to activate layout"
+    },
+    "toast": {
+      "deleted": "Layout deleted successfully.",
+      "activated": "Layout activated successfully."
+    }
+  }
+}

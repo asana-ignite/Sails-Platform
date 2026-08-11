@@ -1,0 +1,24 @@
+{
+  "admin_audit_log": {
+    "title": "ประวัติการตรวจสอบ",
+    "noRecords": "ไม่พบบันทึกการตรวจสอบ",
+    "tableHeaders": {
+      "action": "การดำเนินการ",
+      "object": "วัตถุ",
+      "recordId": "รหัสระเบียน",
+      "user": "ผู้ใช้",
+      "timestamp": "เวลา",
+      "details": "รายละเอียด"
+    },
+    "filters": {
+      "allActions": "การดำเนินการทั้งหมด",
+      "create": "สร้าง",
+      "update": "อัปเดต",
+      "delete": "ลบ",
+      "alterSchema": "เปลี่ยน Schema",
+      "allObjects": "วัตถุทั้งหมด",
+      "allUsers": "ผู้ใช้ทั้งหมด",
+      "dateRange": "ช่วงวันที่"
+    }
+  }
+}

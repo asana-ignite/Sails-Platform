@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { COUNTRY_OPTIONS } from '@sails/shared';
 import { 
   Building2, 
@@ -17,7 +18,6 @@ import { CustomSelect } from '../../components/common/CustomSelect';
 import './AdminCompanyProfile.css';
 
 export interface CompanyProfileData {
-  // Section 1: Organization Details
   legalName: string;
   tradingName: string;
   taxId: string;
@@ -25,7 +25,6 @@ export interface CompanyProfileData {
   companySize: string;
   websiteUrl: string;
 
-  // Section 2: Contact & Headquarters
   businessContactName: string;
   corporateEmail: string;
   businessContactPhone: string;
@@ -42,7 +41,6 @@ export interface CompanyProfileData {
   postalCode: string;
   country: string;
 
-  // Section 3: Legal & Compliance
   dpoName: string;
   dpoEmail: string;
   termsUrl: string;
@@ -200,6 +198,7 @@ const STATE_PROVINCE_MAP: Record<string, { label: string; options: { value: stri
 };
 
 const AdminCompanyProfile: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'organization' | 'address'>('organization');
   const [formData, setFormData] = useState<CompanyProfileData>(DEFAULT_PROFILE_DATA);
   const [isLoading, setIsLoading] = useState(true);
@@ -222,7 +221,7 @@ const AdminCompanyProfile: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Failed to load company profile:', err);
-      setErrorMsg('Failed to load company profile from server.');
+      setErrorMsg(t('admin_company_profile.messages.loadError'));
     } finally {
       setIsLoading(false);
     }
@@ -238,14 +237,14 @@ const AdminCompanyProfile: React.FC = () => {
   const [emailErrors, setEmailErrors] = useState<{ corporateEmail?: string; supportEmail?: string; dpoEmail?: string }>({});
 
   const validateEmail = (email: string) => {
-    if (!email) return true; // Optional email fields allowed
+    if (!email) return true;
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
   const handleEmailBlur = (field: 'corporateEmail' | 'supportEmail' | 'dpoEmail') => {
     const val = formData[field];
     if (val && !validateEmail(val)) {
-      setEmailErrors(prev => ({ ...prev, [field]: 'Please enter a valid email address (e.g. name@domain.com).' }));
+      setEmailErrors(prev => ({ ...prev, [field]: t('admin_company_profile.validation.invalidEmail') }));
     } else {
       setEmailErrors(prev => ({ ...prev, [field]: undefined }));
     }
@@ -257,18 +256,17 @@ const AdminCompanyProfile: React.FC = () => {
     setSavedSuccessMsg(null);
     setErrorMsg(null);
 
-    // Re-validate email formats
     const isCorpValid = validateEmail(formData.corporateEmail);
     const isSuppValid = validateEmail(formData.supportEmail);
     const isDpoValid = validateEmail(formData.dpoEmail);
 
     if (!isCorpValid || !isSuppValid || !isDpoValid) {
       setEmailErrors({
-        corporateEmail: isCorpValid ? undefined : 'Please enter a valid email address.',
-        supportEmail: isSuppValid ? undefined : 'Please enter a valid email address.',
-        dpoEmail: isDpoValid ? undefined : 'Please enter a valid email address.'
+        corporateEmail: isCorpValid ? undefined : t('admin_company_profile.validation.invalidEmailShort'),
+        supportEmail: isSuppValid ? undefined : t('admin_company_profile.validation.invalidEmailShort'),
+        dpoEmail: isDpoValid ? undefined : t('admin_company_profile.validation.invalidEmailShort')
       });
-      setErrorMsg('Please fix the invalid email formats highlighted below before saving.');
+      setErrorMsg(t('admin_company_profile.validation.fixEmailFormats'));
       setIsSaving(false);
       return;
     }
@@ -281,16 +279,16 @@ const AdminCompanyProfile: React.FC = () => {
       });
       const result = await res.json();
       if (result.success) {
-        setSavedSuccessMsg('Company Profile updated successfully.');
+        setSavedSuccessMsg(t('admin_company_profile.messages.saveSuccess'));
         setTimeout(() => {
           setSavedSuccessMsg(null);
         }, 4000);
       } else {
-        setErrorMsg(result.error || 'Failed to save company profile.');
+        setErrorMsg(result.error || t('admin_company_profile.messages.saveError'));
       }
     } catch (err: any) {
       console.error('Failed to save company profile:', err);
-      setErrorMsg('Failed to save company profile to server.');
+      setErrorMsg(t('admin_company_profile.messages.saveServerError'));
     } finally {
       setIsSaving(false);
     }
@@ -298,7 +296,6 @@ const AdminCompanyProfile: React.FC = () => {
 
   return (
     <div className="sails-company-profile sails-page-container">
-      {/* Tab Navigation */}
       <nav className="sails-company-profile__nav">
         <button
           type="button"
@@ -306,7 +303,7 @@ const AdminCompanyProfile: React.FC = () => {
           onClick={() => setActiveTab('organization')}
         >
           <Briefcase size={16} />
-          <span>Organization Details</span>
+          <span>{t('admin_company_profile.tabs.organization')}</span>
         </button>
         <button
           type="button"
@@ -314,14 +311,12 @@ const AdminCompanyProfile: React.FC = () => {
           onClick={() => setActiveTab('address')}
         >
           <MapPin size={16} />
-          <span>Contact & Address</span>
+          <span>{t('admin_company_profile.tabs.contact')}</span>
         </button>
       </nav>
 
-      {/* Form Container */}
       <form onSubmit={handleSave}>
         <div className="sails-card sails-company-profile__card">
-          {/* TAB 1: Organization Details */}
           {activeTab === 'organization' && (
             <div>
               <div className="sails-company-profile__section-header">
@@ -329,67 +324,67 @@ const AdminCompanyProfile: React.FC = () => {
                   <Briefcase size={20} />
                 </div>
                 <div>
-                  <h3 className="sails-company-profile__section-title">Organization Details</h3>
+                  <h3 className="sails-company-profile__section-title">{t('admin_company_profile.sections.organization.title')}</h3>
                   <p className="sails-company-profile__section-subtitle">
-                    Legal registration, trading names, tax identifiers, and public business profile.
+                    {t('admin_company_profile.sections.organization.subtitle')}
                   </p>
                 </div>
               </div>
 
               <div className="sails-cp-grid-2">
                 <div className="sails-cp-group">
-                  <label className="sails-cp-label">Official Legal Name *</label>
+                  <label className="sails-cp-label">{t('admin_company_profile.fields.legalNameRequired')}</label>
                   <input
                     type="text"
                     className="sails-input"
                     value={formData.legalName}
                     onChange={e => handleInputChange('legalName', e.target.value)}
-                    placeholder="e.g. Acme Corporation Co., Ltd."
+                    placeholder={t('admin_company_profile.fields.legalNamePlaceholder')}
                     required
                   />
-                  <span className="sails-cp-help">Registered legal entity name as shown on tax certificates</span>
+                  <span className="sails-cp-help">{t('admin_company_profile.fields.legalNameHelp')}</span>
                 </div>
 
                 <div className="sails-cp-group">
-                  <label className="sails-cp-label">Trading / Display Name *</label>
+                  <label className="sails-cp-label">{t('admin_company_profile.fields.tradingNameRequired')}</label>
                   <input
                     type="text"
                     className="sails-input"
                     value={formData.tradingName}
                     onChange={e => handleInputChange('tradingName', e.target.value)}
-                    placeholder="e.g. Acme Software"
+                    placeholder={t('admin_company_profile.fields.tradingNamePlaceholder')}
                     required
                   />
-                  <span className="sails-cp-help">Display name used in platform menus and invoices</span>
+                  <span className="sails-cp-help">{t('admin_company_profile.fields.tradingNameHelp')}</span>
                 </div>
 
                 <div className="sails-cp-group">
-                  <label className="sails-cp-label">Tax ID / Business Registration Number</label>
+                  <label className="sails-cp-label">{t('admin_company_profile.fields.taxId')}</label>
                   <input
                     type="text"
                     className="sails-input"
                     value={formData.taxId}
                     onChange={e => handleInputChange('taxId', e.target.value)}
-                    placeholder="e.g. 0105566012345"
+                    placeholder={t('admin_company_profile.fields.taxIdPlaceholder')}
                   />
-                  <span className="sails-cp-help">Official government tax identification number</span>
+                  <span className="sails-cp-help">{t('admin_company_profile.fields.taxIdHelp')}</span>
                 </div>
 
                 <div className="sails-cp-group">
-                  <label className="sails-cp-label">Corporate Website URL</label>
+                  <label className="sails-cp-label">{t('admin_company_profile.fields.websiteUrl')}</label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type="url"
                       className="sails-input"
                       value={formData.websiteUrl}
                       onChange={e => handleInputChange('websiteUrl', e.target.value)}
-                      placeholder="https://example.com"
+                      placeholder={t('admin_company_profile.fields.websiteUrlPlaceholder')}
                     />
                   </div>
                 </div>
 
                 <div className="sails-cp-group">
-                  <label className="sails-cp-label">Industry Sector</label>
+                  <label className="sails-cp-label">{t('admin_company_profile.fields.industry')}</label>
                   <CustomSelect
                     size="md"
                     value={formData.industry}
@@ -399,7 +394,7 @@ const AdminCompanyProfile: React.FC = () => {
                 </div>
 
                 <div className="sails-cp-group">
-                  <label className="sails-cp-label">Company Size</label>
+                  <label className="sails-cp-label">{t('admin_company_profile.fields.companySize')}</label>
                   <CustomSelect
                     size="md"
                     value={formData.companySize}
@@ -411,7 +406,6 @@ const AdminCompanyProfile: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 2: Contact & Address */}
           {activeTab === 'address' && (
             <div>
               <div className="sails-company-profile__section-header">
@@ -419,42 +413,41 @@ const AdminCompanyProfile: React.FC = () => {
                   <MapPin size={20} />
                 </div>
                 <div>
-                  <h3 className="sails-company-profile__section-title">Corporate Contact & Location</h3>
+                  <h3 className="sails-company-profile__section-title">{t('admin_company_profile.sections.contact.title')}</h3>
                   <p className="sails-company-profile__section-subtitle">
-                    Corporate contact details and registered physical business location.
+                    {t('admin_company_profile.sections.contact.subtitle')}
                   </p>
                 </div>
               </div>
 
               <div className="sails-cp-grid-2">
               <div className="sails-cp-grid-2 sails-cp-full" style={{ marginBottom: '24px' }}>
-                {/* Column 1: Business Contact Person */}
                 <div style={{ background: 'var(--sails-bg-body, #f4f7f9)', padding: '16px', borderRadius: 'var(--sails-radius-md, 8px)', border: '1px solid var(--sails-border-color, #e1e9ef)' }}>
                   <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--sails-text-main, #344759)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    Business Contact Person
+                    {t('admin_company_profile.fields.businessContactPerson')}
                   </h4>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div className="sails-cp-group">
-                      <label className="sails-cp-label">Business Contact Name</label>
+                      <label className="sails-cp-label">{t('admin_company_profile.fields.businessContactName')}</label>
                       <input
                         type="text"
                         className="sails-input"
                         value={formData.businessContactName}
                         onChange={e => handleInputChange('businessContactName', e.target.value)}
-                        placeholder="e.g. John Doe"
+                        placeholder={t('admin_company_profile.fields.businessContactNamePlaceholder')}
                       />
                     </div>
 
                     <div className="sails-cp-group">
-                      <label className="sails-cp-label">Email</label>
+                      <label className="sails-cp-label">{t('admin_company_profile.fields.email')}</label>
                       <input
                         type="email"
                         className={`sails-input ${emailErrors.corporateEmail ? 'is-invalid' : ''}`}
                         value={formData.corporateEmail}
                         onChange={e => handleInputChange('corporateEmail', e.target.value)}
                         onBlur={() => handleEmailBlur('corporateEmail')}
-                        placeholder="john@company.com"
+                        placeholder={t('admin_company_profile.fields.corporateEmailPlaceholder')}
                         style={emailErrors.corporateEmail ? { borderColor: 'var(--sails-danger, #fd6161)' } : undefined}
                       />
                       {emailErrors.corporateEmail && (
@@ -465,7 +458,7 @@ const AdminCompanyProfile: React.FC = () => {
                     </div>
 
                     <div className="sails-cp-group">
-                      <label className="sails-cp-label">Phone Number</label>
+                      <label className="sails-cp-label">{t('admin_company_profile.fields.phoneNumber')}</label>
                       <input
                         type="text"
                         className="sails-input"
@@ -474,39 +467,38 @@ const AdminCompanyProfile: React.FC = () => {
                           handleInputChange('businessContactPhone', e.target.value);
                           handleInputChange('phone', e.target.value);
                         }}
-                        placeholder="+66 2 123 4567"
+                        placeholder={t('admin_company_profile.fields.phonePlaceholder')}
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Column 2: Support Contact Person */}
                 <div style={{ background: 'var(--sails-bg-body, #f4f7f9)', padding: '16px', borderRadius: 'var(--sails-radius-md, 8px)', border: '1px solid var(--sails-border-color, #e1e9ef)' }}>
                   <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--sails-text-main, #344759)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    Support Contact Person
+                    {t('admin_company_profile.fields.supportContactPerson')}
                   </h4>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div className="sails-cp-group">
-                      <label className="sails-cp-label">Support Contact Name</label>
+                      <label className="sails-cp-label">{t('admin_company_profile.fields.supportContactName')}</label>
                       <input
                         type="text"
                         className="sails-input"
                         value={formData.supportContactName}
                         onChange={e => handleInputChange('supportContactName', e.target.value)}
-                        placeholder="e.g. Jane Smith / Support Lead"
+                        placeholder={t('admin_company_profile.fields.supportContactNamePlaceholder')}
                       />
                     </div>
 
                     <div className="sails-cp-group">
-                      <label className="sails-cp-label">Email</label>
+                      <label className="sails-cp-label">{t('admin_company_profile.fields.email')}</label>
                       <input
                         type="email"
                         className={`sails-input ${emailErrors.supportEmail ? 'is-invalid' : ''}`}
                         value={formData.supportEmail}
                         onChange={e => handleInputChange('supportEmail', e.target.value)}
                         onBlur={() => handleEmailBlur('supportEmail')}
-                        placeholder="support@company.com"
+                        placeholder={t('admin_company_profile.fields.supportEmailPlaceholder')}
                         style={emailErrors.supportEmail ? { borderColor: 'var(--sails-danger, #fd6161)' } : undefined}
                       />
                       {emailErrors.supportEmail && (
@@ -517,7 +509,7 @@ const AdminCompanyProfile: React.FC = () => {
                     </div>
 
                     <div className="sails-cp-group">
-                      <label className="sails-cp-label">Support Phone Number</label>
+                      <label className="sails-cp-label">{t('admin_company_profile.fields.supportPhoneNumber')}</label>
                       <input
                         type="text"
                         className="sails-input"
@@ -526,7 +518,7 @@ const AdminCompanyProfile: React.FC = () => {
                           handleInputChange('supportPhone', e.target.value);
                           handleInputChange('fax', e.target.value);
                         }}
-                        placeholder="+66 2 123 4568"
+                        placeholder={t('admin_company_profile.fields.supportPhonePlaceholder')}
                       />
                     </div>
                   </div>
@@ -534,65 +526,64 @@ const AdminCompanyProfile: React.FC = () => {
               </div>
 
                 <div className="sails-cp-group sails-cp-full">
-                  <label className="sails-cp-label">Address Line 1 <span style={{ color: 'var(--sails-danger, #fd6161)' }}>*</span></label>
+                  <label className="sails-cp-label">{t('admin_company_profile.fields.addressLine1Required')}</label>
                   <input
                     type="text"
                     required
                     className="sails-input"
                     value={formData.streetAddress}
                     onChange={e => handleInputChange('streetAddress', e.target.value)}
-                    placeholder="Street address, P.O. box, building, suite, unit, etc."
+                    placeholder={t('admin_company_profile.fields.addressLine1Placeholder')}
                   />
                 </div>
 
                 <div className="sails-cp-group sails-cp-full">
-                  <label className="sails-cp-label">Address Line 2 <span style={{ color: 'var(--sails-text-muted, #6b8ba4)', fontWeight: 400 }}>(Optional)</span></label>
+                  <label className="sails-cp-label">{t('admin_company_profile.fields.addressLine2Optional')}</label>
                   <input
                     type="text"
                     className="sails-input"
                     value={formData.subDistrict}
                     onChange={e => handleInputChange('subDistrict', e.target.value)}
-                    placeholder="Apartment, suite, unit, building, floor, etc."
+                    placeholder={t('admin_company_profile.fields.addressLine2Placeholder')}
                   />
                 </div>
 
                 <div className="sails-cp-group">
-                  <label className="sails-cp-label">City / Province / State</label>
+                  <label className="sails-cp-label">{t('admin_company_profile.fields.city')}</label>
                   <input
                     type="text"
                     className="sails-input"
                     value={formData.city}
                     onChange={e => handleInputChange('city', e.target.value)}
-                    placeholder="e.g. San Francisco / Bangkok / Bavaria"
+                    placeholder={t('admin_company_profile.fields.cityPlaceholder')}
                   />
                 </div>
 
                 <div className="sails-cp-group">
-                  <label className="sails-cp-label">Country</label>
+                  <label className="sails-cp-label">{t('admin_company_profile.fields.country')}</label>
                   <CustomSelect
                     value={formData.country}
                     options={COUNTRY_OPTIONS}
                     onChange={val => handleInputChange('country', val)}
-                    placeholder="Select or search country..."
+                    placeholder={t('admin_company_profile.fields.countryPlaceholder')}
                     searchable={true}
                   />
                 </div>
 
                 <div className="sails-cp-group">
-                  <label className="sails-cp-label">Zip / Postal Code</label>
+                  <label className="sails-cp-label">{t('admin_company_profile.fields.postalCode')}</label>
                   <input
                     type="text"
                     className="sails-input"
                     value={formData.postalCode}
                     onChange={e => handleInputChange('postalCode', e.target.value)}
-                    placeholder="e.g. 94105 / 10110"
+                    placeholder={t('admin_company_profile.fields.postalCodePlaceholder')}
                   />
                 </div>
               </div>
             </div>
           )}
 
-          {/* Footer Save Actions */}
           <div className="sails-cp-footer">
             <div>
               {savedSuccessMsg && (
@@ -615,7 +606,7 @@ const AdminCompanyProfile: React.FC = () => {
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               <Save size={16} />
-              <span>{isSaving ? 'Saving Changes...' : 'Save Profile Changes'}</span>
+              <span>{isSaving ? t('admin_company_profile.buttons.saving') : t('admin_company_profile.buttons.saveChanges')}</span>
             </button>
           </div>
         </div>

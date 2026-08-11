@@ -1,0 +1,11 @@
+{
+  "admin_roadmap": {
+    "billing": "นี่คือปลั๊กอิน <strong>การสมัครสมาชิก & การเรียกเก็บเงิน</strong>",
+    "apiTokens": "นี่คือโมดูลจัดการ <strong>API & โทเค็นบริการ</strong>",
+    "connectedApps": "นี่คือการกำหนดค่า <strong>แอปที่เชื่อมต่อ</strong>",
+    "byocModules": "นี่คือแดชบอร์ด <strong>โมดูลที่กำหนดเอง (BYOC)</strong>",
+    "integrations": "นี่คือตัวจัดการการเชื่อมต่อ <strong>API & Webhooks</strong>",
+    "phaseMessage": "โมดูลผู้ดูแลนี้เป็นส่วนหนึ่งของ <strong>แผนงานระยะที่ 6</strong>",
+    "endpointMessage": "ขณะนี้เชื่อมต่อกับปลายทาง <strong>{{path}}</strong>"
+  }
+}

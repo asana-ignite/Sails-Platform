@@ -100,6 +100,7 @@ A third-party plugin directory looks like:
      const plugin: WorkflowEventPlugin = {
        type: 'my-record-event',
        label: 'My Record Event',
+       translationKey: 'workflow_event.my_record_event',
        description: 'Custom record CRUD executor',
        parametersSchema: [
          {

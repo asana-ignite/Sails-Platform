@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { safeT as translate } from '../../lib/translate';
 import { useConsole } from '../../contexts/ConsoleContext';
 import DynamicIcon from '../common/DynamicIcon';
 import './Sidebar.css';
@@ -15,6 +17,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }) => {
   const { navigationItems, isLoading } = useConsole();
+  const { t } = useTranslation();
   const location = useLocation();
   const [showStatus, setShowStatus] = React.useState(false);
   const [isMobileView, setIsMobileView] = React.useState(window.innerWidth <= 768);
@@ -131,7 +134,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
       <nav className="sails-sidebar__nav">
         {isLoading ? (
           <div className="sails-sidebar__loading">
-            <Spinner size={20} label="Syncing..." />
+            <Spinner size={20} label={t('common.syncing')} />
           </div>
         ) : (
           <ul className="sails-sidebar__menu">
@@ -161,7 +164,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
                     </span>
                     {!isEffectivelyCollapsed && (
                       <>
-                        <span className="sails-sidebar__text">{item.label}</span>
+                        <span className="sails-sidebar__text">{translate(item.translationKey, item.label)}</span>
                         {hasChildren && (
                           <span className="sails-sidebar__chevron">
                             <ChevronRight size={14} style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.3s' }} />
@@ -187,7 +190,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
                             <span className="sails-sidebar__submenu-icon">
                               <DynamicIcon name={sub.icon || 'Circle'} size={16} />
                             </span>
-                            <span className="sails-sidebar__submenu-text">{sub.label}</span>
+                            <span className="sails-sidebar__submenu-text">{translate(sub.translationKey, sub.label)}</span>
                           </NavLink>
                         </li>
                       ))}
@@ -207,7 +210,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
         >
           <div className="sails-sidebar__status-indicator"></div>
           {(!isEffectivelyCollapsed || showStatus) && (
-            <span className="sails-sidebar__status-text">Core System v1.0</span>
+            <span className="sails-sidebar__status-text">{t('common.coreSystemVersion')}</span>
           )}
         </div>
       </div>

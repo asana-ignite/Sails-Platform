@@ -1,5 +1,6 @@
 import React from 'react';
 import { useParams, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useConsole } from '../../contexts/ConsoleContext';
 import { ConsoleMenu } from '@sails/shared';
 import { AdminPluginRegistry } from '../../features/admin/registry';
@@ -11,6 +12,7 @@ import './AppPluginShell.css';
  * Resolves metadata and dynamic components for ANY application workspace.
  */
 const AppPluginShell: React.FC = () => {
+  const { t } = useTranslation();
   const { navigationItems, activeApp, headerActions, pageTitle, pageSubtitle } = useConsole();
   const location = useLocation();
   const { appSlug } = useParams<{ appSlug: string }>();
@@ -101,7 +103,7 @@ const AppPluginShell: React.FC = () => {
 
       <main className="sails-admin-shell__content">
         {PluginComponent ? (
-          <React.Suspense fallback={<div className="sails-admin-loading">Loading Component...</div>}>
+          <React.Suspense fallback={<div className="sails-admin-loading">{t('common.loading')}</div>}>
             <PluginComponent />
           </React.Suspense>
         ) : (

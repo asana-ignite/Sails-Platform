@@ -1,0 +1,47 @@
+{
+  "menu": {
+    "dashboard": "Dashboard",
+    "overview": "Overview",
+    "general": "General",
+    "company_profile": "Company Profile",
+    "general_settings": "General Settings",
+    "subscription_billing": "Subscription & Billing",
+    "users_team": "Users & Team",
+    "users": "Users",
+    "positions": "Positions",
+    "teams": "Teams",
+    "access_roles": "Access Roles",
+    "platform_studio": "Platform Studio",
+    "data_model": "Data Model",
+    "layouts": "Layouts",
+    "workflow": "Workflow",
+    "apps": "Apps",
+    "login_security": "Login & Security",
+    "login_sso": "Login & Single Sign-On",
+    "api_tokens": "API & Service Tokens",
+    "audit_history": "Audit History",
+    "integrations_apps": "Integrations & Apps",
+    "connected_apps": "Connected Apps",
+    "api_webhooks": "API & Webhooks",
+    "custom_modules_byoc": "Custom Modules (BYOC)",
+    "intelligence": "Intelligence",
+    "leads": "Leads",
+    "pipeline": "Pipeline",
+    "accounts": "Accounts",
+    "customers": "Customers",
+    "companies": "Companies",
+    "transactions": "Transactions",
+    "orders": "Orders",
+    "invoices": "Invoices"
+  },
+  "app": {
+    "settings_admin": "Settings & Admin",
+    "dashboard": "Dashboard",
+    "crm": "CRM",
+    "sales": "Sales"
+  },
+  "widget": {
+    "quick_accept": "Quick Accept",
+    "agent_chat": "Agent Chat"
+  }
+}

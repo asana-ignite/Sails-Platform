@@ -10,6 +10,12 @@ COPY package.json bun.lock* bun.lockb* ./
 COPY packages/core/package.json ./packages/core/
 COPY packages/console/package.json ./packages/console/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/plugin-sdk/package.json ./packages/plugin-sdk/
+COPY packages/plugin-script/package.json ./packages/plugin-script/
+COPY packages/plugin-approval/package.json ./packages/plugin-approval/
+COPY packages/plugin-expression/package.json ./packages/plugin-expression/
+COPY packages/plugin-notification/package.json ./packages/plugin-notification/
+COPY packages/plugin-record-event/package.json ./packages/plugin-record-event/
 
 # Install dependencies
 RUN bun install

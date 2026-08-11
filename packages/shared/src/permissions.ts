@@ -1,6 +1,7 @@
 export interface PermissionDefinition {
   label: string;
   description: string;
+  translationKey?: string;
   category: 'IAM' | 'Platform' | 'Operations' | 'Security' | 'Extensions';
 }
 

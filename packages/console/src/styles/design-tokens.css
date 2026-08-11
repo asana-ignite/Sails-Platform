@@ -38,7 +38,7 @@
   --sails-info-light: #f1f3fc;
 
   /* Typography */
-  --sails-font-family: 'Lexend', sans-serif;
+  --sails-font-family: 'Lexend', 'Prompt', sans-serif;
   --sails-font-size-base: 14px;
 
   /* Spacing */

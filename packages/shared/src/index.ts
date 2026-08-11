@@ -15,6 +15,8 @@ export { COUNTRY_OPTIONS, PHONE_COUNTRY_OPTIONS, phoneFlag } from './countries';
 export type { CountryOption, PhoneCountryOption } from './countries';
 export { SYSTEM_PERMISSION_REGISTRY, getAllCapabilities } from './permissions';
 export type { PermissionDefinition, SystemCapability } from './permissions';
+export { PACKAGE_MANIFESTS, getAllPackageCapabilityDefinitions } from './packages';
+export type { PackageManifest } from './packages';
 export {
   validateFieldValue,
   validateRecord,
@@ -196,6 +198,7 @@ export interface ConsoleMenu {
   order: number;
   isSystem?: boolean;
   requiredCapability?: string | null;
+  translationKey?: string | null;
   children?: ConsoleMenu[];
 }
 
@@ -210,6 +213,7 @@ export interface ConsoleApp {
   isSystem?: boolean;
   requiredCapability?: string | null;
   widgetBarEnabled?: boolean;
+  translationKey?: string | null;
   menus: ConsoleMenu[];
   widgets?: ConsoleWidget[];
   _count?: { menus: number };
@@ -228,6 +232,7 @@ export interface ConsoleWidget {
   enabled?: boolean;
   isSystem?: boolean;
   requiredCapability?: string | null;
+  translationKey?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -280,11 +285,13 @@ export type LogicalType = typeof LOGICAL_TYPES[number];
 export interface FieldParameterOption {
   label: string;
   value: any;
+  translationKey?: string;
 }
 
 export interface FieldParameterDefinition {
   name: string;             // Key in config JSON e.g. "maxLength"
   label: string;            // UI label e.g. "Max Character Length"
+  translationKey?: string;
   type: 'text' | 'number' | 'boolean' | 'select' | 'textarea' | 'model_select' | 'layout_select';
   defaultValue?: any;
   description?: string;
@@ -300,6 +307,7 @@ export interface FieldParameterDefinition {
 export interface FieldTypeMetadata {
   type: string;             // Logical type identifier e.g. 'short_text'
   label: string;            // UI Display Label e.g. 'Short Text'
+  translationKey?: string;
   description?: string;
   iconName?: string;        // Icon identifier e.g. 'Type', 'Hash'
   physicalType: PhysicalType;

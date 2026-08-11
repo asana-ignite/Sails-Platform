@@ -1,0 +1,77 @@
+{
+  "admin_company_profile": {
+    "title": "Company Profile",
+    "tabs": {
+      "organization": "Organization Details",
+      "contact": "Contact & Address"
+    },
+    "sections": {
+      "organization": {
+        "title": "Organization Details",
+        "subtitle": "Legal registration, trading names, tax identifiers, and public business profile."
+      },
+      "contact": {
+        "title": "Corporate Contact & Location",
+        "subtitle": "Corporate contact details and registered physical business location."
+      }
+    },
+    "fields": {
+      "legalName": "Official Legal Name",
+      "legalNameRequired": "Official Legal Name *",
+      "legalNameHelp": "Registered legal entity name as shown on tax certificates",
+      "legalNamePlaceholder": "e.g. Acme Corporation Co., Ltd.",
+      "tradingName": "Trading / Display Name",
+      "tradingNameRequired": "Trading / Display Name *",
+      "tradingNameHelp": "Display name used in platform menus and invoices",
+      "tradingNamePlaceholder": "e.g. Acme Software",
+      "taxId": "Tax ID / Business Registration Number",
+      "taxIdHelp": "Official government tax identification number",
+      "taxIdPlaceholder": "e.g. 0105566012345",
+      "websiteUrl": "Corporate Website URL",
+      "websiteUrlPlaceholder": "https://example.com",
+      "industry": "Industry Sector",
+      "companySize": "Company Size",
+      "businessContactPerson": "Business Contact Person",
+      "businessContactName": "Business Contact Name",
+      "businessContactNamePlaceholder": "e.g. John Doe",
+      "email": "Email",
+      "corporateEmailPlaceholder": "john@company.com",
+      "phoneNumber": "Phone Number",
+      "phonePlaceholder": "+66 2 123 4567",
+      "supportContactPerson": "Support Contact Person",
+      "supportContactName": "Support Contact Name",
+      "supportContactNamePlaceholder": "e.g. Jane Smith / Support Lead",
+      "supportEmailPlaceholder": "support@company.com",
+      "supportPhoneNumber": "Support Phone Number",
+      "supportPhonePlaceholder": "+66 2 123 4568",
+      "addressLine1": "Address Line 1",
+      "addressLine1Required": "Address Line 1 *",
+      "addressLine1Placeholder": "Street address, P.O. box, building, suite, unit, etc.",
+      "addressLine2": "Address Line 2",
+      "addressLine2Optional": "Address Line 2 (Optional)",
+      "addressLine2Placeholder": "Apartment, suite, unit, building, floor, etc.",
+      "city": "City / Province / State",
+      "cityPlaceholder": "e.g. San Francisco / Bangkok / Bavaria",
+      "country": "Country",
+      "countryPlaceholder": "Select or search country...",
+      "postalCode": "Zip / Postal Code",
+      "postalCodePlaceholder": "e.g. 94105 / 10110",
+      "optional": "(Optional)"
+    },
+    "buttons": {
+      "saveChanges": "Save Profile Changes",
+      "saving": "Saving Changes..."
+    },
+    "validation": {
+      "invalidEmail": "Please enter a valid email address (e.g. name@domain.com).",
+      "invalidEmailShort": "Please enter a valid email address.",
+      "fixEmailFormats": "Please fix the invalid email formats highlighted below before saving."
+    },
+    "messages": {
+      "loadError": "Failed to load company profile from server.",
+      "saveSuccess": "Company Profile updated successfully.",
+      "saveError": "Failed to save company profile.",
+      "saveServerError": "Failed to save company profile to server."
+    }
+  }
+}

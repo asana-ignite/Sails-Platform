@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { 
   Users, GitBranch, Shield, Database, Plus, Search, 
@@ -107,6 +108,7 @@ interface ManageDataAccessModalProps {
 }
 
 function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, onClose, onSaveSuccess }: ManageDataAccessModalProps) {
+  const { t } = useTranslation();
   const [permissions, setPermissions] = useState<ObjectPermission[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -181,7 +183,7 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
         });
         if (!res.ok) {
           const errJson = await res.json();
-          throw new Error(errJson.error || 'Failed to save individual object permission');
+          throw new Error(errJson.error || t('admin_team_manager.notification.failedToSaveIndividualPerm'));
         }
       }
 
@@ -189,7 +191,7 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
       onClose();
     } catch (e: any) {
       console.error(e);
-      alert(e.message || 'Failed to save data access permissions.');
+      alert(e.message || t('admin_team_manager.notification.failedToSaveDataAccess'));
     } finally {
       setSaving(false);
     }
@@ -200,6 +202,8 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
     const apiName = (obj.tableName || obj.apiName || obj.name || '').toLowerCase();
     return name.includes(searchQuery.toLowerCase()) || apiName.includes(searchQuery.toLowerCase());
   });
+
+  const scopeTypeLabel = targetType === 'user' ? t('admin_team_manager.members.member') : t('admin_team_manager.tabs.positions');
 
   return createPortal(
     <div className="sails-modal-overlay" style={{ zIndex: 10000, justifyContent: 'center', alignItems: 'center' }}>
@@ -220,10 +224,10 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
           <div>
             <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--sails-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Database size={18} color="var(--sails-primary)" />
-              Manage Data Access — {targetName}
+              {t('admin_team_manager.dataAccess.manageDataAccess')} — {targetName}
             </h3>
             <p style={{ margin: '2px 0 0', fontSize: '0.825rem', color: 'var(--sails-text-muted)' }}>
-              Configure granular visibility and modify scopes for {targetType === 'user' ? 'Member' : 'Position'}
+              {t('admin_team_manager.dataAccess.configureScopesDesc', { type: scopeTypeLabel })}
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer', padding: '4px' }}>
@@ -237,7 +241,7 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
             type="text"
             className="sails-input"
             style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
-            placeholder="Search data object..."
+            placeholder={t('admin_team_manager.dataAccess.searchDataObject')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -250,11 +254,11 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
             <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--sails-border-color)' }}>
-                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>OBJECT</th>
-                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'center' }}>CREATE</th>
-                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', minWidth: '240px' }}>VISIBILITY SCOPE</th>
-                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', minWidth: '240px' }}>MODIFY SCOPE</th>
-                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'center' }}>DELETE</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.dataAccess.objectName').toUpperCase()}</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'center' }}>{t('admin_team_manager.dataAccess.canCreate').toUpperCase()}</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', minWidth: '240px' }}>{t('admin_team_manager.dataAccess.visibilityScope').toUpperCase()}</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', minWidth: '240px' }}>{t('admin_team_manager.dataAccess.modifyScopeLabel').toUpperCase()}</th>
+                  <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'center' }}>{t('admin_team_manager.dataAccess.canDelete').toUpperCase()}</th>
                 </tr>
               </thead>
               <tbody>
@@ -287,10 +291,10 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
                           style={{ width: '100%' }}
                           value={perm.readScope || 'NONE'}
                           options={[
-                            { value: 'NONE', label: '-- None --' },
-                            { value: 'OWNER', label: 'Owner' },
-                            { value: 'ALL', label: 'View All' },
-                            { value: 'HIERARCHY', label: 'View Hierarchy' }
+                            { value: 'NONE', label: t('admin_team_manager.dataAccess.noneOption') },
+                            { value: 'OWNER', label: t('admin_team_manager.dataAccess.ownerOption') },
+                            { value: 'ALL', label: t('admin_team_manager.dataAccess.viewAllData') },
+                            { value: 'HIERARCHY', label: t('admin_team_manager.dataAccess.viewHierarchy') }
                           ]}
                           onChange={(val) => handleUpdatePermDraft(objApiName, { readScope: String(val) as any })}
                         />
@@ -301,10 +305,10 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
                           style={{ width: '100%' }}
                           value={perm.modifyScope || 'NONE'}
                           options={[
-                            { value: 'NONE', label: '-- None --' },
-                            { value: 'OWNER', label: 'Owner' },
-                            { value: 'ALL', label: 'Modify All' },
-                            { value: 'HIERARCHY', label: 'Modify Hierarchy' }
+                            { value: 'NONE', label: t('admin_team_manager.dataAccess.noneOption') },
+                            { value: 'OWNER', label: t('admin_team_manager.dataAccess.ownerOption') },
+                            { value: 'ALL', label: t('admin_team_manager.dataAccess.modifyAllData') },
+                            { value: 'HIERARCHY', label: t('admin_team_manager.dataAccess.modifyHierarchy') }
                           ]}
                           onChange={(val) => handleUpdatePermDraft(objApiName, { modifyScope: String(val) as any })}
                         />
@@ -321,7 +325,7 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
                   );
                 })}
                 {allObjects.length === 0 && (
-                  <tr><td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>No data models defined in system.</td></tr>
+                  <tr><td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.dataAccess.noDataModels')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -330,10 +334,10 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
 
         <div style={{ paddingTop: '14px', borderTop: '1px solid var(--sails-border-color)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
           <button className="sails-btn sails-btn--secondary" onClick={onClose}>
-            Cancel
+            {t('admin_team_manager.form.cancel')}
           </button>
           <button className="sails-btn sails-btn--primary" onClick={handleSaveChanges} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving ? t('admin_team_manager.form.saving') : t('admin_team_manager.form.saveChanges')}
           </button>
         </div>
       </div>
@@ -343,6 +347,7 @@ function ManageDataAccessModal({ targetType, targetId, targetName, allObjects, o
 }
 
 export default function AdminTeamManager() {
+  const { t } = useTranslation();
   const { setHeaderActions } = useConsole();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
@@ -457,7 +462,13 @@ export default function AdminTeamManager() {
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      setAllCapabilities(SYSTEM_PERMISSION_REGISTRY);
+      const permsRes = await fetch('/api/console/permissions');
+      if (permsRes.ok) {
+        const permsData = await permsRes.json();
+        setAllCapabilities(permsData.data || {});
+      } else {
+        setAllCapabilities(SYSTEM_PERMISSION_REGISTRY);
+      }
       const [teamsRes, usersRes, objsData, positionsRes] = await Promise.all([
         fetch('/api/tenant/teams'),
         fetch('/api/tenant/users'),
@@ -492,7 +503,7 @@ export default function AdminTeamManager() {
         onClick={handleOpenCreateModal}
         className="sails-btn sails-btn--primary"
       >
-        <Plus size={16} /> New Team
+        <Plus size={16} /> {t('admin_team_manager.addTeam')}
       </button>
     );
     return () => setHeaderActions(null);
@@ -526,16 +537,16 @@ export default function AdminTeamManager() {
       } else {
         const errData = await res.json();
         setNotificationMsg({
-          title: 'Create Team Failed',
-          message: errData.error || 'Failed to create team.',
+          title: t('admin_team_manager.notification.createTeamFailed'),
+          message: errData.error || t('admin_team_manager.notification.failedToCreateTeam'),
           type: 'error'
         });
       }
     } catch (e: any) {
       console.error(e);
       setNotificationMsg({
-        title: 'Error',
-        message: e.message || 'An unexpected error occurred.',
+        title: t('admin_team_manager.notification.error'),
+        message: e.message || t('admin_team_manager.notification.unexpectedError'),
         type: 'error'
       });
     } finally {
@@ -558,16 +569,16 @@ export default function AdminTeamManager() {
         const errData = await res.json();
         setDeleteConfirmTeam(null);
         setNotificationMsg({
-          title: 'Delete Failed',
-          message: errData.error || 'Failed to delete team.',
+          title: t('admin_team_manager.notification.deleteFailed'),
+          message: errData.error || t('admin_team_manager.notification.failedToDeleteTeam'),
           type: 'error'
         });
       }
     } catch (e: any) {
       setDeleteConfirmTeam(null);
       setNotificationMsg({
-        title: 'Error',
-        message: e.message || 'An unexpected error occurred.',
+        title: t('admin_team_manager.notification.error'),
+        message: e.message || t('admin_team_manager.notification.unexpectedError'),
         type: 'error'
       });
     }
@@ -603,16 +614,16 @@ export default function AdminTeamManager() {
       } else {
         const errData = await res.json();
         setNotificationMsg({
-          title: 'Add Members Failed',
-          message: errData.error || 'Failed to add selected members.',
+          title: t('admin_team_manager.notification.addMembersFailed'),
+          message: errData.error || t('admin_team_manager.notification.failedToAddMembers'),
           type: 'error'
         });
       }
     } catch (e: any) {
       console.error(e);
       setNotificationMsg({
-        title: 'Error',
-        message: e.message || 'An unexpected error occurred.',
+        title: t('admin_team_manager.notification.error'),
+        message: e.message || t('admin_team_manager.notification.unexpectedError'),
         type: 'error'
       });
     } finally {
@@ -678,8 +689,8 @@ export default function AdminTeamManager() {
     } catch (e: any) {
       console.error(e);
       setNotificationMsg({
-        title: 'Error',
-        message: e.message || 'Failed to add positions to team.',
+        title: t('admin_team_manager.notification.error'),
+        message: e.message || t('admin_team_manager.notification.failedToAddPositions'),
         type: 'error'
       });
     } finally {
@@ -749,21 +760,21 @@ export default function AdminTeamManager() {
         });
         if (!res.ok) {
           const errJson = await res.json();
-          throw new Error(errJson.error || 'Failed to save team object permission');
+          throw new Error(errJson.error || t('admin_team_manager.notification.failedToSaveIndividualPerm'));
         }
       }
 
       await fetchInitialData();
       setNotificationMsg({
-        title: 'Permissions Saved',
-        message: `Object permissions for ${selectedTeam?.name} saved successfully.`,
+        title: t('admin_team_manager.notification.permissionsSaved'),
+        message: t('admin_team_manager.notification.objectPermissionsSaved', { name: selectedTeam?.name }),
         type: 'success'
       });
     } catch (e: any) {
       console.error(e);
       setNotificationMsg({
-        title: 'Save Failed',
-        message: e.message || 'Failed to save team object permissions.',
+        title: t('admin_team_manager.notification.saveFailed'),
+        message: e.message || t('admin_team_manager.notification.failedToSaveTeamObjectPerms'),
         type: 'error'
       });
     } finally {
@@ -843,12 +854,12 @@ export default function AdminTeamManager() {
       <div className="sails-card" style={{ width: '300px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid var(--sails-border-color, rgba(255,255,255,0.1))' }}>
           <h3 style={{ margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <GitBranch size={18} /> Team Hierarchy
+            <GitBranch size={18} /> {t('admin_team_manager.treeLabel')}
           </h3>
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {renderTeamTree(null, 0)}
-          {teams.length === 0 && <p style={{ color: 'var(--sails-text-muted)', fontSize: '0.85rem' }}>No teams found.</p>}
+          {teams.length === 0 && <p style={{ color: 'var(--sails-text-muted)', fontSize: '0.85rem' }}>{t('admin_team_manager.noTeams')}</p>}
         </div>
       </div>
 
@@ -856,7 +867,7 @@ export default function AdminTeamManager() {
       <div className="sails-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {!selectedTeam ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--sails-text-muted)' }}>
-            Select a team from the sidebar to view details.
+            {t('admin_team_manager.tree.selectTeamHint')}
           </div>
         ) : (
           <>
@@ -875,7 +886,7 @@ export default function AdminTeamManager() {
                     }}
                     className={`sails-btn sails-btn--secondary ${isTeamActionMenuOpen ? 'active' : ''}`}
                     style={{ padding: '6px 10px' }}
-                    title="Team Options"
+                    title={t('admin_team_manager.contextMenu.teamOptions')}
                   >
                     <MoreHorizontal size={16} />
                   </button>
@@ -893,7 +904,7 @@ export default function AdminTeamManager() {
                         }}
                       >
                         <UserPlus size={14} />
-                        <span>Add Member</span>
+                        <span>{t('admin_team_manager.members.addMember')}</span>
                       </button>
 
                       <button 
@@ -904,7 +915,7 @@ export default function AdminTeamManager() {
                         }}
                       >
                         <Award size={14} />
-                        <span>Add Position</span>
+                        <span>{t('admin_team_manager.positions.addPosition')}</span>
                       </button>
 
                       {!selectedTeam.isSystemAdmin && (
@@ -918,7 +929,7 @@ export default function AdminTeamManager() {
                             }}
                           >
                             <Trash2 size={14} />
-                            <span>Delete Team</span>
+                            <span>{t('admin_team_manager.deleteTeam')}</span>
                           </button>
                         </>
                       )}
@@ -930,15 +941,15 @@ export default function AdminTeamManager() {
 
             {/* TABS */}
             <div style={{ display: 'flex', gap: '20px', borderBottom: '1px solid var(--sails-border-color)', marginBottom: '15px' }}>
-              <TabBtn active={activeTab === 'members'} onClick={() => setActiveTab('members')} icon={<Users size={16} />} label={`Members (${selectedTeam.members.length})`} />
-              <TabBtn active={activeTab === 'positions'} onClick={() => setActiveTab('positions')} icon={<Award size={16} />} label={`Positions (${(selectedTeam.positions || []).length})`} />
-              <TabBtn active={activeTab === 'capabilities'} onClick={() => setActiveTab('capabilities')} icon={<Shield size={16} />} label="System Capabilities" />
-              <TabBtn active={activeTab === 'objects'} onClick={() => setActiveTab('objects')} icon={<Database size={16} />} label="Data Access" />
+              <TabBtn active={activeTab === 'members'} onClick={() => setActiveTab('members')} icon={<Users size={16} />} label={`${t('admin_team_manager.tabs.members')} (${selectedTeam.members.length})`} />
+              <TabBtn active={activeTab === 'positions'} onClick={() => setActiveTab('positions')} icon={<Award size={16} />} label={`${t('admin_team_manager.tabs.positions')} (${(selectedTeam.positions || []).length})`} />
+              <TabBtn active={activeTab === 'capabilities'} onClick={() => setActiveTab('capabilities')} icon={<Shield size={16} />} label={t('admin_team_manager.tabs.systemCapabilities')} />
+              <TabBtn active={activeTab === 'objects'} onClick={() => setActiveTab('objects')} icon={<Database size={16} />} label={t('admin_team_manager.tabs.dataAccess')} />
             </div>
 
             {/* TAB CONTENT */}
             <div style={{ flex: 1, overflowY: 'auto' }}>
-              
+               
               {/* MEMBERS TAB */}
               {activeTab === 'members' && (
                 <div>
@@ -948,16 +959,16 @@ export default function AdminTeamManager() {
                       onClick={handleOpenAddMembersModal}
                     >
                       <UserPlus size={14} />
-                      <span>Add Member</span>
+                      <span>{t('admin_team_manager.members.addMember')}</span>
                     </button>
                   </div>
                   <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid var(--sails-border-color)' }}>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>NAME</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>EMAIL</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>ROLE</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'right' }}>ACTIONS</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.members.titleName').toUpperCase()}</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.members.titleEmail').toUpperCase()}</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.members.titleRole').toUpperCase()}</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'right' }}>{t('admin_team_manager.members.titleActions').toUpperCase()}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -978,14 +989,14 @@ export default function AdminTeamManager() {
                                 alignItems: 'center',
                                 gap: '6px'
                               }}
-                              title={m.isLeader ? "Click to demote to regular Member" : "Click to promote to Team Leader"}
+                              title={m.isLeader ? t('admin_team_manager.members.demoteHint') : t('admin_team_manager.members.promoteHint')}
                             >
                               {m.isLeader ? (
                                 <>
-                                  <Shield size={13} /> Team Leader
+                                  <Shield size={13} /> {t('admin_team_manager.members.leader')}
                                 </>
                               ) : (
-                                'Member'
+                                t('admin_team_manager.members.member')
                               )}
                             </button>
                           </td>
@@ -1003,7 +1014,7 @@ export default function AdminTeamManager() {
                         </tr>
                       ))}
                       {selectedTeam.members.length === 0 && (
-                        <tr><td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>No members found.</td></tr>
+                        <tr><td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.members.noMembers')}</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -1015,24 +1026,24 @@ export default function AdminTeamManager() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--sails-text-muted)' }}>
-                      Positions mapped to {selectedTeam.name} determine role structures and slot occupancies.
+                      {t('admin_team_manager.positions.mappedToTeamDesc', { name: selectedTeam.name })}
                     </p>
                     <button 
                       className="sails-btn sails-btn--secondary sails-btn--sm"
                       onClick={handleOpenAddPositionsModal}
                     >
                       <Plus size={14} />
-                      <span>Add Position to Team</span>
+                      <span>{t('admin_team_manager.positions.addPositionToTeam')}</span>
                     </button>
                   </div>
 
                   <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid var(--sails-border-color)' }}>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>PREFIX</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>POSITION NAME</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>HEADCOUNT / SLOTS</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'right' }}>ACTIONS</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.positions.titlePrefix').toUpperCase()}</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.positions.titlePositionName').toUpperCase()}</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.positions.titleHeadcount').toUpperCase()}</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'right' }}>{t('admin_team_manager.positions.titleActions').toUpperCase()}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1067,7 +1078,7 @@ export default function AdminTeamManager() {
                                 color: '#16a34a',
                                 border: '1px solid rgba(34,197,94,0.2)'
                               }}>
-                                {occupiedSlots} / {pos.headCount} Occupied
+                                {t('admin_team_manager.positions.occupiedSlots', { occupied: occupiedSlots, headCount: pos.headCount })}
                               </span>
                             </td>
                             <td style={{ padding: '10px', textAlign: 'right' }}>
@@ -1085,7 +1096,7 @@ export default function AdminTeamManager() {
                         );
                       })}
                       {(!selectedTeam.positions || selectedTeam.positions.length === 0) && (
-                        <tr><td colSpan={4} style={{ padding: '30px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>No positions mapped to this team yet.</td></tr>
+                        <tr><td colSpan={4} style={{ padding: '30px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.positions.noPositionsMapped')}</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -1097,7 +1108,7 @@ export default function AdminTeamManager() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   {Object.keys(capabilityCategories).length === 0 ? (
                     <div style={{ padding: '40px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>
-                      No system capabilities available.
+                      {t('admin_team_manager.capabilities.noSystemCapabilities')}
                     </div>
                   ) : (
                     Object.entries(capabilityCategories).map(([category, items]) => (
@@ -1139,7 +1150,7 @@ export default function AdminTeamManager() {
                         type="text"
                         className="sails-input"
                         style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
-                        placeholder="Search data object..."
+                        placeholder={t('admin_team_manager.dataAccess.searchDataObject')}
                         value={teamObjectSearchQuery}
                         onChange={(e) => setTeamObjectSearchQuery(e.target.value)}
                       />
@@ -1152,18 +1163,18 @@ export default function AdminTeamManager() {
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
                       <Save size={14} />
-                      <span>{savingTeamObjectPerms ? 'Saving...' : 'Save Changes'}</span>
+                      <span>{savingTeamObjectPerms ? t('admin_team_manager.form.saving') : t('admin_team_manager.form.saveChanges')}</span>
                     </button>
                   </div>
 
                   <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid var(--sails-border-color)' }}>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>OBJECT</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'center' }}>CREATE</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', minWidth: '240px' }}>VISIBILITY SCOPE</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', minWidth: '240px' }}>MODIFY SCOPE</th>
-                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'center' }}>DELETE</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.dataAccess.objectName').toUpperCase()}</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'center' }}>{t('admin_team_manager.dataAccess.canCreate').toUpperCase()}</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', minWidth: '240px' }}>{t('admin_team_manager.dataAccess.visibilityScope').toUpperCase()}</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', minWidth: '240px' }}>{t('admin_team_manager.dataAccess.modifyScopeLabel').toUpperCase()}</th>
+                        <th style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--sails-text-muted)', textAlign: 'center' }}>{t('admin_team_manager.dataAccess.canDelete').toUpperCase()}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1201,10 +1212,10 @@ export default function AdminTeamManager() {
                                   style={{ width: '100%' }}
                                   value={perm.readScope || 'NONE'}
                                   options={[
-                                    { value: 'NONE', label: '-- None --' },
-                                    { value: 'OWNER', label: 'Owner' },
-                                    { value: 'ALL', label: 'View All' },
-                                    { value: 'HIERARCHY', label: 'View Hierarchy' }
+                                    { value: 'NONE', label: t('admin_team_manager.dataAccess.noneOption') },
+                                    { value: 'OWNER', label: t('admin_team_manager.dataAccess.ownerOption') },
+                                    { value: 'ALL', label: t('admin_team_manager.dataAccess.viewAllData') },
+                                    { value: 'HIERARCHY', label: t('admin_team_manager.dataAccess.viewHierarchy') }
                                   ]}
                                   onChange={(val) => handleToggleTeamObjectPermDraft(objApiName, { readScope: String(val) as any })}
                                 />
@@ -1215,10 +1226,10 @@ export default function AdminTeamManager() {
                                   style={{ width: '100%' }}
                                   value={perm.modifyScope || 'NONE'}
                                   options={[
-                                    { value: 'NONE', label: '-- None --' },
-                                    { value: 'OWNER', label: 'Owner' },
-                                    { value: 'ALL', label: 'Modify All' },
-                                    { value: 'HIERARCHY', label: 'Modify Hierarchy' }
+                                    { value: 'NONE', label: t('admin_team_manager.dataAccess.noneOption') },
+                                    { value: 'OWNER', label: t('admin_team_manager.dataAccess.ownerOption') },
+                                    { value: 'ALL', label: t('admin_team_manager.dataAccess.modifyAllData') },
+                                    { value: 'HIERARCHY', label: t('admin_team_manager.dataAccess.modifyHierarchy') }
                                   ]}
                                   onChange={(val) => handleToggleTeamObjectPermDraft(objApiName, { modifyScope: String(val) as any })}
                                 />
@@ -1235,7 +1246,7 @@ export default function AdminTeamManager() {
                           );
                         })}
                       {allObjects.length === 0 && (
-                        <tr><td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>No data models defined in system.</td></tr>
+                        <tr><td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.dataAccess.noDataModels')}</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -1265,7 +1276,7 @@ export default function AdminTeamManager() {
             }}
           >
             <Database size={14} />
-            <span>Manage Data Access</span>
+            <span>{t('admin_team_manager.dataAccess.manageDataAccess')}</span>
           </button>
           <div className="sails-context-divider" />
           <button
@@ -1277,7 +1288,7 @@ export default function AdminTeamManager() {
             }}
           >
             <X size={14} />
-            <span>Unlink Member</span>
+            <span>{t('admin_team_manager.members.unlinkMember')}</span>
           </button>
         </ContextMenuPortal>
       )}
@@ -1300,7 +1311,7 @@ export default function AdminTeamManager() {
             }}
           >
             <Database size={14} />
-            <span>Manage Data Access</span>
+            <span>{t('admin_team_manager.dataAccess.manageDataAccess')}</span>
           </button>
           <div className="sails-context-divider" />
           <button
@@ -1312,7 +1323,7 @@ export default function AdminTeamManager() {
             }}
           >
             <X size={14} />
-            <span>Unlink Position</span>
+            <span>{t('admin_team_manager.positions.unlinkPosition')}</span>
           </button>
         </ContextMenuPortal>
       )}
@@ -1328,8 +1339,8 @@ export default function AdminTeamManager() {
           onSaveSuccess={() => {
             fetchInitialData();
             setNotificationMsg({
-              title: 'Permissions Saved',
-              message: `Data access permissions for ${manageModalState.targetName} saved successfully.`,
+              title: t('admin_team_manager.notification.permissionsSaved'),
+              message: t('admin_team_manager.notification.dataAccessSaved', { name: manageModalState.targetName }),
               type: 'success'
             });
           }}
@@ -1341,7 +1352,7 @@ export default function AdminTeamManager() {
         <div className="sails-modal-overlay">
           <div className="sails-card" style={{ width: '450px', padding: '24px', borderRadius: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Create New Team</h3>
+              <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{t('admin_team_manager.modal.createNewTeam')}</h3>
               <button onClick={() => setShowCreateTeamModal(false)} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
                 <X size={18} />
               </button>
@@ -1349,12 +1360,12 @@ export default function AdminTeamManager() {
 
             <form onSubmit={handleCreateTeamSubmit}>
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>Team Name</label>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>{t('admin_team_manager.form.name')}</label>
                 <input 
                   type="text" 
                   className="sails-input" 
                   style={{ width: '100%' }} 
-                  placeholder="e.g. Frontend Engineering" 
+                  placeholder={t('admin_team_manager.form.teamNamePlaceholder')}
                   value={newTeamName}
                   onChange={e => setNewTeamName(e.target.value)}
                   autoFocus
@@ -1363,7 +1374,7 @@ export default function AdminTeamManager() {
               </div>
 
               <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>Parent Team (Optional)</label>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600 }}>{t('admin_team_manager.form.parentTeamOptional')}</label>
                 <div style={{ position: 'relative' }}>
                   <button
                     type="button"
@@ -1372,7 +1383,7 @@ export default function AdminTeamManager() {
                     onClick={() => setIsParentSelectOpen(!isParentSelectOpen)}
                   >
                     <span>
-                      {modalParentTeamId ? (teams.find(t => t.id === modalParentTeamId)?.name || 'Select Parent Team') : '-- No Parent (Top Level) --'}
+                      {modalParentTeamId ? (teams.find(t => t.id === modalParentTeamId)?.name || t('admin_team_manager.form.selectParentTeam')) : t('admin_team_manager.form.none')}
                     </span>
                     <ChevronDown size={16} />
                   </button>
@@ -1383,7 +1394,7 @@ export default function AdminTeamManager() {
                         style={{ padding: '8px 12px', cursor: 'pointer', borderRadius: '6px', fontSize: '0.85rem' }}
                         onClick={() => { setModalParentTeamId(null); setIsParentSelectOpen(false); }}
                       >
-                        -- No Parent (Top Level) --
+                        {t('admin_team_manager.form.none')}
                       </div>
                       {teams.filter(t => !t.isSystemAdmin).map(t => (
                         <div 
@@ -1401,10 +1412,10 @@ export default function AdminTeamManager() {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" className="sails-btn sails-btn--secondary" onClick={() => setShowCreateTeamModal(false)}>
-                  Cancel
+                  {t('admin_team_manager.form.cancel')}
                 </button>
                 <button type="submit" className="sails-btn sails-btn--primary" disabled={submittingTeam}>
-                  {submittingTeam ? 'Creating...' : 'Create Team'}
+                  {submittingTeam ? t('admin_team_manager.form.creating') : t('admin_team_manager.form.createTeam')}
                 </button>
               </div>
             </form>
@@ -1418,7 +1429,7 @@ export default function AdminTeamManager() {
         <div className="sails-modal-overlay">
           <div className="sails-card" style={{ width: '480px', maxHeight: '80vh', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Add Members to {selectedTeam?.name}</h3>
+              <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{t('admin_team_manager.modal.addMembersTo', { name: selectedTeam?.name })}</h3>
               <button onClick={() => setShowAddMembersModal(false)} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
                 <X size={18} />
               </button>
@@ -1430,7 +1441,7 @@ export default function AdminTeamManager() {
                 type="text"
                 className="sails-input"
                 style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
-                placeholder="Search user by name or email..."
+                placeholder={t('admin_team_manager.modal.searchUserPlaceholder')}
                 value={memberSearchQuery}
                 onChange={e => setMemberSearchQuery(e.target.value)}
                 autoFocus
@@ -1466,14 +1477,14 @@ export default function AdminTeamManager() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button className="sails-btn sails-btn--secondary" onClick={() => setShowAddMembersModal(false)}>
-                Cancel
+                {t('admin_team_manager.form.cancel')}
               </button>
               <button 
                 className="sails-btn sails-btn--primary" 
                 onClick={handleAddMembersSubmit}
                 disabled={submittingAddMembers || selectedUserIdsForAdd.length === 0}
               >
-                {submittingAddMembers ? 'Adding...' : `Add Selected (${selectedUserIdsForAdd.length})`}
+                {submittingAddMembers ? t('admin_team_manager.form.adding') : t('admin_team_manager.form.addSelected', { count: selectedUserIdsForAdd.length })}
               </button>
             </div>
           </div>
@@ -1486,7 +1497,7 @@ export default function AdminTeamManager() {
         <div className="sails-modal-overlay" style={{ zIndex: 10000 }}>
           <div className="sails-card" style={{ width: '480px', maxHeight: '80vh', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Add Positions to {selectedTeam?.name}</h3>
+              <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{t('admin_team_manager.modal.addPositionsTo', { name: selectedTeam?.name })}</h3>
               <button onClick={() => setShowAddPositionsModal(false)} style={{ background: 'none', border: 'none', color: 'var(--sails-text-muted)', cursor: 'pointer' }}>
                 <X size={18} />
               </button>
@@ -1498,7 +1509,7 @@ export default function AdminTeamManager() {
                 type="text"
                 className="sails-input"
                 style={{ width: '100%', paddingLeft: '34px', fontSize: '0.85rem' }}
-                placeholder="Search position by name or prefix..."
+                placeholder={t('admin_team_manager.modal.searchPositionPlaceholder')}
                 value={positionSearchQuery}
                 onChange={e => setPositionSearchQuery(e.target.value)}
                 autoFocus
@@ -1535,7 +1546,7 @@ export default function AdminTeamManager() {
                         </span>
                         <div>
                           <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)' }}>{p.headCount} Headcount Slots</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--sails-text-muted)' }}>{t('admin_team_manager.positions.headcountSlots', { count: p.headCount })}</div>
                         </div>
                       </div>
                       {isSelected && <Check size={16} color="var(--sails-primary)" />}
@@ -1544,21 +1555,21 @@ export default function AdminTeamManager() {
                 })}
               {tenantPositions.filter(p => !(selectedTeam?.positions || []).some(tp => tp.positionId === p.id)).length === 0 && (
                 <div style={{ padding: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--sails-text-muted)' }}>
-                  All positions have been added to this team.
+                  {t('admin_team_manager.positions.allAdded')}
                 </div>
               )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button className="sails-btn sails-btn--secondary" onClick={() => setShowAddPositionsModal(false)}>
-                Cancel
+                {t('admin_team_manager.form.cancel')}
               </button>
               <button 
                 className="sails-btn sails-btn--primary" 
                 onClick={handleAddPositionsSubmit}
                 disabled={submittingAddPositions || selectedPositionIdsForAdd.length === 0}
               >
-                {submittingAddPositions ? 'Adding...' : `Add Selected (${selectedPositionIdsForAdd.length})`}
+                {submittingAddPositions ? t('admin_team_manager.form.adding') : t('admin_team_manager.form.addSelected', { count: selectedPositionIdsForAdd.length })}
               </button>
             </div>
           </div>
@@ -1586,10 +1597,10 @@ export default function AdminTeamManager() {
               </div>
               <div style={{ flex: 1 }}>
                 <h3 style={{ margin: '0 0 6px 0', fontSize: '1.2rem', fontWeight: 600, color: 'var(--sails-text-main)' }}>
-                  Delete Team
+                  {t('admin_team_manager.modal.deleteTeamTitle')}
                 </h3>
                 <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--sails-text-muted)', lineHeight: 1.5 }}>
-                  Are you sure you want to delete the team <strong>"{deleteConfirmTeam.name}"</strong>? All associated user memberships and permissions for this team will be removed.
+                  {t('admin_team_manager.modal.deleteTeamConfirm', { name: deleteConfirmTeam.name })}
                 </p>
               </div>
             </div>
@@ -1599,13 +1610,13 @@ export default function AdminTeamManager() {
                 className="sails-btn sails-btn--secondary"
                 onClick={() => setDeleteConfirmTeam(null)}
               >
-                Cancel
+                {t('admin_team_manager.form.cancel')}
               </button>
               <button 
                 className="sails-btn sails-btn--danger"
                 onClick={() => executeDeleteTeam(deleteConfirmTeam.id)}
               >
-                Delete Team
+                {t('admin_team_manager.deleteTeam')}
               </button>
             </div>
           </div>
@@ -1630,7 +1641,7 @@ export default function AdminTeamManager() {
                 onClick={() => setNotificationMsg(null)}
                 style={{ minWidth: '120px' }}
               >
-                Dismiss
+                {t('admin_team_manager.form.dismiss')}
               </button>
             </div>
           </div>

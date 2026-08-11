@@ -37,6 +37,7 @@ export interface WorkflowEventPlugin {
   type: string;
   label: string;
   description: string;
+  translationKey?: string;
   /** Ordered wizard steps for this event type's configuration (shared schema). */
   parametersSchema: WorkflowEventConfigStep[];
   execute(ctx: WorkflowEventContext): Promise<WorkflowEventResult>;

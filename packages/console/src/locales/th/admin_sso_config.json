@@ -1,0 +1,132 @@
+{
+  "admin_sso_config": {
+    "title": "การเข้าสู่ระบบและ Single Sign-On (SSO)",
+    "subtitle": "กำหนดค่ากฎการตรวจสอบสิทธิ์ เชื่อมต่อผู้ให้บริการข้อมูลประจำตัวองค์กร (Google / Entra ID / SAML) จัดการโดเมนองค์กรที่ตรวจสอบแล้ว และตั้งค่านโยบายการเข้าถึงฉุกเฉิน",
+    "tabs": {
+      "policy": "นโยบายทั่วไปและการเข้าสู่ระบบ",
+      "providers": "ผู้ให้บริการข้อมูลประจำตัว (SSO)",
+      "domains": "การค้นหาโดเมน",
+      "safeguards": "มาตรการป้องกันฉุกเฉิน"
+    },
+    "policy": {
+      "title": "นโยบายการตรวจสอบสิทธิ์และการบังคับใช้",
+      "subtitle": "ควบคุมการเข้าถึงด้วยรหัสผ่านภายใน การกำหนดเส้นทาง SSO แบบบังคับ และการตั้งค่าการจัดสรรผู้ใช้อัตโนมัติ",
+      "allowPasswordLogin": "อนุญาตการเข้าสู่ระบบด้วยรหัสผ่านภายใน",
+      "allowPasswordLoginDesc": "เมื่อเปิดใช้งาน สมาชิกทีมภายในสามารถลงชื่อเข้าใช้โดยใช้ที่อยู่อีเมลและรหัสผ่าน",
+      "jitProvisioning": "การจัดสรรผู้ใช้แบบ Just-In-Time (JIT)",
+      "jitProvisioningDesc": "สร้างบัญชีผู้ใช้โดยอัตโนมัติเมื่อพนักงานที่ได้รับอนุญาตเข้าสู่ระบบผ่าน SSO เป็นครั้งแรก",
+      "ssoEnforcement": "กลยุทธ์การบังคับใช้ SSO",
+      "optionalSso": "SSO แบบไม่บังคับ (เข้าสู่ระบบได้ยืดหยุ่น)",
+      "optionalSsoDesc": "ผู้ใช้สามารถเลือกเข้าสู่ระบบด้วยรหัสผ่านมาตรฐานหรือผ่านผู้ให้บริการข้อมูลประจำตัวใดๆ ที่เปิดใช้งาน",
+      "mandatorySso": "SSO แบบบังคับ (บังคับใช้ตามโดเมนอย่างเคร่งครัด)",
+      "mandatorySsoDesc": "การเข้าสู่ระบบด้วยรหัสผ่านถูกปิดใช้งานสำหรับผู้ใช้ที่มีโดเมนอีเมลองค์กรที่ตรงกับโดเมน SSO ที่ตรวจสอบแล้ว",
+      "defaultRole": "บทบาทเริ่มต้นสำหรับการจัดสรร JIT",
+      "defaultRoleHelp": "กำหนดเมื่อเข้าสู่ระบบครั้งแรก",
+      "saveButton": "บันทึกการตั้งค่านโยบาย",
+      "saving": "กำลังบันทึก..."
+    },
+    "providers": {
+      "title": "ผู้ให้บริการข้อมูลประจำตัวที่กำหนดค่าแล้ว",
+      "subtitle": "กำหนดค่าข้อมูลรับรอง OAuth2 / OIDC และข้อมูลเมตา SAML สำหรับผู้ให้บริการข้อมูลประจำตัวองค์กรของคุณ",
+      "google": {
+        "name": "Google Workspace",
+        "type": "OpenID Connect (OIDC)",
+        "desc": "อนุญาตให้พนักงานภายในลงชื่อเข้าใช้ได้อย่างราบรื่นโดยใช้บัญชี Google Workspace หรือ G Suite",
+        "clientIdLabel": "Client ID:",
+        "allowedDomainsLabel": "โดเมนที่อนุญาต:",
+        "notConfigured": "ยังไม่ได้กำหนดค่า",
+        "all": "ทั้งหมด",
+        "configureButton": "กำหนดค่า Google SSO"
+      },
+      "entra": {
+        "name": "Microsoft Entra ID",
+        "type": "Azure AD / OAuth2",
+        "desc": "ตรวจสอบสิทธิ์พนักงานผ่าน Microsoft 365, Azure Active Directory หรือการลงทะเบียนแอป Entra ID ขององค์กร",
+        "tenantIdLabel": "Tenant ID:",
+        "appClientIdLabel": "App Client ID:",
+        "configureButton": "กำหนดค่า Entra ID SSO"
+      },
+      "saml": {
+        "name": "Enterprise SAML 2.0 / OIDC",
+        "type": "Generic Okta / Ping / OneLogin",
+        "desc": "เชื่อมต่อผู้ให้บริการข้อมูลประจำตัวองค์กรแบบกำหนดเอง รวมถึง Okta, PingIdentity, OneLogin หรือ SAML แบบกำหนดเอง",
+        "metadataUrlLabel": "Metadata URL:",
+        "statusLabel": "สถานะ:",
+        "active": "ทำงาน",
+        "inactive": "ไม่ทำงาน",
+        "configureButton": "กำหนดค่า SAML / OIDC"
+      },
+      "enabled": "เปิดใช้งาน",
+      "disabled": "ปิดใช้งาน"
+    },
+    "domains": {
+      "title": "การกำหนดเส้นทางและตรวจสอบโดเมนองค์กร",
+      "subtitle": "โดเมนอีเมลที่ตรวจสอบแล้วจะเปลี่ยนเส้นทางผู้ใช้ที่ป้อนอีเมลระหว่างเข้าสู่ระบบไปยังผู้ให้บริการ SSO ที่กำหนดค่าไว้โดยอัตโนมัติ",
+      "addDomainPlaceholder": "เช่น acme-corp.com",
+      "addButton": "เพิ่มโดเมน",
+      "domainAdded": "เพิ่มโดเมน {{domain}} แล้ว",
+      "domainRemoved": "ลบโดเมน {{domain}} แล้ว",
+      "columns": {
+        "domain": "โดเมนองค์กร",
+        "status": "สถานะการตรวจสอบ",
+        "txtRecord": "ระเบียน DNS TXT ที่จำเป็น",
+        "addedOn": "เพิ่มเมื่อ"
+      }
+    },
+    "safeguards": {
+      "title": "การเข้าถึงฉุกเฉินและมาตรการความปลอดภัย",
+      "subtitle": "กำหนดค่าบัญชีผู้ดูแลระบบฉุกเฉินเพื่อป้องกันการถูกล็อกจากผู้เช่าหากผู้ให้บริการข้อมูลประจำตัวของคุณเกิดขัดข้อง",
+      "breakGlassAdmins": "ผู้ดูแลระบบสูงสุดฉุกเฉิน (Break-Glass)",
+      "breakGlassHelp": "อีเมลคั่นด้วยเครื่องหมายจุลภาค",
+      "breakGlassPlaceholder": "super.admin@company.com",
+      "breakGlassDesc": "บัญชีผู้ดูแลระบบฉุกเฉินที่กำหนดไว้จะยังคงรักษาการเข้าถึงด้วยรหัสผ่านแม้เมื่อบังคับใช้ SSO แบบบังคับ",
+      "sessionDuration": "ระยะเวลาเซสชัน SSO",
+      "sessionDurationHelp": "เวลาสูงสุดของเซสชันที่ใช้งาน",
+      "saveButton": "บันทึกมาตรการป้องกัน",
+      "revokeSessions": "เพิกถอนเซสชัน SSO ที่ใช้งานทั้งหมด",
+      "revokeSessionsDesc": "ยุติเซสชัน SSO ที่ใช้งานทั้งหมดทั่วทั้งแพลตฟอร์มทันที ผู้ใช้จะได้รับแจ้งให้ตรวจสอบสิทธิ์อีกครั้ง",
+      "revokeButton": "เพิกถอนเซสชัน",
+      "revokeSuccess": "เพิกถอนเซสชัน SSO ที่ใช้งานทั้งหมดแล้ว"
+    },
+    "drawer": {
+      "title": "กำหนดค่า {{provider}}",
+      "enableAuth": "เปิดใช้งานการตรวจสอบสิทธิ์ {{provider}}",
+      "enableAuthDesc": "เปิดหรือระงับการเข้าสู่ระบบ SSO สำหรับผู้ให้บริการนี้",
+      "callbackUrl": "Redirect / Callback URI (อ่านอย่างเดียว)",
+      "callbackUrlHelp": "คัดลอกไปยังพอร์ทัล IdP ของคุณ",
+      "directoryTenantId": "Directory (Tenant) ID",
+      "directoryTenantIdHelp": "Azure AD Directory ID",
+      "directoryTenantIdPlaceholder": "เช่น 3f2b1098-7654-3210-fedc-ba9876543210",
+      "clientId": "Application (Client) ID",
+      "clientIdPlaceholder": "ป้อน Client ID จากผู้ให้บริการข้อมูลประจำตัว",
+      "clientSecret": "Client Secret",
+      "clientSecretPlaceholder": "ป้อน Client Secret",
+      "metadataUrl": "SAML Metadata URL หรือ Endpoint",
+      "metadataUrlPlaceholder": "https://idp.example.com/app/sso/saml/metadata",
+      "allowedDomains": "โดเมนที่โฮสต์ที่อนุญาต",
+      "allowedDomainsHelp": "คั่นด้วยเครื่องหมายจุลภาค",
+      "allowedDomainsPlaceholder": "เช่น ignite-idea.com, sails.io",
+      "testConnection": "ทดสอบการเชื่อมต่อ",
+      "testing": "กำลังทดสอบ...",
+      "saveProvider": "บันทึกผู้ให้บริการ",
+      "connectSuccess": "การเชื่อมต่อสำเร็จ! ตรวจสอบการจับมือกับ {{provider}} แล้ว",
+      "connectFailed": "การเชื่อมต่อล้มเหลว: กรุณาป้อน Client ID หรือ Metadata URL ที่ถูกต้อง"
+    },
+    "modal": {
+      "unsavedChanges": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
+      "unsavedBody": "คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึกในแท็บนี้ หากคุณสลับแท็บโดยไม่บันทึก การแก้ไขของคุณจะถูกละทิ้ง",
+      "stayOnTab": "อยู่ในแท็บนี้",
+      "discardChanges": "ละทิ้งการเปลี่ยนแปลง",
+      "saveAndSwitch": "บันทึกและสลับ",
+      "unsavedDot": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก"
+    },
+    "toast": {
+      "saved": "บันทึกการกำหนดค่า SSO สำเร็จแล้ว",
+      "testSuccess": "ทดสอบการเชื่อมต่อสำเร็จ",
+      "testFailed": "ทดสอบการเชื่อมต่อล้มเหลว",
+      "policySaved": "บันทึกการตั้งค่านโยบายการตรวจสอบสิทธิ์แล้ว!",
+      "safeguardsSaved": "บันทึกการตั้งค่ามาตรการป้องกันฉุกเฉินแล้ว!",
+      "providerSaved": "บันทึกการกำหนดค่าสำหรับ {{name}} แล้ว"
+    }
+  }
+}

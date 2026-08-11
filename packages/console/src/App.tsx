@@ -6,6 +6,7 @@ import './styles/globals.css';
 import { ConsoleProvider, useConsole, ConsoleMenu } from './contexts/ConsoleContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { I18nProvider } from './contexts/I18nContext';
 import { DateTimePrefsProvider } from './utils/systemDateTime';
 import { RecordStackProvider } from './contexts/RecordStackContext';
 import RecordDetailPanel from './components/record/RecordDetailPanel';
@@ -180,6 +181,7 @@ const TabTitle: React.FC = () => {
 function App() {
   return (
     <BrowserRouter>
+      <I18nProvider>
       <TabTitle />
       <ThemeProvider>
       <AuthProvider>
@@ -240,6 +242,7 @@ function App() {
         </Suspense>
       </AuthProvider>
       </ThemeProvider>
+      </I18nProvider>
     </BrowserRouter>
   );
 }

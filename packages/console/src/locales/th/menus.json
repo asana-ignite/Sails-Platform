@@ -1,0 +1,47 @@
+{
+  "menu": {
+    "dashboard": "แดชบอร์ด",
+    "overview": "ภาพรวม",
+    "general": "ทั่วไป",
+    "company_profile": "ข้อมูลบริษัท",
+    "general_settings": "ตั้งค่าทั่วไป",
+    "subscription_billing": "การสมัครสมาชิก & การเรียกเก็บเงิน",
+    "users_team": "ผู้ใช้ & ทีม",
+    "users": "ผู้ใช้",
+    "positions": "ตำแหน่ง",
+    "teams": "ทีม",
+    "access_roles": "บทบาทการเข้าถึง",
+    "platform_studio": "สตูดิโอแพลตฟอร์ม",
+    "data_model": "โมเดลข้อมูล",
+    "layouts": "หน้าจอ",
+    "workflow": "เวิร์กโฟลว์",
+    "apps": "แอป",
+    "login_security": "การเข้าสู่ระบบ & ความปลอดภัย",
+    "login_sso": "เข้าสู่ระบบ & Single Sign-On",
+    "api_tokens": "API & โทเค็นบริการ",
+    "audit_history": "ประวัติการตรวจสอบ",
+    "integrations_apps": "การเชื่อมต่อ & แอป",
+    "connected_apps": "แอปที่เชื่อมต่อ",
+    "api_webhooks": "API & Webhooks",
+    "custom_modules_byoc": "โมดูลที่กำหนดเอง (BYOC)",
+    "intelligence": "ข้อมูลเชิงลึก",
+    "leads": "ลีด",
+    "pipeline": "ไปป์ไลน์",
+    "accounts": "บัญชี",
+    "customers": "ลูกค้า",
+    "companies": "บริษัท",
+    "transactions": "ธุรกรรม",
+    "orders": "คำสั่งซื้อ",
+    "invoices": "ใบแจ้งหนี้"
+  },
+  "app": {
+    "settings_admin": "ตั้งค่า & ผู้ดูแล",
+    "dashboard": "แดชบอร์ด",
+    "crm": "CRM",
+    "sales": "การขาย"
+  },
+  "widget": {
+    "quick_accept": "รับด่วน",
+    "agent_chat": "แชทเจ้าหน้าที่"
+  }
+}

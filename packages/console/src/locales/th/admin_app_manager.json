@@ -1,0 +1,56 @@
+{
+  "admin_app_manager": {
+    "title": "แอป",
+    "addApp": "เพิ่มแอป",
+    "editApp": "แก้ไขแอป",
+    "deleteApp": "ลบแอป",
+    "addMenu": "เพิ่มรายการเมนู",
+    "editMenu": "แก้ไขรายการเมนู",
+    "deleteMenu": "ลบรายการเมนู",
+    "noApps": "ไม่มีการกำหนดค่าแอป",
+    "noMenus": "ไม่มีการกำหนดค่ารายการเมนู",
+    "confirmDeleteApp": "คุณแน่ใจหรือไม่ว่าต้องการลบแอปนี้?",
+    "confirmDeleteMenu": "คุณแน่ใจหรือไม่ว่าต้องการลบรายการเมนูนี้?",
+    "columns": {
+      "name": "ชื่อ",
+      "icon": "ไอคอน",
+      "order": "ลำดับ",
+      "actions": "การดำเนินการ"
+    },
+    "menuColumns": {
+      "label": "ป้ายกำกับ",
+      "path": "เส้นทาง",
+      "actionType": "ประเภท",
+      "order": "ลำดับ",
+      "actions": "การดำเนินการ"
+    },
+    "actionTypes": {
+      "plugin": "ปลั๊กอิน",
+      "table": "ตาราง",
+      "data_model": "โมเดลข้อมูล",
+      "list_view": "รายการมุมมอง"
+    },
+    "form": {
+      "appName": "ชื่อแอป",
+      "icon": "ไอคอน",
+      "order": "ลำดับ",
+      "description": "คำอธิบาย",
+      "menuLabel": "ป้ายกำกับ",
+      "menuPath": "เส้นทาง",
+      "actionType": "ประเภทการดำเนินการ",
+      "componentKey": "คีย์คอมโพเนนต์",
+      "dataModel": "โมเดลข้อมูล",
+      "listView": "รายการมุมมอง",
+      "parentMenu": "เมนูแม่",
+      "requiredCapability": "สิทธิ์ที่ต้องการ"
+    },
+    "toast": {
+      "appCreated": "สร้างแอปสำเร็จ",
+      "appUpdated": "อัปเดตแอปสำเร็จ",
+      "appDeleted": "ลบแอปสำเร็จ",
+      "menuCreated": "สร้างรายการเมนูสำเร็จ",
+      "menuUpdated": "อัปเดตรายการเมนูสำเร็จ",
+      "menuDeleted": "ลบรายการเมนูสำเร็จ"
+    }
+  }
+}

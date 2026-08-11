@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Workflow, Search, Plus, Trash2, Database, X, ArrowUpDown, Calendar, AlertTriangle, CheckCircle2, Clock, Zap, Power, History, PencilRuler } from 'lucide-react';
 import Spinner from '../../components/common/Spinner';
@@ -32,6 +33,7 @@ const STATUS_LABELS: Record<WorkflowRow['status'], { label: string; icon: React.
 };
 
 const AdminWorkflowManager: React.FC = () => {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<WorkflowRow[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -63,12 +65,12 @@ const AdminWorkflowManager: React.FC = () => {
       if (q) params.set('search', q);
 
       const json = await fetchCached(`/api/workflows?${params}`);
-      if (!json.success) throw new Error(json.error || 'Failed to load workflows');
+      if (!json.success) throw new Error(json.error || t('admin_workflow_manager.modal.createError'));
       setRows(json.data.rows);
       setTotal(json.data.total);
       setTotalPages(json.data.totalPages);
     } catch (err: any) {
-      setError(err.message || 'Failed to load workflows');
+      setError(err.message || t('admin_workflow_manager.modal.createError'));
     } finally {
       setLoading(false);
     }
@@ -122,9 +124,9 @@ const AdminWorkflowManager: React.FC = () => {
   const headerActions = useMemo(() => (
     <button className="sails-btn sails-btn--primary" onClick={(e) => { e.stopPropagation(); setShowCreateModal(true); }}>
       <Plus size={16} />
-      <span>Create Workflow</span>
+      <span>{t('admin_workflow_manager.actions.createWorkflow')}</span>
     </button>
-  ), []);
+  ), [t]);
 
   useEffect(() => {
     setHeaderActions(headerActions);
@@ -157,9 +159,9 @@ const AdminWorkflowManager: React.FC = () => {
       if (!json.success) throw new Error(json.error);
       setRows(prev => prev.filter(r => r.id !== id));
       setTotal(prev => prev - 1);
-      showToast('Workflow deleted successfully.');
+      showToast(t('admin_workflow_manager.toast.deleted'));
     } catch (err: any) {
-      setDeleteError(err.message || 'Failed to delete workflow');
+      setDeleteError(err.message || t('admin_workflow_manager.confirm.deleteError'));
     } finally {
       setDeleting(null);
     }
@@ -185,9 +187,9 @@ const AdminWorkflowManager: React.FC = () => {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       setRows(prev => prev.map(r => r.id === id ? { ...r, status: json.data.status, currentVersion: json.data.currentVersion, _count: { versions: (r._count?.versions ?? 0) + 1 } } : r));
-      showToast(`Workflow activated — version ${json.data.currentVersion - 1} published.`);
+      showToast(t('admin_workflow_manager.toast.activated', { version: json.data.currentVersion - 1 }));
     } catch (err: any) {
-      setActivateError(err.message || 'Failed to activate workflow');
+      setActivateError(err.message || t('admin_workflow_manager.confirm.activateError'));
     } finally {
       setActivating(null);
     }
@@ -213,9 +215,9 @@ const AdminWorkflowManager: React.FC = () => {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       setRows(prev => prev.map(r => r.id === id ? { ...r, status: json.data.status } : r));
-      showToast('Workflow deactivated. Running instances continue on their pinned version.');
+      showToast(t('admin_workflow_manager.toast.deactivated'));
     } catch (err: any) {
-      setDeactivateError(err.message || 'Failed to deactivate workflow');
+      setDeactivateError(err.message || t('admin_workflow_manager.confirm.deactivateError'));
     } finally {
       setDeactivating(null);
     }
@@ -255,7 +257,7 @@ const AdminWorkflowManager: React.FC = () => {
           <input
             type="text"
             className="sails-layout-studio__search-input"
-            placeholder="Search workflows by name..."
+            placeholder={t('admin_workflow_manager.table.searchPlaceholder')}
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
@@ -271,7 +273,7 @@ const AdminWorkflowManager: React.FC = () => {
 
       {loading ? (
         <div className="sails-layout-studio__loading">
-          <Spinner size={32} label="Loading workflows..." />
+          <Spinner size={32} label={t('admin_workflow_manager.table.loading')} />
         </div>
       ) : error ? (
         <div className="sails-layout-studio__error">{error}</div>
@@ -280,13 +282,13 @@ const AdminWorkflowManager: React.FC = () => {
           <div className="sails-layout-studio__empty-icon">
             <Workflow size={28} />
           </div>
-          <h3 className="sails-layout-studio__empty-title">No workflows yet</h3>
+          <h3 className="sails-layout-studio__empty-title">{t('admin_workflow_manager.table.noWorkflowsTitle')}</h3>
           <p className="sails-layout-studio__empty-text">
-            Create your first workflow to automate approval processes across your models.
+            {t('admin_workflow_manager.table.noWorkflowsText')}
           </p>
           <button className="sails-btn sails-btn--primary" onClick={() => setShowCreateModal(true)}>
             <Plus size={16} />
-            <span>Create Workflow</span>
+            <span>{t('admin_workflow_manager.actions.createWorkflow')}</span>
           </button>
         </div>
       ) : (
@@ -295,13 +297,13 @@ const AdminWorkflowManager: React.FC = () => {
           <UiTable>
             <thead>
               <tr>
-                <UiTh sortable sortState={sortConfig?.key === 'name' ? sortConfig.direction : 'idle'} onSort={() => handleSort('name')}>Workflow</UiTh>
-                <UiTh sortable sortState={sortConfig?.key === 'description' ? sortConfig.direction : 'idle'} onSort={() => handleSort('description')}>Description</UiTh>
-                <UiTh>Model</UiTh>
-                <UiTh sortable sortState={sortConfig?.key === 'versions' ? sortConfig.direction : 'idle'} onSort={() => handleSort('versions')}>Versions</UiTh>
-                <UiTh sortable sortState={sortConfig?.key === 'status' ? sortConfig.direction : 'idle'} onSort={() => handleSort('status')}>Status</UiTh>
-                <UiTh sortable sortState={sortConfig?.key === 'createdAt' ? sortConfig.direction : 'idle'} onSort={() => handleSort('createdAt')}>Created At</UiTh>
-                <UiTh sortable sortState={sortConfig?.key === 'updatedAt' ? sortConfig.direction : 'idle'} onSort={() => handleSort('updatedAt')}>Last Modified</UiTh>
+                <UiTh sortable sortState={sortConfig?.key === 'name' ? sortConfig.direction : 'idle'} onSort={() => handleSort('name')}>{t('admin_workflow_manager.table.columns.workflow')}</UiTh>
+                <UiTh sortable sortState={sortConfig?.key === 'description' ? sortConfig.direction : 'idle'} onSort={() => handleSort('description')}>{t('admin_workflow_manager.table.columns.description')}</UiTh>
+                <UiTh>{t('admin_workflow_manager.table.columns.model')}</UiTh>
+                <UiTh sortable sortState={sortConfig?.key === 'versions' ? sortConfig.direction : 'idle'} onSort={() => handleSort('versions')}>{t('admin_workflow_manager.table.columns.versions')}</UiTh>
+                <UiTh sortable sortState={sortConfig?.key === 'status' ? sortConfig.direction : 'idle'} onSort={() => handleSort('status')}>{t('admin_workflow_manager.table.columns.status')}</UiTh>
+                <UiTh sortable sortState={sortConfig?.key === 'createdAt' ? sortConfig.direction : 'idle'} onSort={() => handleSort('createdAt')}>{t('admin_workflow_manager.table.columns.createdAt')}</UiTh>
+                <UiTh sortable sortState={sortConfig?.key === 'updatedAt' ? sortConfig.direction : 'idle'} onSort={() => handleSort('updatedAt')}>{t('admin_workflow_manager.table.columns.lastModified')}</UiTh>
                 <th style={{ textAlign: 'right', width: 48 }}></th>
               </tr>
             </thead>
@@ -331,7 +333,7 @@ const AdminWorkflowManager: React.FC = () => {
                         <span className="ui-name-cell" style={{ gap: 8 }}>
                           <Database size={12} />
                           {row.table.name}
-                          {row.isDefault && <UiBadge tone="default">Default</UiBadge>}
+                          {row.isDefault && <UiBadge tone="default">{t('admin_workflow_manager.table.default')}</UiBadge>}
                         </span>
                       ) : (
                         <span className="ui-text-muted">—</span>
@@ -346,7 +348,7 @@ const AdminWorkflowManager: React.FC = () => {
                     <UiTd>
                       <UiBadge tone={statusInfo.label === 'Active' ? 'success' : statusInfo.label === 'Deactivated' ? 'warning' : 'neutral'}>
                         <StatusIcon size={11} />
-                        {statusInfo.label}
+                        {statusInfo.label === 'Active' ? t('admin_workflow_manager.table.status.active') : statusInfo.label === 'Deactivated' ? t('admin_workflow_manager.table.status.deactivated') : t('admin_workflow_manager.table.status.draft')}
                       </UiBadge>
                     </UiTd>
                     <UiTd>
@@ -358,14 +360,14 @@ const AdminWorkflowManager: React.FC = () => {
                     <UiTd align="right" onClick={e => e.stopPropagation()}>
                       <UiActionsMenu open={activeMenuId === row.id} onToggle={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}>
                         <UiActionsItem onClick={() => { setActiveMenuId(null); handleOpenDesigner(row); }}>
-                          <PencilRuler size={14} /> Design Workflow
+                          <PencilRuler size={14} /> {t('admin_workflow_manager.actions.designWorkflow')}
                         </UiActionsItem>
 
                         {row.status === 'draft' && (
                           <>
                             <UiActionsDivider />
                             <UiActionsItem onClick={() => { setActiveMenuId(null); handleActivate(row.id); }} disabled={activating === row.id}>
-                              <Zap size={14} /> {activating === row.id ? 'Activating...' : 'Activate'}
+                              <Zap size={14} /> {activating === row.id ? t('admin_workflow_manager.actions.activating') : t('admin_workflow_manager.actions.activate')}
                             </UiActionsItem>
                           </>
                         )}
@@ -374,7 +376,7 @@ const AdminWorkflowManager: React.FC = () => {
                           <>
                             <UiActionsDivider />
                             <UiActionsItem onClick={() => { setActiveMenuId(null); handleDeactivate(row.id); }} disabled={deactivating === row.id}>
-                              <Power size={14} /> {deactivating === row.id ? 'Deactivating...' : 'Deactivate'}
+                              <Power size={14} /> {deactivating === row.id ? t('admin_workflow_manager.actions.deactivating') : t('admin_workflow_manager.actions.deactivate')}
                             </UiActionsItem>
                           </>
                         )}
@@ -382,7 +384,7 @@ const AdminWorkflowManager: React.FC = () => {
                         <UiActionsDivider />
 
                         <UiActionsItem danger onClick={() => { setActiveMenuId(null); handleDelete(row.id); }} disabled={deleting === row.id}>
-                          <Trash2 size={14} /> Delete
+                          <Trash2 size={14} /> {t('admin_workflow_manager.actions.delete')}
                         </UiActionsItem>
                       </UiActionsMenu>
                     </UiTd>
@@ -419,11 +421,11 @@ const AdminWorkflowManager: React.FC = () => {
 
       <UiConfirmDialog
         open={!!deleteConfirmId && !!deleteTargetRow}
-        title="Delete Workflow"
+        title={t('admin_workflow_manager.confirm.deleteTitle')}
         icon={<AlertTriangle size={20} style={{ color: 'var(--sails-danger, #ef4444)' }} />}
-        body={<>Are you sure you want to delete <strong>{deleteTargetRow?.name}</strong>? This cannot be undone.</>}
+        body={<Trans i18nKey="admin_workflow_manager.confirm.deleteBody" values={{ name: deleteTargetRow?.name }} components={{ 1: <strong /> }} />}
         error={deleteError}
-        confirmLabel={deleting ? 'Deleting...' : 'Delete'}
+        confirmLabel={deleting ? t('admin_workflow_manager.confirm.deletingLabel') : t('admin_workflow_manager.confirm.deleteLabel')}
         loading={!!deleting}
         onConfirm={doDelete}
         onCancel={() => setDeleteConfirmId(null)}
@@ -431,11 +433,11 @@ const AdminWorkflowManager: React.FC = () => {
 
       <UiConfirmDialog
         open={!!activateConfirmId && !!activateTargetRow}
-        title="Activate Workflow"
+        title={t('admin_workflow_manager.confirm.activateTitle')}
         icon={<Zap size={20} style={{ color: 'var(--sails-primary)' }} />}
-        body={<>Publish <strong>{activateTargetRow?.name}</strong> as version {activateTargetRow?.currentVersion}? Running instances keep their pinned version — new instances will use this one.</>}
+        body={<Trans i18nKey="admin_workflow_manager.confirm.activateBody" values={{ name: activateTargetRow?.name, version: activateTargetRow?.currentVersion }} components={{ 1: <strong /> }} />}
         error={activateError}
-        confirmLabel={activating ? 'Activating...' : `Activate v${activateTargetRow?.currentVersion}`}
+        confirmLabel={activating ? t('admin_workflow_manager.confirm.activatingLabel') : t('admin_workflow_manager.confirm.activateLabel', { version: activateTargetRow?.currentVersion })}
         tone="primary"
         loading={!!activating}
         onConfirm={doActivate}
@@ -444,11 +446,11 @@ const AdminWorkflowManager: React.FC = () => {
 
       <UiConfirmDialog
         open={!!deactivateConfirmId && !!deactivateTargetRow}
-        title="Deactivate Workflow"
+        title={t('admin_workflow_manager.confirm.deactivateTitle')}
         icon={<Power size={20} style={{ color: 'var(--sails-warning, #f59e0b)' }} />}
-        body={<>Deactivate <strong>{deactivateTargetRow?.name}</strong>? No new instances can start. Existing running instances continue on their pinned version until completed.</>}
+        body={<Trans i18nKey="admin_workflow_manager.confirm.deactivateBody" values={{ name: deactivateTargetRow?.name }} components={{ 1: <strong /> }} />}
         error={deactivateError}
-        confirmLabel={deactivating ? 'Deactivating...' : 'Deactivate'}
+        confirmLabel={deactivating ? t('admin_workflow_manager.confirm.deactivatingLabel') : t('admin_workflow_manager.confirm.deactivateLabel')}
         loading={!!deactivating}
         onConfirm={doDeactivate}
         onCancel={() => setDeactivateConfirmId(null)}
@@ -458,8 +460,6 @@ const AdminWorkflowManager: React.FC = () => {
     </div>
   );
 };
-
-// ─── Create Workflow Modal ────────────────────────────────────
 
 interface CreateWorkflowModalProps {
   onClose: () => void;
@@ -473,6 +473,7 @@ interface TableOption {
 }
 
 const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({ onClose, onCreated }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [systemName, setSystemName] = useState('');
   const [systemNameError, setSystemNameError] = useState<string | null>(null);
@@ -500,7 +501,7 @@ const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({ onClose, onCr
   const validateSystemName = (val: string): string | null => {
     if (!val) return null;
     if (!/^[a-z0-9]+(_[a-z0-9]+)*$/.test(val)) {
-      return 'System Name must be in valid snake_case (e.g. contract_review).';
+      return t('admin_workflow_manager.modal.systemNameError');
     }
     return null;
   };
@@ -544,8 +545,8 @@ const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({ onClose, onCr
               <Workflow size={24} />
             </div>
             <div>
-              <h2 className="sails-layout-dialog__title">Create Workflow</h2>
-              <p className="sails-layout-dialog__subtitle">Define an approval workflow for a data model.</p>
+              <h2 className="sails-layout-dialog__title">{t('admin_workflow_manager.modal.createTitle')}</h2>
+              <p className="sails-layout-dialog__subtitle">{t('admin_workflow_manager.modal.createSubtitle')}</p>
             </div>
           </div>
           <button className="sails-layout-dialog__close" onClick={onClose}><X size={20} /></button>
@@ -553,11 +554,11 @@ const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({ onClose, onCr
         <div className="sails-layout-dialog__body">
           <div className="sails-layout-dialog__row">
             <div className="sails-layout-dialog__field">
-              <label className="sails-layout-dialog__label">Name *</label>
+              <label className="sails-layout-dialog__label">{t('admin_workflow_manager.modal.nameLabel')}</label>
               <input
                 type="text"
                 className="sails-input"
-                placeholder="e.g. Contract Review"
+                placeholder={t('admin_workflow_manager.modal.namePlaceholder')}
                 value={name}
                 onChange={e => {
                   const val = e.target.value;
@@ -569,11 +570,11 @@ const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({ onClose, onCr
               />
             </div>
             <div className="sails-layout-dialog__field">
-              <label className="sails-layout-dialog__label">System Name *</label>
+              <label className="sails-layout-dialog__label">{t('admin_workflow_manager.modal.systemNameLabel')}</label>
               <input
                 type="text"
                 className={`sails-input ${systemNameError ? 'sails-layout-modal__input-error' : ''}`}
-                placeholder="e.g. contract_review"
+                placeholder={t('admin_workflow_manager.modal.systemNamePlaceholder')}
                 value={systemName}
                 onChange={e => {
                   const val = e.target.value;
@@ -582,40 +583,40 @@ const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({ onClose, onCr
                   setSubmitError(null);
                 }}
               />
-              <span className="sails-layout-dialog__hint">Snake case only (e.g. contract_review).</span>
+              <span className="sails-layout-dialog__hint">{t('admin_workflow_manager.modal.systemNameHint')}</span>
             </div>
           </div>
           <div className="sails-layout-dialog__field">
-            <label className="sails-layout-dialog__label">Description</label>
+            <label className="sails-layout-dialog__label">{t('admin_workflow_manager.modal.descriptionLabel')}</label>
             <textarea
               className="sails-input"
-              placeholder="Optional description of this workflow"
+              placeholder={t('admin_workflow_manager.modal.descriptionPlaceholder')}
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={4}
             />
           </div>
           <div className="sails-layout-dialog__field">
-            <label className="sails-layout-dialog__label">Model (optional)</label>
+            <label className="sails-layout-dialog__label">{t('admin_workflow_manager.modal.modelLabel')}</label>
             <CustomSelect
               value={tableId}
               options={tables.map(t => ({ value: t.id, label: t.name }))}
               onChange={(val) => { setTableId(String(val)); setSubmitError(null); }}
-              placeholder="Select a model..."
+              placeholder={t('admin_workflow_manager.modal.modelPlaceholder')}
               searchable={true}
             />
-            <span className="sails-layout-dialog__hint">The data model this workflow runs on. Leave empty for a standalone workflow.</span>
+            <span className="sails-layout-dialog__hint">{t('admin_workflow_manager.modal.modelHint')}</span>
           </div>
           {submitError && <div className="sails-confirm-modal__error">{submitError}</div>}
         </div>
         <div className="sails-layout-dialog__footer">
-          <button className="sails-btn sails-btn--ghost" onClick={onClose}>Cancel</button>
+          <button className="sails-btn sails-btn--ghost" onClick={onClose}>{t('common.cancel')}</button>
           <button
             className="sails-btn sails-btn--primary"
             onClick={handleCreate}
             disabled={!name || !systemName || submitting}
           >
-            {submitting ? 'Creating...' : 'Create Workflow'}
+            {submitting ? t('admin_workflow_manager.modal.creating') : t('admin_workflow_manager.actions.createWorkflow')}
           </button>
         </div>
       </div>
