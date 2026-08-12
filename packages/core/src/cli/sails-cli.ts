@@ -1,5 +1,10 @@
 #!/usr/bin/env bun
 /**
+ * sails-cli — platform administration CLI (bun src/cli/sails-cli.ts).
+ * tenant:list, tenant:create (provision), schema diff/repair, menu/app
+ * seeding, and other one-off maintenance tasks. NEVER used at request time.
+ */
+/**
  * SAILS CLI — Platform Administration Tool
  * 
  * Usage:

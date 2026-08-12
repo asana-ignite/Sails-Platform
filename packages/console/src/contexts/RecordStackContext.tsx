@@ -1,3 +1,9 @@
+/**
+ * RecordStackContext — stacked record cards: create/edit dialogs opened
+ * over a list (e.g. Related-List inline creation) are rendered in a stack
+ * of overlay cards; this context manages the stack and change
+ * notifications so parent lists refresh automatically.
+ */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface StackEntry {

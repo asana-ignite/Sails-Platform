@@ -1,3 +1,6 @@
+/**
+ * AdminIntegrations — external integrations (ERP, LINE OA, webhooks).
+ */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 

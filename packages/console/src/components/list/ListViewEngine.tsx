@@ -1,3 +1,9 @@
+/**
+ * ListViewEngine — the runtime LIST view: loads the layout config + fields,
+ * fetches records through /api/dynamic (page mode) or /related (embedded
+ * related lists), and drives search/filter/sort/pagination, inline
+ * create/edit/delete, live aggregate totals and the actions bar.
+ */
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Columns, AlertCircle, RotateCcw, Filter } from 'lucide-react';
 import type { TableLayout, SailsFieldDefinition, ListAction, FilterGroup } from '@sails/shared';
@@ -86,6 +92,8 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
   const [fields, setFields] = useState<SailsFieldDefinition[]>([]);
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  /** Live aggregate values (sum/avg/min/max/count) for the Summary Panel. */
+  const [aggregates, setAggregates] = useState<{ fieldName: string; aggregate: string; value: any }[] | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [runtimeSortRules, setRuntimeSortRules] = useState<RuntimeSortRule[]>([]);
@@ -202,10 +210,20 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
     params.set('page', String(page));
     params.set('limit', String(limit));
 
+    // Live aggregate summaries configured in the layout's Summary Panel.
+    const summaryFields: { fieldId: string; aggregate?: string }[] = lc?.summaryFields || [];
+    if (summaryFields.length > 0) {
+      const aggPayload = summaryFields
+        .map((sf) => ({ fieldId: sf.fieldId, aggregate: sf.aggregate || 'sum' }))
+        .filter((a) => findField(a.fieldId));
+      if (aggPayload.length > 0) params.set('aggregates', JSON.stringify(aggPayload));
+    }
+
     const res = await fetch(`/api/dynamic/${tn}?${params}`);
     const data = await res.json();
     setRecords(data.rows || []);
     setTotalRecords(data.total || 0);
+    setAggregates(data.aggregates || null);
     if (pageOverride !== undefined) setCurrentPage(pageOverride);
   }, [layoutId]);
 
@@ -609,6 +627,7 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
           fields={fields}
           records={records}
           totalRecords={totalRecords}
+          aggregates={aggregates}
           page={currentPage}
           onPageChange={setCurrentPage}
           recordsPerPage={recordsPerPage}

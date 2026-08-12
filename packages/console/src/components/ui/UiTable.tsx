@@ -1,3 +1,6 @@
+/**
+ * UiTable — table shell for admin pages (User Manager, Object Manager).
+ */
 import React from 'react';
 
 /** Table card wrapper (card + horizontal scroll). */

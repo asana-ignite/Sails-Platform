@@ -1,3 +1,6 @@
+/**
+ * Sales admin — pipeline stages.
+ */
 import React from 'react';
 
 const PipelineStagesAdmin: React.FC = () => {

@@ -1,3 +1,7 @@
+/**
+ * RecordPicker — searchable record picker for relation/lookup fields
+ * (search list control), using the target model's LIST view.
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, ChevronDown, Check, Database } from 'lucide-react';

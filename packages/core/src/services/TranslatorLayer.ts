@@ -1,7 +1,21 @@
+/**
+ * TranslatorLayer — the schema/metadata service layer. Every table/field
+ * CRUD operation from the admin UI lands here: it translates metadata
+ * changes into DDL (via AlchemaCore), keeps Prisma metadata in sync, and
+ * manages side-effects such as auto-number sequences, validation CHECK
+ * constraints, Expression-field recompute triggers, and layout pruning
+ * when a field is deleted.
+ */
 import format from 'pg-format';
 import { db } from '../lib/db';
 import { AlchemaCore } from '../core/engine/AlchemaCore';
 import { FieldRegistry } from '../core/registry/FieldRegistry';
+import {
+  analyzeExpression,
+  EXPRESSION_RESULT_PG_TYPES,
+  expressionResultType,
+  type ExpressionResultType,
+} from '../core/engine/ComputedFields';
 
 export class TranslatorLayer {
   constructor(private alchemaCore: AlchemaCore) {}
@@ -95,6 +109,25 @@ export class TranslatorLayer {
       include: { tenant: true }
     });
 
+    // 0. Expression fields: validate the JSONata formula and derive
+    //    cross-model dependencies BEFORE any DDL is executed.
+    let expressionDependencies: { targetTable: string; relationField: string; reverse?: boolean }[] = [];
+    let expressionReferencedFields: string[] = [];
+    let expressionWarnings: string[] = [];
+    if (logicalType === 'expression') {
+      const existing = await db.fieldDefinition.findMany({ where: { tableId } });
+      const analysis = analyzeExpression(
+        config?.expression,
+        [...existing, { fieldName, logicalType, config, physicalType }] as any[]
+      );
+      if (!analysis.ok) {
+        throw new Error(analysis.error);
+      }
+      expressionDependencies = analysis.dependencies || [];
+      expressionReferencedFields = analysis.referencedFields || [];
+      expressionWarnings = analysis.warnings || [];
+    }
+
     // Parse relationTarget if the type is relation
     let relationTarget: string | undefined;
     if (physicalType === 'relation' && config && config.targetTable) {
@@ -109,6 +142,15 @@ export class TranslatorLayer {
       relationTarget: relationTarget
     });
 
+    // 1a. Expression fields are stored as the configured result type.
+    if (logicalType === 'expression') {
+      const resultType = (config?.resultType || 'text') as ExpressionResultType;
+      const pgDef = EXPRESSION_RESULT_PG_TYPES[resultType];
+      if (pgDef) {
+        await this.alchemaCore.alterColumnType(tableDef.tenant.schemaName, tableDef.tableName, fieldName, pgDef);
+      }
+    }
+
     // 1b. If logicalType is auto_number, setup PostgreSQL sequence and dynamic DEFAULT expression
     if (logicalType === 'auto_number') {
       await this.alchemaCore.setupAutoNumberColumn(tableDef.tenant.schemaName, tableDef.tableName, fieldName, config);
@@ -122,12 +164,38 @@ export class TranslatorLayer {
         fieldName,
         physicalType,
         logicalType,
-        config: config ? config : undefined,
+        config: config ? { ...config, dependencies: expressionDependencies, referencedFields: expressionReferencedFields } : undefined,
         isRequired,
         isSystem,
         description
       },
     });
+
+    // 2a. Expression fields: wire recompute triggers on referenced tables and
+    //     queue a full-table recompute so existing records get their values.
+    if (logicalType === 'expression') {
+      const tenantSchema = tableDef.tenant.schemaName;
+      for (const dep of expressionDependencies) {
+        if (dep.reverse) {
+          // Rollup ($related): the FK lives on the referenced (child) table.
+          await this.alchemaCore.ensureComputedReverseTrigger(
+            tenantSchema, dep.targetTable, tenantSchema, tableDef.tableName, dep.relationField
+          );
+        } else {
+          await this.alchemaCore.ensureComputedTrigger(
+            tenantSchema,
+            dep.targetTable,
+            tenantSchema,
+            tableDef.tableName,
+            dep.relationField
+          );
+        }
+      }
+      if (expressionWarnings.length > 0) {
+        console.warn(`[ExpressionField] ${name}: ${expressionWarnings.join('; ')}`);
+      }
+      await this.alchemaCore.enqueueFullTableRecompute(tenantSchema, tableDef.tableName);
+    }
 
     // 3. Add CHECK constraints if required
     if (isRequired && (physicalType === 'text' || physicalType === 'short_text')) {
@@ -295,6 +363,40 @@ export class TranslatorLayer {
       await this.alchemaCore.alterColumnType(tenantSchema, tableName, targetFieldName, pgDef);
     }
 
+    // 5b. Expression fields: validate the formula and keep the result-type
+    //     physical column in sync when resultType changes.
+    const wasExpression = fieldDef.logicalType === 'expression';
+    const isExpression = targetLogicalType === 'expression';
+    let newExpressionDeps: { targetTable: string; relationField: string }[] =
+      ((fieldDef.config as any)?.dependencies) || [];
+    let newExpressionRefs: string[] = ((fieldDef.config as any)?.referencedFields) || [];
+
+    if (isExpression) {
+      const expression =
+        data.config?.expression !== undefined
+          ? String(data.config.expression)
+          : (fieldDef.config as any)?.expression;
+      const tableFields = await db.fieldDefinition.findMany({ where: { tableId: fieldDef.tableId } });
+      const analysis = analyzeExpression(expression, tableFields as any[]);
+      if (!analysis.ok) {
+        throw new Error(analysis.error);
+      }
+      newExpressionDeps = analysis.dependencies || [];
+      newExpressionRefs = analysis.referencedFields || [];
+      if (analysis.warnings?.length) {
+        console.warn(`[ExpressionField] ${data.name || fieldDef.name}: ${analysis.warnings.join('; ')}`);
+      }
+
+      const newResultType = (data.config?.resultType as ExpressionResultType) || expressionResultType(fieldDef);
+      const currentResultType = expressionResultType(fieldDef);
+      if (newResultType !== currentResultType) {
+        const pgDef = EXPRESSION_RESULT_PG_TYPES[newResultType];
+        if (pgDef) {
+          await this.alchemaCore.alterColumnType(tenantSchema, tableName, targetFieldName, pgDef);
+        }
+      }
+    }
+
     // 6. Update metadata in Prisma
     const updatedField = await db.fieldDefinition.update({
       where: { id: fieldId },
@@ -307,11 +409,82 @@ export class TranslatorLayer {
           logicalType: data.logicalType,
           physicalType: targetPhysicalType
         }),
-        ...(data.config !== undefined && { config: { ...((fieldDef.config as any) || {}), ...(data.config as any) } })
+        ...(data.config !== undefined && { config: { ...((fieldDef.config as any) || {}), ...(data.config as any) } }),
+        ...(isExpression && { config: { ...((fieldDef.config as any) || {}), ...(data.config as any), dependencies: newExpressionDeps, referencedFields: newExpressionRefs } })
       }
     });
 
+    // 7. Expression fields: sync recompute triggers on referenced tables and
+    //    queue a full-table recompute so all rows get fresh values.
+    if (wasExpression || isExpression) {
+      const oldDeps: { targetTable: string; relationField: string; reverse?: boolean }[] =
+        ((fieldDef.config as any)?.dependencies) || [];
+      const specKey = (d: { targetTable: string; relationField: string; reverse?: boolean }) =>
+        `${d.reverse ? 'rev' : 'fwd'}:${d.relationField}:${d.targetTable}`;
+      const oldSpecs = new Set(oldDeps.map(specKey));
+      const newSpecs = new Set(newExpressionDeps.map(specKey));
+
+      const ensureDep = async (dep: any) => {
+        if (dep.reverse) {
+          await this.alchemaCore.ensureComputedReverseTrigger(tenantSchema, dep.targetTable, tenantSchema, tableName, dep.relationField);
+        } else {
+          await this.alchemaCore.ensureComputedTrigger(tenantSchema, dep.targetTable, tenantSchema, tableName, dep.relationField);
+        }
+      };
+      const dropDep = async (dep: any) => {
+        if (dep.reverse) {
+          await this.alchemaCore.dropComputedReverseTrigger(tenantSchema, dep.targetTable, tableName, dep.relationField);
+        } else {
+          await this.alchemaCore.dropComputedTrigger(tenantSchema, dep.targetTable, tableName, dep.relationField);
+        }
+      };
+
+      if (!isExpression) {
+        await this.dropDependencyTriggersIfUnused(fieldDef.table, oldDeps, fieldId);
+      } else {
+        for (const dep of newExpressionDeps) {
+          if (!oldSpecs.has(specKey(dep))) await ensureDep(dep);
+        }
+        for (const dep of oldDeps) {
+          if (!newSpecs.has(specKey(dep))) await dropDep(dep);
+        }
+        await this.alchemaCore.enqueueFullTableRecompute(tenantSchema, tableName);
+      }
+    }
+
     return updatedField;
+  }
+
+  /**
+   * Drops recompute triggers for dependency specs — but only when no OTHER
+   * expression field on the same table still needs the same relationship.
+   */
+  private async dropDependencyTriggersIfUnused(
+    tableDef: any,
+    dependencies: { targetTable: string; relationField: string; reverse?: boolean }[],
+    excludeFieldId: string
+  ) {
+    if (!dependencies || dependencies.length === 0) return;
+    const others = await db.fieldDefinition.findMany({
+      where: { tableId: tableDef.id, id: { not: excludeFieldId } }
+    });
+    const specKey = (d: { targetTable: string; relationField: string; reverse?: boolean }) =>
+      `${d.reverse ? 'rev' : 'fwd'}:${d.relationField}:${d.targetTable}`;
+    const stillUsed = new Set<string>();
+    for (const f of others) {
+      for (const d of ((f.config as any)?.dependencies) || []) {
+        stillUsed.add(specKey(d));
+      }
+    }
+    const tenantSchema = tableDef.tenant.schemaName;
+    for (const dep of dependencies) {
+      if (stillUsed.has(specKey(dep))) continue;
+      if (dep.reverse) {
+        await this.alchemaCore.dropComputedReverseTrigger(tenantSchema, dep.targetTable, tableDef.tableName, dep.relationField);
+      } else {
+        await this.alchemaCore.dropComputedTrigger(tenantSchema, dep.targetTable, tableDef.tableName, dep.relationField);
+      }
+    }
   }
 
   /**
@@ -331,6 +504,22 @@ export class TranslatorLayer {
     const tableName = fieldDef.table.tableName;
     const fieldName = fieldDef.fieldName;
 
+    // 0. Expression guards:
+    //    a) A field referenced by an Expression formula cannot be deleted.
+    //    b) Deleting an Expression field drops its recompute triggers.
+    const expressionRefs = await db.fieldDefinition.findMany({
+      where: { tableId: fieldDef.tableId, logicalType: 'expression', id: { not: fieldId } }
+    });
+
+    for (const f of expressionRefs) {
+      const refs: string[] = ((f.config as any)?.referencedFields) || [];
+      if (refs.includes(fieldName)) {
+        throw new Error(
+          `Cannot delete field '${fieldDef.name}': it is referenced by the Expression field '${f.name}'. Remove the reference from the formula first.`
+        );
+      }
+    }
+
     // 1. Drop the physical column (this will also cascade drop constraints in PG)
     await this.alchemaCore.removeColumn(tenantSchema, tableName, fieldName);
 
@@ -339,7 +528,97 @@ export class TranslatorLayer {
       where: { id: fieldId }
     });
 
+    // 2b. Prune every layout of this table so removed fields never leave
+    //     orphaned blocks/columns (the cause of blank gaps in forms and lists).
+    await this.pruneLayoutsOfDeletedField(fieldDef.tableId, fieldId, fieldName);
+
+    // 3. Expression field deleted — clean up its recompute triggers.
+    if (fieldDef.logicalType === 'expression') {
+      const oldDeps: { targetTable: string; relationField: string }[] =
+        ((fieldDef.config as any)?.dependencies) || [];
+      await this.dropDependencyTriggersIfUnused(fieldDef.table, oldDeps, fieldId);
+    }
+
     return true;
+  }
+
+  /**
+   * Strips every reference to a deleted field from the table's layouts:
+   *  - field blocks (top-level and inside tab groups),
+   *  - related-list blocks whose FK field matches,
+   *  - LIST columns,
+   *  - block conditions/validations,
+   *  - the recordTitleField setting.
+   * Rewrites both `config` and `publishedConfig` (JSON columns).
+   */
+  private async pruneLayoutsOfDeletedField(tableId: string, fieldId: string, fieldName: string) {
+    const layouts = await db.tableLayout.findMany({ where: { tableId } });
+    if (layouts.length === 0) return;
+
+    const referencesField = (v: any): boolean => v === fieldId || v === fieldName;
+
+    const pruneBlock = (block: any): any => {
+      if (!block || typeof block !== 'object') return null;
+      if (block.blockType === 'field') {
+        if (block.fieldId && referencesField(block.fieldId)) return null;
+      }
+      if (block.blockType === 'related_list') {
+        if (block.relatedFieldName && referencesField(block.relatedFieldName)) return null;
+      }
+      if (block.conditions && Array.isArray(block.conditions)) {
+        block.conditions = block.conditions.filter((c: any) => !(c.fieldId && referencesField(c.fieldId)));
+      }
+      if (block.validations && Array.isArray(block.validations)) {
+        block.validations = block.validations.filter((v: any) => !(v.fieldId && referencesField(v.fieldId)));
+      }
+      if (block.blockType === 'tab_group' && Array.isArray(block.tabs)) {
+        for (const tab of block.tabs) {
+          if (tab && Array.isArray(tab.blocks)) {
+            tab.blocks = tab.blocks.map(pruneBlock).filter(Boolean);
+          }
+        }
+      }
+      return block;
+    };
+
+    const pruneConfig = (raw: any): any => {
+      if (!raw || typeof raw !== 'object') return raw;
+      const config = Array.isArray(raw) ? { blocks: raw } : { ...raw };
+
+      if (Array.isArray(config.blocks)) {
+        config.blocks = config.blocks.map(pruneBlock).filter(Boolean);
+      }
+      if (Array.isArray(config.columns)) {
+        config.columns = config.columns.filter(
+          (c: any) => !(c.fieldId && referencesField(c.fieldId))
+        );
+      }
+      if (config.recordTitleField && referencesField(config.recordTitleField)) {
+        config.recordTitleField = null;
+      }
+      return config;
+    };
+
+    // Deep-clone before pruning: pruneBlock mutates block objects in place,
+    // and the change-detection below compares JSON strings against the
+    // untouched original — a shallow copy would "mutate both sides" and make
+    // every comparison equal, silently skipping the DB write.
+    const deepClone = (raw: any): any => JSON.parse(JSON.stringify(raw));
+
+    for (const layout of layouts) {
+      const updates: any = {};
+      if (layout.config) {
+        const next = pruneConfig(deepClone(layout.config));
+        if (JSON.stringify(next) !== JSON.stringify(layout.config)) updates.config = next;
+      }
+      if (layout.publishedConfig) {
+        const next = pruneConfig(deepClone(layout.publishedConfig));
+        if (JSON.stringify(next) !== JSON.stringify(layout.publishedConfig)) updates.publishedConfig = next;
+      }
+      if (Object.keys(updates).length > 0) {
+        await db.tableLayout.update({ where: { id: layout.id }, data: updates });
+      }
+    }
   }
   
   /**

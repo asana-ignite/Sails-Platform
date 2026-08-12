@@ -1,3 +1,6 @@
+/**
+ * UiBadge — status/label chip.
+ */
 import React from 'react';
 
 export type UiBadgeTone = 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'default';

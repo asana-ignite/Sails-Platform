@@ -2,7 +2,7 @@
  * JSONata intellisense support — curated function list + suggestion builder.
  * Suggestions merge JSONata's built-in $functions with workflow variables.
  */
-import { STRUCTURED_TYPE_SUBFIELDS } from '@sails/shared';
+import { STRUCTURED_TYPE_SUBFIELDS, EXPRESSION_FUNCTION_DOCS } from '@sails/shared';
 
 export interface Suggestion {
   label: string;
@@ -61,6 +61,12 @@ export const JSONATA_FUNCTIONS: { name: string; signature: string; desc: string 
   { name: '$number', signature: '$number(value)', desc: 'Convert to number' },
   { name: '$boolean', signature: '$boolean(value)', desc: 'Convert to boolean' },
   { name: '$exists', signature: '$exists(value)', desc: 'True if value exists' },
+  // First-party date/time library (registered server-side + in the Test runner).
+  ...EXPRESSION_FUNCTION_DOCS.map((f) => ({
+    name: `$${f.name}`,
+    signature: f.signature,
+    desc: f.description,
+  })),
 ];
 
 /**

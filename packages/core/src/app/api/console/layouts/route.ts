@@ -1,3 +1,8 @@
+/**
+ * Layout CRUD + the draft/publish lifecycle: save drafts, activate (writes
+ * publishedConfig + version history), discard-draft (revert to published),
+ * delete. Both LIST and DETAIL/FORM layouts live here.
+ */
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';

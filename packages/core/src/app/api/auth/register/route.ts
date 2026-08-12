@@ -1,3 +1,7 @@
+/**
+ * Public self-registration: creates a tenant + admin user, provisions the
+ * tenant schema and default navigation (see TenantProvisioner).
+ */
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 

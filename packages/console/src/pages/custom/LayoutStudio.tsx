@@ -12,7 +12,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDateTimePrefs, formatSystemDateTimeValue } from '../../utils/systemDateTime';
 import {
   GripVertical, Plus, X, Eye, EyeOff, Trash2, MoveUp, MoveDown,
-  LayoutGrid, Settings, ArrowRight, ListTree, FolderKanban, Columns,
+  LayoutGrid, Settings, ArrowRight, ListTree, FolderKanban, Columns, MoveVertical,
   Table2, Filter, ShieldAlert, AlertCircle, ArrowUpDown,
   ArrowLeft, Loader2, Play, Pause, Minimize2, Maximize2, CheckCircle2,
   Layers, Search, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown,
@@ -26,6 +26,7 @@ import { FilterBuilder } from '../../components/common/FilterBuilder';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import SailsPopover from '../../components/common/SailsPopover';
+import { evaluateExpressionFields } from '../../utils/expressionLive';
 import { FieldControlRegistry } from '../../features/controls/FieldControlRegistry';
 import { DetailFieldInput, DetailFieldDisplay, mockFieldValue } from '../../features/controls/DetailFieldControl';
 import { UserControl } from '../../features/controls/plugins/UserControl';
@@ -46,7 +47,7 @@ const actionRegistry = ActionRegistry.getInstance();
 // ─── Types ────────────────────────────────────────────────────
 
 type Width = number;
-type BlockType = 'field' | 'related_list' | 'tab_group';
+type BlockType = 'field' | 'related_list' | 'tab_group' | 'spacer';
 
 interface BlockCondition {
   id: string;
@@ -77,6 +78,8 @@ interface PlacedBlock {
   conditions?: BlockCondition[];
   validations?: FieldValidation[];
   controlPluginId?: string;
+  /** Spacer block: vertical space between controls, in pixels. */
+  height?: number;
 }
 
 interface BuilderSection {
@@ -146,6 +149,7 @@ function defaultPropsForBlock(blockType: BlockType, fieldId?: string): Partial<P
   if (blockType === 'related_list') return {
     width: 12,
   };
+  if (blockType === 'spacer') return { width: 12, height: 32 };
   if (blockType === 'tab_group') return {
     tabs: [
       { id: 'tab1', label: 'Details', sectionIds: [], blocks: [] },
@@ -155,6 +159,30 @@ function defaultPropsForBlock(blockType: BlockType, fieldId?: string): Partial<P
     width: 12,
   };
   return {};
+}
+
+/**
+ * Drops layout blocks whose model field no longer exists (field blocks and
+ * related-list blocks pointing at a deleted FK field), including blocks nested
+ * inside tab groups. Deleted fields must never leave blank grid space behind.
+ */
+function pruneOrphanedBlocks(blocks: PlacedBlock[], fields: any[]): PlacedBlock[] {
+  const resolve = (fieldId?: string) =>
+    !!fieldId && fields.some((f) => f.id === fieldId || f.fieldName === fieldId);
+  const clean = (list: PlacedBlock[]): PlacedBlock[] =>
+    (list || []).flatMap((b) => {
+      if (!b) return [];
+      if (b.blockType === 'field' && !resolve(b.fieldId)) return [];
+      if (b.blockType === 'related_list' && b.relatedFieldName && !resolve(b.relatedFieldName)) return [];
+      if (b.blockType === 'tab_group') {
+        return [{
+          ...b,
+          tabs: (b.tabs || []).map((t) => ({ ...t, blocks: clean(t.blocks || []) })),
+        }];
+      }
+      return [b];
+    });
+  return clean(blocks);
 }
 
 // ─── Mock related data ────────────────────────────────────────
@@ -230,6 +258,7 @@ function buildPalette(fields: SailsFieldDefinition[], placedFieldIds: string[]):
     }
   });
   items.push({ id: 'rel_list_view', blockType: 'related_list', label: 'Related List View', icon: <ListTree size={13} />, description: 'Inline list of records linked via FK' });
+  items.push({ id: 'layout_spacer', blockType: 'spacer', label: 'Spacing', icon: <MoveVertical size={13} />, description: 'Empty space between fields or controls' });
   items.push({ id: 'layout_tabs', blockType: 'tab_group', label: 'Tab Group', icon: <FolderKanban size={13} />, description: 'Tabbed container' });
   return items;
 }
@@ -663,6 +692,45 @@ const LayoutStudio: React.FC = () => {
 
   const allFields = tableMeta?.fields ?? [];
   const currentTableName = tableMeta?.tableName || '';
+
+  // Live Expression preview: re-evaluate computed fields from the mock record
+  // so the canvas shows formula results in real time (same shared semantics as
+  // the runtime form). Non-expression values pass through untouched.
+  const [liveExprValues, setLiveExprValues] = useState<Record<string, any> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const hasExpressions = allFields.some(
+      (f) => (f.logicalType || '').toLowerCase() === 'expression',
+    );
+    if (!hasExpressions) {
+      setLiveExprValues(null);
+      return;
+    }
+    evaluateExpressionFields(allFields, mockRecord).then((result) => {
+      if (!cancelled) setLiveExprValues(result.values);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mockRecord, allFields]);
+  const previewRecord = useMemo(
+    () => (liveExprValues ? { ...mockRecord, ...liveExprValues } : mockRecord),
+    [mockRecord, liveExprValues],
+  );
+
+  // Deleted model fields must never leave blank space: drop orphaned blocks
+  // and list columns whenever the metadata or the layout state changes.
+  // Idempotent — the JSON comparison keeps the previous state when clean.
+  useEffect(() => {
+    if (allFields.length === 0) return;
+    setBlocks((prev) => {
+      const next = pruneOrphanedBlocks(prev, allFields);
+      return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
+    });
+    setListColumns((prev) => {
+      const next = prev.filter((c) => allFields.some((f) => f.id === c.fieldId || f.fieldName === c.fieldId));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [allFields, blocks, listColumns]);
 
   // Models that reference the current model via a relation/lookup FK field.
   const inboundModels = useMemo(() => {
@@ -1708,7 +1776,7 @@ const LayoutStudio: React.FC = () => {
   // ── Summary Actions ──
   const addListSummaryField = (fieldId: string) => {
     if (listSummaryFields.some((sf) => sf.fieldId === fieldId)) return;
-    setListSummaryFields((prev) => [...prev, { id: listSummId(), fieldId }]);
+    setListSummaryFields((prev) => [...prev, { id: listSummId(), fieldId, aggregate: 'sum' }]);
   };
 
   const removeListSummaryField = (fieldId: string) => {
@@ -2338,7 +2406,21 @@ const LayoutStudio: React.FC = () => {
                         return (
                           <div key={sf.id} className="ls-summary-field">
                             <span className="ls-summary-field__name">{f.name}</span>
-                            <span className="ls-summary-field__tag">Group By</span>
+                            <select
+                              className="sails-input"
+                              style={{ fontSize: 11, padding: '3px 6px', width: 'auto' }}
+                              value={sf.aggregate || 'sum'}
+                              onChange={(e) => setListSummaryFields((prev) =>
+                                prev.map((p) => (p.id === sf.id ? { ...p, aggregate: e.target.value as any } : p))
+                              )}
+                              title="Aggregate computed live over all matching rows"
+                            >
+                              <option value="sum">SUM</option>
+                              <option value="avg">AVG</option>
+                              <option value="min">MIN</option>
+                              <option value="max">MAX</option>
+                              <option value="count">COUNT</option>
+                            </select>
                             <button className="ls-block__btn ls-block__btn--danger" onClick={() => removeListSummaryField(sf.fieldId)}><X size={11} /></button>
                           </div>
                         );
@@ -2748,7 +2830,7 @@ const LayoutStudio: React.FC = () => {
 
                           // ── FIELD BLOCK ──
                           if (blk.blockType === 'field' && field) {
-                            const condResult = evaluateConditions(blk.conditions, mockRecord, allFields);
+                            const condResult = evaluateConditions(blk.conditions, previewRecord, allFields);
                             const hasConditions = blk.conditions && blk.conditions.length > 0;
                             const hasValidations = blk.validations && blk.validations.length > 0;
                             const isConditionalHidden = hasConditions && !condResult;
@@ -2769,9 +2851,9 @@ const LayoutStudio: React.FC = () => {
                                 <label className="ls-block__label">{blk.labelOverride || field.name}{field.isRequired && <span className="ls-block__required">*</span>}</label>
                                 {blk.visible ? (
                                   isReadOnly ? (
-                                    <div className="ls-block__value">{renderFieldValue(field, mockRecord, blk.controlPluginId, 'display')}</div>
+                                    <div className="ls-block__value">{renderFieldValue(field, previewRecord, blk.controlPluginId, 'display')}</div>
                                   ) : (
-                                    renderFieldValue(field, mockRecord, blk.controlPluginId, 'edit', {
+                                    renderFieldValue(field, previewRecord, blk.controlPluginId, 'edit', {
                                       inert: !previewMode,
                                       rules: blk.validations,
                                       showErrors: previewMode,
@@ -2781,6 +2863,25 @@ const LayoutStudio: React.FC = () => {
                                 ) : <em className="ls-block__empty">hidden</em>}
                                 <span className="ls-block__width-badge">{blk.width} cols</span>
                                 <span className="ls-block__type-badge">{field.logicalType}</span>
+                                <div className="ls-block__resize-handle" onMouseDown={(e) => handleResizeStart(e, blk.id, blk.width)} />
+                              </div>
+                            );
+                          }
+
+                          // ── SPACER BLOCK ──
+                          if (blk.blockType === 'spacer') {
+                            const spacerHeight = blk.height ?? 32;
+                            return (
+                              <div key={blk.id}
+                                className={`ls-block ls-block--spacer ${isSelected ? 'ls-block--selected' : ''} ${!blk.visible ? 'ls-block--hidden' : ''} ${dragOverBlockId === blk.id ? 'ls-block--drag-over' : ''} ${resizing?.blockId === blk.id ? 'ls-block--resizing' : ''}`}
+                                style={{ gridColumn: `span ${blk.width}`, height: spacerHeight }}
+                                draggable onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: blk.id, sourceSectionId: section.id })}
+                                onDragOver={(e) => handleBlockDrop(e, blk.id, section.id)}
+                                onDragLeave={() => setDragOverBlockId(null)}
+                                onClick={(e) => { e.stopPropagation(); if (isReadOnly) return; setSelectedBlockId(blk.id); setSelectedSectionId(null); }}>
+                                {controlsEl}
+                                <span className="ls-spacer__label">{blk.visible ? `SPACER · ${spacerHeight}px` : 'hidden'}</span>
+                                <span className="ls-block__width-badge">{blk.width} cols</span>
                                 <div className="ls-block__resize-handle" onMouseDown={(e) => handleResizeStart(e, blk.id, blk.width)} />
                               </div>
                             );
@@ -2887,7 +2988,7 @@ const LayoutStudio: React.FC = () => {
                                         );
 
                                         if (tb.blockType === 'field' && tbField) {
-                                          const condResult = evaluateConditions(tb.conditions, mockRecord, allFields);
+                                          const condResult = evaluateConditions(tb.conditions, previewRecord, allFields);
                                           const hasConditions = tb.conditions && tb.conditions.length > 0;
                                           const hasValidations = tb.validations && tb.validations.length > 0;
                                           const isCondHidden = hasConditions && !condResult;
@@ -2909,9 +3010,9 @@ const LayoutStudio: React.FC = () => {
                                               <label className="ls-block__label">{tb.labelOverride || tbField.name}{tbField.isRequired && <span className="ls-block__required">*</span>}</label>
                                               {tb.visible ? (
                                                 isReadOnly ? (
-                                                  <div className="ls-block__value">{renderFieldValue(tbField, mockRecord, tb.controlPluginId, 'display')}</div>
+                                                  <div className="ls-block__value">{renderFieldValue(tbField, previewRecord, tb.controlPluginId, 'display')}</div>
                                                 ) : (
-                                                  renderFieldValue(tbField, mockRecord, tb.controlPluginId, 'edit', {
+                                                  renderFieldValue(tbField, previewRecord, tb.controlPluginId, 'edit', {
                                                     inert: !previewMode,
                                                     rules: tb.validations,
                                                     showErrors: previewMode,
@@ -2921,6 +3022,26 @@ const LayoutStudio: React.FC = () => {
                                               ) : <em className="ls-block__empty">hidden</em>}
                                               <span className="ls-block__width-badge">{tb.width} cols</span>
                                               <span className="ls-block__type-badge">{tbField.logicalType}</span>
+                                              <div className="ls-block__resize-handle" onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, tb.id, tb.width); }} />
+                                            </div>
+                                          );
+                                        }
+
+                                        if (tb.blockType === 'spacer') {
+                                          const spacerHeight = tb.height ?? 32;
+                                          const isDragOver = dragOverChildBlockId === tb.id;
+                                          return (
+                                            <div key={tb.id}
+                                              className={`ls-block ls-block--spacer ${tbSelected ? 'ls-block--selected' : ''} ${!tb.visible ? 'ls-block--hidden' : ''} ${isDragOver ? 'ls-block--drag-over' : ''}`}
+                                              style={{ gridColumn: `span ${tb.width}`, height: spacerHeight }}
+                                              draggable
+                                              onDragStart={(e) => handleDragStart(e, { type: 'placed', blockId: tb.id, sourceTabBlockId: blk.id, sourceTabId: activeTab.id })}
+                                              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverChildBlockId(tb.id); }}
+                                              onDragLeave={(e) => { e.stopPropagation(); setDragOverChildBlockId(null); }}
+                                              onClick={(e) => { e.stopPropagation(); if (isReadOnly) return; setSelectedBlockId(tb.id); setSelectedSectionId(null); }}>
+                                              {tbControls}
+                                              <span className="ls-spacer__label">{tb.visible ? `SPACER · ${spacerHeight}px` : 'hidden'}</span>
+                                              <span className="ls-block__width-badge">{tb.width} cols</span>
                                               <div className="ls-block__resize-handle" onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, tb.id, tb.width); }} />
                                             </div>
                                           );
@@ -3438,6 +3559,7 @@ const LayoutStudio: React.FC = () => {
                 <div className="ls-prop__name">
                   {selectedBlock.blockType === 'field' ? selectedField?.name :
                    selectedBlock.blockType === 'related_list' ? (selectedBlock.relatedTableLabel || 'Related List View') :
+                   selectedBlock.blockType === 'spacer' ? 'Spacing' :
                    'Tab Group'}
                 </div>
                 <div className="ls-prop__type">{selectedBlock.blockType}</div>
@@ -3453,6 +3575,28 @@ const LayoutStudio: React.FC = () => {
                       onChange={(e) => updateBlock(selectedBlock.id, { visible: e.target.checked })} />{' '}Visible
                   </label>
                 </div>
+
+                {selectedBlock.blockType === 'spacer' && (
+                  <div className="ls-prop-group">
+                    <label className="ls-prop-label">Height (px)</label>
+                    <input
+                      className="sails-input"
+                      type="number"
+                      min={8}
+                      max={200}
+                      step={4}
+                      value={selectedBlock.height ?? 32}
+                      onChange={(e) => {
+                        const h = Math.min(200, Math.max(8, Number(e.target.value) || 32));
+                        updateBlock(selectedBlock.id, { height: h });
+                      }}
+                      style={{ fontSize: 12, padding: '6px 8px' }}
+                    />
+                    <small className="ls-prop-hint" style={{ color: 'var(--sails-text-muted)', fontSize: 10, display: 'block', marginTop: 4 }}>
+                      Vertical space this control reserves between fields.
+                    </small>
+                  </div>
+                )}
 
                 {selectedBlock.blockType === 'field' && (
                   <>

@@ -1,3 +1,8 @@
+/**
+ * zodGenerator — builds a Zod validation schema from field metadata
+ * (via the field-type plugin registry + validation rules). Used by the
+ * API to reject invalid payloads before they reach the database.
+ */
 import { z } from 'zod';
 import { FieldRegistry } from '../core/registry/FieldRegistry';
 

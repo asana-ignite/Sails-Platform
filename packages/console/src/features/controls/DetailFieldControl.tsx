@@ -1,3 +1,8 @@
+/**
+ * DetailFieldControl — the runtime form-field renderer: resolves the
+ * field's control plugin, wires validation (metadata rules + layout block
+ * rules), and renders label/input/display for the detail page.
+ */
 import React from 'react';
 import type { SailsFieldDefinition } from '@sails/shared';
 import { validateFieldValue, isEmptyValue } from '@sails/shared';

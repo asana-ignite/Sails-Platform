@@ -1,3 +1,6 @@
+/**
+ * WidgetBar — console widget bar (registered widgets).
+ */
 import React, { Suspense, useState, useRef, useEffect, useCallback } from 'react';
 import { Pin, PinOff } from 'lucide-react';
 import { ConsoleWidget } from '@sails/shared';

@@ -1,3 +1,6 @@
+/**
+ * Object permissions granted directly to a user.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession, requireAdmin } from '@/lib/auth/session';

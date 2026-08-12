@@ -1,3 +1,6 @@
+/**
+ * MOCKUP — workflow canvas (prototype).
+ */
 import React from 'react';
 import { Flag } from 'lucide-react';
 import { ALL_PORTS, CANVAS_W, END_H, NODE_H, NODE_W } from '../constants';

@@ -1,3 +1,8 @@
+/**
+ * configCache — tiny TTL cache for expensive tenant metadata lookups
+ * (e.g. menu path resolution). Entries expire after 30 seconds; callers
+ * invalidate explicitly after schema/menu writes so changes surface fast.
+ */
 const configCache = new Map<string, { data: any; expiresAt: number }>();
 
 export function invalidateConfigCache(tenantId?: string) {

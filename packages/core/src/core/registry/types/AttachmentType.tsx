@@ -1,3 +1,6 @@
+/**
+ * Attachment — file upload reference.
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

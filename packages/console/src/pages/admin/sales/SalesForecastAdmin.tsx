@@ -1,3 +1,6 @@
+/**
+ * Sales admin — sales forecast.
+ */
 import React from 'react';
 
 const SalesForecastAdmin: React.FC = () => {

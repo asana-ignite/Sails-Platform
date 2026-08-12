@@ -1,3 +1,6 @@
+/**
+ * LookupControl — searchable relation/lookup combobox.
+ */
 import React from 'react';
 import { User, Search, X, ExternalLink } from 'lucide-react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';

@@ -1,3 +1,7 @@
+/**
+ * control types — FieldControlPlugin contract (compatible logical types,
+ * RenderEdit/RenderDisplay, mockValue) + layout validation rule shapes.
+ */
 import React from 'react';
 import type { SailsFieldDefinition } from '@sails/shared';
 

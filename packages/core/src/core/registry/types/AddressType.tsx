@@ -1,3 +1,6 @@
+/**
+ * Address — structured postal address (jsonb sub-fields).
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

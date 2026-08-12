@@ -1,3 +1,6 @@
+/**
+ * RichTextEditor — WYSIWYG editor implementation.
+ */
 import React from 'react';
 import type { FieldControlProps } from '../types';
 import { SailsHtmlEditor, type SailsHtmlEditorPreset } from '../../../components/shared/SailsHtmlEditor';

@@ -1,3 +1,6 @@
+/**
+ * MOCKUP — stage properties panel for the workflow prototype.
+ */
 import React from 'react';
 import {
   AlertTriangle, CheckCircle2, MoveDown, MoveUp, Plus, Settings, Split, Trash2, X, Zap,

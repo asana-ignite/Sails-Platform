@@ -1,3 +1,6 @@
+/**
+ * CS admin — auto-reply rules.
+ */
 import React from 'react';
 
 const AutoReplyRulesAdmin: React.FC = () => {

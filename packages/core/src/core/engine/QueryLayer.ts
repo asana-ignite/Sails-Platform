@@ -1,9 +1,19 @@
+/**
+ * QueryLayer — the single secure data-access layer for dynamic tables.
+ *
+ * Every read/write to tenant data funnels through here:
+ *   insertRecord / updateRecord / upsertRecord / deleteRecord / listRecords
+ * Each operation runs inside TransactionContext (RLS + session vars),
+ * passes AccessGuard (RBAC), writes data_audit_logs, and — since the
+ * Expression-field feature — evaluates computed fields on write.
+ */
 import { Pool, PoolClient } from 'pg';
 import format from 'pg-format';
 import crypto from 'crypto';
 import { SYSTEM_PROTECTED_COLUMNS } from '@sails/shared';
 import { AccessGuard, CrudAction } from './AccessGuard';
 import { TransactionContext } from './TransactionContext';
+import { computeRecordExpressions } from './ComputedFields';
 import { getSession, SessionContext } from '@/lib/auth/session';
 
 /** One rule inside a Query Studio filter group, as received from the API route. */
@@ -309,7 +319,8 @@ export class QueryLayer {
     schemaName: string,
     tableName: string,
     payload: Record<string, any>,
-    ctx?: SessionContext
+    ctx?: SessionContext,
+    fields?: any[]
   ): Promise<any> {
     const resolvedCtx = ctx ?? await resolveSessionContext();
 
@@ -332,6 +343,15 @@ export class QueryLayer {
           created_by: resolvedCtx.userId, 
           updated_by: resolvedCtx.userId 
         };
+
+        // 1b. Compute Expression fields — the computed value always wins.
+        if (fields && fields.length > 0) {
+          const computed = await computeRecordExpressions(client, schemaName, tableName, fields, dataToInsert);
+          for (const [key, value] of Object.entries(computed.values)) {
+            dataToInsert[key] = value;
+          }
+        }
+
         const columns = Object.keys(dataToInsert);
         const values = Object.values(dataToInsert);
 
@@ -384,7 +404,8 @@ export class QueryLayer {
     tableName: string,
     recordId: string,
     payload: Record<string, any>,
-    ctx?: SessionContext
+    ctx?: SessionContext,
+    fields?: any[]
   ): Promise<any> {
     const resolvedCtx = ctx ?? await resolveSessionContext();
 
@@ -406,6 +427,17 @@ export class QueryLayer {
 
         // 2. Build SET clauses with audit columns
         const dataToUpdate = { ...stripProtectedColumns(payload), updated_by: resolvedCtx.userId, updated_at: new Date().toISOString() };
+
+        // 2b. Compute Expression fields against old + new values — the
+        //     computed value always wins over the client payload.
+        if (fields && fields.length > 0) {
+          const merged = { ...oldRecord, ...dataToUpdate };
+          const computed = await computeRecordExpressions(client, schemaName, tableName, fields, merged);
+          for (const [key, value] of Object.entries(computed.values)) {
+            dataToUpdate[key] = value;
+          }
+        }
+
         const setClauses = Object.keys(dataToUpdate).map((key) =>
           format('%I = %L', key, dataToUpdate[key])
         );
@@ -463,7 +495,8 @@ export class QueryLayer {
     tableName: string,
     idValue: string | null,
     payload: Record<string, any>,
-    ctx?: SessionContext
+    ctx?: SessionContext,
+    fields?: any[]
   ): Promise<any> {
     const resolvedCtx = ctx ?? await resolveSessionContext();
 
@@ -504,6 +537,17 @@ export class QueryLayer {
         const columns = Object.keys(dataToInsert);
         const values = Object.values(dataToInsert);
         const updateCols = Object.keys(cleanPayload).concat(['updated_by', 'updated_at']);
+
+        // 2b. Compute Expression fields — the computed value always wins.
+        //     On the update path, evaluate against old + new merged values.
+        if (fields && fields.length > 0) {
+          const merged = oldRecord ? { ...oldRecord, ...dataToInsert } : dataToInsert;
+          const computed = await computeRecordExpressions(client, schemaName, tableName, fields, merged);
+          for (const [key, value] of Object.entries(computed.values)) {
+            dataToInsert[key] = value;
+            if (!updateCols.includes(key)) updateCols.push(key);
+          }
+        }
 
         // 3. Execute dynamic UPSERT
         const upsertSql = format(
@@ -631,8 +675,14 @@ export class QueryLayer {
       validFields: Set<string>;
       textFields: string[];
       jsonbFields?: Set<string>;
+      /** Live aggregate summaries: [{ fieldName, aggregate }] — computed over
+       *  ALL rows matching the same filters (not just the current page) inside
+       *  the same RLS transaction as the list. */
+      aggregates?: { fieldName: string; aggregate: 'sum' | 'avg' | 'min' | 'max' | 'count' }[];
+      /** Pre-resolved session context (tests/engines); otherwise resolved from the request session. */
+      ctx?: SessionContext;
     }
-  ): Promise<{ rows: any[]; total: number; page: number; limit: number; totalPages: number }> {
+  ): Promise<{ rows: any[]; total: number; page: number; limit: number; totalPages: number; aggregates?: { fieldName: string; aggregate: string; value: any }[] }> {
     const page = Math.max(1, options.page || 1);
     const limit = Math.min(100, Math.max(1, options.limit || 25));
     const offset = (page - 1) * limit;
@@ -652,6 +702,7 @@ export class QueryLayer {
     if (orderByClauses.length === 0) {
       orderByClauses.push('created_at DESC');
     }
+
     const orderBySQL = `ORDER BY ${orderByClauses.join(', ')}`;
 
     return QueryLayer.executeSecureQuery(pool, tableName, 'read', async (client) => {
@@ -671,13 +722,34 @@ export class QueryLayer {
 
       const total = parseInt(countResult.rows[0]?.total || '0', 10);
 
+      // Live aggregates over the FULL filtered set (RLS-enforced, same WHERE).
+      let aggregates: { fieldName: string; aggregate: string; value: any }[] | undefined;
+      if (options.aggregates && options.aggregates.length > 0) {
+        const aggSQL = options.aggregates.map((a, i) => {
+          const op = a.aggregate === 'count' ? 'COUNT(%I)' : `${a.aggregate.toUpperCase()}(COALESCE(%I::numeric, 0))::float8`;
+          return `${format(op, a.fieldName, a.fieldName)} AS a${i}`;
+        }).join(', ');
+        const sql = format(
+          'SELECT %s FROM %I.%I %s',
+          aggSQL, schemaName, tableName, whereSQL
+        );
+        const aggResult = await client.query(sql);
+        const row = aggResult.rows[0] || {};
+        aggregates = options.aggregates.map((a, i) => ({
+          fieldName: a.fieldName,
+          aggregate: a.aggregate,
+          value: row[`a${i}`] ?? null,
+        }));
+      }
+
       return {
         rows: dataResult.rows,
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
+        ...(aggregates ? { aggregates } : {}),
       };
-    });
+    }, options.ctx);
   }
 }

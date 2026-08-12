@@ -1,3 +1,6 @@
+/**
+ * TimeControl — time input.
+ */
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Clock, X } from 'lucide-react';

@@ -1,3 +1,6 @@
+/**
+ * AdminAuditLog — platform-wide audit trail view.
+ */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, RefreshCw, ChevronLeft, ChevronRight, Database, Shield, Wrench, Radio } from 'lucide-react';

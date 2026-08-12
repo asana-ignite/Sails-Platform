@@ -1,3 +1,6 @@
+/**
+ * UiNameCell — primary-name cell with detail link.
+ */
 import React from 'react';
 
 export const UiNameCell: React.FC<{

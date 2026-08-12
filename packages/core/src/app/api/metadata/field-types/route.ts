@@ -1,3 +1,6 @@
+/**
+ * Field-type registry endpoint (labels/physical types for the schema UI).
+ */
 import { NextResponse } from 'next/server';
 import { FIELD_TYPE_REGISTRY } from '@sails/shared';
 

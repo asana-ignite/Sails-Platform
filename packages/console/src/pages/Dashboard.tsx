@@ -1,3 +1,6 @@
+/**
+ * Dashboard — stat cards + recent activity.
+ */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Users, TrendingUp, DollarSign, Clock } from 'lucide-react';

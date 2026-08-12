@@ -1,3 +1,6 @@
+/**
+ * DateTimeControl — date + time input.
+ */
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { CalendarDays, ChevronLeft, ChevronRight, X, Clock } from 'lucide-react';

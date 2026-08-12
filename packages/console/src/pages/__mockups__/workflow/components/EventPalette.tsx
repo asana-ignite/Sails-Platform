@@ -1,3 +1,6 @@
+/**
+ * MOCKUP — workflow event palette (prototype).
+ */
 import React from 'react';
 import { GitBranch, Settings, Split, Target, Zap } from 'lucide-react';
 import { EVENT_DEFS } from '../constants';

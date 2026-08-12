@@ -1,3 +1,6 @@
+/**
+ * Signout — ends the session and returns to login.
+ */
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import './Login.css';

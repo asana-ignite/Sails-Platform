@@ -113,7 +113,11 @@ export function validateFieldValue(
   // always replaced, so the required gate must not block blank creates.
   const isAutoNumber = (field.logicalType || '').toLowerCase() === 'auto_number';
 
-  if (field.isRequired && isEmptyValue(value) && !isAutoNumber) {
+  // Expression (computed) values are generated server-side on save — never
+  // accepted from the client, so the required gate must not block creates.
+  const isComputed = (field.logicalType || '').toLowerCase() === 'expression';
+
+  if (field.isRequired && isEmptyValue(value) && !isAutoNumber && !isComputed) {
     issues.push('This field is required');
   }
 
@@ -223,6 +227,12 @@ export function sanitizeWritePayload(
   for (const field of fields) {
     const key = field.fieldName;
     if (!key || !Object.prototype.hasOwnProperty.call(out, key)) continue;
+    // Expression (computed) values are always generated server-side on save.
+    // Drop any client-supplied value — computed fields are read-only.
+    if ((field.logicalType || '').toLowerCase() === 'expression') {
+      delete out[key];
+      continue;
+    }
     const val = out[key];
     if (typeof val !== 'string' || val.trim() !== '') continue;
     const lt = (field.logicalType || '').toLowerCase();
@@ -231,6 +241,12 @@ export function sanitizeWritePayload(
     // (not null) so create generates the next value and edit preserves the stored
     // one — the sequence is never executed on update.
     if (lt === 'auto_number') {
+      delete out[key];
+      continue;
+    }
+    // Expression (computed) values are always generated server-side on save.
+    // Drop any client-supplied value — computed fields are read-only.
+    if (lt === 'expression') {
       delete out[key];
       continue;
     }

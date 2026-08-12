@@ -1,3 +1,6 @@
+/**
+ * Relation — FK to another model's record (VARCHAR(30) id, FK constraint).
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

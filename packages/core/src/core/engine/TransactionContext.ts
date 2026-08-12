@@ -1,3 +1,11 @@
+/**
+ * TransactionContext — the RLS execution wrapper.
+ *
+ * Opens a transaction, injects the session identity (current_user_id /
+ * current_tenant_id / current_team_id) via SET LOCAL, switches to the
+ * rls_user role (so FORCE RLS policies apply), runs the callback, commits.
+ * Every tenant-data query in the platform runs inside one of these.
+ */
 import { Pool, PoolClient } from 'pg';
 import { ConnectionManager } from './ConnectionManager';
 import { getSession } from '@/lib/auth/session';

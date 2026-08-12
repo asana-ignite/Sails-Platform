@@ -27,6 +27,37 @@ export const FIELD_TYPE_REGISTRY: FieldTypeMetadata[] = [
     ]
   },
   {
+    type: 'expression',
+    label: 'Expression',
+    description: 'Calculated value from a JSONata formula — evaluated automatically whenever the record (or a related record it references) is saved',
+    iconName: 'Sigma',
+    physicalType: 'text',
+    parametersSchema: [
+      {
+        name: 'resultType',
+        label: 'Result Type',
+        type: 'select',
+        required: true,
+        defaultValue: 'number',
+        options: [
+          { label: 'Number', value: 'number' },
+          { label: 'Text', value: 'text' },
+          { label: 'Boolean', value: 'boolean' },
+          { label: 'Date / Time', value: 'date' }
+        ],
+        description: 'Physical column type. The formula result is converted to this type when stored.'
+      },
+      {
+        name: 'expression',
+        label: 'JSONata Formula',
+        type: 'textarea',
+        required: true,
+        placeholder: 'e.g. price * quantity  or  $sum(orderLines.amount)',
+        description: 'JSONata expression evaluated against the record. Reference related records through their relation field names.'
+      }
+    ]
+  },
+  {
     type: 'number',
     label: 'Number',
     description: 'Whole number integer value',

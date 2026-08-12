@@ -17,6 +17,7 @@ import '@sails/plugin-script';
 import '@sails/plugin-approval';
 import { buildPluginSDK, loadThirdPartyPlugins } from './loader';
 import { startWorkflowScheduler } from '@/core/engine/WorkflowScheduler';
+import { startComputedRecomputeWorker } from '@/core/engine/ComputedRecomputeWorker';
 
 let initialised = false;
 
@@ -34,6 +35,11 @@ export function initPlugins(): void {
 
   // Completion engine: drives every running instance toward a terminal state.
   startWorkflowScheduler();
+
+  // Expression-field recompute engine: drains the recompute queue written by
+  // triggers on referenced tables (cross-model recalculation on related
+  // record changes).
+  startComputedRecomputeWorker();
 }
 
 // Auto-run on first import — idempotent via `initialised` flag.

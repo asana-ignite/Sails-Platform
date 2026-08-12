@@ -1,3 +1,7 @@
+/**
+ * NumberFormatInput — numeric input with thousands separators + decimal
+ * clamping (shared by Number/Decimal/Currency/Percent controls).
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import type { SailsFieldDefinition } from '@sails/shared';
 import {

@@ -1,3 +1,6 @@
+/**
+ * sails-btn styled button (primary/ghost/danger/sm…).
+ */
 import React from 'react';
 import './Button.css';
 

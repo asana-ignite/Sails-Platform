@@ -1,3 +1,8 @@
+/**
+ * contextMacros — session/workflow context macros for filters and
+ * conditions (@me, @today, @wf.requestor, @var.<name>, ...). Resolved by
+ * filterPreprocess before rules reach QueryLayer.
+ */
 import { isNPeriodMacro } from '@sails/shared';
 
 /**

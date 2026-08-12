@@ -1,3 +1,8 @@
+/**
+ * knex.ts — the central PostgreSQL connection pool (pg, not knex despite
+ * the name). Every raw query in the platform goes through this pool;
+ * `TransactionContext` borrows clients from it for RLS-scoped transactions.
+ */
 import { Pool } from 'pg';
 
 let connectionString = process.env.DATABASE_URL;

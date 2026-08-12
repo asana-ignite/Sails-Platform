@@ -1,3 +1,7 @@
+/**
+ * useClickOutside — closes popovers/modals when the pointer leaves the
+ * referenced element.
+ */
 import { useEffect } from 'react';
 
 export const useClickOutside = (ref: React.RefObject<HTMLElement>, callback: () => void) => {

@@ -1,3 +1,8 @@
+/**
+ * ConsoleContext — the console shell state: apps/menus loaded from
+ * /api/console/config, page header/title controls, theme and navigation
+ * helpers. Sidebar and page titles subscribe to this context.
+ */
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ConsoleApp, ConsoleMenu, ConsoleWidget } from '@sails/shared';
 

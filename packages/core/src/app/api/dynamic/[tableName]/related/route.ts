@@ -1,3 +1,7 @@
+/**
+ * Related records for Related-List blocks: rows of a child model whose FK
+ * points at the parent record, using the configured child LIST view.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/knex';
 import { db } from '@/lib/db';

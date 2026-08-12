@@ -37,6 +37,11 @@ export {
 } from './numbers';
 export { logicalTypeToJsonSchema, collectionValueSchema, validateCollectionValue, validateRecordValue } from './workflowSchema';
 export type { CollectionColumn, CollectionVarShape } from './workflowSchema';
+export { EXPRESSION_FUNCTIONS, EXPRESSION_FUNCTION_DOCS, registerExpressionFunctions } from './expressionFunctions';
+export type { ExpressionFunction, ExpressionFunctionDoc } from './expressionFunctions';
+export { coerceExpressionResult, expressionResultType } from './expressionEvaluation';
+export type { ExpressionResultType } from './expressionEvaluation';
+import type { ExpressionResultType } from './expressionEvaluation';
 
 export {
   WORKFLOW_EVENT_CONFIGS,
@@ -274,6 +279,7 @@ export const LOGICAL_TYPES = [
   'attachment',
   'lat_lng',
   'auto_number',
+  'expression',
 ] as const;
 
 export const LOGICAL_FIELD_TYPES = LOGICAL_TYPES;
@@ -444,6 +450,25 @@ export interface AutoNumberFieldConfig {
   digits?: number;
 }
 
+export interface ExpressionFieldDependency {
+  /** Physical table name of the referenced related data model. */
+  targetTable: string;
+  /** Field name of the relation/lookup field used to reach the related record(s). */
+  relationField: string;
+  /** True for rollup references ($related('child','fk')): the FK lives on the
+   *  referenced (child) table and points back at this record. */
+  reverse?: boolean;
+}
+
+export interface ExpressionFieldConfig {
+  /** JSONata expression — evaluated server-side on every save. */
+  expression?: string;
+  /** Physical storage type of the computed result. */
+  resultType?: ExpressionResultType;
+  /** Relation fields referenced by the expression (used to drive recompute). */
+  dependencies?: ExpressionFieldDependency[];
+}
+
 export type SailsFieldConfig =
   | ShortTextFieldConfig
   | LongTextFieldConfig
@@ -461,6 +486,7 @@ export type SailsFieldConfig =
   | SelectFieldConfig
   | RelationFieldConfig
   | AutoNumberFieldConfig
+  | ExpressionFieldConfig
   | Record<string, any>;
 
 // ─── Page Layout Contracts ─────────────────────────────────────
@@ -553,9 +579,13 @@ export interface LayoutColumn {
   targetDetailLayoutId?: string;
 }
 
+export type AggregateOp = 'sum' | 'avg' | 'min' | 'max' | 'count';
+
 export interface SummaryField {
   id: string;
   fieldId: string;
+  /** Aggregation applied by the list engine over all matching rows. */
+  aggregate?: AggregateOp;
 }
 
 export interface LayoutFilter {

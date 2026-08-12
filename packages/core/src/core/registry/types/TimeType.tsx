@@ -1,3 +1,6 @@
+/**
+ * Time — clock time.
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

@@ -1,3 +1,6 @@
+/**
+ * DateControl — calendar date input.
+ */
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';

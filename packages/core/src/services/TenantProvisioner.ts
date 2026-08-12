@@ -1,3 +1,12 @@
+/**
+ * TenantProvisioner — the full new-tenant bootstrap pipeline.
+ *
+ * 1. Creates the tenant schema (tenant_<slug>) with RLS + grants,
+ * 2. seeds system tables (wf_* workflow tables, menus, apps, layouts),
+ * 3. creates the admin user + teams/positions,
+ * 4. seeds capabilities and default admin navigation.
+ * Called by the tenant-creation CLI/API only — never at runtime request time.
+ */
 import { db } from '../lib/db';
 import { AlchemaCore } from '../core/engine/AlchemaCore';
 import { Pool } from 'pg';

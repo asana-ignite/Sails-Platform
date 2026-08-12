@@ -1,3 +1,6 @@
+/**
+ * UiCheckboxCell — row selection checkbox cell.
+ */
 import React from 'react';
 
 /** Checkbox header cell (select-all) or body cell (row select). */

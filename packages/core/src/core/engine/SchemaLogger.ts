@@ -1,3 +1,8 @@
+/**
+ * SchemaLogger — fire-and-forget DDL + system-event audit writer.
+ * DDL statements executed by AlchemaCore are logged to core.ddl_logs and
+ * logical metadata events to core.system_event_logs (both tenant-scoped).
+ */
 import { Pool } from 'pg';
 import { ConnectionManager } from './ConnectionManager';
 import format from 'pg-format';

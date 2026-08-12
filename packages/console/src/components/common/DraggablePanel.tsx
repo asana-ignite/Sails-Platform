@@ -1,3 +1,7 @@
+/**
+ * DraggablePanel — docked/floating side panel wrapper (Layout Studio
+ * palette + properties panel, Workflow Studio panels) with resize handles.
+ */
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 
 interface DraggablePanelProps {

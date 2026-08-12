@@ -1,3 +1,6 @@
+/**
+ * MOCKUP — event configuration form (prototype).
+ */
 import React from 'react';
 import { Braces, Code2 } from 'lucide-react';
 import { MOCK_MODELS, ROUTER_TYPES } from '../constants';

@@ -1,3 +1,6 @@
+/**
+ * Activate a package for the tenant (seeds capabilities/menus).
+ */
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { TenantProvisioner } from '../../../../../services/TenantProvisioner';

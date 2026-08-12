@@ -1,3 +1,6 @@
+/**
+ * MOCKUP — workflow prototype constants (event types, colors).
+ */
 import React from 'react';
 import {
   User, Users, Briefcase, Shield, Hash,

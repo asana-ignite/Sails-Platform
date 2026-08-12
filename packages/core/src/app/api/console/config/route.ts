@@ -1,3 +1,8 @@
+/**
+ * Console bootstrap config: the tenant's apps + sidebar menus that drive the
+ * ConsoleContext/Sidebar. DB-driven navigation — empty DB falls back to mock
+ * data so the UI never renders blank.
+ */
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAppSession } from '@/lib/auth/session';

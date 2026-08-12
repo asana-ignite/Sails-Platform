@@ -1,3 +1,6 @@
+/**
+ * BooleanControl — toggle / checkbox / dropdown variants.
+ */
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import { CustomSelect } from '../../../components/common/CustomSelect';

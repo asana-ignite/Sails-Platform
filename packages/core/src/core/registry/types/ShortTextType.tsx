@@ -1,3 +1,6 @@
+/**
+ * Short Text — single-line VARCHAR(255) with max-length/format presets.
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

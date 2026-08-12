@@ -1,3 +1,4 @@
+/* CS admin — LINE OA integration. */
 import React from 'react';
 
 const LineIntegrationAdmin: React.FC = () => {

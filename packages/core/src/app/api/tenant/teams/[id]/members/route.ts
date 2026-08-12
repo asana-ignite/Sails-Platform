@@ -1,3 +1,6 @@
+/**
+ * Team membership (add/remove users).
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth/session';

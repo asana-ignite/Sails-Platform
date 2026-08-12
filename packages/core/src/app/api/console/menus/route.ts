@@ -1,3 +1,6 @@
+/**
+ * Sidebar menu CRUD (links, folders, ordering, visibility).
+ */
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';

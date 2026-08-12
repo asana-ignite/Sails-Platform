@@ -119,6 +119,39 @@ export const JSONATA_SNIPPETS: Snippet[] = [
     { token: 'n', kind: 'field', types: ['number'] },
   ] },
 
+  // Date Time (first-party function library — $addDays, $diffDays, $formatDate…)
+  { id: 'jt-adddays', category: 'Date Time', label: 'Date + N days', description: 'Due date / follow-up date', template: '$addDays(??date??, ??n??)', friendly: 'AddDays(??date??, ??n??)', placeholders: [
+    { token: 'date', kind: 'field', types: ['date'] },
+    { token: 'n', kind: 'number' },
+  ] },
+  { id: 'jt-addmonths', category: 'Date Time', label: 'Date + N months', description: 'Billing cycle / expiry date', template: '$addMonths(??date??, ??n??)', friendly: 'AddMonths(??date??, ??n??)', placeholders: [
+    { token: 'date', kind: 'field', types: ['date'] },
+    { token: 'n', kind: 'number' },
+  ] },
+  { id: 'jt-diffdays', category: 'Date Time', label: 'Days between', description: 'Days overdue / remaining', template: '$diffDays(??a??, ??b??)', friendly: 'DiffDays(??a??, ??b??)', placeholders: [
+    { token: 'a', kind: 'field', types: ['date'] },
+    { token: 'b', kind: 'field', types: ['date'] },
+  ] },
+  { id: 'jt-age', category: 'Date Time', label: 'Age in years', description: 'Full years since a date', template: '$ageYears(??birthdate??)', friendly: 'AgeYears(??birthdate??)', placeholders: [
+    { token: 'birthdate', kind: 'field', types: ['date'] },
+  ] },
+  { id: 'jt-startmonth', category: 'Date Time', label: 'Start of month', description: 'First day of the month', template: '$startOfMonth(??date??)', friendly: 'StartOfMonth(??date??)', placeholders: [
+    { token: 'date', kind: 'field', types: ['date'] },
+  ] },
+  { id: 'jt-fmtdate', category: 'Date Time', label: 'Format date', description: "Tokens: yyyy MM dd HH mm MMM ddd", template: '$formatDate(??date??, \'dd/MM/yyyy\')', friendly: "FormatDate(??date??, 'dd/MM/yyyy')", placeholders: [
+    { token: 'date', kind: 'field', types: ['date'] },
+  ] },
+  { id: 'jt-overdue', category: 'Date Time', label: 'Days overdue (if any)', description: 'Days past due, 0 when not', template: '($diffDays(??due_date??, $now()) > 0 ? $diffDays(??due_date??, $now()) : 0)', friendly: "if(??due_date?? < now()) then DiffDays(??due_date??, now()) else 0", placeholders: [
+    { token: 'due_date', kind: 'field', types: ['date'] },
+  ] },
+  { id: 'jt-weekend', category: 'Date Time', label: 'Is weekend?', description: 'True for Sat / Sun', template: '$isWeekend(??date??)', friendly: 'IsWeekend(??date??)', placeholders: [
+    { token: 'date', kind: 'field', types: ['date'] },
+  ] },
+  { id: 'jt-today', category: 'Date Time', label: 'Start of today', description: 'Midnight today (UTC)', template: '$today()', placeholders: [] },
+  { id: 'jt-dayname', category: 'Date Time', label: 'Weekday name', description: 'e.g. "Monday"', template: '$weekdayName(??date??)', friendly: 'WeekdayName(??date??)', placeholders: [
+    { token: 'date', kind: 'field', types: ['date'] },
+  ] },
+
   // Logic
 { id: 'jt-ternary', category: 'Logic', label: 'If / then / else', description: 'Pick one of two values by a condition', template: '??x?? > ??threshold?? ? \'yes\' : \'no\'', friendly: "if(??x?? > ??threshold??) then 'yes' else 'no'", placeholders: [
     { token: 'x', kind: 'field', types: ['number'] },
@@ -155,5 +188,5 @@ export const JSONATA_SNIPPETS: Snippet[] = [
 ];
 
 export const SNIPPET_CATEGORIES = [
-  'Combine', 'Math', 'Text', 'Dates', 'Logic', 'Arrays', 'Objects', 'Conditions', 'Assignment',
+  'Combine', 'Math', 'Text', 'Dates', 'Date Time', 'Logic', 'Arrays', 'Objects', 'Conditions', 'Assignment',
 ];

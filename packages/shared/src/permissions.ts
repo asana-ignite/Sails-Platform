@@ -1,3 +1,11 @@
+/**
+ * System permissions — the static registry of platform capability keys.
+ *
+ * Every entry is a `system.<category>.<action>` key that admin UI surfaces
+ * (permission panels, admin apps, menus) use to gate features. The registry
+ * here is the display metadata (label/description/category); enforcement and
+ * tenant assignment happen server-side via core.object_permissions.
+ */
 export interface PermissionDefinition {
   label: string;
   description: string;

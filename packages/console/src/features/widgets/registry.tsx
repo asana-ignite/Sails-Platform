@@ -1,3 +1,6 @@
+/**
+ * widget registry — maps widget-bar keys to console widget components.
+ */
 import { lazy } from 'react';
 
 /**

@@ -1,3 +1,6 @@
+/**
+ * EmailControl — email input with format validation.
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import { X } from 'lucide-react';

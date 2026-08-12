@@ -1,3 +1,6 @@
+/**
+ * DecimalControl — decimal input with precision handling.
+ */
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import { formatDecimalValue, resolveDecimalPlaces } from '@sails/shared';

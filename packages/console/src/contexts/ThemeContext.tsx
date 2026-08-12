@@ -1,3 +1,6 @@
+/**
+ * ThemeContext — dark/light theme + accent color, persisted per user.
+ */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { hexToRgbChannels, hexToHSL, hslToHex, computeBackgroundTint, computeMatchingPalette, ColorMatchingTechnique } from '../utils/colorUtils';
 import { fetchCached } from '../api/client';

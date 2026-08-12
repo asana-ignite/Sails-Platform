@@ -1,3 +1,7 @@
+/**
+ * Table (data model) CRUD: create (schema + metadata + system fields),
+ * list with fields, for the Object Manager.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getTranslator } from '@/lib/services';

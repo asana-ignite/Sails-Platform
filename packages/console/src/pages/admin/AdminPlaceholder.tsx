@@ -1,3 +1,6 @@
+/**
+ * AdminPlaceholder — generic placeholder for not-yet-built admin surfaces.
+ */
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';

@@ -1,3 +1,8 @@
+/**
+ * registry — maps navigation componentKeys to the React page components
+ * they mount (Sidebar menus resolve through this). Adding a new admin menu
+ * requires registering its component here.
+ */
 import { lazy } from 'react';
 
 /**

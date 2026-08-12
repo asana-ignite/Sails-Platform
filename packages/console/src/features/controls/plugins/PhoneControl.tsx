@@ -1,3 +1,6 @@
+/**
+ * PhoneControl — phone input with country code.
+ */
 import React, { useEffect, useState } from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import { CustomSelect } from '../../../components/common/CustomSelect';

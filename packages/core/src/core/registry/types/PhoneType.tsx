@@ -1,3 +1,6 @@
+/**
+ * Phone — E.164 number with country code.
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

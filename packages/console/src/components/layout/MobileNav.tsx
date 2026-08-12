@@ -1,3 +1,6 @@
+/**
+ * MobileNav — collapsible navigation drawer for small screens.
+ */
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';

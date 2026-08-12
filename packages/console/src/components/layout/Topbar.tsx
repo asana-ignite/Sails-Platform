@@ -1,3 +1,6 @@
+/**
+ * Topbar — page header strip (app switcher, search, user menu).
+ */
 import React, { useState, useRef, useEffect } from 'react';
 import {
    Search, Bell, User, LayoutGrid,

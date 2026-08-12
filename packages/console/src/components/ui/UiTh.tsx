@@ -1,3 +1,6 @@
+/**
+ * UiTh — table header cell with sorting support.
+ */
 import React from 'react';
 import { ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 

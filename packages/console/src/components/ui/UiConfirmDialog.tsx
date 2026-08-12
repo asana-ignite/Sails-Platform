@@ -1,3 +1,6 @@
+/**
+ * UiConfirmDialog — destructive confirmation modal.
+ */
 import React from 'react';
 import { createPortal } from 'react-dom';
 

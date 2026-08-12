@@ -1,3 +1,8 @@
+/**
+ * ObjectManager — Schema Studio: data models (tables) CRUD, field CRUD
+ * with the metadata-driven type wizard (incl. Expression formulas with
+ * JSONata editor), layouts list and permissions surface.
+ */
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDateTimePrefs, formatSystemDateTimeValue, formatGlobalPrefsValue } from '../../utils/systemDateTime';
@@ -55,7 +60,103 @@ import { CustomSelect, SelectOption } from '../../components/common/CustomSelect
 import { DynamicIcon } from '../../components/common/DynamicIcon';
 import { FilterBuilder } from '../../components/common/FilterBuilder';
 import { UiTableCard, UiTable, UiTh, UiTr, UiTd, UiNameCell, UiBadge, UiDateCell, UiActionsMenu, UiActionsItem, UiActionsDivider, UiPagination, UiConfirmDialog } from '../../components/ui';
+import { ExpressionEditor } from '../../components/workflow/ExpressionEditor';
+import type { SuggestionVariable, RecordSchemaMap } from '../../components/workflow/jsonataSuggest';
 import './ObjectManager.css';
+
+/**
+ * Builds the intellisense schema for the Expression editor from the model
+ * being configured: the model's own fields as suggestion variables, plus the
+ * columns of every related model (for `relField.childField` drill-downs).
+ */
+function buildExpressionEditorSchema(tables: SailsTableDefinition[], table: SailsTableDefinition | null): {
+  variables: SuggestionVariable[];
+  recordSchemas: RecordSchemaMap;
+} {
+  const recordSchemas: RecordSchemaMap = {};
+  for (const t of tables) {
+    recordSchemas[t.tableName] = (t.fields || []).map((f) => ({
+      fieldName: f.fieldName,
+      label: f.name || f.fieldName,
+      logicalType: f.logicalType || 'text',
+      targetModel: (f.config as any)?.targetTable || undefined,
+    }));
+  }
+
+  const variables: SuggestionVariable[] = (table?.fields || []).map((f) => ({
+    id: f.id,
+    name: f.fieldName,
+    fieldType: f.logicalType || 'text',
+    targetModel: (f.config as any)?.targetTable || undefined,
+  }));
+
+  return { variables, recordSchemas };
+}
+
+/** Sample record for the expression Test runner (same-record fields only). */
+function buildSampleRecord(fields: any[]): Record<string, any> {
+  const rec: Record<string, any> = {};
+  for (const f of fields || []) {
+    const lt = f.logicalType || 'text';
+    if (['number', 'decimal', 'currency', 'percentage', 'auto_number'].includes(lt)) rec[f.fieldName] = 100;
+    else if (lt === 'boolean') rec[f.fieldName] = true;
+    else if (lt === 'date' || lt === 'datetime') rec[f.fieldName] = new Date().toISOString();
+    else if (lt === 'relation' || lt === 'lookup') rec[f.fieldName] = null;
+    else rec[f.fieldName] = `Sample ${f.name || f.fieldName}`;
+  }
+  return rec;
+}
+
+/** Expression (JSONata) editor block used in the field wizard. */
+const ExpressionParam: React.FC<{
+  tables: SailsTableDefinition[];
+  table: SailsTableDefinition | null;
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+  description?: string;
+  compact?: boolean;
+}> = ({ tables, table, value, onChange, label, description, compact }) => {
+  const { variables, recordSchemas } = useMemo(
+    () => buildExpressionEditorSchema(tables, table),
+    [tables, table]
+  );
+  // The `record.` drill branch — the familiar workflow-style way to pick the
+  // model's own fields (and drill into related records) inside the formula.
+  const recordColumns = useMemo(
+    () =>
+      (table?.fields || []).map((f) => ({
+        fieldName: f.fieldName,
+        label: f.name || f.fieldName,
+        logicalType: f.logicalType || 'text',
+        targetModel: (f.config as any)?.targetTable || undefined,
+      })),
+    [table]
+  );
+  const sample = useMemo(() => buildSampleRecord(table?.fields || []), [table]);
+  return (
+    <div className="om-field-group om-field-group--full">
+      <label className="om-field-label">{label}</label>
+      <ExpressionEditor
+        variables={variables}
+        recordSchemas={recordSchemas}
+        drillRoots={recordColumns.length > 0 ? { record: recordColumns } : undefined}
+        triggerModelName={table?.tableName}
+        sample={sample}
+        value={value || ''}
+        onChange={onChange}
+        compact={compact}
+        hideVariablePicker
+        placeholder="e.g. unit_price * qty  or  $uppercase(name) & ' - ' & $string($round(total, 2))"
+      />
+      {description && (
+        <small style={{ color: 'var(--sails-text-muted)', fontSize: '0.75rem', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+          {description}
+        </small>
+      )}
+    </div>
+  );
+};
 
 const SortIcon: React.FC<{ active: boolean; direction?: 'asc' | 'desc' }> = ({ active, direction }) => {
   if (!active) return <ArrowUpDown size={14} className="om-sort-icon--idle" />;
@@ -1894,6 +1995,24 @@ const ObjectManager: React.FC = () => {
                               </div>
                             )}
 
+                            {newFieldLogicalType === 'expression' && (
+                              <div style={{
+                                padding: '12px 16px',
+                                backgroundColor: 'rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.08)',
+                                border: '1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.25)',
+                                borderRadius: '8px',
+                                marginBottom: '16px'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sails-primary)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
+                                  <Sparkles size={16} />
+                                  <span>{t('admin_object_manager.wizard.expressionGuidance')}</span>
+                                </div>
+                                <p style={{ margin: '0', fontSize: '0.8125rem', color: 'var(--sails-text-main)', lineHeight: '1.4' }}>
+                                  {t('admin_object_manager.wizard.expressionHelp')}
+                                </p>
+                              </div>
+                            )}
+
                             <div className="om-form-grid-2">
                               {activeFieldTypeMeta.parametersSchema.map((param: FieldParameterDefinition) => {
                                 const vw = param.visibleWhen;
@@ -1929,7 +2048,7 @@ const ObjectManager: React.FC = () => {
 
                                 if (param.type === 'select') {
                                   return (
-                                    <div key={param.name} className="om-field-group">
+                                    <div key={param.name} className="om-field-group" style={param.name === 'resultType' ? { gridColumn: '1 / -1' } : undefined}>
                                       <label className="om-field-label">{param.label}</label>
                                       <CustomSelect
                                         size="md"
@@ -2011,6 +2130,21 @@ const ObjectManager: React.FC = () => {
                                         </small>
                                       )}
                                     </div>
+                                  );
+                                }
+
+                                if (param.name === 'expression') {
+                                  return (
+                                    <ExpressionParam
+                                      key={param.name}
+                                      tables={tables}
+                                      table={selectedTable}
+                                      label={param.label}
+                                      description={param.description}
+                                      compact
+                                      value={dynamicConfigValues[param.name]}
+                                      onChange={v => setDynamicConfigValues((prev: any) => ({ ...prev, [param.name]: v }))}
+                                    />
                                   );
                                 }
 
@@ -2268,6 +2402,24 @@ const ObjectManager: React.FC = () => {
                               </div>
                             )}
 
+                            {editFieldLogicalType === 'expression' && (
+                              <div style={{
+                                padding: '12px 16px',
+                                backgroundColor: 'rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.08)',
+                                border: '1px solid rgba(var(--sails-primary-r), var(--sails-primary-g), var(--sails-primary-b), 0.25)',
+                                borderRadius: '8px',
+                                marginBottom: '16px'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sails-primary)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px' }}>
+                                  <Sparkles size={16} />
+                                  <span>{t('admin_object_manager.wizard.expressionGuidance')}</span>
+                                </div>
+                                <p style={{ margin: '0', fontSize: '0.8125rem', color: 'var(--sails-text-main)', lineHeight: '1.4' }}>
+                                  {t('admin_object_manager.wizard.expressionHelp')}
+                                </p>
+                              </div>
+                            )}
+
                             <div className="om-form-grid-2">
                               {activeFieldTypeMeta.parametersSchema.map((param: FieldParameterDefinition) => {
                                 const vw = param.visibleWhen;
@@ -2303,7 +2455,7 @@ const ObjectManager: React.FC = () => {
 
                                 if (param.type === 'select') {
                                   return (
-                                    <div key={param.name} className="om-field-group">
+                                    <div key={param.name} className="om-field-group" style={param.name === 'resultType' ? { gridColumn: '1 / -1' } : undefined}>
                                       <label className="om-field-label">{param.label}</label>
                                       <CustomSelect
                                         size="md"
@@ -2385,6 +2537,21 @@ const ObjectManager: React.FC = () => {
                                         </small>
                                       )}
                                     </div>
+                                  );
+                                }
+
+                                if (param.name === 'expression') {
+                                  return (
+                                    <ExpressionParam
+                                      key={param.name}
+                                      tables={tables}
+                                      table={selectedTable}
+                                      label={param.label}
+                                      description={param.description}
+                                      compact
+                                      value={editDynamicConfigValues[param.name]}
+                                      onChange={v => setEditDynamicConfigValues((prev: any) => ({ ...prev, [param.name]: v }))}
+                                    />
                                   );
                                 }
 

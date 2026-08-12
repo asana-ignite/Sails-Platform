@@ -1,3 +1,6 @@
+/**
+ * AppPluginShell — the shell that mounts the active console app/page plugin.
+ */
 import React from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';

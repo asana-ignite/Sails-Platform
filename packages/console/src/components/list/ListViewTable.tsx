@@ -1,3 +1,8 @@
+/**
+ * ListViewTable — the desktop table rendering of a list view: sortable
+ * headers with filter popovers, row selection, inline edit/create/delete,
+ * primary links, and the aggregate totals row.
+ */
 import React, { useCallback, useMemo, useRef } from 'react';
 import {
   ArrowUp,
@@ -86,6 +91,9 @@ export interface ListViewTableProps {
   onRequestDelete?: (rec: any) => void;
   onCancelDelete?: () => void;
   onConfirmDelete?: () => void;
+
+  /** Live aggregate values from the server ({fieldName, aggregate, value}[]). */
+  aggregates?: { fieldName: string; aggregate: string; value: any }[] | null;
 }
 
 const NUMERIC_COLUMN_TYPES = new Set(['number', 'decimal', 'currency', 'percentage', 'percent']);
@@ -119,6 +127,9 @@ export function getVisibleColumns(config: any, fields: SailsFieldDefinition[]): 
         position: idx,
       }));
   return [...raw]
+    // Columns whose model field no longer exists are dropped entirely —
+    // a deleted field must never leave an empty column behind.
+    .filter((c: any) => !c.fieldId || fields.some((f) => f.id === c.fieldId || f.fieldName === c.fieldId))
     .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
     .filter((c: any) => c.visible !== false);
 }
@@ -214,6 +225,7 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
   onRequestDelete,
   onCancelDelete,
   onConfirmDelete,
+  aggregates,
 }) => {
   const datetimePrefs = useDateTimePrefs();
   const { users: tenantUsers } = useTenantUsers();
@@ -254,8 +266,12 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
   }, [rawCols]);
 
   const visibleListColumns = useMemo(() => {
-    return sortedListColumns.filter((c: any) => c.visible !== false);
-  }, [sortedListColumns]);
+    // Columns whose model field no longer exists are dropped entirely — a
+    // deleted field must never leave an empty column in the list.
+    return sortedListColumns.filter((c: any) =>
+      c.visible !== false && (!c.fieldId || fields.some((f) => f.id === c.fieldId || f.fieldName === c.fieldId))
+    );
+  }, [sortedListColumns, fields]);
 
   /** Field defs of visible columns that are user-editable (non-system). */
   const editableFields = useMemo(() => {
@@ -667,6 +683,36 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                   );
                 })}
               </tbody>
+              {aggregates && aggregates.length > 0 && (
+                <tfoot>
+                  <tr className="ls-totals-row">
+                    {allowMultiSelect && <td className="ls-rtd ls-rtd--cb" />}
+                    {visibleListColumns.map((col) => {
+                      const f = fields.find((ff) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
+                      const agg = f ? aggregates.find((a) => a.fieldName === f.fieldName) : null;
+                      const hasValue = agg && agg.value !== null && agg.value !== undefined && agg.value !== '';
+                      if (!hasValue) {
+                        return (
+                          <td key={col.id} className="ls-rtd" style={{ textAlign: col.alignment || 'left' }} />
+                        );
+                      }
+                      const num = Number(agg.value);
+                      const text = agg.aggregate === 'count'
+                        ? new Intl.NumberFormat().format(Number.isFinite(num) ? num : 0)
+                        : f
+                          ? formatDecimalValue(num, f.config, f.logicalType)
+                          : String(agg.value);
+                      return (
+                        <td key={col.id} className="ls-rtd" style={{ textAlign: col.alignment || (f && NUMERIC_COLUMN_TYPES.has(f.logicalType) ? 'right' : 'left') }}>
+                          <span className="ls-totals-op">{agg.aggregate}</span>
+                          {text}
+                        </td>
+                      );
+                    })}
+                    {(inlineEnabled || allowInlineDelete) && <td className="ls-rtd ls-rtd--actions" />}
+                  </tr>
+                </tfoot>
+              )}
             </table>
 
             {totalRecords === 0 && !creatingRow && (

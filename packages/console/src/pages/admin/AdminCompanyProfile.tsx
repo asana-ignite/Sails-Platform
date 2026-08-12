@@ -1,3 +1,6 @@
+/**
+ * AdminCompanyProfile — tenant branding/legal profile editor.
+ */
 import React, { useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { COUNTRY_OPTIONS } from '@sails/shared';

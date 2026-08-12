@@ -1,3 +1,8 @@
+/**
+ * WorkflowEventWizard — step-by-step configuration modal for a workflow
+ * event node (Record/Expression/Notification/Script/Approval) incl. field
+ * mapping, filter groups and JSONata expressions.
+ */
 import React, { useState } from 'react';
 import { AlertTriangle, AlignLeft, ArrowDown, ArrowRight, ArrowUp, Calendar, CheckCircle2, ChevronDown, ChevronRight, Clock, CornerUpLeft, Database, DollarSign, Eye, FileText, Filter, Fingerprint, GitMerge, Hash, Link2, List, ListChecks, Mail, MapPin, Paperclip, Pencil, Percent, Phone, Plus, Search, ToggleLeft, Trash2, Type, User, X, type LucideIcon } from 'lucide-react';
 import type {

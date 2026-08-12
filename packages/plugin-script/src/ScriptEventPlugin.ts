@@ -1,3 +1,7 @@
+/**
+ * ScriptEventPlugin — BYOC script event executor (runs tenant scripts in
+ * the sandbox via ScriptSandbox).
+ */
 import type { WorkflowEventPlugin } from '@sails/plugin-sdk';
 import { db } from 'sails-core/src/lib/db';
 import { fail } from 'sails-core/src/core/engine/WorkflowEventPlugins';

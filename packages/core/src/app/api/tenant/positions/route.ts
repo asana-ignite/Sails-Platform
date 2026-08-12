@@ -1,3 +1,6 @@
+/**
+ * Position (job role) CRUD + grant object permissions per position.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession, requireAdmin } from '@/lib/auth/session';

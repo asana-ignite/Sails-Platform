@@ -1,3 +1,6 @@
+/**
+ * Currency — money value with symbol.
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

@@ -1,3 +1,6 @@
+/**
+ * Tenant company profile (branding, legal, address) read/update.
+ */
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';

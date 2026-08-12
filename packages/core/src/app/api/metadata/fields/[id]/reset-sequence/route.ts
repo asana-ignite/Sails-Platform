@@ -1,3 +1,6 @@
+/**
+ * Auto-number sequence reset.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getTranslator } from '@/lib/services';

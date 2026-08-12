@@ -1,3 +1,9 @@
+/**
+ * Package manifests — the static catalogue of platform packages (Sales, Ops,
+ * IAM, Security…). Each manifest declares its capabilities and the admin menu
+ * surface it owns; the console renders these to build the Settings & Admin
+ * section and capability/permission pickers.
+ */
 import { PermissionDefinition } from './permissions';
 
 export interface PackageManifest {

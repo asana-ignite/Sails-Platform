@@ -115,7 +115,7 @@ const recordEventPlugin: WorkflowEventPlugin = {
           const idVal = valueFor(ctx, idEntry, workflowCtx);
           if (idVal != null && idVal !== '') payload.id = idVal;
         }
-        stored = await QueryLayer.insertRecord(pool, schema, model, payload, ses);
+        stored = await QueryLayer.insertRecord(pool, schema, model, payload, ses, meta.table.fields as any[]);
       }
 
       else if (operation === 'update') {
@@ -131,13 +131,13 @@ const recordEventPlugin: WorkflowEventPlugin = {
             jsonbFields: meta.jsonbFields,
           });
           for (const row of rows.rows) {
-            await QueryLayer.updateRecord(pool, schema, model, row.id, data, ses);
+            await QueryLayer.updateRecord(pool, schema, model, row.id, data, ses, meta.table.fields as any[]);
           }
         } else {
           const idEntry = (eventConfig.fieldMapping || []).find((m: any) => m.targetCol === 'id');
           const targetId = idEntry ? (valueFor(ctx, idEntry, workflowCtx) as string) ?? null : resolveTargetId(ctx, eventConfig);
           if (!targetId) return fail(ctx, 'Record Event update requires a target record id (map a source onto the id column, or set a Record Filter)');
-          stored = await QueryLayer.updateRecord(pool, schema, model, targetId, data, ses);
+          stored = await QueryLayer.updateRecord(pool, schema, model, targetId, data, ses, meta.table.fields as any[]);
         }
       }
 
@@ -150,7 +150,7 @@ const recordEventPlugin: WorkflowEventPlugin = {
           if (m.targetCol === 'id') continue;
           payload[m.targetCol] = valueFor(ctx, m, workflowCtx);
         }
-        stored = await QueryLayer.upsertRecord(pool, schema, model, idValue, payload, ses);
+        stored = await QueryLayer.upsertRecord(pool, schema, model, idValue, payload, ses, meta.table.fields as any[]);
       }
 
       else if (operation === 'delete') {

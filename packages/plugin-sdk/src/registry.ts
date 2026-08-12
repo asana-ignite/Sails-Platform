@@ -1,3 +1,7 @@
+/**
+ * registry — the shared workflowEventRegistry singleton that all built-in,
+ * first-party and third-party plugins register into.
+ */
 import type { WorkflowEventPlugin } from './types';
 
 /**

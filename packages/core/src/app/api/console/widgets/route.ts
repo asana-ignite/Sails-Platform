@@ -1,3 +1,6 @@
+/**
+ * Console widget bar items CRUD.
+ */
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';

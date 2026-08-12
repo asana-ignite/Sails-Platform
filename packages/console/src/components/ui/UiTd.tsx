@@ -1,3 +1,6 @@
+/**
+ * UiTd — table body cell.
+ */
 import React from 'react';
 
 export const UiTd: React.FC<{

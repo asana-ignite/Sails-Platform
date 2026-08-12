@@ -1,3 +1,8 @@
+/**
+ * FieldControlRegistry — the console's field-control plugin registry
+ * (logical type → renderable control with mock values). Detail page and
+ * Layout Studio resolve controls through this.
+ */
 import type { FieldControlPlugin } from './types';
 import { LookupControl } from './plugins/LookupControl';
 import { ShortTextControl } from './plugins/ShortTextControl';
@@ -17,6 +22,7 @@ import { AddressControl } from './plugins/AddressControl';
 import { AttachmentControl } from './plugins/AttachmentControl';
 import { LatLngControl } from './plugins/LatLngControl';
 import { AutoNumberControl } from './plugins/AutoNumberControl';
+import { ExpressionControl } from './plugins/ExpressionControl';
 import { PhoneControl } from './plugins/PhoneControl';
 import { EmailControl } from './plugins/EmailControl';
 import { SearchListControl } from './plugins/SearchListControl';
@@ -48,6 +54,7 @@ export class FieldControlRegistry {
     this.register(AttachmentControl);
     this.register(LatLngControl);
     this.register(AutoNumberControl);
+    this.register(ExpressionControl);
     this.register(PhoneControl);
     this.register(EmailControl);
     this.register(SearchListControl);

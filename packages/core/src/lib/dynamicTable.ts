@@ -1,3 +1,8 @@
+/**
+ * dynamicTable — resolves a dynamic table name to its metadata + tenant
+ * schema for the active session. Returns null (→ 404) when the table does
+ * not exist for the session's tenant, so cross-tenant access is impossible.
+ */
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';
 

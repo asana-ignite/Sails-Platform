@@ -1,3 +1,6 @@
+/**
+ * UserControl — user picker (with role filter).
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { User, UserCheck, Search, ChevronDown, X, Check } from 'lucide-react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';

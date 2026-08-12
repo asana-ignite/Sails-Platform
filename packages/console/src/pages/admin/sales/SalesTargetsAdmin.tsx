@@ -1,3 +1,6 @@
+/**
+ * Sales admin — sales targets.
+ */
 import React from 'react';
 
 const SalesTargetsAdmin: React.FC = () => {

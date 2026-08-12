@@ -1,3 +1,6 @@
+/**
+ * AdminConnectedApps — third-party app authorizations.
+ */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 

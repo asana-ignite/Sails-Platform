@@ -1,3 +1,7 @@
+/**
+ * FilterBuilder — Query-Studio style grouped filter builder (and/or rules
+ * over drill paths) shared by list views, workflows and reports.
+ */
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Filter, Check, ChevronDown } from 'lucide-react';
 import CustomSelect from './CustomSelect';

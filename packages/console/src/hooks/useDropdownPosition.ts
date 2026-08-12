@@ -1,3 +1,9 @@
+/**
+ * useDropdownPosition — viewport-aware popover positioning shared by all
+ * flyovers (autocomplete, filter popovers, pickers): measures the panel,
+ * flips up/down by available space, clamps to the viewport, and
+ * re-positions on scroll/resize.
+ */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 export interface DropdownPosition {

@@ -1,3 +1,8 @@
+/**
+ * api/client — console fetch helpers with a metadata response cache
+ * (fetchCached + clearCache). Schema/menu endpoints are cached so pages
+ * don't re-query them on every render; mutations invalidate explicitly.
+ */
 type CacheEntry = {
   data: any;
   expiresAt: number;

@@ -1,3 +1,7 @@
+/**
+ * Field creation — DDL + metadata via TranslatorLayer (incl. Expression
+ * formula validation and recompute-trigger wiring).
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getTranslator } from '@/lib/services';

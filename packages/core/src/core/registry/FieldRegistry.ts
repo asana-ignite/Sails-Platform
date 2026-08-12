@@ -1,3 +1,9 @@
+/**
+ * FieldRegistry — the field-type plugin registry (singleton).
+ * Each plugin (core/registry/types/*) defines the logical type's physical
+ * DDL, zod validation, and React form/table renderers. addFieldDef and
+ * AlchemaCore resolve column types through this registry.
+ */
 import { FieldTypePlugin } from './FieldTypePlugin';
 import { ShortTextType } from './types/ShortTextType';
 import { TextType } from './types/TextType';
@@ -19,6 +25,7 @@ import { AddressType } from './types/AddressType';
 import { AttachmentType } from './types/AttachmentType';
 import { AutoNumberType } from './types/AutoNumberType';
 import { UserType } from './types/UserType';
+import { ExpressionType } from './types/ExpressionType';
 
 export class FieldRegistry {
   private static instance: FieldRegistry;
@@ -28,6 +35,7 @@ export class FieldRegistry {
     this.plugins = new Map();
     // Register default plugins in specified display sequence
     this.register(AutoNumberType);
+    this.register(ExpressionType);
     this.register(NumberType);
     this.register(DecimalType);
     this.register(ShortTextType);

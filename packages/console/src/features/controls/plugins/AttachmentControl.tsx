@@ -1,3 +1,6 @@
+/**
+ * AttachmentControl — file upload with type/size limits.
+ */
 import React, { useRef } from 'react';
 import { Paperclip, FileText, Upload, X } from 'lucide-react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';

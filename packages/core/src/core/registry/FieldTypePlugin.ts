@@ -1,3 +1,8 @@
+/**
+ * FieldTypePlugin — the contract every field type implements:
+ * physical column DDL (getPostgresColumnDefinition), zod schema for input
+ * validation, and React components for form + table rendering.
+ */
 import React from 'react';
 import { FieldParameterDefinition, PhysicalType } from '@sails/shared';
 

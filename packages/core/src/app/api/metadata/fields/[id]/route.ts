@@ -1,3 +1,7 @@
+/**
+ * Field update/delete — TranslatorLayer handles type conversion audits,
+ * layout pruning on delete, and Expression trigger lifecycle.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { getTranslator } from '@/lib/services';
 import { requireAdmin } from '@/lib/auth/session';

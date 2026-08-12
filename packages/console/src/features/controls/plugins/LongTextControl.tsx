@@ -1,3 +1,6 @@
+/**
+ * LongTextControl — multi-line textarea.
+ */
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 

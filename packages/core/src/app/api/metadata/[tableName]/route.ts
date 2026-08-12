@@ -1,3 +1,6 @@
+/**
+ * Metadata for one dynamic table (fields + rules), used by detail pages.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 

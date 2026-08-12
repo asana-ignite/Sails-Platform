@@ -1,3 +1,6 @@
+/**
+ * UserDetailsModal — full user profile modal (permissions, teams, positions).
+ */
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useDateTimePrefs, formatSystemDateTimeValue } from '../../utils/systemDateTime';

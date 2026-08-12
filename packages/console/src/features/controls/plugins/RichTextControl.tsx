@@ -1,3 +1,6 @@
+/**
+ * RichTextControl — rich text editing wrapper.
+ */
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import '../controls.css';

@@ -1,3 +1,7 @@
+/**
+ * FieldControlWrapper — common chrome around a field control (label,
+ * errors, hints).
+ */
 import React from 'react';
 import type { FieldControlProps } from './types';
 import './controls.css';

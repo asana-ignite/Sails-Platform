@@ -1,3 +1,7 @@
+/**
+ * Workflow definition lifecycle (draft/activate/discard/delete) + counts —
+ * the definition studio's save/publish API.
+ */
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';

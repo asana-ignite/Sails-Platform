@@ -1,3 +1,12 @@
+/**
+ * AccessGuard — object-level (RBAC) authorization for dynamic tables.
+ *
+ * Every QueryLayer operation starts here: it checks the session's role
+ * against the table's object_permissions (via core metadata) BEFORE any
+ * SQL runs. Record-level filtering is layered on top by TransactionContext
+ * (RLS). Together: "can this user operate on this table at all" (this
+ * module) + "which rows may they see" (RLS).
+ */
 import { db } from '../../lib/db';
 import { getSession } from '@/lib/auth/session';
 

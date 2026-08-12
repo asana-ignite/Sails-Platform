@@ -125,6 +125,8 @@
       "noParams": "No parameters available for this field type.",
       "autoNumberGuidance": "Auto-number fields automatically generate sequential identifiers for each new record. Configure the format pattern below.",
       "autoNumberHelp": "Use {YYYY} for year, {MM} for month, {DD} for day. Use zeroes for digit padding (e.g., 0000 = 4 digits).",
+      "expressionGuidance": "Calculated automatically — no manual entry",
+      "expressionHelp": "Expression fields evaluate a JSONata formula every time the record is saved. Use field names directly (e.g. unit_price * qty) and reference related records through their relation fields (e.g. rate_ref.rate). The value is recalculated whenever the record — or a related record it references — changes. Cannot reference other Expression fields.",
       "createFieldStep1Desc": "Choose a field type to define the kind of data this field will store.",
       "createFieldStep2Desc": "Configure the field parameters and validation rules.",
       "editFieldStep1Desc": "Choose a new field type to change the kind of data this field stores.",

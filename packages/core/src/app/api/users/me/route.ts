@@ -1,3 +1,6 @@
+/**
+ * Current session user profile (used by the console header/user menu).
+ */
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';

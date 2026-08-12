@@ -402,6 +402,11 @@
     margin-bottom: 16px;
 }
 
+/* Full-width grid item (e.g. the Expression formula editor) */
+.om-field-group--full {
+    grid-column: 1 / -1;
+}
+
 /* Option Source Zone (select field) — radio-selectable cards */
 .om-source-zone {
     border: 1px solid var(--sails-border-color, #cbd5e1);

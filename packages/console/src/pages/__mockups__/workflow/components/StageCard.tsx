@@ -1,3 +1,6 @@
+/**
+ * MOCKUP — workflow stage card (prototype).
+ */
 import React from 'react';
 import { Clock, Filter, Link2, MoveDown, MoveUp, Plus, Trash2 } from 'lucide-react';
 import { ALL_PORTS, EVENT_DEFS, NODE_H, NODE_W, ROUTER_TYPES } from '../constants';

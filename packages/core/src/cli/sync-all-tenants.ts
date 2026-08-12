@@ -1,3 +1,8 @@
+/**
+ * sync-all-tenants — one-off maintenance: re-runs a provisioning step
+ * (menus/capabilities/apps) across every existing tenant. Used after a
+ * platform upgrade that adds new default navigation.
+ */
 import { db } from '../lib/db';
 import { TenantProvisioner } from '../services/TenantProvisioner';
 import { ConnectionManager } from '../core/engine/ConnectionManager';

@@ -1,4 +1,10 @@
 /**
+ * ConnectionManager — resolves the PostgreSQL pool for a tenant schema.
+ * In the current single-database deployment every tenant shares the main
+ * pool; the indirection exists so a future cell/zoning deployment can
+ * swap in per-database pools without touching callers.
+ */
+/**
  * ConnectionManager
  * 
  * A centralized abstraction for resolving database connections.

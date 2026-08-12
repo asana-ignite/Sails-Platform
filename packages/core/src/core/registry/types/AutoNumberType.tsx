@@ -1,3 +1,6 @@
+/**
+ * Auto Number — sequence-generated formatted string (date tokens + zero padding), read-only in forms.
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

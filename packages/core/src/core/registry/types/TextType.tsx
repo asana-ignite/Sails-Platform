@@ -1,3 +1,6 @@
+/**
+ * Text — multi-line plain text (long_text logical type).
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

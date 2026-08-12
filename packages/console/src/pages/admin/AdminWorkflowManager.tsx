@@ -1,3 +1,6 @@
+/**
+ * AdminWorkflowManager — workflow definitions overview (open in Studio).
+ */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { createPortal } from 'react-dom';

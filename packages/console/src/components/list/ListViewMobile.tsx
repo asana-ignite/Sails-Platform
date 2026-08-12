@@ -1,3 +1,7 @@
+/**
+ * ListViewMobile — accordion/card rendering of a list view on small screens
+ * (same data pipeline as ListViewTable).
+ */
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import {
   ChevronDown,

@@ -1,3 +1,6 @@
+/**
+ * CurrencyControl — money input with symbol + decimals.
+ */
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import { formatDecimalValue } from '@sails/shared';

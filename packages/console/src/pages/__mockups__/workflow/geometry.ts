@@ -1,3 +1,6 @@
+/**
+ * MOCKUP — workflow canvas geometry helpers.
+ */
 import { END_H, NODE_H, NODE_W, PORT_DIR } from './constants';
 import type { Port, Pt } from './types';
 

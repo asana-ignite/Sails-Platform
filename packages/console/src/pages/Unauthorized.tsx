@@ -1,3 +1,6 @@
+/**
+ * Unauthorized — 403-style screen for missing permissions.
+ */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert, Home, ArrowLeft } from 'lucide-react';

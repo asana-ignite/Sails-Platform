@@ -1,3 +1,6 @@
+/**
+ * AdminByocModules — BYOC custom module management.
+ */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 

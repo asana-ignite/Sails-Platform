@@ -1,3 +1,7 @@
+/**
+ * DynamicIcon — renders a Lucide icon by string name (stored in metadata,
+ * e.g. field-type icons, app icons).
+ */
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
 import { LucideProps } from 'lucide-react';

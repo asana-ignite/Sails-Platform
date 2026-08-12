@@ -334,6 +334,153 @@ export class AlchemaCore {
     await this.pool.query(resetSql);
     await this.logDdlAction(schemaName, tableName, 'RESET_SEQUENCE', resetSql);
   }
+
+  /**
+   * Deterministic recompute-trigger name for a dependent spec on a target table.
+   * Unique per (dependent table, relation field) so multiple expression fields
+   * referencing the same relationship share one trigger.
+   */
+  computedTriggerName(tableName: string, relationField: string): string {
+    return `trg_computed_${tableName}_${relationField}`;
+  }
+
+  /**
+   * Ensures a BEFORE INSERT/UPDATE/DELETE trigger exists on the *referenced*
+   * table B. The trigger enqueues dependent rows (rows in A whose relation
+   * field points at the changed row) into core.computed_recompute_queue so the
+   * recompute worker refreshes their Expression fields.
+   *
+   * The trigger function is SECURITY DEFINER (runs as the queue-table owner),
+   * so it captures affected ids even for writes by low-privileged roles, and
+   * BEFORE DELETE captures them before the ON DELETE SET NULL cascade erases
+   * the FK linkage.
+   */
+  async ensureComputedTrigger(
+    targetSchema: string,
+    targetTable: string,
+    dependentSchema: string,
+    dependentTable: string,
+    relationField: string
+  ) {
+    const triggerName = this.computedTriggerName(dependentTable, relationField);
+
+    const exists = await this.pool.query(
+      `SELECT 1 FROM pg_trigger t
+         JOIN pg_class c ON t.tgrelid = c.oid
+         JOIN pg_namespace n ON c.relnamespace = n.oid
+        WHERE n.nspname = $1 AND c.relname = $2 AND t.tgname = $3`,
+      [targetSchema, targetTable, triggerName]
+    );
+    if ((exists.rowCount || 0) > 0) return;
+
+    const sql = format(
+      `CREATE TRIGGER %I
+       BEFORE INSERT OR UPDATE OR DELETE ON %I.%I
+       FOR EACH ROW EXECUTE FUNCTION core.enqueue_computed_change(%L, %L, %L)`,
+      triggerName,
+      targetSchema,
+      targetTable,
+      dependentSchema,
+      dependentTable,
+      relationField
+    );
+    await this.pool.query(sql);
+    await this.logDdlAction(targetSchema, targetTable, 'CREATE_TRIGGER', sql);
+  }
+
+  /**
+   * Drops a recompute trigger by dependent spec (no-op when it does not exist).
+   */
+  async dropComputedTrigger(
+    targetSchema: string,
+    targetTable: string,
+    dependentTable: string,
+    relationField: string
+  ) {
+    const triggerName = this.computedTriggerName(dependentTable, relationField);
+    const sql = format('DROP TRIGGER IF EXISTS %I ON %I.%I', triggerName, targetSchema, targetTable);
+    await this.pool.query(sql);
+    await this.logDdlAction(targetSchema, targetTable, 'DROP_TRIGGER', sql);
+  }
+
+  /**
+   * Deterministic reverse-trigger name (rollup dependencies): unique per
+   * (parent table, child FK field) and prefixed so it can never collide with
+   * a forward trigger on the same child table.
+   */
+  computedReverseTriggerName(parentTable: string, fkField: string): string {
+    return `trg_computed_rev_${parentTable}_${fkField}`;
+  }
+
+  /**
+   * Ensures a BEFORE INSERT/UPDATE/DELETE trigger on the *child* table for a
+   * rollup dependency. When a child row is created/updated/deleted, the
+   * PARENT row it references (via the child's FK field) is enqueued for
+   * recompute — powers $related('child_table', 'fk_field') rollups.
+   */
+  async ensureComputedReverseTrigger(
+    childSchema: string,
+    childTable: string,
+    parentSchema: string,
+    parentTable: string,
+    fkField: string
+  ) {
+    const triggerName = this.computedReverseTriggerName(parentTable, fkField);
+
+    const exists = await this.pool.query(
+      `SELECT 1 FROM pg_trigger t
+         JOIN pg_class c ON t.tgrelid = c.oid
+         JOIN pg_namespace n ON c.relnamespace = n.oid
+        WHERE n.nspname = $1 AND c.relname = $2 AND t.tgname = $3`,
+      [childSchema, childTable, triggerName]
+    );
+    if ((exists.rowCount || 0) > 0) return;
+
+    const sql = format(
+      `CREATE TRIGGER %I
+       BEFORE INSERT OR UPDATE OR DELETE ON %I.%I
+       FOR EACH ROW EXECUTE FUNCTION core.enqueue_computed_reverse_change(%L, %L, %L)`,
+      triggerName,
+      childSchema,
+      childTable,
+      parentSchema,
+      parentTable,
+      fkField
+    );
+    await this.pool.query(sql);
+    await this.logDdlAction(childSchema, childTable, 'CREATE_TRIGGER', sql);
+  }
+
+  /**
+   * Drops a reverse recompute trigger by spec (no-op when it does not exist).
+   */
+  async dropComputedReverseTrigger(
+    childSchema: string,
+    childTable: string,
+    parentTable: string,
+    fkField: string
+  ) {
+    const triggerName = this.computedReverseTriggerName(parentTable, fkField);
+    const sql = format('DROP TRIGGER IF EXISTS %I ON %I.%I', triggerName, childSchema, childTable);
+    await this.pool.query(sql);
+    await this.logDdlAction(childSchema, childTable, 'DROP_TRIGGER', sql);
+  }
+
+  /**
+   * Enqueues a whole-table recompute (used when an Expression field is created
+   * or its formula changes). The worker processes record_id IS NULL rows as a
+   * batched full-table pass and clears them once the table is refreshed.
+   */
+  async enqueueFullTableRecompute(schemaName: string, tableName: string) {
+    const sql = format(
+      `INSERT INTO core.computed_recompute_queue (schema_name, table_name, record_id, created_at)
+       VALUES (%L, %L, NULL, NOW())`,
+      schemaName,
+      tableName
+    );
+    await this.pool.query(sql);
+    await this.pool.query(`NOTIFY sails_computed_recompute, ''`);
+  }
 }
 
 /**

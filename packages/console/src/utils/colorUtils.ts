@@ -1,3 +1,7 @@
+/**
+ * colorUtils — hex/HSL conversion and accent-color helpers used by the
+ * theme system and Ghost Glass styling.
+ */
 export function hexToRgb(hex: string): [number, number, number] {
   hex = hex.replace(/^#/, '');
   if (hex.length === 3) {

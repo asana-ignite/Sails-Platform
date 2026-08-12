@@ -1,3 +1,7 @@
+/**
+ * LazyRenderErrorBoundary — catches render errors from field controls so
+ * one broken control never crashes the whole form.
+ */
 import React, { Component, Suspense } from 'react';
 
 const fallbackStyle: React.CSSProperties = {

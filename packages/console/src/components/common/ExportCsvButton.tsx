@@ -1,3 +1,7 @@
+/**
+ * ExportCsvButton — CSV export of the current list view (respects active
+ * filters/search).
+ */
 import React from 'react';
 import { Download } from 'lucide-react';
 import { downloadCsv } from '../../utils/csv';

@@ -1,3 +1,6 @@
+/**
+ * Console Apps — CRUD for the app switcher (apps with menus, widgets).
+ */
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAppSession, requireSession } from '@/lib/auth/session';

@@ -1,3 +1,6 @@
+/**
+ * MobileSearchBar — search entry for small screens.
+ */
 import React from 'react';
 import { Search, X } from 'lucide-react';
 import './MobileSearchBar.css';

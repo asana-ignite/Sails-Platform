@@ -1,3 +1,7 @@
+/**
+ * FieldPathPicker — picker for a field drill-path (model.field.subfield)
+ * used by mapping/condition builders.
+ */
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { GitFork, ChevronRight, ChevronDown, Search, X } from 'lucide-react';

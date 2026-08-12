@@ -1,3 +1,6 @@
+/**
+ * AdminPositionManager — positions (job roles) CRUD + object permissions.
+ */
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';

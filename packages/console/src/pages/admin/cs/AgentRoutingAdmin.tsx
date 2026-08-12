@@ -1,3 +1,4 @@
+/* CS admin — agent routing configuration. */
 import React from 'react';
 
 const AgentRoutingAdmin: React.FC = () => {

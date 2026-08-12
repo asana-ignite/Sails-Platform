@@ -1,3 +1,7 @@
+/**
+ * RelatedListView — the runtime Related-List block: renders child records
+ * whose FK points at the parent record, via /api/dynamic/<child>/related.
+ */
 import React from 'react';
 import { useRecordStack } from '../../contexts/RecordStackContext';
 import { resolveDefaultDetailLayout } from '../../utils/recordNavigation';

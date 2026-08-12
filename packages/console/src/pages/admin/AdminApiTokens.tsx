@@ -1,3 +1,6 @@
+/**
+ * API tokens admin (issue/revoke long-lived service tokens).
+ */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 

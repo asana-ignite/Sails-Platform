@@ -1,3 +1,6 @@
+/**
+ * Permission matrix: per-object read/write scopes for teams/positions/users.
+ */
 import { NextResponse } from 'next/server';
 import { SYSTEM_PERMISSION_REGISTRY } from '@/lib/security/registry';
 import { requireSession } from '@/lib/auth/session';

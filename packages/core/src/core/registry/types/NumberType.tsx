@@ -1,3 +1,6 @@
+/**
+ * Number — whole-number integer column.
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

@@ -1,3 +1,6 @@
+/**
+ * MOCKUP — JSONata expression modal for the workflow prototype.
+ */
 import React from 'react';
 import { CheckCircle2, X } from 'lucide-react';
 import ExpressionEditor from '../../../../components/workflow/ExpressionEditor';

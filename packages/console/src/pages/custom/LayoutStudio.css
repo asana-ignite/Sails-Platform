@@ -421,6 +421,9 @@
   grid-template-columns: repeat(12, 1fr);
   gap: 20px;
   padding: 20px;
+  /* Backfill freed cells — a removed block (deleted model field, manual
+     delete) must never leave an empty hole in the form grid. */
+  grid-auto-flow: dense;
 }
 
 .ls-section__empty {
@@ -478,6 +481,44 @@
 .ls-block--resizing {
   cursor: col-resize;
   user-select: none;
+}
+
+/* ─── Spacer block — reserved empty space between controls ──── */
+
+.ls-block--spacer {
+  padding: 0;
+  border: 2px dashed var(--sails-border, #cbd5e1);
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 16px;
+}
+
+.ls-block--spacer:hover {
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+.ls-spacer__label {
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--sails-text-muted, #94a3b8);
+  user-select: none;
+}
+
+/* Published / previewed forms render the spacer as pure invisible space. */
+.ls-root--preview .ls-block--spacer,
+.ls-root--readonly .ls-block--spacer {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.ls-root--preview .ls-block--spacer .ls-spacer__label,
+.ls-root--readonly .ls-block--spacer .ls-spacer__label {
+  display: none;
 }
 
 /* ─── Block controls bar ────────────────────────────────────── */

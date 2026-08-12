@@ -1,3 +1,6 @@
+/**
+ * Admin API to provision a brand-new tenant (see TenantProvisioner).
+ */
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { TenantProvisioner } from '../../../../services/TenantProvisioner';

@@ -1,3 +1,6 @@
+/**
+ * UiTr — table row.
+ */
 import React from 'react';
 
 export const UiTr: React.FC<{

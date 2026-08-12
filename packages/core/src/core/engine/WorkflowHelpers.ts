@@ -5,6 +5,7 @@
  */
 import { db } from '@/lib/db';
 import { pool } from '@/lib/knex';
+import { registerExpressionFunctions, type ExpressionFunction } from '@sails/shared';
 
 /** Max size of a tenant BYOC script, in bytes (sandbox + API validation). */
 export const MAX_SCRIPT_BYTES = 64 * 1024;
@@ -25,12 +26,16 @@ const jsonataLib: ((expr: string) => any) | null = (() => {
 export async function evaluateJsonata(
   expression: string,
   input: any,
+  extraFunctions?: Record<string, ExpressionFunction>,
 ): Promise<{ ok: boolean; value?: any; error?: string }> {
   if (!jsonataLib) {
     return { ok: false, error: 'JSONata engine is not available — add the jsonata dependency to sails-core' };
   }
   try {
     const expressionFn = jsonataLib(expression);
+    // First-party function library (date/time formulas etc.) — shared with the
+    // console so the editor's Test runner produces identical results.
+    registerExpressionFunctions(expressionFn, extraFunctions);
     const value = await expressionFn.evaluate(input);
     return { ok: true, value };
   } catch (error: any) {

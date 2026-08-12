@@ -706,3 +706,21 @@ model CapabilityDefinition {
   @@map("capability_definitions")
   @@schema("core")
 }
+
+/// Durable queue backing the Expression-field recompute engine. Rows are
+/// written by `core.enqueue_computed_change()` trigger functions on referenced
+/// tables and drained by the in-process recompute worker. A NULL record_id is
+/// a whole-table recompute marker (created when an Expression field is added or
+/// edited). Row-level dedupe happens at drain time (the worker groups by
+/// target and clears all rows once the target is refreshed).
+model ComputedRecomputeQueue {
+  id          String   @id @default(dbgenerated("gen_random_uuid()"))
+  schemaName  String   @map("schema_name")
+  tableName   String   @map("table_name")
+  recordId    String?  @map("record_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("computed_recompute_queue")
+  @@schema("core")
+}

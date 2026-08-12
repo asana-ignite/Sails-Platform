@@ -1,3 +1,8 @@
+/**
+ * MOCKUP — workflow canvas helpers (geometry/sample evaluation).
+ * Prototype-grade; the production implementation lives in
+ * components/workflow/* and pages/custom/WorkflowStudio.tsx.
+ */
 import jsonata from 'jsonata';
 import type {
   BranchCondition, RouteStage, RoutingProcess, WorkflowEvent, WorkflowEventType, WorkflowVariable,

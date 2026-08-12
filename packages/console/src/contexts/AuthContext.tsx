@@ -1,3 +1,8 @@
+/**
+ * AuthContext — session lifecycle for the console: holds the Auth.js
+ * session (user, tenantId, role, teams), sign-in/out, and a loading gate
+ * (ProtectedRoute waits on it before mounting the app).
+ */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface User {

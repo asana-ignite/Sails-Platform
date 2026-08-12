@@ -1,3 +1,8 @@
+/**
+ * Country option lists shared by the console: address country pickers
+ * (COUNTRY_OPTIONS) and phone country dial codes (PHONE_COUNTRY_OPTIONS,
+ * sorted by popularity with flag emoji support).
+ */
 export interface CountryOption { value: string; label: string; }
 
 /** Country with E.164 dial code + ISO-2 code (for flag emoji). */

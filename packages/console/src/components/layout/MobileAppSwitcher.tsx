@@ -1,3 +1,6 @@
+/**
+ * MobileAppSwitcher — app switcher for small screens.
+ */
 import React from 'react';
 import { useConsole } from '../../contexts/ConsoleContext';
 import DynamicIcon from '../common/DynamicIcon';

@@ -1,3 +1,9 @@
+/**
+ * filterPreprocess — prepares Query-Studio filter groups before SQL:
+ * validates field chains against metadata, resolves relation drill-hops
+ * into EXISTS subquery shapes, expands session macros (@me, @today,
+ * @wf.*, @var.*), and resolves record-source subqueries.
+ */
 import { db } from '@/lib/db';
 import type { SessionContext } from '@/lib/auth/session';
 import { FilterGroupRule } from './QueryLayer';

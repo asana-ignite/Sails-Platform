@@ -1,3 +1,6 @@
+/**
+ * IconPicker — searchable Lucide icon chooser for apps/menus.
+ */
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, X } from 'lucide-react';

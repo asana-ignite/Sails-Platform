@@ -1,3 +1,6 @@
+/**
+ * Boolean — true/false toggle.
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

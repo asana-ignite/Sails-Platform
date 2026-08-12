@@ -1,3 +1,6 @@
+/**
+ * NotificationEventPlugin — bell + email notification event executor.
+ */
 import type { WorkflowEventPlugin } from '@sails/plugin-sdk';
 import { fail, referencesWorkflowContext, buildWorkflowCtx } from 'sails-core/src/core/engine/WorkflowEventPlugins';
 import { resolveTenantSchema, logWfAction } from 'sails-core/src/core/engine/WorkflowHelpers';

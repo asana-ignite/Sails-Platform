@@ -1,3 +1,6 @@
+/**
+ * SearchListControl — search-list picker embedding a child LIST view.
+ */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import { X, MoreHorizontal, Search, Database } from 'lucide-react';

@@ -1,3 +1,7 @@
+/**
+ * types — WorkflowEventPlugin / WorkflowEventContext / WorkflowEventResult
+ * contracts: what an event executor receives and returns.
+ */
 import type { WorkflowEventConfigStep } from '@sails/shared';
 
 export type { WorkflowEventType, WorkflowEventConfigStep, WorkflowEventConfigParameter, WorkflowEventConfigParameterType } from '@sails/shared';

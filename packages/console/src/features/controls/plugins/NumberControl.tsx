@@ -1,3 +1,6 @@
+/**
+ * NumberControl — integer input with optional thousands separator.
+ */
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import { formatDecimalValue } from '@sails/shared';

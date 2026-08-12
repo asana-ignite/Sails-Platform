@@ -1,3 +1,6 @@
+/**
+ * ReportDesigner — visual report/formula builder (mockup-grade).
+ */
 import React, { useReducer, useEffect, useMemo, useCallback, useRef, useState } from 'react';
 import { useConsole } from '../../contexts/ConsoleContext';
 import {

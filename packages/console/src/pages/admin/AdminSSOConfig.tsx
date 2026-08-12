@@ -1,3 +1,6 @@
+/**
+ * AdminSSOConfig — SSO/identity provider settings (Google, Entra, SAML).
+ */
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';

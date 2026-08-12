@@ -1,3 +1,6 @@
+/**
+ * WidgetsTab — console widget bar editor for an app.
+ */
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, SwitchCamera } from 'lucide-react';
 import { ConsoleWidget } from '@sails/shared';

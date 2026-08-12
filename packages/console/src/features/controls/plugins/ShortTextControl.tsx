@@ -1,3 +1,6 @@
+/**
+ * ShortTextControl — single-line text input.
+ */
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 

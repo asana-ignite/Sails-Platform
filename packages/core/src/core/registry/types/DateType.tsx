@@ -1,3 +1,6 @@
+/**
+ * Date — calendar date.
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

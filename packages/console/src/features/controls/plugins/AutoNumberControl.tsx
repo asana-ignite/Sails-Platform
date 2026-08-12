@@ -1,3 +1,6 @@
+/**
+ * AutoNumberControl — read-only auto-number display.
+ */
 import React from 'react';
 import { Hash } from 'lucide-react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';

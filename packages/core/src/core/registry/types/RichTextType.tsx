@@ -1,3 +1,6 @@
+/**
+ * Rich Text — WYSIWYG HTML content.
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

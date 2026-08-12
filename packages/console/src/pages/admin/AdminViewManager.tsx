@@ -1,3 +1,6 @@
+/**
+ * AdminViewManager — list view activation/rollback management.
+ */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { createPortal } from 'react-dom';

@@ -11,6 +11,7 @@ import { JSONATA_SNIPPETS, fieldTypeMatches, type Snippet, type SnippetPlacehold
 import { describeJsonata } from './jsonataExplain';
 import { friendlyToJsonata, jsonataToFriendly, buildPlainSuggestions } from './jsonataFriendly';
 import { WorkflowVariablePicker, type PickerVariable, type PickerSchemaMap, type PickerColumn } from './WorkflowVariablePicker';
+import { registerExpressionFunctions } from '@sails/shared';
 import { useDropdownPosition } from '../../hooks/useDropdownPosition';
 import './ExpressionEditor.css';
 
@@ -32,6 +33,8 @@ interface ExpressionEditorProps {
   compact?: boolean;
   /** Show the snippet library panel (modal usage). */
   showSnippets?: boolean;
+  /** Hide the … variable picker corner button (e.g. field-formula editors). */
+  hideVariablePicker?: boolean;
 }
 
 interface PendingFill {
@@ -129,6 +132,7 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   placeholder,
   compact,
   showSnippets,
+  hideVariablePicker,
 }) => {
   const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
   const [suggestIndex, setSuggestIndex] = useState(0);
@@ -217,10 +221,10 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   // OR the workflow-context branches (record / oldRecord / requestor). The
   // studio always supplies drillRoots.requestor, so the button is always
   // available there even for workflows with no variables.
-  const hasPickerTargets = pickerVariables.length > 0
+  const hasPickerTargets = !hideVariablePicker && (pickerVariables.length > 0
     || !!pickerTriggerFields
     || !!drillRoots?.oldRecord
-    || !!drillRoots?.requestor;
+    || !!drillRoots?.requestor);
 
   const [jsonataLib, setJsonataLib] = useState<any>(null);
   const [jsonataLoadError, setJsonataLoadError] = useState<string | null>(null);
@@ -404,6 +408,9 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
     setRunError(null);
     try {
       const expression = jsonataLib(assignment.evalExpr);
+      // First-party function library (date/time formulas) — the same set the
+      // server registers, so Test results always match production evaluation.
+      registerExpressionFunctions(expression);
       const ctx = sample || {};
       const out = await expression.evaluate(ctx);
       setTestResult({ ok: true, text: JSON.stringify(out, null, 2) });

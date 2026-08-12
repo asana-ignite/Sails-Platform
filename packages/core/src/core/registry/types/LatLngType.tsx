@@ -1,3 +1,6 @@
+/**
+ * Lat/Lng — geographic coordinates (jsonb).
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

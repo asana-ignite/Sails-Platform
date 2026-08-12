@@ -1,3 +1,6 @@
+/**
+ * AdminAppManager — console apps CRUD + their menus/widgets.
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';

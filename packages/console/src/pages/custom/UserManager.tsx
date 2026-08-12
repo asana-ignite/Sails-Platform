@@ -1,3 +1,6 @@
+/**
+ * UserManager — tenant users list + invite/roles/positions management.
+ */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';

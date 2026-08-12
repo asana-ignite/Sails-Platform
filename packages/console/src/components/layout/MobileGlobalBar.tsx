@@ -1,3 +1,6 @@
+/**
+ * MobileGlobalBar — bottom/global bar for mobile navigation.
+ */
 import React from 'react';
 import { Grid, Menu, Search, Bell, LayoutGrid, User } from 'lucide-react';
 

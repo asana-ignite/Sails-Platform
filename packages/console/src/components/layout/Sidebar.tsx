@@ -1,3 +1,6 @@
+/**
+ * Sidebar — DB-driven navigation rendered from ConsoleContext menus.
+ */
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';

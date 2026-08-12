@@ -1,3 +1,6 @@
+/**
+ * controls — barrel exports for the field control system.
+ */
 export * from './types';
 export * from './FieldControlRegistry';
 export * from './FieldControlWrapper';
@@ -20,3 +23,4 @@ export * from './plugins/AddressControl';
 export * from './plugins/AttachmentControl';
 export * from './plugins/LatLngControl';
 export * from './plugins/AutoNumberControl';
+export * from './plugins/ExpressionControl';

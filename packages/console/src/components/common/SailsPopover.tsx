@@ -1,3 +1,6 @@
+/**
+ * SailsPopover — positioned popover primitive used by menus and pickers.
+ */
 import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useDropdownPosition, type UseDropdownPositionOptions } from '../../hooks/useDropdownPosition';

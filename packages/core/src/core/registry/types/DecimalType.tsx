@@ -1,3 +1,6 @@
+/**
+ * Decimal — high-precision numeric column.
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

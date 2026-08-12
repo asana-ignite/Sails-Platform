@@ -1,3 +1,7 @@
+/**
+ * Field options endpoint: resolves select/lookup/relation picker options,
+ * including drill-chains through related models.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/knex';
 import { db } from '@/lib/db';

@@ -1,3 +1,6 @@
+/**
+ * AppLayout — the main app shell: sidebar + topbar + routed content.
+ */
 import React, { useState } from 'react';
 import Topbar from './Topbar';
 import Sidebar from './Sidebar';

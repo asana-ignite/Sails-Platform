@@ -1,3 +1,6 @@
+/**
+ * csv — CSV export/import helpers (list view export, record imports).
+ */
 export function escapeCsvField(value: string): string {
   if (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
     return `"${value.replace(/"/g, '""')}"`;

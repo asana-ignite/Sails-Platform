@@ -1,3 +1,8 @@
+/**
+ * CustomSelect — searchable combobox used across the platform (form params,
+ * filter builders, page-size pickers). Renders a flyover option list and
+ * supports keyboard navigation.
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';

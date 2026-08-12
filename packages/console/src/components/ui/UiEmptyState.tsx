@@ -1,3 +1,6 @@
+/**
+ * UiEmptyState — empty table placeholder.
+ */
 import React from 'react';
 
 export const UiEmptyState: React.FC<{

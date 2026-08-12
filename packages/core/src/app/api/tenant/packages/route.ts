@@ -1,3 +1,6 @@
+/**
+ * Installed package catalogue for the tenant.
+ */
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { TenantProvisioner } from '../../../../services/TenantProvisioner';

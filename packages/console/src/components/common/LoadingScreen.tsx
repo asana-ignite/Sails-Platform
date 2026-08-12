@@ -1,3 +1,6 @@
+/**
+ * LoadingScreen — full-page / card loading indicator.
+ */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 

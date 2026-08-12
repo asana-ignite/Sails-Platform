@@ -1,3 +1,6 @@
+/**
+ * PercentControl — percentage input.
+ */
 import React from 'react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import { formatDecimalValue } from '@sails/shared';

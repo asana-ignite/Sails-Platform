@@ -24,6 +24,11 @@ export function logicalTypeToJsonSchema(logicalType?: string | null): Record<str
       return { type: 'number' };
     case 'boolean':
       return { type: 'boolean' };
+    case 'expression':
+      // Expression (computed) fields are typed by their configured resultType.
+      // Without config the runtime value is typically numeric or string — leave
+      // the schema open so validation never rejects a legitimate result.
+      return { type: ['number', 'string', 'boolean', 'null'] };
     case 'date':
       return { type: 'string', format: 'date' };
     case 'datetime':

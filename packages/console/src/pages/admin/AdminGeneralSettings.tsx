@@ -1,3 +1,6 @@
+/**
+ * AdminGeneralSettings — locale/timezone/platform defaults.
+ */
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { HexColorPicker } from 'react-colorful';

@@ -1,3 +1,6 @@
+/**
+ * AdminTestPlugin — plugin SDK test surface.
+ */
 import React from 'react';
 
 const AdminTestPlugin: React.FC = () => {

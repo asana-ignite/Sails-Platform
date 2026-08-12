@@ -1,3 +1,6 @@
+/**
+ * Console App by id — update/delete (system apps guarded).
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';

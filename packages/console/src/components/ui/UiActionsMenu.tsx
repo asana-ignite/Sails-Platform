@@ -1,3 +1,6 @@
+/**
+ * UiActionsMenu — row action menu (edit/delete/…).
+ */
 import React from 'react';
 import { MoreHorizontal } from 'lucide-react';
 

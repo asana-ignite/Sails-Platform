@@ -1,3 +1,6 @@
+/**
+ * Spinner — small inline loading indicator.
+ */
 import React from 'react';
 
 interface SpinnerProps {

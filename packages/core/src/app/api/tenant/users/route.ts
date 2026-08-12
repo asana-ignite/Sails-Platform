@@ -1,3 +1,6 @@
+/**
+ * Tenant user management: invite, list, activate/deactivate, role changes.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession, requireAdmin } from '@/lib/auth/session';

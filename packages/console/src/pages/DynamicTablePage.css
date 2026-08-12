@@ -224,6 +224,32 @@
   border-bottom: 1px solid var(--sails-border-color);
 }
 
+/* Totals row — live aggregate summaries (SUM/AVG/MIN/MAX/COUNT). */
+.sails-dynamic-table .ls-totals-row {
+  background: rgba(var(--sails-primary-r, 59), var(--sails-primary-g, 130), var(--sails-primary-b, 246), 0.06);
+}
+
+.sails-dynamic-table .ls-totals-row .ls-rtd {
+  border-bottom: none;
+  border-top: 2px solid var(--sails-border-color);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sails-dynamic-table .ls-totals-op {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(var(--sails-primary-r, 59), var(--sails-primary-g, 130), var(--sails-primary-b, 246), 0.12);
+  color: var(--sails-primary, #6366f1);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  vertical-align: 1px;
+}
+
 .sails-dynamic-table .ls-primary-link,
 .ls-primary-link {
   color: var(--sails-primary, #6366f1);

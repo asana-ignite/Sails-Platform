@@ -1,3 +1,6 @@
+/**
+ * AddressControl — structured address input (sub-fields).
+ */
 import React from 'react';
 import { COUNTRY_OPTIONS } from '@sails/shared';
 import type { FieldControlPlugin, FieldControlProps } from '../types';

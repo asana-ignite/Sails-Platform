@@ -1,3 +1,7 @@
+/**
+ * ApprovalEventPlugin — approval step executor (creates wf_task rows and
+ * routes decisions back into the running instance).
+ */
 import type { WorkflowEventPlugin, WorkflowEventContext } from '@sails/plugin-sdk';
 import { db } from 'sails-core/src/lib/db';
 import { pool } from 'sails-core/src/lib/knex';

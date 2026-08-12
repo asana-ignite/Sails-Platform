@@ -1,3 +1,6 @@
+/**
+ * Table update/delete (system tables guarded).
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { getTranslator } from '@/lib/services';
 import { requireAdmin } from '@/lib/auth/session';

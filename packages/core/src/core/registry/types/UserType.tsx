@@ -1,3 +1,6 @@
+/**
+ * User — reference to an internal platform user.
+ */
 import React from 'react';
 import { z } from 'zod';
 import { FieldTypePlugin } from '../FieldTypePlugin';

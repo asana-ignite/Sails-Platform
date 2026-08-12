@@ -1,3 +1,8 @@
+/**
+ * Dynamic table API — the workhorse: POST/PATCH/DELETE records and the GET
+ * list pipeline (filters, filterGroups, search, sort, pagination, live
+ * aggregates). All operations run through QueryLayer (RBAC + RLS + audit).
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/knex';
 import { QueryLayer, FilterGroupRule } from '@/core/engine/QueryLayer';
@@ -32,12 +37,15 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Validation failed', issues }, { status: 422 });
     }
 
-    // QueryLayer handles: AccessGuard (RBAC) → TransactionContext (RLS) → Audit Log
+    // QueryLayer handles: AccessGuard (RBAC) → TransactionContext (RLS) → Audit Log.
+    // Field metadata enables Expression (computed) field evaluation on save.
     const newRecord = await QueryLayer.insertRecord(
       pool,
       resolved.schemaName,
       tableName,
-      data
+      data,
+      undefined,
+      resolved.table.fields as any[]
     );
 
     return NextResponse.json(newRecord, { status: 201 });
@@ -147,10 +155,12 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const filtersRaw = searchParams.get('filters');
     const filterGroupsRaw = searchParams.get('filterGroups');
     const sortRaw = searchParams.get('sort');
+    const aggregatesRaw = searchParams.get('aggregates');
 
     let filters: Record<string, string> | undefined;
     let filterGroups: { groupLogic: 'and' | 'or'; rules: FilterGroupRule[] }[] | undefined;
     let sort: { fieldId: string; dir: 'asc' | 'desc' }[] | undefined;
+    let aggregates: { fieldName: string; aggregate: 'sum' | 'avg' | 'min' | 'max' | 'count' }[] | undefined;
 
     if (filtersRaw) {
       try { filters = JSON.parse(filtersRaw); } catch { /* ignore malformed JSON */ }
@@ -165,6 +175,28 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       try {
         const parsed = JSON.parse(sortRaw);
         if (Array.isArray(parsed)) sort = parsed;
+      } catch { /* ignore malformed JSON */ }
+    }
+    if (aggregatesRaw) {
+      try {
+        const parsed = JSON.parse(aggregatesRaw);
+        if (Array.isArray(parsed)) {
+          const tableFields = tableMeta?.fields || [];
+          const findField = (idOrName: string) =>
+            tableFields.find((f: any) => f.id === idOrName || f.fieldName === idOrName);
+          const NUMERIC = new Set(['number', 'decimal', 'currency', 'percentage', 'auto_number']);
+          aggregates = parsed
+            .filter((a: any) => a && a.fieldId && a.aggregate && tableFields.length > 0)
+            .map((a: any) => ({ field: findField(a.fieldId), aggregate: String(a.aggregate).toLowerCase() }))
+            .filter((a: any) => {
+              if (!a.field) return false;
+              if (!['sum', 'avg', 'min', 'max', 'count'].includes(a.aggregate)) return false;
+              // sum/avg require a numeric column; min/max/count work on any type.
+              if (['sum', 'avg'].includes(a.aggregate) && !NUMERIC.has(a.field.logicalType)) return false;
+              return true;
+            })
+            .map((a: any) => ({ fieldName: a.field.fieldName, aggregate: a.aggregate }));
+        }
       } catch { /* ignore malformed JSON */ }
     }
 
@@ -196,6 +228,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       validFields,
       textFields,
       jsonbFields,
+      ...(aggregates && aggregates.length > 0 ? { aggregates } : {}),
     });
 
     return NextResponse.json(
@@ -242,7 +275,9 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       resolved.schemaName,
       tableName,
       recordId,
-      data
+      data,
+      undefined,
+      resolved.table.fields as any[]
     );
 
     return NextResponse.json(updatedRecord, { status: 200 });

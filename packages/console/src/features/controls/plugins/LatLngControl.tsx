@@ -1,3 +1,6 @@
+/**
+ * LatLngControl — latitude/longitude input (optional GPS capture).
+ */
 import React, { useState } from 'react';
 import { MapPinned, LocateFixed } from 'lucide-react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';

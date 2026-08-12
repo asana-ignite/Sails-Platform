@@ -1,3 +1,6 @@
+/**
+ * UiDateCell — formatted date cell.
+ */
 import React from 'react';
 
 export const UiDateCell: React.FC<{ children?: React.ReactNode; className?: string }> = ({ children, className }) => (

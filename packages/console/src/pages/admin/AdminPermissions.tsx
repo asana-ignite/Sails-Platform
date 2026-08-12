@@ -1,3 +1,6 @@
+/**
+ * AdminPermissions — capability/permission matrix viewer.
+ */
 import React from 'react';
 import { SYSTEM_PERMISSION_REGISTRY } from '@sails/shared';
 import './AdminPermissions.css';

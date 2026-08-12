@@ -1,3 +1,8 @@
+/**
+ * BYOC scripts — list/upload custom JS modules that workflow 'script' events
+ * run inside the sandbox (ScriptSandbox). Size-limited, metadata stored in
+ * core.record_scripts.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import vm from 'node:vm';
 import { db } from '@/lib/db';
