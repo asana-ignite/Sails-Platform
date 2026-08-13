@@ -1,0 +1,1085 @@
+/** Form Event Builder — mockup styles (compact / Layout Studio variant) */
+
+/* ─── Root / layout ─────────────────────────────────────────── */
+
+.feb-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--sails-bg-body, #f4f7f9);
+  overflow: hidden;
+}
+
+.feb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  height: 46px;
+  background: var(--sails-bg-card, #ffffff);
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.feb-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sails-primary, #9dcee0);
+  white-space: nowrap;
+}
+
+.feb-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.feb-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.feb-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.feb-toolbar__hint {
+  font-size: 11px;
+  color: var(--sails-text-muted, #94a3b8);
+  margin-right: 6px;
+}
+
+/* ─── Body ──────────────────────────────────────────────────── */
+
+.feb-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.feb-center {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feb-center--compact {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* ─── Buttons / inputs ──────────────────────────────────────── */
+
+.feb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 7px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  background: var(--sails-bg-card, #ffffff);
+  color: var(--sails-text-main, #1e293b);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+
+.feb-btn:hover:not(:disabled) {
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+.feb-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.feb-btn--primary {
+  background: var(--sails-primary, #9dcee0);
+  border-color: var(--sails-primary, #9dcee0);
+  color: #0f172a;
+}
+
+.feb-btn--ghost {
+  background: transparent;
+  color: var(--sails-text-muted, #64748b);
+}
+
+.feb-btn--dashed {
+  border-style: dashed;
+  color: var(--sails-text-muted, #64748b);
+  background: transparent;
+}
+
+.feb-btn--mini {
+  padding: 3px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+}
+
+.feb-btn--sm {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.feb-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.feb-icon-btn:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--sails-text-main, #1e293b);
+}
+
+.feb-icon-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.feb-icon-btn--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+.feb-input {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 9px;
+  font-size: 12px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 6px;
+  background: var(--sails-bg-card, #ffffff);
+  color: var(--sails-text-main, #1e293b);
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.feb-input:focus {
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+.feb-input--mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.feb-input--area {
+  resize: vertical;
+}
+
+.feb-input--wide {
+  flex: 1.6;
+}
+
+/* ─── Cards ─────────────────────────────────────────────────── */
+
+.feb-card {
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feb-card__header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.feb-acc__head {
+  cursor: pointer;
+  user-select: none;
+}
+
+.feb-card__header-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.feb-card__title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.feb-card__hint {
+  font-size: 10.5px;
+  color: var(--sails-text-muted, #94a3b8);
+  margin-left: 2px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feb-card__badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(157, 206, 224, 0.18);
+  color: var(--sails-primary, #2c7f94);
+}
+
+.feb-acc__chev {
+  color: var(--sails-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.feb-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.feb-grid--2 { grid-template-columns: repeat(2, 1fr); }
+.feb-grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+.feb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.feb-field--wide { grid-column: span 2; }
+
+.feb-field__label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--sails-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.feb-hint {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+.feb-hint code {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  background: rgba(148, 163, 184, 0.12);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.feb-seg {
+  display: flex;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 6px;
+  overflow: hidden;
+  height: 30px;
+}
+
+.feb-seg__btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  background: var(--sails-bg-card, #ffffff);
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+}
+
+.feb-seg__btn--on {
+  background: rgba(157, 206, 224, 0.16);
+  color: #0f766e;
+}
+
+/* ─── Action chips strip ────────────────────────────────────── */
+
+.feb-chip-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.feb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  background: var(--sails-bg-card, #ffffff);
+  color: var(--sails-text-main, #1e293b);
+  cursor: pointer;
+  transition: all 0.12s;
+  max-width: 100%;
+}
+
+.feb-chip:hover {
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+.feb-chip--selected {
+  border-color: var(--sails-primary, #9dcee0);
+  box-shadow: 0 0 0 2px rgba(157, 206, 224, 0.22);
+}
+
+.feb-chip__icon {
+  display: flex;
+  align-items: center;
+  color: var(--sails-primary, #2c7f94);
+  flex-shrink: 0;
+}
+
+.feb-chip__label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feb-chip__variant {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--sails-text-muted, #64748b);
+  flex-shrink: 0;
+}
+
+.feb-chip__variant--primary {
+  background: rgba(157, 206, 224, 0.22);
+  color: #0f766e;
+}
+
+.feb-chip__variant--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+.feb-chip__del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.feb-chip__del:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+.feb-builder-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--sails-primary, #2c7f94);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.feb-builder-link:hover {
+  text-decoration: underline;
+}
+
+/* ─── Pre-validations ───────────────────────────────────────── */
+
+.feb-validation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feb-validation .feb-input {
+  flex: 1;
+}
+
+/* ─── Sections ──────────────────────────────────────────────── */
+
+.feb-section {
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.6);
+  overflow: hidden;
+}
+
+.feb-section__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--sails-bg-card, #ffffff);
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+}
+
+.feb-section__num {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sails-primary, #2c7f94);
+  background: rgba(157, 206, 224, 0.16);
+  padding: 2px 6px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.feb-section__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+  white-space: nowrap;
+}
+
+.feb-section__summary {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.feb-section__tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.feb-cond-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px dashed var(--sails-border-color, #e2e8f0);
+  background: transparent;
+  color: var(--sails-text-muted, #64748b);
+  cursor: pointer;
+  transition: all 0.12s;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.feb-cond-toggle:hover {
+  border-color: var(--sails-primary, #9dcee0);
+  color: var(--sails-primary, #2c7f94);
+}
+
+.feb-cond-toggle--on {
+  border-style: solid;
+  border-color: rgba(139, 92, 246, 0.4);
+  background: rgba(139, 92, 246, 0.08);
+  color: #7c3aed;
+}
+
+.feb-section__cond {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: rgba(139, 92, 246, 0.05);
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+}
+
+.feb-section__cond-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #7c3aed;
+  white-space: nowrap;
+}
+
+.feb-section__cond .feb-input {
+  flex: 1;
+}
+
+/* ─── Events ────────────────────────────────────────────────── */
+
+.feb-events {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+}
+
+.feb-events__empty {
+  margin: 0;
+  padding: 8px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--sails-text-muted, #94a3b8);
+  text-align: center;
+}
+
+.feb-event {
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 8px;
+  background: var(--sails-bg-card, #ffffff);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.feb-event:hover {
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+.feb-event--expanded {
+  border-color: var(--sails-primary, #9dcee0);
+  box-shadow: 0 0 0 1px rgba(157, 206, 224, 0.25);
+}
+
+.feb-event--running {
+  border-color: #a855f7;
+}
+
+.feb-event--done {
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.feb-event__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.feb-event__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.feb-event__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.feb-event__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.feb-event__chip--cond {
+  background: rgba(139, 92, 246, 0.12);
+  color: #7c3aed;
+}
+
+.feb-event__chip--store {
+  background: rgba(168, 85, 247, 0.1);
+  color: #9333ea;
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.feb-event__type {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--sails-text-muted, #94a3b8);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.feb-event__tools {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.feb-event__tools .feb-icon-btn {
+  width: 20px;
+  height: 20px;
+}
+
+.feb-event__chev {
+  color: var(--sails-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.feb-event__runstate {
+  flex-shrink: 0;
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+.feb-event__runstate--done {
+  color: #10b981;
+}
+
+.feb-event__runstate--skipped {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+.feb-event__config {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 10px;
+  border-top: 1px dashed var(--sails-border-color, #e2e8f0);
+  background: rgba(248, 250, 252, 0.7);
+}
+
+.feb-mappings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.feb-mapping {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feb-mapping .feb-input {
+  flex: 1;
+}
+
+/* ─── Add event menu ────────────────────────────────────────── */
+
+.feb-add-event {
+  position: relative;
+  padding: 0 10px 9px;
+}
+
+.feb-add-menu {
+  position: absolute;
+  left: 10px;
+  bottom: 38px;
+  z-index: 20;
+  min-width: 220px;
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 9px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.feb-add-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.feb-add-menu__item:hover {
+  background: rgba(157, 206, 224, 0.12);
+}
+
+.feb-add-menu__info {
+  display: flex;
+  flex-direction: column;
+}
+
+.feb-add-menu__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.feb-add-menu__desc {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+/* ─── Run chips / spin ──────────────────────────────────────── */
+
+.feb-spin {
+  animation: feb-rotate 0.9s linear infinite;
+}
+
+@keyframes feb-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.feb-run-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.feb-run-chip--passed {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.feb-run-chip--skipped {
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--sails-text-muted, #64748b);
+}
+
+.feb-run-chip--running {
+  background: rgba(168, 85, 247, 0.12);
+  color: #7c3aed;
+}
+
+/* ─── Empty state ───────────────────────────────────────────── */
+
+.feb-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--sails-text-muted, #94a3b8);
+  padding: 40px 0;
+}
+
+.feb-empty__icon {
+  opacity: 0.5;
+  margin-bottom: 4px;
+}
+
+.feb-empty__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.feb-empty__sub {
+  margin: 0;
+  font-size: 11px;
+}
+
+/* ─── Run bar ───────────────────────────────────────────────── */
+
+.feb-runbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feb-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 7px 10px;
+  border-radius: 7px;
+}
+
+.feb-banner--ok {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.feb-banner--warn {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+/* ─── Inline preview ────────────────────────────────────────── */
+
+.feb-preview-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 10px;
+  background: var(--sails-bg-card, #ffffff);
+  padding: 12px;
+}
+
+.feb-preview__record {
+  border: 1px dashed var(--sails-border-color, #e2e8f0);
+  border-radius: 8px;
+  background: var(--sails-bg-body, #f8fafc);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.feb-preview__record-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.feb-preview__record-meta {
+  font-size: 10.5px;
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+.feb-preview__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--sails-border-color, #e2e8f0);
+}
+
+.feb-preview-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  cursor: default;
+}
+
+.feb-preview-btn--primary {
+  background: var(--sails-primary, #9dcee0);
+  color: #0f172a;
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+.feb-preview-btn--secondary {
+  background: var(--sails-bg-card, #ffffff);
+  border-color: var(--sails-border-color, #e2e8f0);
+  color: var(--sails-text-main, #1e293b);
+}
+
+.feb-preview-btn--danger {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+.feb-preview-btn--ghost {
+  background: transparent;
+  color: var(--sails-text-muted, #64748b);
+}
+
+.feb-preview-btn--ghost-ish {
+  background: var(--sails-bg-card, #ffffff);
+  border-color: var(--sails-border-color, #e2e8f0);
+  color: var(--sails-text-muted, #64748b);
+}
+
+.feb-preview__chain {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feb-preview__gate {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px dashed rgba(245, 158, 11, 0.35);
+}
+
+.feb-preview__gate-icon {
+  display: flex;
+  align-items: center;
+  color: #b45309;
+}
+
+.feb-preview__gate-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.feb-preview__gate .feb-run-chip {
+  margin-left: auto;
+}
+
+.feb-preview__section {
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.feb-preview__section--skipped {
+  opacity: 0.55;
+}
+
+.feb-preview__section-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  background: rgba(248, 250, 252, 0.8);
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+}
+
+.feb-preview__section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.feb-preview__section-cond {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9.5px;
+  color: #7c3aed;
+  background: rgba(139, 92, 246, 0.08);
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: auto;
+}
+
+.feb-preview__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 8px;
+}
+
+.feb-preview__step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 2px;
+}
+
+.feb-preview__step + .feb-preview__step {
+  border-top: 1px dashed var(--sails-border-color, #e2e8f0);
+}
+
+.feb-preview__step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--sails-text-muted, #64748b);
+  flex-shrink: 0;
+}
+
+.feb-preview__step-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.feb-preview__step-label {
+  font-size: 11px;
+  color: var(--sails-text-main, #1e293b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feb-preview__step-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.feb-ok {
+  color: #10b981;
+}
+
+.feb-skip-text {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+.feb-preview__hint {
+  margin: 0;
+  font-size: 9.5px;
+  color: var(--sails-text-muted, #94a3b8);
+  line-height: 1.5;
+}
+

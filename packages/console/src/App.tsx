@@ -27,6 +27,7 @@ const BpmnBuilder = lazy(() => import('./pages/__mockups__/BpmnBuilder'));
 const LayoutStudio = lazy(() => import('./pages/custom/LayoutStudio'));
 const WorkflowStudio = lazy(() => import('./pages/custom/WorkflowStudio'));
 const TableBuilder = lazy(() => import('./pages/__mockups__/TableBuilder'));
+const FormEventBuilder = lazy(() => import('./pages/__mockups__/FormEventBuilder'));
 /**
  * ProtectedRoute
  * Redirects to /login if not authenticated.
@@ -195,6 +196,7 @@ function App() {
             <Route path="/route-builder" element={<RouteBuilder />} />
             <Route path="/bpmn-builder" element={<BpmnBuilder />} />
             <Route path="/table-builder" element={<TableBuilder />} />
+            <Route path="/form-event-builder" element={<FormEventBuilder />} />
             <Route path="/layout-studio/:tableId/:layoutId" element={
               <ProtectedRoute>
                 <DateTimePrefsProvider>
