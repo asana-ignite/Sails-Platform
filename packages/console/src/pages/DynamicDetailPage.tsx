@@ -13,9 +13,11 @@ import {
   Table2,
   Save,
   Loader2,
-  Pencil
+  Pencil,
+  Copy,
+  Trash2
 } from 'lucide-react';
-import type { TableLayout, SailsFieldDefinition, ConsoleMenu } from '@sails/shared';
+import type { TableLayout, SailsFieldDefinition, ConsoleMenu, DetailAction } from '@sails/shared';
 import { isSystemField, SYSTEM_PROTECTED_COLUMNS } from '@sails/shared';
 import LoadingScreen from '../components/common/LoadingScreen';
 import RelatedListView from '../components/common/RelatedListView';
@@ -25,6 +27,9 @@ import type { FieldValidation } from '../features/controls/types';
 import { evaluateExpressionFields } from '../utils/expressionLive';
 import { useConsole } from '../contexts/ConsoleContext';
 import { useRecordStack } from '../contexts/RecordStackContext';
+import { ActionRegistry } from '../features/actions';
+import { UiConfirmDialog } from '../components/ui/UiConfirmDialog';
+import DynamicIcon from '../components/common/DynamicIcon';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
 import './custom/layouts-responsive.css';
@@ -81,11 +86,12 @@ const getDetailRouteParams = (pathname: string, menus: ConsoleMenu[]): DetailRou
 // ── Sub-Component: Page Header ────────────────────────────────
 interface DetailHeaderProps {
   primaryTitle: string;
-  subtitle: string;
   isNewMode: boolean;
   isEditing: boolean;
   saving: boolean;
   canEdit: boolean;
+  allowEdit?: boolean;
+  headerActions?: React.ReactNode;
   onBack: () => void;
   onEdit: () => void;
   onCancelEdit: () => void;
@@ -93,7 +99,7 @@ interface DetailHeaderProps {
 }
 
 const DetailHeader: React.FC<DetailHeaderProps> = memo(
-  ({ primaryTitle, subtitle, isNewMode, isEditing, saving, canEdit, onBack, onEdit, onCancelEdit, showBack = true }) => (
+  ({ primaryTitle, isNewMode, isEditing, saving, canEdit, allowEdit = true, headerActions, onBack, onEdit, onCancelEdit, showBack = true }) => (
     <header className="sails-page-header sails-dynamic-table__header">
       <div className="sails-page-header__left" style={{ pointerEvents: 'auto' }}>
         {showBack && (
@@ -109,7 +115,6 @@ const DetailHeader: React.FC<DetailHeaderProps> = memo(
         )}
         <div>
           <h1 className="sails-page-header__title">{primaryTitle}</h1>
-          <p className="sails-page-header__subtitle">{subtitle}</p>
         </div>
       </div>
       {isNewMode || isEditing ? (
@@ -142,16 +147,19 @@ const DetailHeader: React.FC<DetailHeaderProps> = memo(
           </button>
         </div>
       ) : canEdit ? (
-        <div className="sails-page-header__right" style={{ pointerEvents: 'auto' }}>
-          <button
-            type="button"
-            className="sails-btn sails-btn--primary"
-            onClick={onEdit}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            <Pencil size={16} />
-            <span>Edit</span>
-          </button>
+        <div className="sails-page-header__right" style={{ pointerEvents: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          {headerActions}
+          {allowEdit && (
+            <button
+              type="button"
+              className="sails-btn sails-btn--primary"
+              onClick={onEdit}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <Pencil size={16} />
+              <span>Edit</span>
+            </button>
+          )}
         </div>
       ) : null}
     </header>
@@ -200,6 +208,17 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [saveAttempted, setSaveAttempted] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
+
+  // ── Detail action buttons (Events tab config) ──
+  const [pendingConfirmAction, setPendingConfirmAction] = useState<DetailAction | null>(null);
+  const [cloneDraft, setCloneDraft] = useState<{
+    action: DetailAction;
+    children: { tableName: string; label: string }[];
+    selected: Set<string>;
+  } | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<{ text: string; openId?: string } | null>(null);
 
   const { dataModelId, layoutKey, recordId, isNewMode } = useMemo(() => {
     // 1. Explicit props (stacked record card) override everything else.
@@ -515,6 +534,126 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
     }
   };
 
+  // ── Detail action execution ──
+  const configuredDetailActions = useMemo(() => {
+    if (!config) return [];
+    const list = (config as any).detailActions;
+    return Array.isArray(list) ? (list as DetailAction[]).filter((a) => a.visible !== false) : [];
+  }, [config]);
+
+  const runDetailAction = (action: DetailAction) => {
+    if (actionBusy) return;
+    setActionError(null);
+    setActionMessage(null);
+    const plugin = ActionRegistry.getInstance().getAction(action.actionKey);
+    if (action.actionKey === 'clone') {
+      openCloneDraft(action);
+      return;
+    }
+    if (plugin?.confirm) {
+      setPendingConfirmAction(action);
+      return;
+    }
+    void executeDetailAction(action);
+  };
+
+  const openCloneDraft = async (action: DetailAction) => {
+    setActionBusy(true);
+    try {
+      const data = await fetchCached('/api/metadata/objects', undefined, 60000);
+      const tables: any[] = Array.isArray(data) ? data : (data?.rows || data?.data || []);
+      const tn = tableName || '';
+      const children = tables
+        .filter((t) =>
+          (t.fields || []).some(
+            (f: any) => String(f.config?.targetTable || '') === tn
+          )
+        )
+        .map((t) => ({ tableName: t.tableName, label: t.name || t.tableName }));
+      const related = (config as any)?.relatedRecords || [];
+      const prechecked = new Set<string>();
+      for (const r of related) {
+        const hit = children.find((c) => c.tableName === r.tableName);
+        if (hit) prechecked.add(hit.tableName);
+      }
+      setCloneDraft({ action, children, selected: prechecked });
+    } catch {
+      // fall back to shallow clone if metadata is unavailable
+      void executeDetailAction(action, []);
+      return;
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const executeDetailAction = async (action: DetailAction, include?: string[]) => {
+    setActionBusy(true);
+    setActionError(null);
+    setActionMessage(null);
+    try {
+      const plugin = ActionRegistry.getInstance().getAction(action.actionKey);
+      const ctx: any = {
+        tableId: dataModelId || '',
+        tableName: tableName || '',
+        layoutId: layout?.id,
+        menuPath: baseRoute,
+        embedded: inStack,
+        defaultDetailLayoutKey: layoutKey || undefined,
+        navigate,
+        refetch: () => undefined,
+        notifyRecordsChanged,
+        recordId: recordId || undefined,
+        record: record || undefined,
+        cloneInclude: include,
+      };
+      if (plugin) {
+        await plugin.execute(ctx);
+      }
+
+      // Custom events appended to a standard action run AFTER its fixed step.
+      const extraEvents = (action.sections || []).flatMap((s) => s.events || []);
+      if (extraEvents.length > 0 && tableName) {
+        const body: any = { events: extraEvents };
+        if (action.actionKey === 'delete') {
+          body.snapshot = record || undefined; // pre-delete snapshot for notifications
+        } else if (action.actionKey === 'clone' && ctx.lastResult?.id) {
+          body.recordId = ctx.lastResult.id;
+        } else {
+          body.recordId = recordId || undefined;
+        }
+        const res = await fetch(`/api/dynamic/${tableName}/form-event`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Event chain failed.');
+      }
+
+      if (action.actionKey === 'clone') {
+        const newId = ctx.lastResult?.id;
+        notifyRecordsChanged();
+        if (newId && !inStack) {
+          setRecord(ctx.lastResult);
+          setActionMessage({
+            text: 'Record cloned successfully.',
+            openId: newId,
+          });
+        } else if (inStack) {
+          setActionMessage({ text: 'Record cloned successfully.' });
+        } else {
+          setActionMessage({ text: 'Record cloned successfully.' });
+        }
+      }
+    } catch (err: any) {
+      setActionError(err.message || 'Action failed.');
+    } finally {
+      setActionBusy(false);
+      setPendingConfirmAction(null);
+      setCloneDraft(null);
+    }
+  };
+
   // Browser tab title: "Sails - <primary column value>" (e.g. "Sails - INV-0001").
   // Uses the layout's configured recordTitleField; skipped for stacked cards so
   // the underlying page keeps its tab title. The ConsoleProvider effect re-runs
@@ -579,12 +718,6 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
         ? record[titleField.fieldName]
         : record.name || record.title || record.label || record.id)
     : `Record #${recordId}`;
-
-  const subtitle = isNewMode
-    ? `Creating record using Detail Layout: ${layout?.name || 'Default'}`
-    : layout?.name
-    ? `Detail Layout: ${layout.name}`
-    : 'Record Details';
 
   const userVisibleFields = fields.filter((f) => !isSystemField(f.fieldName || f.id));
   const sections: any[] = (config as any)?.sections?.length > 0 ? (config as any).sections : [{ id: 'default_sec', title: 'Record Properties', columns: 2 }];
@@ -725,11 +858,38 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
       <form onSubmit={handleSaveRecord}>
         <DetailHeader
           primaryTitle={primaryTitle}
-          subtitle={subtitle}
           isNewMode={isNewMode}
           isEditing={isEditing}
           saving={saving}
           canEdit={!isNewMode && !!record}
+          allowEdit={(config as any)?.allowEdit !== false}
+          headerActions={
+            !isNewMode && configuredDetailActions.length > 0 ? (
+              <>
+                {configuredDetailActions.map((a) => {
+                  const plugin = ActionRegistry.getInstance().getAction(a.actionKey);
+                  const variantClass = a.variant === 'primary' ? 'sails-btn--primary'
+                    : a.variant === 'danger' ? 'sails-btn--danger'
+                    : a.variant === 'ghost' ? 'sails-btn--ghost'
+                    : 'sails-btn--secondary';
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className={`sails-btn ${variantClass}`}
+                      disabled={actionBusy}
+                      title={plugin?.description || a.label}
+                      onClick={() => runDetailAction(a)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <DynamicIcon name={a.iconName || plugin?.iconName || 'Zap'} size={15} />
+                      <span>{a.label}</span>
+                    </button>
+                  );
+                })}
+              </>
+            ) : undefined
+          }
           onBack={inStack ? () => requestClose() : () => navigate(-1)}
           onEdit={handleEditRecord}
           onCancelEdit={handleCancelEdit}
@@ -741,6 +901,26 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
             <div className="sails-detail-error-banner">
               <AlertCircle size={18} />
               <span>{saveError}</span>
+            </div>
+          )}
+          {actionError && (
+            <div className="sails-detail-error-banner">
+              <AlertCircle size={18} />
+              <span>{actionError}</span>
+            </div>
+          )}
+          {actionMessage && (
+            <div className="sails-detail-action-toast">
+              <span>{actionMessage.text}</span>
+              {actionMessage.openId && recordId && (
+                <button
+                  type="button"
+                  className="sails-btn sails-btn--ghost sails-btn--sm"
+                  onClick={() => navigate(`${baseRoute}/${layoutKey}/${actionMessage.openId}`)}
+                >
+                  Open record
+                </button>
+              )}
             </div>
           )}
 
@@ -796,6 +976,64 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
           )}
         </section>
       </form>
+
+      {/* ── Standard action: themed confirm (delete) ── */}
+      {pendingConfirmAction && (() => {
+        const plugin = ActionRegistry.getInstance().getAction(pendingConfirmAction.actionKey);
+        const confirm = plugin?.confirm;
+        if (!confirm) return null;
+        return (
+          <UiConfirmDialog
+            open
+            title={confirm.title}
+            icon={<Trash2 size={18} />}
+            body={confirm.message}
+            confirmLabel={confirm.confirmLabel}
+            tone={confirm.tone}
+            loading={actionBusy}
+            onConfirm={() => executeDetailAction(pendingConfirmAction)}
+            onCancel={() => setPendingConfirmAction(null)}
+          />
+        );
+      })()}
+
+      {/* ── Deep Clone dialog ── */}
+      {cloneDraft && (
+        <UiConfirmDialog
+          open
+          title="Deep Clone"
+          icon={<Copy size={18} />}
+          body={
+            <div className="dc-clone-body">
+              <p className="dc-clone-hint">Copy this record and its child records?</p>
+              {cloneDraft.children.length === 0 && (
+                <p className="dc-clone-none">No child models found — the record will be copied as-is.</p>
+              )}
+              {cloneDraft.children.map((c) => (
+                <label key={c.tableName} className="dc-clone-option">
+                  <input
+                    type="checkbox"
+                    checked={cloneDraft.selected.has(c.tableName)}
+                    onChange={() => {
+                      const next = new Set(cloneDraft.selected);
+                      if (next.has(c.tableName)) next.delete(c.tableName);
+                      else next.add(c.tableName);
+                      setCloneDraft({ ...cloneDraft, selected: next });
+                    }}
+                  />
+                  <span className="dc-clone-label">{c.label}</span>
+                  <span className="dc-clone-table">{c.tableName}</span>
+                </label>
+              ))}
+            </div>
+          }
+          tone="primary"
+          confirmLabel="Clone"
+          loading={actionBusy}
+          onConfirm={() => executeDetailAction(cloneDraft.action, Array.from(cloneDraft.selected))}
+          onCancel={() => setCloneDraft(null)}
+        />
+      )}
     </div>
   );
 };

@@ -133,6 +133,37 @@ export async function POST(req: Request) {
       });
     }
 
+    // Seed standard detail actions for new DETAIL/FORM layouts so CRUD/Clone
+    // buttons arrive pre-wired (overridable per layout). Custom chains added
+    // by the caller are respected as-is.
+    let seededConfig = config;
+    const isDetailView = viewType === 'DETAIL' || viewType === 'FORM';
+    const parsedSeed = typeof config === 'string' ? JSON.parse(config) : config;
+    if (isDetailView && (!parsedSeed || !parsedSeed.detailActions)) {
+      const now = Date.now();
+      seededConfig = {
+        ...(parsedSeed || {}),
+        detailActions: [
+          {
+            id: `act_delete_${now}`,
+            actionKey: 'delete',
+            label: 'Delete',
+            variant: 'danger',
+            iconName: 'Trash2',
+            visible: true,
+          },
+          {
+            id: `act_clone_${now}_2`,
+            actionKey: 'clone',
+            label: 'Clone',
+            variant: 'secondary',
+            iconName: 'Copy',
+            visible: true,
+          },
+        ],
+      };
+    }
+
     const layout = await db.tableLayout.create({
       data: {
         tableId: tableId || null,
@@ -143,7 +174,7 @@ export async function POST(req: Request) {
         description,
         isDefault: isDefault || false,
         recordTitleField,
-        config: config || { sections: [], fields: [] },
+        config: seededConfig || { sections: [], fields: [] },
         status: 'draft',
         publishedConfig: null,
       },

@@ -537,6 +537,10 @@ export interface LayoutConfig {
   // Action buttons (toolbar / context)
   actions?: ListAction[];              // List-level toolbar actions (e.g. Create)
   detailActions?: DetailAction[];      // Detail/Form-level header actions (future)
+  /** When false, the Detail View's built-in Edit button is hidden (read-only layouts). */
+  allowEdit?: boolean;
+  /** Row highlight rules for LIST views (evaluated per record at runtime). */
+  rowFormatting?: ConditionalFormatRule[];
 }
 
 /**
@@ -550,17 +554,62 @@ export interface ListAction {
   variant: 'primary' | 'secondary' | 'ghost' | 'danger';
   visible: boolean;
   requiresSelection?: boolean;
+  iconName?: string;
+  /** Optional event chain executed when this toolbar action is clicked. */
+  preValidations?: PreValidation[];
+  sections?: ActionSection[];
+}
+
+/** A validation gate evaluated before an action's event chain runs. */
+export interface PreValidation {
+  id: string;
+  fieldId: string;
+  rule: string;
+  value?: string;
+  message: string;
+}
+
+/** A single step in an action's event chain (reuses workflow event plugin types). */
+export interface FormEvent {
+  id: string;
+  type: 'record' | 'expression' | 'script' | 'notification';
+  label: string;
+  condition?: string;
+  storeAs?: string;
+  config: Record<string, any>;
+}
+
+/** An ordered group of events; a false condition skips the whole section. */
+export interface ActionSection {
+  id: string;
+  condition?: string;
+  events: FormEvent[];
+  collapsed?: boolean;
 }
 
 /**
- * A header-level action on a Detail / Form view. (Reserved for future sprint)
+ * A header-level action on a Detail / Form view.
+ * Plain actions carry only actionKey (e.g. 'delete'); form-event actions carry
+ * preValidations + event sections executed on click.
  */
 export interface DetailAction {
   id: string;
-  actionKey: 'edit' | 'clone' | 'delete' | 'archive';
+  actionKey: string;                 // System action key or 'form_event' for custom chains
   label: string;
   variant: 'primary' | 'secondary' | 'danger' | 'ghost';
   visible: boolean;
+  iconName?: string;
+  /** Validation gates — all must pass before any event runs. */
+  preValidations?: PreValidation[];
+  /** Ordered event sections executed when the button is clicked. */
+  sections?: ActionSection[];
+}
+
+/** A display-style rule evaluated against the record at runtime. */
+export interface ConditionalFormatRule {
+  id: string;
+  conditions: { fieldId: string; operator: string; value?: string; logic?: 'and' | 'or' }[];
+  style: { textColor?: string; background?: string; bold?: boolean; icon?: string };
 }
 
 export interface LayoutColumn {

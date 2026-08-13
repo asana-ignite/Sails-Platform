@@ -1756,3 +1756,643 @@
   font-size: 9.5px;
   color: var(--sails-text-muted, #94a3b8);
 }
+
+/* ─── Studio tabs (Layout | Events | Conditions) ───────────── */
+
+.ls-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 12px;
+  background: var(--sails-bg-card, #ffffff);
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.ls-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--sails-text-muted, #64748b);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+
+.ls-tab:hover {
+  color: var(--sails-text-main, #1e293b);
+}
+
+.ls-tab--active {
+  color: var(--sails-primary, #6366f1);
+  border-bottom-color: var(--sails-primary, #6366f1);
+}
+
+.ls-tab__count {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
+}
+
+/* ─── Palette: events / conditions ─────────────────────────── */
+
+.ls-palette__hint {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  line-height: 1.5;
+  padding: 0 4px;
+}
+
+.ls-evt-palette-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* ─── Events working area ──────────────────────────────────── */
+
+.ls-evt-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Card bodies in the Events tab get the standard inset (mirrors
+   .ls-table-card__body) — content no longer sticks to the card edges. */
+.ls-evt-container > .ls-table-card > :not(.ls-table-card__header) {
+  padding: 12px 14px;
+}
+
+.ls-evt-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ls-evt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  background: var(--sails-bg-card, #ffffff);
+  color: var(--sails-text-main, #1e293b);
+  cursor: pointer;
+  transition: all 0.12s;
+  max-width: 100%;
+}
+
+.ls-evt-chip:hover {
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+.ls-evt-chip--selected {
+  border-color: var(--sails-primary, #9dcee0);
+  box-shadow: 0 0 0 2px rgba(157, 206, 224, 0.22);
+}
+
+.ls-evt-chip__icon {
+  display: flex;
+  align-items: center;
+  color: var(--sails-primary, #2c7f94);
+  flex-shrink: 0;
+}
+
+.ls-evt-chip__label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ls-evt-chip__variant {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--sails-text-muted, #64748b);
+  flex-shrink: 0;
+}
+
+.ls-evt-chip__variant--primary {
+  background: rgba(157, 206, 224, 0.22);
+  color: #0f766e;
+}
+
+.ls-evt-chip__variant--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+.ls-evt-chip__del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ls-evt-chip__del:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+.ls-evt-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.ls-evt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ls-evt-field__label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--sails-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ls-evt-pvrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.ls-evt-pvrow .sails-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Event sections ───────────────────────────────────────── */
+
+.ls-evt-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.ls-evt-section {
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.6);
+  overflow: hidden;
+}
+
+.ls-evt-section__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--sails-bg-card, #ffffff);
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+}
+
+.ls-evt-section__num {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sails-primary, #2c7f94);
+  background: rgba(157, 206, 224, 0.16);
+  padding: 2px 6px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.ls-evt-section__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+  white-space: nowrap;
+}
+
+.ls-evt-section__summary {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.ls-evt-section__tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.ls-evt-cond-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px dashed var(--sails-border-color, #e2e8f0);
+  background: transparent;
+  color: var(--sails-text-muted, #64748b);
+  cursor: pointer;
+  transition: all 0.12s;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.ls-evt-cond-toggle:hover {
+  border-color: var(--sails-primary, #9dcee0);
+  color: var(--sails-primary, #2c7f94);
+}
+
+.ls-evt-cond-toggle--on {
+  border-style: solid;
+  border-color: rgba(139, 92, 246, 0.4);
+  background: rgba(139, 92, 246, 0.08);
+  color: #7c3aed;
+}
+
+.ls-evt-section__cond {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: rgba(139, 92, 246, 0.05);
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+}
+
+.ls-evt-section__cond-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #7c3aed;
+  white-space: nowrap;
+}
+
+.ls-evt-events {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  min-height: 34px;
+}
+
+.ls-evt-event {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 8px;
+  background: var(--sails-bg-card, #ffffff);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.ls-evt-event:hover {
+  border-color: var(--sails-primary, #9dcee0);
+}
+
+.ls-evt-event--selected {
+  border-color: var(--sails-primary, #9dcee0);
+  box-shadow: 0 0 0 1px rgba(157, 206, 224, 0.25);
+}
+
+.ls-evt-event--done {
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.ls-evt-event--running {
+  border-color: #a855f7;
+}
+
+.ls-evt-event__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.ls-evt-event__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.ls-evt-chip-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.12);
+  color: #7c3aed;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ls-evt-chip-mini--store {
+  background: rgba(168, 85, 247, 0.1);
+  color: #9333ea;
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.ls-evt-event__skipped {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--sails-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.ls-evt-event__type {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--sails-text-muted, #94a3b8);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ls-evt-event__tools {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+/* ─── Run bar / chips / banner ─────────────────────────────── */
+
+.ls-evt-runbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ls-evt-runchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ls-evt-runchip--passed {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.ls-evt-runchip--skipped {
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--sails-text-muted, #64748b);
+}
+
+.ls-evt-runchip--running {
+  background: rgba(168, 85, 247, 0.12);
+  color: #7c3aed;
+}
+
+.ls-evt-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 7px 10px;
+  border-radius: 7px;
+}
+
+.ls-evt-banner--ok {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.ls-evt-banner--warn {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+/* ─── Conditions table ─────────────────────────────────────── */
+
+.ls-cond-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.ls-cond-table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--sails-text-muted, #64748b);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+}
+
+.ls-cond-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+  color: var(--sails-text-main, #1e293b);
+}
+
+.ls-cond-table tbody tr {
+  cursor: pointer;
+}
+
+.ls-cond-table tbody tr:hover {
+  background: rgba(157, 206, 224, 0.07);
+}
+
+.ls-cond-table tbody tr.ls-cond-row--selected {
+  background: rgba(157, 206, 224, 0.14);
+}
+
+.ls-table-card__hint {
+  font-size: 10.5px;
+  color: var(--sails-text-muted, #94a3b8);
+  margin-left: 2px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Events tab: Button card control alignment ─────────────── */
+
+.ls-evt-grid .sails-input {
+  height: 30px;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.ls-evt-grid .sails-custom-select__trigger {
+  min-height: 30px;
+  font-size: 12px;
+}
+
+.ls-evt-grid .sails-icon-picker__trigger {
+  height: 30px;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+/* ─── +Add Action menu ──────────────────────────────────────── */
+
+.ls-evt-addmenu {
+  position: relative;
+}
+
+.ls-evt-addmenu__pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  min-width: 230px;
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 9px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ls-evt-addmenu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ls-evt-addmenu__item:hover:not(:disabled) {
+  background: rgba(157, 206, 224, 0.12);
+}
+
+.ls-evt-addmenu__item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ls-evt-addmenu__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(157, 206, 224, 0.14);
+  color: var(--sails-primary, #2c7f94);
+  flex-shrink: 0;
+}
+
+.ls-evt-addmenu__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ls-evt-addmenu__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.ls-evt-addmenu__soon {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.ls-evt-addmenu__desc {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+/* ─── Fixed step (standard actions) ─────────────────────────── */
+
+.ls-evt-fixedstep__note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--sails-text-muted, #64748b);
+  line-height: 1.5;
+}
+
+.ls-evt-fixedstep__note strong {
+  color: var(--sails-text-main, #1e293b);
+}
+
+/* ─── Palette: coming-soon items ────────────────────────────── */
+
+.ls-palette-field--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ─── Add-action dropdown must pop over the card (card clips overflow) ── */
+
+.ls-evt-container > .ls-table-card {
+  overflow: visible;
+}
+
+.ls-evt-addmenu__pop {
+  z-index: 1000;
+}

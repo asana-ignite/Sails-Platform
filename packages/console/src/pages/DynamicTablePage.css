@@ -403,3 +403,64 @@
   gap: 6px;
   white-space: nowrap;
 }
+
+/* ─── Detail action toast + deep-clone dialog ───────────────── */
+
+.sails-detail-action-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #047857;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dc-clone-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dc-clone-hint {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.dc-clone-none {
+  margin: 0;
+  font-size: 11px;
+  color: var(--sails-text-muted, #94a3b8);
+  font-style: italic;
+}
+
+.dc-clone-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.dc-clone-option:hover {
+  background: rgba(157, 206, 224, 0.08);
+}
+
+.dc-clone-label {
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.dc-clone-table {
+  margin-left: auto;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+}

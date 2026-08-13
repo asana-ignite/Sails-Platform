@@ -202,7 +202,7 @@ const DynamicTablePage: React.FC = () => {
             layoutId={layoutId}
             title={displayTitle}
             menuPath={activeMenu?.path || undefined}
-            navigate={navigate}
+            navigate={(p) => navigate(p as any)}
             actionsBar="none"
             onActionsReady={handleActionsReady}
           />

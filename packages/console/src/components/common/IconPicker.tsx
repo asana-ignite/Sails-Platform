@@ -3,11 +3,12 @@
  */
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import * as LucideIcons from 'lucide-react';
 import { Search, X } from 'lucide-react';
 import DynamicIcon from './DynamicIcon';
 import './IconPicker.css';
 
-const ICONS = [
+const ICON_NAMES = [
   'Activity', 'ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown',
   'Award', 'BarChart', 'BarChart3', 'Bell', 'Blocks',
   'Book', 'BookOpen', 'Bookmark', 'Box', 'Briefcase',
@@ -15,7 +16,7 @@ const ICONS = [
   'ChevronLeft', 'ChevronRight', 'ChevronUp', 'Circle', 'Clipboard',
   'ClipboardCheck', 'Clock', 'Cloud', 'Code', 'Code2',
   'Columns', 'Command', 'Compass', 'Copy', 'CreditCard',
-  'Crop', 'Crosshair', 'Crown', 'Cube', 'Database',
+  'Crop', 'Crosshair', 'Crown', 'Boxes', 'Database',
   'Disc', 'DollarSign', 'Download', 'Droplets', 'Edit',
   'Edit3', 'ExternalLink', 'Eye', 'EyeOff', 'FastForward',
   'File', 'FileClock', 'FileDigit', 'FileText', 'Flag',
@@ -43,7 +44,7 @@ const ICONS = [
   'Speaker', 'Star', 'StopCircle', 'Sun', 'Table',
   'Table2', 'Tablet', 'Tag', 'Target', 'Terminal',
   'Text', 'ThumbsDown', 'ThumbsUp', 'Timer', 'ToggleLeft',
-  'ToggleRight', 'Tool', 'Trash', 'Trash2', 'TrendingDown',
+  'ToggleRight', 'Cog', 'Trash', 'Trash2', 'TrendingDown',
   'TrendingUp', 'Triangle', 'Truck', 'Tv', 'Type',
   'Umbrella', 'Underline', 'Undo', 'Unlink', 'Unlock',
   'Upload', 'User', 'UserCheck', 'UserMinus', 'UserPlus',
@@ -54,24 +55,52 @@ const ICONS = [
   'Zap', 'ZoomIn', 'ZoomOut',
 ];
 
+/**
+ * Filter against the actual lucide exports at module load — covers deprecated
+ * aliases (e.g. 'CheckCircle' → CircleCheckBig) and drops any entry a future
+ * lucide upgrade renames/removes, so the picker can never offer a broken icon.
+ * Note: lucide components are forwardRef objects (not functions), so check for
+ * presence rather than typeof === 'function'.
+ */
+const ICONS = ICON_NAMES.filter((name) => (LucideIcons as any)[name] != null);
+
 interface IconPickerProps {
   value: string;
   onChange: (icon: string) => void;
   disabled?: boolean;
+  /** Curated subset to offer instead of the full catalog (e.g. action buttons). */
+  icons?: string[];
 }
 
-const IconPicker: React.FC<IconPickerProps> = ({ value, onChange, disabled }) => {
+const IconPicker: React.FC<IconPickerProps> = ({ value, onChange, disabled, icons }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [filtered, setFiltered] = useState(ICONS);
+
+  // Subset mode: filter the provided list the same way as the full catalog and
+  // dedupe; falls back to the full catalog when no subset is given.
+  const available = React.useMemo(() => {
+    const pool = icons || ICONS;
+    const seen = new Set<string>();
+    return pool.filter((name) => {
+      if (seen.has(name)) return false;
+      seen.add(name);
+      return (LucideIcons as any)[name] != null;
+    });
+  }, [icons]);
+
+  const [filtered, setFiltered] = useState(available);
   const inputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setFiltered(available);
+  }, [available]);
 
   useEffect(() => {
     const q = search.toLowerCase();
     setFiltered(
-      q ? ICONS.filter(name => name.toLowerCase().includes(q)) : ICONS
+      q ? available.filter(name => name.toLowerCase().includes(q)) : available
     );
-  }, [search]);
+  }, [search, available]);
 
   useEffect(() => {
     if (isOpen) {
@@ -122,7 +151,7 @@ const IconPicker: React.FC<IconPickerProps> = ({ value, onChange, disabled }) =>
                 </button>
               )}
             </div>
-            <div className="sails-icon-picker__grid">
+            <div className={`sails-icon-picker__grid ${icons ? 'sails-icon-picker__grid--curated' : ''}`}>
               {filtered.length === 0 ? (
                 <div className="sails-icon-picker__empty">No icons found</div>
               ) : (

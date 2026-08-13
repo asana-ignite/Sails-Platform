@@ -190,3 +190,8 @@
   text-align: center;
   color: var(--sails-text-muted);
 }
+
+/* Curated subset mode: fewer icons, larger cells. */
+.sails-icon-picker__grid--curated {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+}

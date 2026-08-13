@@ -8,6 +8,9 @@
 
 import type { ActionPlugin } from './types';
 import { CreateAction } from './plugins/CreateAction';
+import { DeleteAction } from './plugins/DeleteAction';
+import { CloneAction } from './plugins/CloneAction';
+import { PrintAction } from './plugins/PrintAction';
 
 export class ActionRegistry {
   private static instance: ActionRegistry;
@@ -18,6 +21,9 @@ export class ActionRegistry {
 
     // ── Register all built-in system actions ──
     this.register(CreateAction);
+    this.register(DeleteAction);
+    this.register(CloneAction);
+    this.register(PrintAction);
     // Future: this.register(ExportAction);
     // Future: this.register(DeleteBulkAction);
   }

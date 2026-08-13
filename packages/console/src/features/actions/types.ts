@@ -28,11 +28,28 @@ export interface ActionContext {
   /** Selected record IDs (for bulk actions) */
   selectedIds?: string[];
   /** React-Router navigate function */
-  navigate: (path: string) => void;
+  navigate: (path: string | number) => void;
   /** Trigger a data refetch on the parent list */
   refetch?: () => void;
   /** Optional: open a drawer/modal by key via ConsoleContext */
   openDrawer?: (key: string, props?: Record<string, any>) => void;
+  /** Detail actions: the record being viewed. */
+  recordId?: string;
+  record?: Record<string, any>;
+  /** Detail actions: notify the record stack that the record changed/deleted. */
+  notifyRecordsChanged?: () => void;
+  /** Deep-clone: child table names to copy along with the parent. */
+  cloneInclude?: string[];
+  /** Set by the plugin's execute() — e.g. the newly cloned record. */
+  lastResult?: any;
+}
+
+/** Themed confirmation shown before an action runs (standard platform modal). */
+export interface ActionConfirm {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  tone?: 'danger' | 'primary';
 }
 
 export interface ActionPlugin {
@@ -57,6 +74,10 @@ export interface ActionPlugin {
   defaultVariant: 'primary' | 'secondary' | 'danger' | 'ghost';
   /** Default label (can be overridden per-layout in Layout Studio) */
   defaultLabel: string;
+  /** Show the standard themed confirm modal before executing. */
+  confirm?: ActionConfirm;
+  /** Placeholder action — shown disabled in pickers (e.g. future features). */
+  comingSoon?: boolean;
   /**
    * Runtime handler — called when the user clicks the action button.
    * For 'list' actions this fires immediately; for 'bulk' actions it

@@ -27,7 +27,7 @@ export interface ListViewEngineProps {
   title: string;
   /** Full-page navigation mode (list page). When absent, `onRecordOpen` is used instead. */
   menuPath?: string;
-  navigate?: (path: string) => void;
+  navigate?: (path: string | number) => void;
   /** Open a record (related mode → record stack push). */
   onRecordOpen?: (rec: any, detailLayoutKey?: string) => void;
   /** Table id for action contexts (optional; derived from the layout otherwise). */
@@ -585,7 +585,7 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
         menuPath,
         embedded: !!relatedRef.current,
         defaultDetailLayoutKey: defaultDetailLayoutKeyRef.current || undefined,
-        navigate: navigate || (() => {}),
+        navigate: navigate || ((_: string | number) => {}),
         refetch: () => doFetch(),
       });
     }

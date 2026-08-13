@@ -19,8 +19,10 @@ import {
   RotateCcw, AlignLeft, AlignCenter, AlignRight,
   Edit3, Zap, Undo2, Redo2, AlertTriangle, Database, ExternalLink,
   MousePointerClick, Smartphone, List, PanelRight, History,
+  GitBranch, SlidersHorizontal, Braces, Bell, Code, Workflow as WorkflowIcon,
+  CircleCheck, CircleX, Copy, Printer, Lock,
 } from 'lucide-react';
-import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction, MobileViewMode } from '@sails/shared';
+import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction, MobileViewMode, DetailAction, FormEvent, ActionSection, PreValidation } from '@sails/shared';
 import { formatDateTimeValue, formatDecimalValue, normalizeFilters } from '@sails/shared';
 import { FilterBuilder } from '../../components/common/FilterBuilder';
 import DynamicIcon from '../../components/common/DynamicIcon';
@@ -35,6 +37,14 @@ import { EmailControl } from '../../features/controls/plugins/EmailControl';
 import { LatLngControl } from '../../features/controls/plugins/LatLngControl';
 import type { FieldValidation, ConditionOp, ValidationType } from '../../features/controls/types';
 import { ActionRegistry } from '../../features/actions';
+import { EventConfigPanel } from '../../features/formEvents/EventConfigPanel';
+import IconPicker from '../../components/common/IconPicker';
+import {
+  EVENT_DEFS, EVENT_TYPE_ORDER, ACTION_ICON_OPTIONS, ACTION_BUTTON_ICONS, VARIANT_OPTIONS, VALIDATION_RULES,
+  MOCK_SCRIPTS, MOCK_TEMPLATES, newFormEvent, newActionSection, defaultPreValidation, uid,
+  mockEval,
+} from '../../features/formEvents';
+import type { FormEventType, ButtonVariant, EventRunStatus, SectionRunStatus } from '../../features/formEvents';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchCached } from '../../api/client';
 import Unauthorized from '../Unauthorized';
@@ -581,6 +591,22 @@ const LayoutStudio: React.FC = () => {
   const [listSelectedActionId, setListSelectedActionId] = useState<string | null>(null);
   const [listMobileViewMode, setListMobileViewMode] = useState<MobileViewMode>('table');
 
+  // ── Studio tabs: Layout | Events | Conditions ──
+  const [activeTab, setActiveTab] = useState<'layout' | 'events' | 'conditions'>('layout');
+
+  // ── Detail action buttons + event chains (Events tab) ──
+  const [detailActions, setDetailActions] = useState<DetailAction[]>([]);
+  const [selectedDetailActionId, setSelectedDetailActionId] = useState<string | null>(null);
+  const [selectedDetailEventId, setSelectedDetailEventId] = useState<string | null>(null);
+  const [detailPvOpen, setDetailPvOpen] = useState(true);
+  const [detailSectionsOpen, setDetailSectionsOpen] = useState(true);
+  const [detailRunState, setDetailRunState] = useState<'idle' | 'running' | 'completed'>('idle');
+  const [detailRunStep, setDetailRunStep] = useState(-1);
+  const [detailEventStatus, setDetailEventStatus] = useState<Record<string, EventRunStatus>>({});
+  const [detailSectionRun, setDetailSectionRun] = useState<Record<string, SectionRunStatus>>({});
+  const [detailAddMenuOpen, setDetailAddMenuOpen] = useState(false);
+  const [layoutAllowEdit, setLayoutAllowEdit] = useState(true);
+
   // ── Undo / Redo history (per-view stacks) ──
   const [undoStack, setUndoStack] = useState<Record<string, LsSnapshot[]>>(
     Object.fromEntries(HISTORY_VIEWS.map((v) => [v, []])) as Record<string, LsSnapshot[]>
@@ -677,6 +703,9 @@ const LayoutStudio: React.FC = () => {
           } else {
             if (config.sections) setSections(config.sections);
             if (config.blocks) setBlocks(config.blocks);
+            if (config.detailActions && Array.isArray(config.detailActions)) setDetailActions(config.detailActions);
+            else setDetailActions([]);
+            setLayoutAllowEdit(config.allowEdit !== false);
           }
         }
       } catch (err: any) {
@@ -1038,6 +1067,10 @@ const LayoutStudio: React.FC = () => {
     } else {
       setSections([newSection()]);
       setBlocks([]);
+      setDetailActions([]);
+      setLayoutAllowEdit(true);
+      setSelectedDetailActionId(null);
+      setSelectedDetailEventId(null);
       setSelectedBlockId(null);
       setSelectedSectionId(null);
       setLayoutRecordTitleField(null);
@@ -1070,7 +1103,7 @@ const LayoutStudio: React.FC = () => {
         mobileViewMode: listMobileViewMode,
       };
     }
-    return { sections, blocks };
+    return { sections, blocks, detailActions, allowEdit: layoutAllowEdit };
   };
 
   // ── Undo / Redo engine ──
@@ -1103,6 +1136,10 @@ const LayoutStudio: React.FC = () => {
     } else {
       setSections(Array.isArray(c.sections) && c.sections.length > 0 ? c.sections : [newSection()]);
       setBlocks(Array.isArray(c.blocks) ? c.blocks : []);
+      setDetailActions(Array.isArray(c.detailActions) ? c.detailActions : []);
+      setLayoutAllowEdit(c.allowEdit !== false);
+      setSelectedDetailActionId(null);
+      setSelectedDetailEventId(null);
       setSelectedBlockId(null);
       setSelectedSectionId(null);
     }
@@ -1203,6 +1240,232 @@ const LayoutStudio: React.FC = () => {
     setListActions((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
   };
 
+  // ── Detail Action + Event Chain helpers (Events tab) ──
+  const selectedDetailAction = detailActions.find((a) => a.id === selectedDetailActionId) || null;
+  const selectedDetailEvent = (() => {
+    if (!selectedDetailEventId) return null;
+    for (const act of detailActions) {
+      for (const sec of act.sections || []) {
+        const ev = sec.events.find((e) => e.id === selectedDetailEventId);
+        if (ev) return ev;
+      }
+    }
+    return null;
+  })();
+
+  const findDetailEventLocation = (eventId: string): { action: DetailAction; section: ActionSection; event: FormEvent } | null => {
+    for (const act of detailActions) {
+      for (const sec of act.sections || []) {
+        const ev = sec.events.find((e) => e.id === eventId);
+        if (ev) return { action: act, section: sec, event: ev };
+      }
+    }
+    return null;
+  };
+
+  const patchDetailAction = (actionId: string, patch: Partial<DetailAction>) => {
+    setDetailActions((prev) => prev.map((a) => (a.id === actionId ? { ...a, ...patch } : a)));
+  };
+
+  const addDetailAction = () => {
+    const na: DetailAction = {
+      id: uid('act'),
+      actionKey: 'form_event',
+      label: 'Custom Action',
+      variant: 'secondary',
+      iconName: 'Zap',
+      visible: true,
+      preValidations: [],
+      sections: [newActionSection()],
+    };
+    setDetailActions((prev) => [...prev, na]);
+    setSelectedDetailActionId(na.id);
+    setSelectedDetailEventId(null);
+    resetDetailRun();
+  };
+
+  /** Instantiate a standard action (delete/clone) from its registry plugin. */
+  const addStandardDetailAction = (actionKey: string) => {
+    const plugin = actionRegistry.getAction(actionKey);
+    if (!plugin || plugin.comingSoon) return;
+    const na: DetailAction = {
+      id: uid('act'),
+      actionKey,
+      label: plugin.defaultLabel,
+      variant: plugin.defaultVariant,
+      iconName: plugin.iconName,
+      visible: true,
+      preValidations: [],
+      sections: [],
+    };
+    setDetailActions((prev) => [...prev, na]);
+    setSelectedDetailActionId(na.id);
+    setSelectedDetailEventId(null);
+    resetDetailRun();
+  };
+
+  const detailStandardPlugins = useMemo(() => actionRegistry.getActionsByCategory('detail'), []);
+
+  const deleteDetailAction = (actionId: string) => {
+    setDetailActions((prev) => {
+      const next = prev.filter((a) => a.id !== actionId);
+      if (actionId === selectedDetailActionId) {
+        setSelectedDetailActionId(next[0]?.id || null);
+        setSelectedDetailEventId(null);
+      }
+      return next;
+    });
+  };
+
+  const addDetailSection = (actionId: string) => {
+    const act = detailActions.find((a) => a.id === actionId);
+    if (!act) return;
+    patchDetailAction(actionId, { sections: [...(act.sections || []), newActionSection()] });
+  };
+
+  const patchDetailSection = (actionId: string, sectionId: string, patch: Partial<ActionSection>) => {
+    const act = detailActions.find((a) => a.id === actionId);
+    if (!act) return;
+    patchDetailAction(actionId, {
+      sections: (act.sections || []).map((s) => (s.id === sectionId ? { ...s, ...patch } : s)),
+    });
+  };
+
+  const moveDetailSection = (actionId: string, sectionId: string, dir: -1 | 1) => {
+    const act = detailActions.find((a) => a.id === actionId);
+    if (!act) return;
+    const list = [...(act.sections || [])];
+    const idx = list.findIndex((s) => s.id === sectionId);
+    const j = idx + dir;
+    if (idx === -1 || j < 0 || j >= list.length) return;
+    [list[idx], list[j]] = [list[j], list[idx]];
+    patchDetailAction(actionId, { sections: list });
+  };
+
+  const deleteDetailSection = (actionId: string, sectionId: string) => {
+    const act = detailActions.find((a) => a.id === actionId);
+    if (!act) return;
+    patchDetailAction(actionId, { sections: (act.sections || []).filter((s) => s.id !== sectionId) });
+  };
+
+  const addDetailEvent = (actionId: string, sectionId: string, type: FormEventType) => {
+    const act = detailActions.find((a) => a.id === actionId);
+    if (!act) return;
+    const ev = newFormEvent(type);
+    patchDetailAction(actionId, {
+      sections: (act.sections || []).map((s) => (s.id === sectionId ? { ...s, events: [...s.events, ev] } : s)),
+    });
+    setSelectedDetailEventId(ev.id);
+  };
+
+  const patchDetailEvent = (actionId: string, sectionId: string, eventId: string, patch: Partial<FormEvent>) => {
+    const act = detailActions.find((a) => a.id === actionId);
+    if (!act) return;
+    patchDetailAction(actionId, {
+      sections: (act.sections || []).map((s) =>
+        s.id === sectionId ? { ...s, events: s.events.map((e) => (e.id === eventId ? { ...e, ...patch } : e)) } : s
+      ),
+    });
+  };
+
+  const moveDetailEvent = (actionId: string, sectionId: string, eventId: string, dir: -1 | 1) => {
+    const act = detailActions.find((a) => a.id === actionId);
+    if (!act) return;
+    patchDetailAction(actionId, {
+      sections: (act.sections || []).map((s) => {
+        if (s.id !== sectionId) return s;
+        const list = [...s.events];
+        const idx = list.findIndex((e) => e.id === eventId);
+        const j = idx + dir;
+        if (idx === -1 || j < 0 || j >= list.length) return s;
+        [list[idx], list[j]] = [list[j], list[idx]];
+        return { ...s, events: list };
+      }),
+    });
+  };
+
+  const deleteDetailEvent = (actionId: string, sectionId: string, eventId: string) => {
+    const act = detailActions.find((a) => a.id === actionId);
+    if (!act) return;
+    patchDetailAction(actionId, {
+      sections: (act.sections || []).map((s) =>
+        s.id === sectionId ? { ...s, events: s.events.filter((e) => e.id !== eventId) } : s
+      ),
+    });
+    if (selectedDetailEventId === eventId) setSelectedDetailEventId(null);
+  };
+
+  // ── Detail run simulation ──
+  const resetDetailRun = () => {
+    setDetailRunState('idle');
+    setDetailRunStep(-1);
+    setDetailEventStatus({});
+    setDetailSectionRun({});
+  };
+
+  const detailRunSteps = useMemo(() => {
+    if (!selectedDetailAction) return [];
+    const out: { sectionId: string; eventId: string; skipped: boolean; firstInSection: boolean }[] = [];
+    for (const s of selectedDetailAction.sections || []) {
+      const skipped = s.condition ? !mockEval(s.condition, previewRecord) : false;
+      s.events.forEach((e, i) => out.push({ sectionId: s.id, eventId: e.id, skipped, firstInSection: i === 0 }));
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDetailAction, previewRecord]);
+
+  const startDetailRun = () => {
+    setDetailEventStatus({});
+    setDetailSectionRun({});
+    setDetailRunStep(0);
+    setDetailRunState('running');
+  };
+
+  useEffect(() => {
+    if (detailRunState !== 'running') return;
+    if (detailRunStep >= detailRunSteps.length) {
+      setDetailRunState('completed');
+      return;
+    }
+    const step = detailRunSteps[detailRunStep];
+    const t1 = window.setTimeout(() => {
+      setDetailEventStatus((prev) => ({ ...prev, [step.eventId]: step.skipped ? 'skipped' : 'running' }));
+      if (step.firstInSection) {
+        setDetailSectionRun((prev) => ({ ...prev, [step.sectionId]: step.skipped ? 'skipped' : 'running' }));
+      }
+    }, 80);
+    const t2 = window.setTimeout(() => {
+      setDetailEventStatus((prev) => ({ ...prev, [step.eventId]: step.skipped ? 'skipped' : 'done' }));
+      if (step.firstInSection) {
+        setDetailSectionRun((prev) => ({ ...prev, [step.sectionId]: step.skipped ? 'skipped' : 'passed' }));
+      }
+      setDetailRunStep((i) => i + 1);
+    }, 650);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [detailRunState, detailRunStep, detailRunSteps]);
+
+  const detailDoneCount = selectedDetailAction
+    ? (selectedDetailAction.sections || []).reduce((n, s) => n + s.events.filter((e) => detailEventStatus[e.id] === 'done').length, 0)
+    : 0;
+  const detailSkippedCount = selectedDetailAction
+    ? (selectedDetailAction.sections || []).reduce((n, s) => n + s.events.filter((e) => detailEventStatus[e.id] === 'skipped').length, 0)
+    : 0;
+
+  /** Flat list of placed blocks (top-level + tab children) for the Conditions tab. */
+  const placedBlocks = useMemo(() => {
+    const out: any[] = [];
+    for (const b of blocks) {
+      out.push(b);
+      if (b.blockType === 'tab_group' && b.tabs) {
+        for (const t of b.tabs) out.push(...(t.blocks || []));
+      }
+    }
+    return out;
+  }, [blocks]);
+
   // ── Global Canvas Keyboard Shortcuts (Escape / Delete) ──
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1212,6 +1475,8 @@ const LayoutStudio: React.FC = () => {
       if (e.key === 'Escape') {
         setListSelectedColId(null);
         setListSelectedActionId(null);
+        setSelectedDetailEventId(null);
+        setSelectedDetailActionId(null);
         return;
       }
 
@@ -1234,7 +1499,14 @@ const LayoutStudio: React.FC = () => {
       }
 
       if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
-        if (listSelectedActionId) {
+        if (selectedDetailEventId) {
+          const loc = findDetailEventLocation(selectedDetailEventId);
+          if (loc) deleteDetailEvent(loc.action.id, loc.section.id, selectedDetailEventId);
+          setSelectedDetailEventId(null);
+        } else if (selectedDetailActionId) {
+          deleteDetailAction(selectedDetailActionId);
+          setSelectedDetailActionId(null);
+        } else if (listSelectedActionId) {
           const act = listActions.find((a) => a.id === listSelectedActionId);
           if (act) {
             toggleListAction(act.actionKey);
@@ -1248,7 +1520,7 @@ const LayoutStudio: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [listSelectedActionId, listSelectedColId, listActions, undoStack, redoStack, viewType, isEditing, previewMode]);
+  }, [listSelectedActionId, listSelectedColId, listActions, undoStack, redoStack, viewType, isEditing, previewMode, selectedDetailEventId, selectedDetailActionId, detailActions]);
 
   const handleSaveClick = () => {
     setSaveError(null);
@@ -1377,6 +1649,9 @@ const LayoutStudio: React.FC = () => {
           } else {
             if (config.sections) setSections(config.sections);
             if (config.blocks) setBlocks(config.blocks);
+            if (config.detailActions && Array.isArray(config.detailActions)) setDetailActions(config.detailActions);
+            else setDetailActions([]);
+            setLayoutAllowEdit(config.allowEdit !== false);
           }
         }
       }
@@ -1429,6 +1704,9 @@ const LayoutStudio: React.FC = () => {
           else setSections([]);
           if (config.blocks) setBlocks(config.blocks);
           else setBlocks([]);
+          if (config.detailActions && Array.isArray(config.detailActions)) setDetailActions(config.detailActions);
+          else setDetailActions([]);
+          setLayoutAllowEdit(config.allowEdit !== false);
         }
       }
       setSavedSuccessMsg('Changes discarded. Layout reverted to active version.');
@@ -1515,6 +1793,7 @@ const LayoutStudio: React.FC = () => {
     setListSelectedActionId(null);
     setSelectedBlockId(null);
     setSelectedSectionId(null);
+    setSelectedDetailEventId(null);
   };
 
   const removeBlock = (blockId: string) => {
@@ -2129,6 +2408,507 @@ const LayoutStudio: React.FC = () => {
 
   // ── Render ─────────────────────────────────────────────────
 
+  const workingTab = previewMode ? 'layout' : activeTab;
+
+  // ── Events / Conditions working areas (render helpers) ──
+
+  const renderActionIcon = (name?: string, size = 12) => {
+    const opt = ACTION_ICON_OPTIONS.find((o) => o.value === name);
+    if (opt) return <opt.Icon size={size} />;
+    return <DynamicIcon name={name || 'Zap'} size={size} />;
+  };
+
+  const renderRunChip = (tone: 'passed' | 'skipped' | 'running', children: React.ReactNode) => (
+    <span className={`ls-evt-runchip ls-evt-runchip--${tone}`}>{children}</span>
+  );
+
+  const renderDetailSection = (act: DetailAction, sec: ActionSection, si: number) => {
+    const condOn = !!sec.condition;
+    const runStatus = detailSectionRun[sec.id] || 'idle';
+    const secCount = (act.sections || []).length;
+    return (
+      <div key={sec.id} className="ls-evt-section">
+        <div className="ls-evt-section__head">
+          <span className="ls-evt-section__num">S{si + 1}</span>
+          <span className="ls-evt-section__title">Section {si + 1}</span>
+          {sec.collapsed && (
+            <span className="ls-evt-section__summary">{sec.events.length} event{sec.events.length !== 1 ? 's' : ''}{condOn ? ' · conditioned' : ''}</span>
+          )}
+          {runStatus === 'passed' && renderRunChip('passed', <><CheckCircle2 size={10} /> passed</>)}
+          {runStatus === 'skipped' && renderRunChip('skipped', 'condition not met')}
+          {runStatus === 'running' && renderRunChip('running', <><Loader2 size={10} className="sails-spin" /> running</>)}
+          <div className="ls-evt-section__tools">
+            <button
+              className={`ls-evt-cond-toggle ${condOn ? 'ls-evt-cond-toggle--on' : ''}`}
+              title={condOn ? 'Remove section condition' : 'Gate this whole section on a condition'}
+              onClick={() => patchDetailSection(act.id, sec.id, { condition: condOn ? undefined : `{{record.status = 'pending'}}` })}
+            >
+              <GitBranch size={11} /> {condOn ? 'Conditioned' : 'Condition'}
+            </button>
+            <button
+              className="ls-block__btn"
+              title={sec.collapsed ? 'Expand section' : 'Collapse section'}
+              onClick={() => patchDetailSection(act.id, sec.id, { collapsed: !sec.collapsed })}
+            >
+              {sec.collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+            </button>
+            <button className="ls-block__btn" disabled={si === 0} onClick={() => moveDetailSection(act.id, sec.id, -1)} title="Move section up"><MoveUp size={12} /></button>
+            <button className="ls-block__btn" disabled={si === secCount - 1} onClick={() => moveDetailSection(act.id, sec.id, 1)} title="Move section down"><MoveDown size={12} /></button>
+            <button className="ls-block__btn ls-block__btn--danger" onClick={() => deleteDetailSection(act.id, sec.id)} title="Delete section"><Trash2 size={12} /></button>
+          </div>
+        </div>
+        {!sec.collapsed && (
+          <>
+            {condOn && (
+              <div className="ls-evt-section__cond">
+                <span className="ls-evt-section__cond-label">Condition</span>
+                <input
+                  className="sails-input"
+                  style={{ flex: 1, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 11 }}
+                  value={sec.condition || ''}
+                  onChange={(e) => patchDetailSection(act.id, sec.id, { condition: e.target.value })}
+                  placeholder={`{{record.status = 'pending'}}`}
+                />
+              </div>
+            )}
+            <div
+              className="ls-evt-events"
+              onDragOver={(e) => { e.preventDefault(); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                try {
+                  const p = JSON.parse(e.dataTransfer.getData('application/json'));
+                  if (p.eventType) addDetailEvent(act.id, sec.id, p.eventType as FormEventType);
+                } catch { /* ignore */ }
+              }}
+            >
+              {sec.events.length === 0 && (
+                <p className="ls-empty" style={{ padding: '10px 0' }}>No events in this section. Drag an event type from the palette.</p>
+              )}
+              {sec.events.map((ev, ei) => {
+                const d = EVENT_DEFS[ev.type];
+                const status = detailEventStatus[ev.id] || 'idle';
+                const selected = selectedDetailEventId === ev.id;
+                return (
+                  <div
+                    key={ev.id}
+                    className={`ls-evt-event ${selected ? 'ls-evt-event--selected' : ''} ${status === 'done' ? 'ls-evt-event--done' : ''} ${status === 'running' ? 'ls-evt-event--running' : ''}`}
+                    onClick={() => { setSelectedDetailEventId(selected ? null : ev.id); }}
+                  >
+                    <span className="ls-evt-event__icon" style={{ background: `${d.color}22`, color: d.color }}>{<d.Icon size={12} />}</span>
+                    <span className="ls-evt-event__label">{ev.label}</span>
+                    {ev.condition && <span className="ls-evt-chip-mini"><GitBranch size={9} /> cond</span>}
+                    {ev.storeAs && <span className="ls-evt-chip-mini ls-evt-chip-mini--store"><Braces size={9} /> {ev.storeAs}</span>}
+                    {status === 'running' && <Loader2 size={12} className="sails-spin" />}
+                    {status === 'done' && <CheckCircle2 size={12} style={{ color: '#10b981' }} />}
+                    {status === 'skipped' && <span className="ls-evt-event__skipped">skipped</span>}
+                    <span className="ls-evt-event__type">{d.label}</span>
+                    <div className="ls-evt-event__tools" onClick={(e) => e.stopPropagation()}>
+                      <button className="ls-block__btn" disabled={ei === 0} onClick={() => moveDetailEvent(act.id, sec.id, ev.id, -1)} title="Move up"><MoveUp size={11} /></button>
+                      <button className="ls-block__btn" disabled={ei === sec.events.length - 1} onClick={() => moveDetailEvent(act.id, sec.id, ev.id, 1)} title="Move down"><MoveDown size={11} /></button>
+                      <button className="ls-block__btn ls-block__btn--danger" onClick={() => deleteDetailEvent(act.id, sec.id, ev.id)} title="Delete event"><X size={11} /></button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const renderDetailEventsArea = () => {
+    const act = selectedDetailAction;
+    return (
+      <>
+        <div className="ls-page__header" onClick={handleCanvasDeselect}>
+          <h1 className="ls-page__title">Action Buttons</h1>
+          <p className="ls-page__subtitle">Header buttons on the Detail View — each carries pre-validations and ordered event sections.</p>
+        </div>
+
+        <div className="ls-evt-container">
+          {/* Action chip strip */}
+          <div className="ls-table-card">
+            <div className="ls-table-card__header">
+              <MousePointerClick size={13} />
+              <span className="ls-table-card__title">Action Buttons</span>
+              {detailActions.length > 0 && <span className="ls-table-card__badge">{detailActions.length}</span>}
+              <div className="ls-evt-addmenu" style={{ marginLeft: 'auto' }}>
+                <button className="ls-block__btn" title="Add action button" onClick={() => setDetailAddMenuOpen((o) => !o)}>
+                  <Plus size={13} />
+                </button>
+                {detailAddMenuOpen && (
+                  <div className="ls-evt-addmenu__pop">
+                    <button
+                      className="ls-evt-addmenu__item"
+                      onClick={() => { addDetailAction(); setDetailAddMenuOpen(false); }}
+                    >
+                      <span className="ls-evt-addmenu__icon"><Zap size={13} /></span>
+                      <span className="ls-evt-addmenu__info">
+                        <span className="ls-evt-addmenu__name">Custom Action</span>
+                        <span className="ls-evt-addmenu__desc">Build a chain from scratch</span>
+                      </span>
+                    </button>
+                    {detailStandardPlugins.map((plugin) => (
+                      <button
+                        key={plugin.id}
+                        className="ls-evt-addmenu__item"
+                        disabled={plugin.comingSoon}
+                        title={plugin.comingSoon ? 'Coming soon — Document Template' : plugin.description}
+                        onClick={() => { addStandardDetailAction(plugin.id); setDetailAddMenuOpen(false); }}
+                      >
+                        <span className="ls-evt-addmenu__icon"><DynamicIcon name={plugin.iconName} size={13} /></span>
+                        <span className="ls-evt-addmenu__info">
+                          <span className="ls-evt-addmenu__name">
+                            {plugin.name} Action
+                            {plugin.comingSoon && <span className="ls-evt-addmenu__soon">Coming Soon</span>}
+                          </span>
+                          <span className="ls-evt-addmenu__desc">{plugin.comingSoon ? 'Document Template (future)' : 'Fixed step + optional events'}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="ls-evt-chips">
+              {detailActions.length === 0 && <p className="ls-empty">No action buttons yet. Click + to add one.</p>}
+              {detailActions.map((a) => (
+                <div
+                  key={a.id}
+                  className={`ls-evt-chip ${a.id === selectedDetailActionId ? 'ls-evt-chip--selected' : ''}`}
+                  onClick={() => { setSelectedDetailActionId(a.id); setSelectedDetailEventId(null); }}
+                >
+                  <span className="ls-evt-chip__icon">{renderActionIcon(a.iconName)}</span>
+                  <span className="ls-evt-chip__label">{a.label}</span>
+                  <span className={`ls-evt-chip__variant ls-evt-chip__variant--${a.variant}`}>{a.variant}</span>
+                  <button
+                    className="ls-evt-chip__del"
+                    title="Delete action"
+                    onClick={(e) => { e.stopPropagation(); deleteDetailAction(a.id); }}
+                  ><X size={10} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {!act ? (
+            <div className="ls-table-card">
+              <p className="ls-empty" style={{ padding: 20 }}>Select or create an action button to configure its events.</p>
+            </div>
+          ) : (
+            <>
+              {/* Button props */}
+              <div className="ls-table-card">
+                <div className="ls-table-card__header">
+                  <Settings size={13} />
+                  <span className="ls-table-card__title">Button</span>
+                  <span className="ls-table-card__hint">How it appears in the Detail View header</span>
+                </div>
+                <div className="ls-evt-grid">
+                  <label className="ls-evt-field">
+                    <span className="ls-evt-field__label">Label</span>
+                    <input className="sails-input" value={act.label} onChange={(e) => patchDetailAction(act.id, { label: e.target.value })} />
+                  </label>
+                  <label className="ls-evt-field">
+                    <span className="ls-evt-field__label">Variant</span>
+                    <CustomSelect
+                      size="sm"
+                      value={act.variant}
+                      options={VARIANT_OPTIONS}
+                      onChange={(v) => patchDetailAction(act.id, { variant: v as ButtonVariant })}
+                      style={{ width: '100%' }}
+                    />
+                  </label>
+                  <label className="ls-evt-field">
+                    <span className="ls-evt-field__label">Icon</span>
+                    <IconPicker
+                      value={act.iconName || 'Zap'}
+                      icons={ACTION_BUTTON_ICONS}
+                      onChange={(name) => patchDetailAction(act.id, { iconName: name })}
+                      disabled={isReadOnly}
+                    />
+                  </label>
+                  <label className="ls-evt-field">
+                    <span className="ls-evt-field__label">Visible</span>
+                    <label className="ls-radio-label" style={{ height: 30, display: 'flex', alignItems: 'center' }}>
+                      <input type="checkbox" checked={act.visible} onChange={(e) => patchDetailAction(act.id, { visible: e.target.checked })} /> Visible
+                    </label>
+                  </label>
+                </div>
+              </div>
+
+              {/* Fixed step (standard actions only) */}
+              {(() => {
+                const fixedPlugin = ['delete', 'clone'].includes(act.actionKey) ? actionRegistry.getAction(act.actionKey) : null;
+                if (!fixedPlugin) return null;
+                const stepLabel = act.actionKey === 'delete' ? 'Delete Record' : 'Clone Record (Deep Clone)';
+                return (
+                  <div className="ls-table-card">
+                    <div className="ls-table-card__header">
+                      <Lock size={13} />
+                      <span className="ls-table-card__title">Fixed Step</span>
+                      <span className="ls-table-card__badge">{stepLabel}</span>
+                      <span className="ls-table-card__hint">Always runs first — cannot be removed or reordered</span>
+                    </div>
+                    <p className="ls-evt-fixedstep__note">
+                      Custom events added below run <strong>after</strong> {fixedPlugin.confirm ? `the confirmation and ` : ''}{stepLabel.toLowerCase()}.
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {/* Pre-validations */}
+              <div className="ls-table-card">
+                <div className="ls-table-card__header" style={{ cursor: 'pointer' }} onClick={() => setDetailPvOpen((o) => !o)}>
+                  <ShieldAlert size={13} />
+                  <span className="ls-table-card__title">Pre-Validations</span>
+                  <span className="ls-table-card__badge">{(act.preValidations || []).length}</span>
+                  <span className="ls-table-card__hint">Gate the whole chain — failure stops it</span>
+                  {detailPvOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                </div>
+                {detailPvOpen && (
+                  <>
+                    {(act.preValidations || []).length === 0 && (
+                      <p className="ls-empty" style={{ padding: '8px 0' }}>No pre-validations — the chain runs immediately on click.</p>
+                    )}
+                    {(act.preValidations || []).map((pv) => (
+                      <div key={pv.id} className="ls-evt-pvrow">
+                        <select
+                          className="sails-input"
+                          value={pv.fieldId}
+                          onChange={(e) => patchDetailAction(act.id, { preValidations: (act.preValidations || []).map((p) => p.id === pv.id ? { ...p, fieldId: e.target.value } : p) })}
+                        >
+                          <option value="">— field —</option>
+                          {allFields.filter((f) => !f.isSystem).map((f) => (
+                            <option key={f.id} value={f.id}>{f.name}</option>
+                          ))}
+                        </select>
+                        <select
+                          className="sails-input"
+                          value={pv.rule}
+                          onChange={(e) => patchDetailAction(act.id, { preValidations: (act.preValidations || []).map((p) => p.id === pv.id ? { ...p, rule: e.target.value } : p) })}
+                        >
+                          {VALIDATION_RULES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                        </select>
+                        <input
+                          className="sails-input"
+                          placeholder="value"
+                          value={pv.value || ''}
+                          onChange={(e) => patchDetailAction(act.id, { preValidations: (act.preValidations || []).map((p) => p.id === pv.id ? { ...p, value: e.target.value } : p) })}
+                        />
+                        <input
+                          className="sails-input"
+                          style={{ flex: 1.4 }}
+                          placeholder="Failure message"
+                          value={pv.message}
+                          onChange={(e) => patchDetailAction(act.id, { preValidations: (act.preValidations || []).map((p) => p.id === pv.id ? { ...p, message: e.target.value } : p) })}
+                        />
+                        <button
+                          className="ls-block__btn ls-block__btn--danger"
+                          title="Remove rule"
+                          onClick={() => patchDetailAction(act.id, { preValidations: (act.preValidations || []).filter((p) => p.id !== pv.id) })}
+                        ><X size={11} /></button>
+                      </div>
+                    ))}
+                    <button
+                      className="sails-btn sails-btn--ghost sails-btn--sm"
+                      style={{ alignSelf: 'flex-start' }}
+                      onClick={() => patchDetailAction(act.id, { preValidations: [...(act.preValidations || []), defaultPreValidation()] })}
+                    ><Plus size={11} /> Add rule</button>
+                  </>
+                )}
+              </div>
+
+              {/* Event sections */}
+              <div className="ls-table-card">
+                <div className="ls-table-card__header" style={{ cursor: 'pointer' }} onClick={() => setDetailSectionsOpen((o) => !o)}>
+                  <GitBranch size={13} />
+                  <span className="ls-table-card__title">Event Sections</span>
+                  <span className="ls-table-card__badge">{(act.sections || []).length}</span>
+                  <span className="ls-table-card__hint">Top-to-bottom · false condition skips a section</span>
+                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                    <button className="ls-block__btn" title="Add section" onClick={() => addDetailSection(act.id)}><Plus size={12} /></button>
+                  </div>
+                  {detailSectionsOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                </div>
+                {detailSectionsOpen && (
+                  <div className="ls-evt-sections">
+                    {(act.sections || []).length === 0 && <p className="ls-empty" style={{ padding: '8px 0' }}>No sections. Add one from the palette or the + button.</p>}
+                    {(act.sections || []).map((sec, si) => renderDetailSection(act, sec, si))}
+                  </div>
+                )}
+              </div>
+
+              {/* Run bar */}
+              <div className="ls-evt-runbar">
+                {detailRunState === 'idle' && (
+                  <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={startDetailRun} disabled={detailRunSteps.length === 0}>
+                    <Play size={12} /> Run Simulation
+                  </button>
+                )}
+                {detailRunState === 'running' && (
+                  <button className="sails-btn sails-btn--ghost sails-btn--sm" disabled>
+                    <Loader2 size={12} className="sails-spin" /> Running {detailDoneCount}/{detailRunSteps.length}…
+                  </button>
+                )}
+                {detailRunState === 'completed' && (
+                  <span className={`ls-evt-banner ${detailSkippedCount > 0 ? 'ls-evt-banner--warn' : 'ls-evt-banner--ok'}`}>
+                    {detailSkippedCount > 0
+                      ? `${detailDoneCount} succeeded · ${detailSkippedCount} skipped by condition`
+                      : `${detailDoneCount} event${detailDoneCount !== 1 ? 's' : ''} succeeded`}
+                  </span>
+                )}
+                {detailRunState !== 'idle' && (
+                  <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={resetDetailRun}><RotateCcw size={12} /> Reset</button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </>
+    );
+  };
+
+  const renderListEventsArea = () => (
+    <>
+      <div className="ls-page__header" onClick={handleCanvasDeselect}>
+        <h1 className="ls-page__title">Toolbar Actions</h1>
+        <p className="ls-page__subtitle">Configure the action buttons shown in the List View header. Event chains on toolbar actions arrive in a later iteration.</p>
+      </div>
+      <div className="ls-table-card ls-summary-panel ls-actions-card">
+        <div className="ls-table-card__header">
+          <MousePointerClick size={13} />
+          <span className="ls-table-card__title">Actions</span>
+          {listActions.length > 0 && <span className="ls-table-card__badge">{listActions.length}</span>}
+          {availableListActionPlugins.filter((p) => !isActionEnabled(p.id)).map((plugin) => (
+            <button key={plugin.id} className="ls-block__btn" title={`Add ${plugin.name}`}
+              onClick={() => toggleListAction(plugin.id)}
+              style={{ marginLeft: 'auto' }}>
+              <Plus size={13} />
+            </button>
+          ))}
+        </div>
+        <div className="ls-summary-panel__body">
+          {listActions.length === 0 ? (
+            <div className="ls-summary-panel__placeholder" style={{ flexDirection: 'row', gap: 8, padding: '4px 0', justifyContent: 'center' }}>
+              <MousePointerClick size={14} className="ls-summary-panel__placeholder-icon" />
+              <span>No actions configured. Click + to add one.</span>
+            </div>
+          ) : (
+            <div className="ls-summary-fields">
+              {listActions.map((action) => {
+                const isSelected = listSelectedActionId === action.id;
+                const plugin = actionRegistry.getAction(action.actionKey);
+                const icon = plugin?.iconName || 'Plus';
+                return (
+                  <div key={action.id}
+                    tabIndex={0}
+                    role="button"
+                    aria-selected={isSelected}
+                    className={`ls-summary-field ${isSelected ? 'ls-summary-field--selected' : ''}`}
+                    style={{ cursor: 'pointer', outline: isSelected ? '2px solid var(--sails-primary, #6366f1)' : undefined }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setListSelectedActionId(action.id);
+                        setListSelectedColId(null);
+                      }
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setListSelectedActionId(action.id);
+                      setListSelectedColId(null);
+                    }}>
+                    <DynamicIcon name={icon} size={12} style={{ opacity: 0.7, flexShrink: 0 }} />
+                    <span className="ls-summary-field__name">{action.label}</span>
+                    <span className="ls-summary-field__tag">{action.variant.charAt(0).toUpperCase() + action.variant.slice(1)}</span>
+                    <button className="ls-block__btn ls-block__btn--danger"
+                      title={`Remove ${action.label}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (listSelectedActionId === action.id) setListSelectedActionId(null);
+                        toggleListAction(action.actionKey);
+                      }}>
+                      <X size={11} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  const renderListConditionsArea = () => (
+    <>
+      <div className="ls-page__header" onClick={handleCanvasDeselect}>
+        <h1 className="ls-page__title">Conditions</h1>
+        <p className="ls-page__subtitle">Filter rules and row formatting for this list view.</p>
+      </div>
+      <div className="ls-table-card">
+        <p className="ls-empty" style={{ padding: 20 }}>
+          List conditions manager (filters + row highlight rules) arrives in Phase 2 — filters remain configurable from the Layout tab.
+        </p>
+      </div>
+    </>
+  );
+
+  const renderDetailConditionsArea = () => (
+    <>
+      <div className="ls-page__header" onClick={handleCanvasDeselect}>
+        <h1 className="ls-page__title">Conditions</h1>
+        <p className="ls-page__subtitle">Visibility conditions, validations and conditional formatting for the blocks on this layout.</p>
+      </div>
+      <div className="ls-table-card">
+        <div className="ls-table-card__header">
+          <SlidersHorizontal size={13} />
+          <span className="ls-table-card__title">Blocks</span>
+          <span className="ls-table-card__badge">{placedBlocks.length}</span>
+          <span className="ls-table-card__hint">Click a row to edit its rules in the right panel</span>
+        </div>
+        {placedBlocks.length === 0 ? (
+          <p className="ls-empty" style={{ padding: 20 }}>No blocks placed yet — add fields on the Layout tab.</p>
+        ) : (
+          <table className="ls-cond-table">
+            <thead>
+              <tr>
+                <th>Block / Field</th>
+                <th>Conditions</th>
+                <th>Validations</th>
+                <th>Formatting</th>
+              </tr>
+            </thead>
+            <tbody>
+              {placedBlocks.map((b) => {
+                const field = b.fieldId ? allFields.find((f) => f.id === b.fieldId) : null;
+                const name = field?.name
+                  || (b.blockType === 'tab_group' ? 'Tab Group'
+                    : b.blockType === 'related_list' ? (b.relatedTableLabel || 'Related List')
+                    : b.blockType || 'Block');
+                return (
+                  <tr
+                    key={b.id}
+                    className={selectedBlockId === b.id ? 'ls-cond-row--selected' : ''}
+                    onClick={() => { if (!isReadOnly) { setSelectedBlockId(b.id); setSelectedSectionId(null); } }}
+                  >
+                    <td>{name}</td>
+                    <td>{b.conditions?.length ? `${b.conditions.length} rule${b.conditions.length !== 1 ? 's' : ''}` : '—'}</td>
+                    <td>{b.validations?.length ? `${b.validations.length} rule${b.validations.length !== 1 ? 's' : ''}` : '—'}</td>
+                    <td>—</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
+  );
+
   return (
     <div className={`ls-root ${previewMode ? 'ls-root--preview' : ''} ${isReadOnly ? 'ls-root--readonly' : ''}`}>
       <div className="ls-toolbar">
@@ -2242,6 +3022,33 @@ const LayoutStudio: React.FC = () => {
         </div>
       )}
 
+      {!previewMode && (
+        <div className="ls-tabs">
+          <button
+            type="button"
+            className={`ls-tab ${workingTab === 'layout' ? 'ls-tab--active' : ''}`}
+            onClick={() => { setActiveTab('layout'); handleCanvasDeselect(); }}
+          >
+            <LayoutGrid size={13} /> Layout
+          </button>
+          <button
+            type="button"
+            className={`ls-tab ${workingTab === 'events' ? 'ls-tab--active' : ''}`}
+            onClick={() => { setActiveTab('events'); handleCanvasDeselect(); }}
+          >
+            <Zap size={13} /> Events
+            {detailActions.length > 0 && <span className="ls-tab__count">{detailActions.length}</span>}
+          </button>
+          <button
+            type="button"
+            className={`ls-tab ${workingTab === 'conditions' ? 'ls-tab--active' : ''}`}
+            onClick={() => { setActiveTab('conditions'); handleCanvasDeselect(); }}
+          >
+            <SlidersHorizontal size={13} /> Conditions
+          </button>
+        </div>
+      )}
+
       <div className="ls-body" style={{ gridTemplateColumns: (() => {
         if (previewMode) return '1fr';
         const pw = showProperties ? propsWidth : 36;
@@ -2270,7 +3077,8 @@ const LayoutStudio: React.FC = () => {
               </button>
             </div>
           </div>
-          {viewType === 'LIST' ? (
+          {workingTab === 'layout' ? (
+            viewType === 'LIST' ? (
             <div className="ls-palette__fields">
               <div className="ls-palette__group-label">AVAILABLE FIELDS</div>
               {allFields.filter((f) => !listColumnFieldIds.includes(f.id)).map((f) => (
@@ -2349,7 +3157,77 @@ const LayoutStudio: React.FC = () => {
             )}
           </div>
             </>
-          )}
+          )
+        ) : (
+          <div className="ls-palette__fields">
+            {workingTab === 'events' ? (
+              <>
+                {viewType === 'LIST' ? (
+                  <>
+                    <div className="ls-palette__group-label">LIST TOOLBAR ACTIONS</div>
+                    {availableListActionPlugins.filter((p) => !isActionEnabled(p.id)).map((plugin) => (
+                      <div key={plugin.id} className="ls-palette-field ls-palette-field--block" onClick={() => toggleListAction(plugin.id)}>
+                        <MousePointerClick size={13} /><span>{plugin.name}</span>
+                        <span className="ls-type-tag">{plugin.description || 'toolbar action'}</span>
+                        <ArrowRight size={12} className="ls-add-icon" />
+                      </div>
+                    ))}
+                    <p className="ls-palette__hint">Toolbar actions configured here appear in the List View header.</p>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="sails-btn sails-btn--ghost sails-btn--sm ls-palette__add-section"
+                      onClick={() => { if (selectedDetailAction) addDetailSection(selectedDetailAction.id); }}
+                      disabled={!selectedDetailAction}
+                    >
+                      <Plus size={13} /> Add Section
+                    </button>
+                    <div className="ls-palette__group-label">STANDARD ACTIONS</div>
+                    {detailStandardPlugins.map((plugin) => (
+                      <div
+                        key={plugin.id}
+                        className={`ls-palette-field ls-palette-field--block ${plugin.comingSoon ? 'ls-palette-field--disabled' : ''}`}
+                        title={plugin.comingSoon ? 'Coming soon — Document Template' : plugin.description}
+                        onClick={() => { if (!plugin.comingSoon) addStandardDetailAction(plugin.id); }}
+                      >
+                        <DynamicIcon name={plugin.iconName} size={13} />
+                        <span>{plugin.name}</span>
+                        <span className="ls-type-tag">{plugin.comingSoon ? 'Coming Soon' : 'fixed step'}</span>
+                        <ArrowRight size={12} className="ls-add-icon" />
+                      </div>
+                    ))}
+                    <div className="ls-palette__group-label">EVENT TYPES</div>
+                    {EVENT_TYPE_ORDER.map((t) => {
+                      const d = EVENT_DEFS[t];
+                      return (
+                        <div key={t} className="ls-palette-field ls-palette-field--block"
+                          draggable
+                          onDragStart={(e) => e.dataTransfer.setData('application/json', JSON.stringify({ eventType: t }))}
+                          onClick={() => {
+                            if (!selectedDetailAction) return;
+                            const sid = selectedDetailAction.sections?.[0]?.id || '';
+                            if (sid) addDetailEvent(selectedDetailAction.id, sid, t);
+                          }}>
+                          <span className="ls-evt-palette-icon" style={{ background: `${d.color}22`, color: d.color }}>{<d.Icon size={13} />}</span>
+                          <span>{d.label}</span>
+                          <span className="ls-type-tag">{d.desc}</span>
+                          <ArrowRight size={12} className="ls-add-icon" />
+                        </div>
+                      );
+                    })}
+                    <p className="ls-palette__hint">Click to add to the selected action's first section — or drag onto a section.</p>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="ls-palette__group-label">CONDITIONS</div>
+                <p className="ls-palette__hint">Manage visibility conditions, validation rules and conditional formatting from the Conditions tab.</p>
+              </>
+            )}
+          </div>
+        )}
         </div>
             </>
           )}
@@ -2369,7 +3247,8 @@ const LayoutStudio: React.FC = () => {
                 handleCanvasDeselect();
               }
             }}>
-              {viewType === 'LIST' ? (
+              {workingTab === 'layout' ? (
+                viewType === 'LIST' ? (
                 <>
               {/* ── View Name ── */}
               <div className="ls-page__header" onClick={handleCanvasDeselect}>
@@ -2422,73 +3301,6 @@ const LayoutStudio: React.FC = () => {
                               <option value="count">COUNT</option>
                             </select>
                             <button className="ls-block__btn ls-block__btn--danger" onClick={() => removeListSummaryField(sf.fieldId)}><X size={11} /></button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-              )}
-
-              {/* ── Actions Card ── */}
-              {!previewMode && !isReadOnly && (
-              <div className="ls-table-card ls-summary-panel ls-actions-card">
-                <div className="ls-table-card__header">
-                  <MousePointerClick size={13} />
-                  <span className="ls-table-card__title">Actions</span>
-                  {listActions.length > 0 && <span className="ls-table-card__badge">{listActions.length}</span>}
-                  {availableListActionPlugins.filter((p) => !isActionEnabled(p.id)).map((plugin) => (
-                    <button key={plugin.id} className="ls-block__btn" title={`Add ${plugin.name}`}
-                      onClick={() => toggleListAction(plugin.id)}
-                      style={{ marginLeft: 'auto' }}>
-                      <Plus size={13} />
-                    </button>
-                  ))}
-                </div>
-                <div className="ls-summary-panel__body">
-                  {listActions.length === 0 ? (
-                    <div className="ls-summary-panel__placeholder" style={{ flexDirection: 'row', gap: 8, padding: '4px 0', justifyContent: 'center' }}>
-                      <MousePointerClick size={14} className="ls-summary-panel__placeholder-icon" />
-                      <span>No actions configured. Click + to add one.</span>
-                    </div>
-                  ) : (
-                    <div className="ls-summary-fields">
-                      {listActions.map((action) => {
-                        const isSelected = listSelectedActionId === action.id;
-                        const plugin = actionRegistry.getAction(action.actionKey);
-                        const icon = plugin?.iconName || 'Plus';
-                        return (
-                          <div key={action.id}
-                            tabIndex={0}
-                            role="button"
-                            aria-selected={isSelected}
-                            className={`ls-summary-field ${isSelected ? 'ls-summary-field--selected' : ''}`}
-                            style={{ cursor: 'pointer', outline: isSelected ? '2px solid var(--sails-primary, #6366f1)' : undefined }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                setListSelectedActionId(action.id);
-                                setListSelectedColId(null);
-                              }
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setListSelectedActionId(action.id);
-                              setListSelectedColId(null);
-                            }}>
-                            <DynamicIcon name={icon} size={12} style={{ opacity: 0.7, flexShrink: 0 }} />
-                            <span className="ls-summary-field__name">{action.label}</span>
-                            <span className="ls-summary-field__tag">{action.variant.charAt(0).toUpperCase() + action.variant.slice(1)}</span>
-                            <button className="ls-block__btn ls-block__btn--danger"
-                              title={`Remove ${action.label}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (listSelectedActionId === action.id) setListSelectedActionId(null);
-                                toggleListAction(action.actionKey);
-                              }}>
-                              <X size={11} />
-                            </button>
                           </div>
                         );
                       })}
@@ -3107,7 +3919,20 @@ const LayoutStudio: React.FC = () => {
                 <div className="ls-page__empty"><p>No sections yet. Click <strong>+ Add Section</strong>.</p></div>
               )}
                 </>
-              )}
+              )
+            ) : workingTab === 'events' ? (
+              viewType === 'LIST' ? (
+                <>{renderListEventsArea()}</>
+              ) : (
+                <>{renderDetailEventsArea()}</>
+              )
+            ) : (
+              viewType === 'LIST' ? (
+                <>{renderListConditionsArea()}</>
+              ) : (
+                <>{renderDetailConditionsArea()}</>
+              )
+            )}
             </div>
           </div>
         </div>
@@ -3138,6 +3963,22 @@ const LayoutStudio: React.FC = () => {
                     <>
                       {(() => {
                         const selectedAction = listActions.find((a) => a.id === listSelectedActionId);
+                        if (activeTab === 'conditions') {
+                          return (
+                            <>
+                              <div className="ls-section-divider">Conditions</div>
+                              <p className="ls-empty" style={{ fontSize: 10 }}>List conditions manager (filters + row formatting) arrives in Phase 2.</p>
+                            </>
+                          );
+                        }
+                        if (activeTab === 'events' && !selectedAction) {
+                          return (
+                            <>
+                              <div className="ls-section-divider">Events</div>
+                              <p className="ls-empty" style={{ fontSize: 10 }}>Select a toolbar action to edit its properties.</p>
+                            </>
+                          );
+                        }
                         if (selectedAction) {
                           return (
                             <>
@@ -3554,6 +4395,29 @@ const LayoutStudio: React.FC = () => {
                       </div>
                     </>
                   ) : (
+                    <>
+                    {activeTab === 'events' ? (
+                      selectedDetailEvent ? (
+                        <>
+                          <div className="ls-section-divider">Event Properties</div>
+                          <div className="ls-prop__name">{selectedDetailEvent.label}</div>
+                          <div className="ls-prop__type">{selectedDetailEvent.type}</div>
+                          <EventConfigPanel
+                            event={selectedDetailEvent}
+                            fields={allFields}
+                            onPatch={(patch) => {
+                              const loc = findDetailEventLocation(selectedDetailEvent.id);
+                              if (loc) patchDetailEvent(loc.action.id, loc.section.id, selectedDetailEvent.id, patch);
+                            }}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <div className="ls-section-divider">Event Properties</div>
+                          <p className="ls-empty" style={{ fontSize: 10 }}>Select an event in the Events tab to configure it.</p>
+                        </>
+                      )
+                    ) : (
                     <>{selectedBlock ? (
                     <>
                 <div className="ls-prop__name">
@@ -3963,10 +4827,19 @@ const LayoutStudio: React.FC = () => {
                   <p className="ls-prop-hint">The selected model's field value is used as the detail page title.</p>
                 </div>
 
+                <div className="ls-prop-group">
+                  <label className="ls-prop-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="checkbox" checked={layoutAllowEdit}
+                      onChange={(e) => setLayoutAllowEdit(e.target.checked)} /> Allow Edit
+                  </label>
+                  <p className="ls-prop-hint">Shows the Edit button on the detail page. Turn off for read-only layouts (e.g. audit records).</p>
+                </div>
+
                 <p className="ls-empty" style={{ fontSize: 10 }}>Select a section or block to edit its properties.</p>
               </>
-            )}</>
-                  )}
+            )}
+                    </>)}
+                  </>)}
 
                 {/* ── Version History ── */}
                 <div className="ls-prop-group ls-version-history">
