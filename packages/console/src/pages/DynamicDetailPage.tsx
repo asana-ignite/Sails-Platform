@@ -669,7 +669,10 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
       // Custom events (sections with conditions) run AFTER the fixed step.
       const sections = (action.sections || []).map((s) => ({
         condition: s.condition || undefined,
-        events: s.events || [],
+        events: (s.events || []).map((e) => ({
+          ...e,
+          config: { ...e.config, storeToVariable: e.config?.storeToVariable || e.storeAs || undefined },
+        })),
       }));
       const hasSectionEvents = sections.some((s) => (s.events || []).length > 0);
       if (hasSectionEvents && tableName) {
@@ -688,6 +691,29 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Event chain failed.');
+
+        // Apply Record Event results onto the layout's form controls
+        // (config.formOutputMapping: result field → form field).
+        const vars: Record<string, any> = data.variables || {};
+        for (const sec of action.sections || []) {
+          for (const ev of sec.events || []) {
+            const fm: { sourceField: string; targetFieldId: string }[] = (ev.config as any)?.formOutputMapping || [];
+            if (fm.length === 0 || !ev.storeAs) continue;
+            const rec = vars[ev.storeAs];
+            if (rec == null || typeof rec !== 'object') continue;
+            const patch: Record<string, any> = {};
+            for (const m of fm) {
+              const f = fields.find((ff) => ff.id === m.targetFieldId || ff.fieldName === m.targetFieldId);
+              if (!f) continue;
+              const v = m.sourceField.split('.').reduce<any>((acc, seg) => (acc == null ? undefined : acc[seg]), rec);
+              if (v !== undefined) patch[f.fieldName] = v;
+            }
+            if (Object.keys(patch).length > 0) {
+              setFormData((prev: Record<string, any>) => ({ ...prev, ...patch }));
+              setRecord((prev: any) => (prev ? { ...prev, ...patch } : prev));
+            }
+          }
+        }
       }
 
       if (action.actionKey === 'clone') {

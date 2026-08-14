@@ -14,6 +14,7 @@ import { SYSTEM_PROTECTED_COLUMNS } from '@sails/shared';
 import { AccessGuard, CrudAction } from './AccessGuard';
 import { TransactionContext } from './TransactionContext';
 import { computeRecordExpressions } from './ComputedFields';
+import { triggerBoundWorkflows } from './WorkflowTriggers';
 import { getSession, SessionContext } from '@/lib/auth/session';
 
 /** One rule inside a Query Studio filter group, as received from the API route. */
@@ -392,6 +393,17 @@ export class QueryLayer {
     // 4. Dispatch Audit Log Asynchronously (Fire and forget)
     pool.query(result.auditSql).catch(err => console.error('[AuditLog] Failed to write audit log:', err));
 
+    // 5. Record Trigger hook (fire-and-forget — never fails the write)
+    if (resolvedCtx.suppressRecordTriggers) return;
+    void triggerBoundWorkflows({
+      tenantId: resolvedCtx.tenantId,
+      tableName,
+      operation: 'create',
+      recordId: result.newRecord.id,
+      values: result.newRecord,
+      actorId: resolvedCtx.userId,
+    }).catch(err => console.error('[WorkflowTriggers] create trigger failed:', err));
+
     return result.newRecord;
   }
 
@@ -467,7 +479,7 @@ export class QueryLayer {
           JSON.stringify(newRecord)
         );
 
-        return { newRecord, auditSql };
+        return { newRecord, oldRecord, auditSql };
       },
       { 
         userId: resolvedCtx.userId, 
@@ -479,6 +491,18 @@ export class QueryLayer {
 
     // 5. Dispatch Audit Log Asynchronously (Fire and forget)
     pool.query(result.auditSql).catch(err => console.error('[AuditLog] Failed to write audit log:', err));
+
+    // 6. Record Trigger hook (fire-and-forget — never fails the write)
+    if (resolvedCtx.suppressRecordTriggers) return;
+    void triggerBoundWorkflows({
+      tenantId: resolvedCtx.tenantId,
+      tableName,
+      operation: 'update',
+      recordId,
+      values: result.newRecord,
+      oldValues: result.oldRecord,
+      actorId: resolvedCtx.userId,
+    }).catch(err => console.error('[WorkflowTriggers] update trigger failed:', err));
 
     return result.newRecord;
   }
@@ -577,7 +601,7 @@ export class QueryLayer {
           JSON.stringify(newRecord)
         );
 
-        return { newRecord, auditSql };
+        return { newRecord, oldRecord, action, auditSql };
       },
       {
         userId: resolvedCtx.userId,
@@ -589,6 +613,18 @@ export class QueryLayer {
 
     // 5. Dispatch Audit Log Asynchronously (Fire and forget)
     pool.query(result.auditSql).catch(err => console.error('[AuditLog] Failed to write audit log:', err));
+
+    // 6. Record Trigger hook (fire-and-forget — never fails the write)
+    if (resolvedCtx.suppressRecordTriggers) return;
+    void triggerBoundWorkflows({
+      tenantId: resolvedCtx.tenantId,
+      tableName,
+      operation: result.action === 'CREATE' ? 'create' : 'update',
+      recordId: result.newRecord.id,
+      values: result.newRecord,
+      oldValues: result.oldRecord || undefined,
+      actorId: resolvedCtx.userId,
+    }).catch(err => console.error('[WorkflowTriggers] upsert trigger failed:', err));
 
     return result.newRecord;
   }
@@ -637,7 +673,7 @@ export class QueryLayer {
           recordId,
           JSON.stringify(oldRecord)
         );
-        return { auditSql };
+        return { oldRecord, auditSql };
       },
       { 
         userId: resolvedCtx.userId, 
@@ -649,6 +685,17 @@ export class QueryLayer {
 
     // 4. Dispatch Audit Log Asynchronously (Fire and forget)
     pool.query(result.auditSql).catch(err => console.error('[AuditLog] Failed to write audit log:', err));
+
+    // 5. Record Trigger hook (fire-and-forget — never fails the write)
+    if (resolvedCtx.suppressRecordTriggers) return;
+    void triggerBoundWorkflows({
+      tenantId: resolvedCtx.tenantId,
+      tableName,
+      operation: 'delete',
+      recordId,
+      values: result.oldRecord,
+      actorId: resolvedCtx.userId,
+    }).catch(err => console.error('[WorkflowTriggers] delete trigger failed:', err));
   }
 
   /**

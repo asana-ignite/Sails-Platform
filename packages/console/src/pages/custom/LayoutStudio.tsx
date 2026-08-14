@@ -39,6 +39,8 @@ import { LatLngControl } from '../../features/controls/plugins/LatLngControl';
 import type { FieldValidation, ConditionOp, ValidationType } from '../../features/controls/types';
 import { ActionRegistry } from '../../features/actions';
 import { EventConfigPanel } from '../../features/formEvents/EventConfigPanel';
+import { RecordEventEditorModal } from '../../features/formEvents/RecordEventEditorModal';
+import type { WizardVariable } from '../../components/workflow/WorkflowEventWizard';
 import IconPicker from '../../components/common/IconPicker';
 import {
   EVENT_DEFS, EVENT_TYPE_ORDER, ACTION_ICON_OPTIONS, ACTION_BUTTON_ICONS, VARIANT_OPTIONS,
@@ -645,6 +647,10 @@ const LayoutStudio: React.FC = () => {
   const [detailEventStatus, setDetailEventStatus] = useState<Record<string, EventRunStatus>>({});
   const [detailSectionRun, setDetailSectionRun] = useState<Record<string, SectionRunStatus>>({});
   const [detailAddMenuOpen, setDetailAddMenuOpen] = useState(false);
+  const [recordEditorEventId, setRecordEditorEventId] = useState<string | null>(null);
+  const [recordFilterEventId, setRecordFilterEventId] = useState<string | null>(null);
+  const [sectionTitleEditId, setSectionTitleEditId] = useState<string | null>(null);
+  const [eventLabelEditId, setEventLabelEditId] = useState<string | null>(null);
   const [layoutAllowEdit, setLayoutAllowEdit] = useState(true);
 
   // ── Undo / Redo history (per-view stacks) ──
@@ -1435,6 +1441,26 @@ const LayoutStudio: React.FC = () => {
     if (selectedDetailEventId === eventId) setSelectedDetailEventId(null);
   };
 
+  /**
+   * Functional config merge for the Record Event wizard — the wizard fires
+   * several onConfigChange calls in one batch (model change resets
+   * filterGroups + fieldMapping), so every write must merge onto the freshest
+   * config, never a stale closure.
+   */
+  const patchDetailEventConfig = (actionId: string, sectionId: string, eventId: string, name: string, value: any) => {
+    setDetailActions((prev) => prev.map((a) => {
+      if (a.id !== actionId) return a;
+      return {
+        ...a,
+        sections: (a.sections || []).map((s) =>
+          s.id === sectionId
+            ? { ...s, events: s.events.map((e) => (e.id === eventId ? { ...e, config: { ...e.config, [name]: value } } : e)) }
+            : s
+        ),
+      };
+    }));
+  };
+
   // ── Detail run simulation ──
   const resetDetailRun = () => {
     setDetailRunState('idle');
@@ -1554,6 +1580,8 @@ const LayoutStudio: React.FC = () => {
         setListSelectedActionId(null);
         setSelectedDetailEventId(null);
         setSelectedDetailActionId(null);
+        setSectionTitleEditId(null);
+        setEventLabelEditId(null);
         return;
       }
 
@@ -1871,6 +1899,8 @@ const LayoutStudio: React.FC = () => {
     setSelectedBlockId(null);
     setSelectedSectionId(null);
     setSelectedDetailEventId(null);
+    setSectionTitleEditId(null);
+    setEventLabelEditId(null);
   };
 
   const removeBlock = (blockId: string) => {
@@ -2507,7 +2537,35 @@ const LayoutStudio: React.FC = () => {
       <div key={sec.id} className="ls-evt-section">
         <div className="ls-evt-section__head">
           <span className="ls-evt-section__num">S{si + 1}</span>
-          <span className="ls-evt-section__title">Section {si + 1}</span>
+          {sectionTitleEditId === sec.id ? (
+            <input
+              autoFocus
+              className="ls-section__title-input"
+              defaultValue={sec.title || `Section ${si + 1}`}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter') {
+                  const v = (e.currentTarget.value || '').trim();
+                  patchDetailSection(act.id, sec.id, { title: v || undefined });
+                  setSectionTitleEditId(null);
+                } else if (e.key === 'Escape') {
+                  setSectionTitleEditId(null);
+                }
+              }}
+              onBlur={(e) => {
+                const v = (e.currentTarget.value || '').trim();
+                patchDetailSection(act.id, sec.id, { title: v || undefined });
+                setSectionTitleEditId(null);
+              }}
+            />
+          ) : (
+            <span
+              className="ls-evt-section__title"
+              title="Double-click to rename"
+              onDoubleClick={(e) => { e.stopPropagation(); setSectionTitleEditId(sec.id); }}
+            >{sec.title || `Section ${si + 1}`}</span>
+          )}
           {sec.collapsed && (
             <span className="ls-evt-section__summary">{sec.events.length} event{sec.events.length !== 1 ? 's' : ''}{condOn ? ' · conditioned' : ''}</span>
           )}
@@ -2580,7 +2638,36 @@ const LayoutStudio: React.FC = () => {
                     onClick={() => { setSelectedDetailEventId(selected ? null : ev.id); }}
                   >
                     <span className="ls-evt-event__icon" style={{ background: `${d.color}22`, color: d.color }}>{<d.Icon size={12} />}</span>
-                    <span className="ls-evt-event__label">{ev.label}</span>
+                    {eventLabelEditId === ev.id ? (
+                      <input
+                        autoFocus
+                        className="ls-section__title-input"
+                        style={{ flex: 1, minWidth: 0 }}
+                        defaultValue={ev.label}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                          if (e.key === 'Enter') {
+                            const v = (e.currentTarget.value || '').trim();
+                            patchDetailEvent(act.id, sec.id, ev.id, { label: v || ev.label });
+                            setEventLabelEditId(null);
+                          } else if (e.key === 'Escape') {
+                            setEventLabelEditId(null);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const v = (e.currentTarget.value || '').trim();
+                          patchDetailEvent(act.id, sec.id, ev.id, { label: v || ev.label });
+                          setEventLabelEditId(null);
+                        }}
+                      />
+                    ) : (
+                      <span
+                        className="ls-evt-event__label"
+                        title="Double-click to rename"
+                        onDoubleClick={(e) => { e.stopPropagation(); setEventLabelEditId(ev.id); }}
+                      >{ev.label}</span>
+                    )}
                     {ev.condition && <span className="ls-evt-chip-mini"><GitBranch size={9} /> cond</span>}
                     {ev.storeAs && <span className="ls-evt-chip-mini ls-evt-chip-mini--store"><Braces size={9} /> {ev.storeAs}</span>}
                     {status === 'running' && <Loader2 size={12} className="sails-spin" />}
@@ -4514,6 +4601,7 @@ const LayoutStudio: React.FC = () => {
                             drillRoots={pvDrillRoots}
                             triggerModelName={tableMeta?.tableName}
                             sample={previewRecord}
+                            onOpenEditor={() => setRecordEditorEventId(selectedDetailEvent.id)}
                           />
                         </>
                       ) : (
@@ -5324,6 +5412,76 @@ const LayoutStudio: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ── Record Event editor modal (Workflow-Studio-style) ── */}
+      {recordEditorEventId && (() => {
+        const loc = findDetailEventLocation(recordEditorEventId);
+        if (!loc) return null;
+        const ev = loc.event;
+        const variables: WizardVariable[] = (loc.action.sections || [])
+          .flatMap((s) => s.events || [])
+          .filter((e) => e.id !== ev.id && e.storeAs)
+          .map((e) => ({
+            id: e.storeAs!,
+            name: e.storeAs!,
+            fieldType: 'record',
+            targetModel: (e.config as any)?.model || tableMeta?.tableName,
+          }));
+        return (
+          <RecordEventEditorModal
+            event={ev}
+            variables={variables}
+            tables={models}
+            triggerModel={tableMeta}
+            recordSchemas={pvRecordSchemas}
+            recordSchema={pvColumns}
+            drillRoots={pvDrillRoots}
+            formControls={allFields.filter((f) => !f.isSystem).map((f) => ({
+              fieldId: f.id,
+              fieldName: f.fieldName ?? f.id,
+              name: f.name ?? f.fieldName ?? f.id,
+              logicalType: f.logicalType ?? f.physicalType ?? 'text',
+              config: f.config,
+            }))}
+            onPatch={(patch) => patchDetailEvent(loc.action.id, loc.section.id, ev.id, patch)}
+            onConfigChange={(name, value) => patchDetailEventConfig(loc.action.id, loc.section.id, ev.id, name, value)}
+            onRemove={() => deleteDetailEvent(loc.action.id, loc.section.id, ev.id)}
+            onClose={() => setRecordEditorEventId(null)}
+            onOpenFilterBuilder={(eventId) => setRecordFilterEventId(eventId)}
+          />
+        );
+      })()}
+
+      {/* ── Record Filter overlay (batch / read / list) ── */}
+      {recordFilterEventId && (() => {
+        const loc = findDetailEventLocation(recordFilterEventId);
+        if (!loc) return null;
+        return (
+          <div className="ls-overlay" style={{ zIndex: 1100 }} onClick={() => setRecordFilterEventId(null)}>
+            <div className="ls-overlay-card" onClick={(e) => e.stopPropagation()}>
+              <div className="ls-overlay-card__header">
+                <h3 className="ls-overlay-card__title"><Filter size={14} /> Record Filter</h3>
+                <button className="ls-block__btn" onClick={() => setRecordFilterEventId(null)}><X size={14} /></button>
+              </div>
+              <div className="ls-overlay-card__body">
+                <FilterBuilder
+                  fields={allFields}
+                  rootTableName={tableMeta?.tableName || ''}
+                  initialGroups={loc.event.config.filterGroups || []}
+                  showHeader={false}
+                  onApply={(groups) => {
+                    patchDetailEvent(loc.action.id, loc.section.id, loc.event.id, {
+                      config: { ...loc.event.config, filterGroups: groups },
+                    });
+                    setRecordFilterEventId(null);
+                  }}
+                  onCancel={() => setRecordFilterEventId(null)}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

@@ -211,6 +211,8 @@ export async function fireStageEvents(
       timing,
       eventConfig: event.config || {},
     };
+    // Workflow-caused writes must never re-trigger record workflows (loop guard).
+    (ctx as any).suppressRecordTriggers = true;
     try {
       const result = await plugin.execute(ctx);
       if (result.output) currentVars = { ...currentVars, ...result.output };

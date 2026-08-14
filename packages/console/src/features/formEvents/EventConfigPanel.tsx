@@ -4,7 +4,7 @@
  * selected in the Events tab.
  */
 import React from 'react';
-import { Plus, X } from 'lucide-react';
+import { Database } from 'lucide-react';
 import type { SailsFieldDefinition, FormEvent } from '@sails/shared';
 import ExpressionEditor from '../../components/workflow/ExpressionEditor';
 import { MOCK_SCRIPTS, MOCK_TEMPLATES } from './index';
@@ -13,6 +13,8 @@ interface EventConfigPanelProps {
   event: FormEvent;
   fields: SailsFieldDefinition[];
   onPatch: (patch: Partial<FormEvent>) => void;
+  /** Open the full Record Event editor modal (record events). */
+  onOpenEditor?: () => void;
   /** JSONata intellisense context — model column suggestions (record.<field>). */
   recordSchemas?: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
   drillRoots?: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
@@ -28,8 +30,8 @@ export const EventConfigPanel: React.FC<EventConfigPanelProps> = ({
   drillRoots,
   triggerModelName,
   sample,
+  onOpenEditor,
 }) => {
-  const usableFields = fields.filter((f) => !f.isSystem);
   const patchConfig = (config: Record<string, any>) => onPatch({ config: { ...event.config, ...config } });
 
   return (
@@ -39,100 +41,55 @@ export const EventConfigPanel: React.FC<EventConfigPanelProps> = ({
         <input className="sails-input" value={event.label} onChange={(e) => onPatch({ label: e.target.value })} />
       </div>
 
-      <div className="ls-prop-group">
-        <label className="ls-prop-label">Store result as (variable)</label>
-        <input
-          className="sails-input"
-          value={event.storeAs || ''}
-          placeholder="myVar — optional"
-          onChange={(e) => onPatch({ storeAs: e.target.value || undefined })}
-        />
-        <p className="ls-prop-hint">Downstream events can reference the value via <code>variables.{event.storeAs || '…'}</code>.</p>
-      </div>
+      {event.type !== 'record' && (
+        <div className="ls-prop-group">
+          <label className="ls-prop-label">Store result as (variable)</label>
+          <input
+            className="sails-input"
+            value={event.storeAs || ''}
+            placeholder="myVar — optional"
+            onChange={(e) => onPatch({ storeAs: e.target.value || undefined })}
+          />
+          <p className="ls-prop-hint">Downstream events can reference the value via <code>variables.{event.storeAs || '…'}</code>.</p>
+        </div>
+      )}
 
-      <div className="ls-prop-group">
-        <label className="ls-prop-label">Condition (JSONata)</label>
-        <ExpressionEditor
-          compact
-          hideVariablePicker
-          variables={[]}
-          recordSchemas={recordSchemas}
-          drillRoots={drillRoots}
-          triggerModelName={triggerModelName}
-          value={event.condition || ''}
-          onChange={(v) => onPatch({ condition: v || undefined })}
-          sample={sample}
-          placeholder="record.budget > 100000"
-        />
-        <p className="ls-prop-hint">Skips this event when the expression evaluates false.</p>
-      </div>
+      {event.type !== 'record' && (
+        <div className="ls-prop-group">
+          <label className="ls-prop-label">Condition (JSONata)</label>
+          <ExpressionEditor
+            compact
+            hideVariablePicker
+            variables={[]}
+            recordSchemas={recordSchemas}
+            drillRoots={drillRoots}
+            triggerModelName={triggerModelName}
+            value={event.condition || ''}
+            onChange={(v) => onPatch({ condition: v || undefined })}
+            sample={sample}
+            placeholder="record.budget > 100000"
+          />
+          <p className="ls-prop-hint">Skips this event when the expression evaluates false.</p>
+        </div>
+      )}
 
       {event.type === 'record' && (
         <>
           <div className="ls-prop-group">
-            <label className="ls-prop-label">Operation</label>
-            <select
-              className="sails-input"
-              value={event.config.operation || 'update'}
-              onChange={(e) => patchConfig({ operation: e.target.value })}
+            <button
+              type="button"
+              className="sails-btn sails-btn--ghost sails-btn--sm"
+              onClick={onOpenEditor}
+              style={{ width: '100%', justifyContent: 'center' }}
             >
-              <option value="create">Create</option>
-              <option value="update">Update</option>
-              <option value="upsert">Upsert</option>
-              <option value="delete">Delete</option>
-            </select>
+              <Database size={12} /> Open Record Editor…
+            </button>
+            <p className="ls-prop-hint">
+              Operation: <strong>{event.config.operation || 'update'}</strong> ·{' '}
+              {(event.config.fieldMapping || event.config.mappings || []).length} mapping{(event.config.fieldMapping || event.config.mappings || []).length !== 1 ? 's' : ''}
+            </p>
+            <p className="ls-prop-hint">Full mapping editor — sources (record / variable / literal), target columns, filters and output.</p>
           </div>
-          {event.config.operation !== 'create' && event.config.operation !== 'delete' && (
-            <div className="ls-prop-group">
-              <label className="ls-prop-label">Field mapping</label>
-              {(event.config.mappings || []).map((m: any, mi: number) => (
-                <div key={mi} className="ls-evt-mapping">
-                  <select
-                    className="sails-input"
-                    value={m.fieldId}
-                    onChange={(e) => {
-                      const mappings = [...(event.config.mappings || [])];
-                      mappings[mi] = { ...mappings[mi], fieldId: e.target.value };
-                      patchConfig({ mappings });
-                    }}
-                  >
-                    <option value="">— field —</option>
-                    {usableFields.map((f) => (
-                      <option key={f.id} value={f.id}>{f.name}</option>
-                    ))}
-                  </select>
-                  <input
-                    className="sails-input"
-                    value={m.value || ''}
-                    placeholder="value"
-                    onChange={(e) => {
-                      const mappings = [...(event.config.mappings || [])];
-                      mappings[mi] = { ...mappings[mi], value: e.target.value };
-                      patchConfig({ mappings });
-                    }}
-                  />
-                  <button
-                    className="ls-block__btn ls-block__btn--danger"
-                    title="Remove mapping"
-                    onClick={() => {
-                      const mappings = (event.config.mappings || []).filter((_: any, i: number) => i !== mi);
-                      patchConfig({ mappings });
-                    }}
-                  ><X size={11} /></button>
-                </div>
-              ))}
-              <button
-                className="sails-btn sails-btn--ghost sails-btn--sm"
-                onClick={() => {
-                  const mappings = [...(event.config.mappings || []), { fieldId: usableFields[0]?.id || '', value: '' }];
-                  patchConfig({ mappings });
-                }}
-                style={{ marginTop: 6 }}
-              >
-                <Plus size={11} /> Add field
-              </button>
-            </div>
-          )}
         </>
       )}
 

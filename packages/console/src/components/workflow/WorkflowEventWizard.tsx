@@ -33,11 +33,13 @@ export interface WizardVariable {
 
 /** One field-mapping row (source + target column). `source` defaults to 'variable'. */
 export interface MappingEntry {
-  source?: 'variable' | 'record' | 'record_old' | 'wf';
+  source?: 'variable' | 'record' | 'record_old' | 'wf' | 'value';
   sourceVar?: string;
   sourceField?: string;
   /** Item index into a collection variable (default 0 = first item). */
   itemIndex?: number;
+  /** Fixed literal value when source === 'value'. */
+  value?: any;
   targetCol: string;
 }
 
@@ -60,6 +62,12 @@ export interface WorkflowEventWizardProps {
   hasOldRecord?: boolean;
   /** Model tableName → column schema map (record drill-down in variable pickers). */
   recordSchemas?: PickerSchemaMap;
+  /** Layout form controls for the Output step's "To Form Controls" mode. */
+  formControls?: { fieldId: string; fieldName: string; name: string; logicalType: string; config?: any }[];
+  /** Form-output-only mode (Layout Studio): no workflow variables — the Result
+   *  Variable control and its validation are hidden; output maps to form
+   *  controls only. */
+  formOutputOnly?: boolean;
   /** Triggering record schema (columns) — enables `record.<field>` intellisense. */
   recordSchema?: PickerColumn[];
   /** Create a collection workflow variable for read/list results; returns its id. */
@@ -174,7 +182,7 @@ function isEmptyValue(v: any): boolean {
  */
 export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
   eventId, eventType, config, label, onLabelChange, description, onDescriptionChange,
-  variables, tables, triggerModel, hasOldRecord, recordSchemas, recordSchema, drillRoots, exitConditions,
+  variables, tables, triggerModel, hasOldRecord, recordSchemas, recordSchema, drillRoots, exitConditions, formControls, formOutputOnly,
   onCreateCollectionVariable, onCreateRecordVariable, onBindVariableToEvent,
   onOpenExpressionEditor, onOpenFilterBuilder, onAddVariable, onSelectVariable,
   onConfigChange, onDone, onRemove, onClose,
@@ -190,7 +198,11 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
   const [srcIndex, setSrcIndex] = useState<Record<string, string>>({});
   const [showMapSummary, setShowMapSummary] = useState(false);
   // Click-to-assign: the active source leaf (click a leaf, then a column).
-  const [clickSrc, setClickSrc] = useState<{ source?: 'variable' | 'record' | 'record_old' | 'wf'; sourceVar?: string; sourceField?: string; itemIndex?: number; fieldType?: string; name?: string } | null>(null);
+  const [clickSrc, setClickSrc] = useState<{ source?: 'variable' | 'record' | 'record_old' | 'wf' | 'value'; sourceVar?: string; sourceField?: string; itemIndex?: number; fieldType?: string; name?: string; value?: any } | null>(null);
+  // Fixed-value literal for the mapping rail's "Fixed value" editor.
+  const [literalDraft, setLiteralDraft] = useState('');
+  // Column awaiting a typed/picked fixed value (option 2: click column first).
+  const [valueTarget, setValueTarget] = useState<any | null>(null);
   // Independent rail scroll offsets (lines overlay is scroll-independent).
   const [leftScroll, setLeftScroll] = useState(0);
   const [rightScroll, setRightScroll] = useState(0);
@@ -200,6 +212,8 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
   // Output mapping (result fields → variables) panel state.
   const [outSelMapIdx, setOutSelMapIdx] = useState<number | null>(null);
   const [outClickSrc, setOutClickSrc] = useState<{ sourceField: string; fieldType: string; name?: string } | null>(null);
+  /** Output target mode: workflow variables or the layout's form controls. */
+  const [outMode, setOutMode] = useState<'vars' | 'form'>('vars');
   const [outDropFeedback, setOutDropFeedback] = useState<{ col: string; ok: boolean } | null>(null);
   const [outDragPreview, setOutDragPreview] = useState<{ srcIndex: number; tgtIndex: number; ok: boolean; cx: number; cy: number } | null>(null);
   const [outLeftScroll, setOutLeftScroll] = useState(0);
@@ -245,14 +259,19 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
         setSelMapIdx(null);
       } else if (outSelMapIdx !== null) {
         e.preventDefault();
-        const om: { sourceField: string; targetVar: string }[] = config.outputMapping || [];
-        if (om[outSelMapIdx]) onConfigChange('outputMapping', om.filter((_: any, j: number) => j !== outSelMapIdx));
+        if (formOutputOnly || outMode === 'vars') {
+          const om: { sourceField: string; targetVar: string }[] = config.outputMapping || [];
+          if (om[outSelMapIdx]) onConfigChange('outputMapping', om.filter((_: any, j: number) => j !== outSelMapIdx));
+        } else {
+          const fm: { sourceField: string; targetFieldId: string }[] = config.formOutputMapping || [];
+          if (fm[outSelMapIdx]) onConfigChange('formOutputMapping', fm.filter((_: any, j: number) => j !== outSelMapIdx));
+        }
         setOutSelMapIdx(null);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selMapIdx, outSelMapIdx, config, onConfigChange]);
+  }, [selMapIdx, outSelMapIdx, outMode, formOutputOnly, config, onConfigChange]);
 
   // The event config is LIVE (write-through) — no local draft. `config` is
   // refreshed by the parent on every onConfigChange.
@@ -439,12 +458,13 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
     steps.forEach((step, i) => {
       for (const p of step.parameters) {
         if (!p.required) continue;
+        if (formOutputOnly && p.type === 'variable_auto_create') continue;
         if (isEmptyValue(config[p.name])) {
           issues.push({ tab: i + 1, message: `${p.label} is required.` });
         }
       }
     });
-    const mismatch = variableStructureIssue();
+    const mismatch = formOutputOnly ? null : variableStructureIssue();
     if (mismatch) {
       const outTab = steps.findIndex((s) => s.parameters.some((p) => p.name === 'storeToVariable'));
       issues.push({ tab: Math.max(outTab + 1, 1), message: mismatch });
@@ -474,7 +494,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
       }
 
       // Output variable must be mapped (and typed correctly).
-      if (op !== 'delete') {
+      if (op !== 'delete' && !formOutputOnly) {
         const outTab = Math.max(steps.findIndex((s) => s.parameters.some((p) => p.name === 'storeToVariable')) + 1, 1);
         const name = String(config.storeToVariable || '').trim();
         if (!name) {
@@ -595,6 +615,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
         );
       }
       case 'variable_auto_create': {
+        if (formOutputOnly) return null; // Layout Studio: no workflow variables
         // Output result variable for every operation except delete (its step
         // is hidden). list → collection; read and all writes → record.
         // The control is the shared VariableTextInput; a Create button builds
@@ -756,18 +777,21 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
           : displayColsAll;
 
         /** Same source descriptor (unmap-on-reapply); different source replaces. */
-        const sameSource = (a: MappingEntry, b: { source?: 'variable' | 'record' | 'record_old' | 'wf'; sourceVar?: string; sourceField?: string; itemIndex?: number }) =>
+        const sameSource = (a: MappingEntry, b: { source?: 'variable' | 'record' | 'record_old' | 'wf' | 'value'; sourceVar?: string; sourceField?: string; itemIndex?: number }) =>
           (a.source || 'variable') === (b.source || 'variable')
           && a.sourceVar === b.sourceVar
           && a.sourceField === b.sourceField
           && (a.itemIndex ?? 0) === (b.itemIndex ?? 0);
 
         /** Shared map/replace/unmap for drag-drops and click-to-assign. */
-        const tryMap = (desc: { source?: 'variable' | 'record' | 'record_old' | 'wf'; sourceVar?: string; sourceField?: string; itemIndex?: number; fieldType?: string; name?: string; record?: boolean; modelName?: string }, col: any) => {
+        const tryMap = (desc: { source?: 'variable' | 'record' | 'record_old' | 'wf' | 'value'; sourceVar?: string; sourceField?: string; itemIndex?: number; fieldType?: string; name?: string; record?: boolean; modelName?: string; value?: any }, col: any) => {
           if (!isMappableCol(col)) return;
           const colType = col.logicalType || col.physicalType || 'text';
           let compat: boolean;
-          if (desc.record) {
+          if (desc.source === 'value') {
+            // Fixed literal — the typed value is applied as-is (DB coerces).
+            compat = true;
+          } else if (desc.record) {
             // Whole record → relation/lookup of the SAME model (stores the id)
             // or a JSONB/record column (stores the object).
             const targetModel = col.config?.targetTable || col.targetModel;
@@ -782,7 +806,14 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
             notifyMapping(null);
             const targetCol = col.fieldName || col.name;
             const existing = fieldMapping.find((m) => m.targetCol === targetCol);
-            const entry: MappingEntry = { source: desc.source || 'variable', sourceVar: desc.sourceVar, sourceField: desc.sourceField, itemIndex: desc.itemIndex, targetCol };
+            const entry: MappingEntry = {
+              source: desc.source || 'variable',
+              sourceVar: desc.sourceVar,
+              sourceField: desc.sourceField,
+              itemIndex: desc.itemIndex,
+              targetCol,
+              ...(desc.source === 'value' ? { value: desc.value } : {}),
+            };
             if (!existing) {
               onConfigChange('fieldMapping', [...fieldMapping, entry]);
             } else if (sameSource(existing, desc)) {
@@ -899,7 +930,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                   <label className="ws-props-label" style={{ marginBottom: 4, display: 'block' }}>Mappings ({fieldMapping.length})</label>
                   {fieldMapping.map((m, i) => (
                     <div key={i} className="ws-props-row" style={{ gap: 6, marginBottom: 3 }}>
-                      <code style={{ fontSize: 10, minWidth: 80 }}>{m.sourceVar || m.sourceField}{m.itemIndex != null ? `[${m.itemIndex}]` : ''}</code>
+                      <code style={{ fontSize: 10, minWidth: 80 }}>{m.source === 'value' ? `Fixed: ${m.value}` : m.sourceVar || m.sourceField}{m.itemIndex != null ? `[${m.itemIndex}]` : ''}</code>
                       <span style={{ fontSize: 10, color: 'var(--sails-text-muted)' }}>→</span>
                       <code style={{ fontSize: 10, minWidth: 80 }}>{m.targetCol}</code>
                       <button className="ws-icon-btn" onClick={() => onConfigChange('fieldMapping', fieldMapping.filter((_, j) => j !== i))}><X size={10} /></button>
@@ -911,7 +942,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
 
             <div
               style={{ position: 'relative', padding: 4 }}
-              onClick={() => { setSelMapIdx(null); setClickSrc(null); }}
+              onClick={() => { setSelMapIdx(null); setClickSrc(null); setValueTarget(null); }}
             >
               <div
                 ref={mapRowRef}
@@ -951,6 +982,102 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                       onChange={(e) => setSrcSearch(e.target.value)}
                     />
                   </div>
+                  {/* Fixed value (literal) — type a value, click Use, then a column;
+                      or click a column first and type/pick its value here */}
+                  <div style={{ padding: '3px 0', borderBottom: '1px solid var(--sails-border,#e2e8f0)', marginBottom: 4 }} onClick={(e) => e.stopPropagation()}>
+                    {valueTarget ? (
+                      <>
+                        <div style={{ fontSize: 9.5, color: 'var(--sails-text-muted)', marginBottom: 3 }}>
+                          Value for <strong>{valueTarget.name || valueTarget.fieldName}</strong>:
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <input
+                            className="wvp-search-input"
+                            style={{ flex: 1, fontSize: 10, padding: '4px 6px', height: 24 }}
+                            placeholder="Type a value…"
+                            value={literalDraft}
+                            onChange={(e) => setLiteralDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && literalDraft.trim()) {
+                                tryMap({ source: 'value', value: literalDraft.trim(), fieldType: 'text', name: `Fixed: ${literalDraft.trim()}` }, valueTarget);
+                                setValueTarget(null);
+                                setLiteralDraft('');
+                              } else if (e.key === 'Escape') {
+                                setValueTarget(null);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="ws-icon-btn"
+                            title="Apply this value to the column"
+                            disabled={!literalDraft.trim()}
+                            onClick={() => {
+                              tryMap({ source: 'value', value: literalDraft.trim(), fieldType: 'text', name: `Fixed: ${literalDraft.trim()}` }, valueTarget);
+                              setValueTarget(null);
+                              setLiteralDraft('');
+                            }}
+                          ><ArrowRight size={12} /></button>
+                        </div>
+                        {(valueTarget.config?.options || []).length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
+                            {(valueTarget.config?.options || []).map((o: any, oi: number) => {
+                              const v = o.value !== undefined && o.value !== null ? String(o.value) : String(o.label ?? '');
+                              return (
+                                <button
+                                  key={oi}
+                                  type="button"
+                                  style={{ fontSize: 9.5, padding: '2px 8px', borderRadius: 999, border: '1px solid var(--sails-border,#e2e8f0)', background: 'var(--sails-bg-card,#fff)', cursor: 'pointer' }}
+                                  onClick={() => {
+                                    setLiteralDraft(v);
+                                    tryMap({ source: 'value', value: v, fieldType: 'text', name: `Fixed: ${o.label ?? v}` }, valueTarget);
+                                    setValueTarget(null);
+                                    setLiteralDraft('');
+                                  }}
+                                >{o.label ?? v}</button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <input
+                            className="wvp-search-input"
+                            style={{ flex: 1, fontSize: 10, padding: '4px 6px', height: 24 }}
+                            placeholder="Fixed value… (e.g. Qualified)"
+                            value={literalDraft}
+                            onChange={(e) => { setLiteralDraft(e.target.value); }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && literalDraft.trim()) {
+                                setClickSrc({ source: 'value', value: literalDraft.trim(), fieldType: 'text', name: `Fixed: ${literalDraft.trim()}` });
+                                setSelMapIdx(null);
+                              } else if (e.key === 'Escape') {
+                                setClickSrc(null);
+                                setValueTarget(null);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="ws-icon-btn"
+                            title="Use this value — click a column to map it"
+                            disabled={!literalDraft.trim()}
+                            onClick={() => {
+                              setClickSrc({ source: 'value', value: literalDraft.trim(), fieldType: 'text', name: `Fixed: ${literalDraft.trim()}` });
+                              setSelMapIdx(null);
+                            }}
+                          ><ArrowRight size={12} /></button>
+                        </div>
+                        {clickSrc?.source === 'value' && (
+                          <div style={{ fontSize: 9.5, color: 'var(--sails-primary,#9dcee0)', padding: '3px 2px 0' }}>
+                            Fixed: <code>{clickSrc.value}</code> — click a column to map (Esc to cancel)
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                   <div
                     ref={leftRowsRef}
                     style={{ maxHeight: ROWS_MAX, overflowY: 'auto', overflowX: 'hidden', paddingRight: 20 }}
@@ -977,6 +1104,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                                 : undefined;
                               setClickSrc({ source: v.source, sourceVar: v.varName, sourceField: v.fieldName, itemIndex, fieldType: lt, name: v.label });
                               setSelMapIdx(null);
+                              setValueTarget(null);
                             } else if (hasChildren) {
                               toggleSrc(v.key);
                             }
@@ -1072,8 +1200,16 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                         <div key={col.fieldName || col.name} className="wvp-node"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (clickSrc) tryMap(clickSrc, col);
-                              else if (mapped) onConfigChange('fieldMapping', fieldMapping.filter((m) => m.targetCol !== (col.fieldName || col.name)));
+                              if (clickSrc) {
+                                tryMap(clickSrc, col);
+                                if (clickSrc.source === 'value') setClickSrc(null);
+                              } else if (mapped) {
+                                onConfigChange('fieldMapping', fieldMapping.filter((m) => m.targetCol !== (col.fieldName || col.name)));
+                              } else if (isMappableCol(col)) {
+                                // No source pending — select the column to type/pick a fixed value.
+                                setValueTarget(col);
+                                setSelMapIdx(null);
+                              }
                             }}
                             onDragOver={(e) => {
                             e.preventDefault(); e.stopPropagation();
@@ -1211,6 +1347,19 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
           ? varRowsAll.filter((v) => v.label.toLowerCase().includes(outVarSearch.toLowerCase()))
           : varRowsAll;
         const outEntries: { sourceField: string; targetVar: string }[] = config.outputMapping || [];
+        const formRowsAll = (formControls || []).map((fc) => ({
+          key: `ofc:${fc.fieldId}`,
+          label: fc.name || fc.fieldName,
+          fieldType: fc.logicalType || 'text',
+          targetFieldId: fc.fieldId || fc.fieldName,
+        }));
+        const formRows = outVarSearch.trim()
+          ? formRowsAll.filter((r) => r.label.toLowerCase().includes(outVarSearch.toLowerCase()))
+          : formRowsAll;
+        const formEntries: { sourceField: string; targetFieldId: string }[] = config.formOutputMapping || [];
+        const effectiveOutMode = formOutputOnly ? 'form' : outMode;
+        const activeTargetRows: { key: string; label: string; fieldType: string; targetFieldId?: string }[] = effectiveOutMode === 'vars' ? varRows : formRows;
+        const activeEntries: any[] = effectiveOutMode === 'vars' ? outEntries : formEntries;
         // Rows-area coordinates (the svg already starts below the label+search
         // band, so row positions are relative to its top — no OHEADER_H term).
         const oYLeft = (i: number) => i * OPITCH + OROW_H / 2 - outLeftScroll;
@@ -1222,16 +1371,25 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
           background: 'var(--sails-primary,#9dcee0)', border: '2px solid var(--sails-bg-card)',
           boxShadow: '0 0 0 1px rgba(157,206,224,.5)', cursor: 'crosshair', zIndex: 3,
         };
-        const tryOutMap = (src: { sourceField: string; fieldType: string; name?: string }, tgt: { name: string; fieldType: string }) => {
+        const tryOutMap = (src: { sourceField: string; fieldType: string; name?: string }, tgt: { name: string; fieldType: string; targetFieldId?: string }) => {
           const compat = isCompatibleType(src.fieldType || 'text', tgt.fieldType || 'text');
           setOutDropFeedback({ col: tgt.name, ok: compat });
           if (compat) {
             notifyMapping(null);
-            const entry = { sourceField: src.sourceField, targetVar: tgt.name };
-            const existing = outEntries.find((m) => m.targetVar === tgt.name);
-            if (!existing) onConfigChange('outputMapping', [...outEntries, entry]);
-            else if (existing.sourceField === src.sourceField) onConfigChange('outputMapping', outEntries.filter((m) => m.targetVar !== tgt.name));
-            else onConfigChange('outputMapping', outEntries.map((m) => (m.targetVar === tgt.name ? entry : m)));
+            if (effectiveOutMode === 'vars') {
+              const entry = { sourceField: src.sourceField, targetVar: tgt.name };
+              const existing = outEntries.find((m) => m.targetVar === tgt.name);
+              if (!existing) onConfigChange('outputMapping', [...outEntries, entry]);
+              else if (existing.sourceField === src.sourceField) onConfigChange('outputMapping', outEntries.filter((m) => m.targetVar !== tgt.name));
+              else onConfigChange('outputMapping', outEntries.map((m) => (m.targetVar === tgt.name ? entry : m)));
+            } else {
+              const tid = tgt.targetFieldId!;
+              const entry = { sourceField: src.sourceField, targetFieldId: tid };
+              const existing = formEntries.find((m) => m.targetFieldId === tid);
+              if (!existing) onConfigChange('formOutputMapping', [...formEntries, entry]);
+              else if (existing.sourceField === src.sourceField) onConfigChange('formOutputMapping', formEntries.filter((m) => m.targetFieldId !== tid));
+              else onConfigChange('formOutputMapping', formEntries.map((m) => (m.targetFieldId === tid ? entry : m)));
+            }
           } else {
             notifyMapping(`Can't assign '${src.sourceField}' (${typeLabel(src.fieldType)}) → ${tgt.name} (${typeLabel(tgt.fieldType)}) — field types are not compatible.`);
           }
@@ -1244,6 +1402,22 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
         }
         return (
           <>
+            {!formOutputOnly && (
+              <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+                {(['vars', 'form'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className="sails-btn sails-btn--ghost sails-btn--sm"
+                    style={{
+                      fontSize: 10,
+                      ...(effectiveOutMode === m ? { background: 'rgba(157,206,224,.18)', color: 'var(--sails-primary,#2c7f94)' } : {}),
+                    }}
+                    onClick={() => { setOutMode(m); setOutClickSrc(null); setOutSelMapIdx(null); }}
+                  >{m === 'vars' ? 'To Variables' : 'To Form Controls'}</button>
+                ))}
+              </div>
+            )}
             <div
               ref={outMapRowRef}
               style={{ display: 'flex', position: 'relative' }}
@@ -1323,16 +1497,16 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
               {/* Middle — drag & drop gap */}
               <div style={{ flex: '0 0 calc(20% - 20px)' }} />
 
-              {/* Right — scalar variables */}
+              {/* Right — variables or form controls */}
               <div style={{ flex: '0 0 40%', minWidth: 0 }}>
                 <div style={{ height: OLABEL_H, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <label className="ws-props-label" style={{ margin: 0 }}>Variables</label>
+                  <label className="ws-props-label" style={{ margin: 0 }}>{effectiveOutMode === 'vars' ? 'Variables' : 'Form Controls'}</label>
                 </div>
                 <div className="wvp-search" style={{ boxSizing: 'border-box', height: OSEARCH_H, marginBottom: 0 }}>
                   <Search size={11} />
                   <input
                     className="wvp-search-input"
-                    placeholder="Search variables…"
+                    placeholder={effectiveOutMode === 'vars' ? 'Search variables…' : 'Search form controls…'}
                     value={outVarSearch}
                     onChange={(e) => setOutVarSearch(e.target.value)}
                   />
@@ -1342,8 +1516,8 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                   style={{ maxHeight: OROWS_MAX, overflowY: 'auto', overflowX: 'hidden' }}
                   onScroll={(e) => setOutRightScroll(e.currentTarget.scrollTop)}
                 >
-                  {varRows.map((v, j) => {
-                    const mapped = outEntries.some((m) => m.targetVar === v.label);
+                  {activeTargetRows.map((v, j) => {
+                    const mapped = activeEntries.some((m) => effectiveOutMode === 'vars' ? m.targetVar === v.label : m.targetFieldId === v.targetFieldId);
                     const feedback = outDropFeedback !== null && outDropFeedback.col === v.label;
                     const feedbackOk = feedback && outDropFeedback.ok;
                     // The whole row accepts the drop — no pixel-perfect port hits.
@@ -1351,8 +1525,11 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                       <div key={v.key} className="wvp-node"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (outClickSrc) tryOutMap(outClickSrc, { name: v.label, fieldType: v.fieldType });
-                          else if (mapped) onConfigChange('outputMapping', outEntries.filter((m) => m.targetVar !== v.label));
+                          if (outClickSrc) tryOutMap(outClickSrc, { name: v.label, fieldType: v.fieldType, targetFieldId: v.targetFieldId });
+                          else if (mapped) {
+                            if (effectiveOutMode === 'vars') onConfigChange('outputMapping', outEntries.filter((m) => m.targetVar !== v.label));
+                            else onConfigChange('formOutputMapping', formEntries.filter((m) => m.targetFieldId !== v.targetFieldId));
+                          }
                         }}
                         onDragOver={(e) => {
                           e.preventDefault(); e.stopPropagation();
@@ -1376,7 +1553,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                           try {
                             const p = JSON.parse(e.dataTransfer.getData('application/json'));
                             if (p.type !== 'out-map') return;
-                            tryOutMap(p, { name: v.label, fieldType: v.fieldType });
+                            tryOutMap(p, { name: v.label, fieldType: v.fieldType, targetFieldId: v.targetFieldId });
                           } catch { /* ignore */ }
                         }}
                         style={{
@@ -1404,14 +1581,15 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
 
               {/* Connector layer */}
               <svg style={{ position: 'absolute', left: 0, top: OHEADER_H, width: '100%', height: `calc(100% - ${OHEADER_H}px)`, overflow: 'hidden', pointerEvents: 'none', zIndex: 2 }}>
-                {outEntries.map((m, mi) => {
+                {activeEntries.map((m, mi) => {
                   const si = resRows.findIndex((f) => f.sourceField === m.sourceField);
-                  const ti = varRows.findIndex((v) => v.label === m.targetVar);
+                  const ti = activeTargetRows.findIndex((v) => effectiveOutMode === 'vars' ? v.label === m.targetVar : v.targetFieldId === m.targetFieldId);
                   if (si < 0 || ti < 0) return null;
+                  const tgtName = effectiveOutMode === 'vars' ? m.targetVar : (activeTargetRows[ti]?.label || m.targetFieldId);
                   const sel = outSelMapIdx === mi;
                   return (
                     <g key={mi}>
-                      <title>{sel ? `${m.sourceField} → ${m.targetVar} (click again or press Delete to remove)` : `${m.sourceField} → ${m.targetVar} (click to select)`}</title>
+                      <title>{sel ? `${m.sourceField} → ${tgtName} (click again or press Delete to remove)` : `${m.sourceField} → ${tgtName} (click to select)`}</title>
                       <path
                         d={oConn(osrcX, oYLeft(si), otgtX, oYRight(ti))}
                         stroke={sel ? '#ef4444' : 'var(--sails-primary,#9dcee0)'}
@@ -1442,7 +1620,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                 )}
               </svg>
             </div>
-            {outSelMapIdx !== null && outEntries[outSelMapIdx] && (
+            {outSelMapIdx !== null && activeEntries[outSelMapIdx] && (
               <p className="ws-props-hint" style={{ padding: '4px 0 0', color: '#ef4444' }}>
                 Line selected — press Delete/Backspace to remove
               </p>

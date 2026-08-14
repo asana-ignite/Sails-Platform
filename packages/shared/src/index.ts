@@ -586,6 +586,7 @@ export interface FormEvent {
 /** An ordered group of events; a false condition skips the whole section. */
 export interface ActionSection {
   id: string;
+  title?: string;
   condition?: string;
   events: FormEvent[];
   collapsed?: boolean;

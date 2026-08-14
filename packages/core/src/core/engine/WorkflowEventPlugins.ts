@@ -45,6 +45,7 @@ export async function buildSession(ctx: WorkflowEventContext): Promise<SessionCo
     email: '',
     teams: [],
     activeTeamId: ctx.session.teamId || undefined,
+    suppressRecordTriggers: !!(ctx as any).suppressRecordTriggers,
   };
 }
 
@@ -163,6 +164,7 @@ export function getPath(obj: any, path: string): any {
 }
 
 export function valueFor(ctx: WorkflowEventContext, m: any, wfCtx?: WorkflowMacroCtx | null): any {
+  if (m.source === 'value') return m.value;
   if (m.source === 'record') return getPath(ctx.record?.values, m.sourceField ?? m.targetCol);
   if (m.source === 'record_old') return getPath(ctx.record?.oldValues, m.sourceField ?? m.targetCol);
   if (m.source === 'wf') {

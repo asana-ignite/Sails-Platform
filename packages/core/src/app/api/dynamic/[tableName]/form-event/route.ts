@@ -142,7 +142,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
           const result = await plugin.execute(ctx);
           if (result?.output) {
             variables = { ...variables, ...result.output };
-            if (event.storeAs) variables[event.storeAs] = result.output;
+            if (event.storeAs) {
+              // Unwrap single-record outputs (e.g. Record Event results) so the
+              // client can read fields directly for form-control mapping.
+              const out = result.output;
+              const st = event.config?.storeToVariable;
+              variables[event.storeAs] = (out && st && typeof out === 'object' && st in out) ? out[st] : out;
+            }
           }
           if (!result?.success) {
             results.push({ type, label: event.label, success: false, error: result?.error || 'Event failed.' });

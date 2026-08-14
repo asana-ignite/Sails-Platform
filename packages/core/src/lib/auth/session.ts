@@ -18,6 +18,8 @@ export interface SessionContext {
   email: string;
   teams: { teamId: string; isLeader: boolean }[];
   activeTeamId?: string;
+  /** Set while a workflow executes stage events — QueryLayer skips record triggers. */
+  suppressRecordTriggers?: boolean;
 }
 
 const _sessionStore = new AsyncLocalStorage<SessionContext>();

@@ -98,9 +98,19 @@ export function defaultEventLabel(type: FormEventType): string {
   }
 }
 
+/**
+ * Record event config (plugin-compatible):
+ *   operation: create | update | upsert | delete | read | list
+ *   model: target tableName
+ *   fieldMapping: [{ targetCol, source: 'record'|'variable'|'value'|'record_old'|'wf', sourceVar?, sourceField?, value? }]
+ *   filterGroups: QueryStudio filters (batch read/update/delete)
+ *   storeToVariable / FormEvent.storeAs: result binding
+ *   formOutputMapping (Layout Studio): [{ sourceField, targetFieldId }] — map
+ *     the result record's fields onto the layout's form controls at runtime.
+ */
 export function defaultEventConfig(type: FormEventType): Record<string, any> {
   switch (type) {
-    case 'record':       return { operation: 'update', mappings: [{ fieldId: '', value: '' }] };
+    case 'record':       return { operation: 'update', fieldMapping: [{ targetCol: '', source: 'record', sourceField: '' }] };
     case 'notification': return { templateId: '', channel: 'email', to: '' };
     case 'script':       return { scriptId: '', timeoutMs: 10000 };
     case 'expression':   return { expression: '' };
