@@ -563,10 +563,14 @@ export interface ListAction {
 /** A validation gate evaluated before an action's event chain runs. */
 export interface PreValidation {
   id: string;
-  fieldId: string;
-  rule: string;
-  value?: string;
+  /** JSONata condition — must evaluate truthy for the action to run. */
+  expression: string;
+  /** Shown to the user when the expression evaluates falsy. */
   message: string;
+  /** Legacy structured fields (older drafts) — migrated to `expression` in the studio. */
+  fieldId?: string;
+  rule?: string;
+  value?: string;
 }
 
 /** A single step in an action's event chain (reuses workflow event plugin types). */

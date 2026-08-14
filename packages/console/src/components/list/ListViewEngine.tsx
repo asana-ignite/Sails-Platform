@@ -119,6 +119,8 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
   const [deletingRow, setDeletingRow] = useState(false);
 
   const initialLoadDone = useRef(false);
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
   const tableNameRef = useRef<string | null>(null);
   const layoutConfigRef = useRef<any>(null);
   const fieldsRef = useRef<SailsFieldDefinition[]>([]);
@@ -556,9 +558,9 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
       const rel = relatedRef.current;
       // Standalone list page: navigate directly to the new-record route
       // instead of stacking the panel.
-      if (!rel && navigate && createLayoutKey && tn && menuPath) {
+      if (!rel && navigateRef.current && createLayoutKey && tn && menuPath) {
         const base = menuPath.replace(/\/+$/, '');
-        navigate(`${base}/${createLayoutKey}/new`);
+        navigateRef.current(`${base}/${createLayoutKey}/new`);
         return;
       }
       if (createLayoutKey && tn) {
@@ -585,11 +587,11 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
         menuPath,
         embedded: !!relatedRef.current,
         defaultDetailLayoutKey: defaultDetailLayoutKeyRef.current || undefined,
-        navigate: navigate || ((_: string | number) => {}),
+        navigate: navigateRef.current || ((_: string | number) => {}),
         refetch: () => doFetch(),
       });
     }
-  }, [config, tableId, layout, menuPath, navigate, startCreate, doFetch, pushRecord]);
+  }, [config, tableId, layout, menuPath, startCreate, doFetch, pushRecord]);
 
   // Hand the actions + executor to the parent (page-header placement when actionsBar='none').
   useEffect(() => {
@@ -650,7 +652,7 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
               return;
             }
             const base = menuPath?.replace(/\/+$/, '');
-            if (navigate && base && layoutKey) navigate(`${base}/${layoutKey}/${rec.id}`);
+            if (navigateRef.current && base && layoutKey) navigateRef.current(`${base}/${layoutKey}/${rec.id}`);
           }}
           allowInlineEdit={!!config?.allowInlineEdit}
           editingRowId={editingRowId}

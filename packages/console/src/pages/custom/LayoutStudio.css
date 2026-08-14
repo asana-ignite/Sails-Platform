@@ -2396,3 +2396,200 @@
 .ls-evt-addmenu__pop {
   z-index: 1000;
 }
+
+/* ─── Details modal tabs (General | Versions) ───────────────── */
+
+.ls-details-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+}
+
+/* ─── Big modal (Details) — matches Data Model Studio / Workflow Studio ── */
+
+.ls-big-modal {
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  max-width: 840px;
+  height: 80vh;
+  min-height: 600px;
+  max-height: 850px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ls-big-modal--md {
+  max-width: 680px;
+}
+
+.ls-big-modal__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.ls-big-modal__icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(157, 206, 224, 0.16);
+  color: var(--sails-primary, #2c7f94);
+  flex-shrink: 0;
+}
+
+.ls-big-modal__titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.ls-big-modal__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.ls-big-modal__subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--sails-text-muted, #64748b);
+}
+
+.ls-big-modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ls-big-modal__close:hover {
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--sails-text-main, #1e293b);
+}
+
+.ls-big-modal__tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.ls-big-modal__body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.ls-big-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--sails-border-color, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.ls-modal__set-default { min-width: 140px; }
+
+/* Placeholder color — match Data Model Studio (--sails-field-placeholder) */
+.ls-root input::placeholder,
+.ls-root textarea::placeholder {
+  color: var(--sails-field-placeholder, #D9D9D9);
+  opacity: 1;
+}
+
+/* ─── Pre-validation rules (JSONata editor rows) ────────────── */
+
+.ls-evt-pvrow-expr {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 8px;
+  background: var(--sails-bg-body, #f8fafc);
+}
+
+.ls-evt-pvrow-expr__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ls-evt-pvrow-expr__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.ls-evt-pvrow-expr__hint {
+  font-size: 10px;
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+.ls-evt-pvrow-expr__head .ls-block__btn {
+  margin-left: auto;
+}
+
+/* ─── Conditions tab: model columns listing ─────────────────── */
+
+.ls-cond-cols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ls-cond-col {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 6px;
+  background: var(--sails-bg-card, #ffffff);
+  font-size: 11px;
+}
+
+.ls-cond-col__name {
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+}
+
+/* ─── Section condition editor (Events tab) ─────────────────── */
+
+.ls-evt-section__cond {
+  align-items: flex-start;
+  padding: 8px 10px;
+}
+
+.ls-evt-section__cond-label {
+  margin-top: 6px;
+}
+
+.ls-evt-section__cond-editor {
+  flex: 1;
+  min-width: 0;
+}

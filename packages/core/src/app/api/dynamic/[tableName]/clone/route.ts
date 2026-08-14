@@ -10,18 +10,13 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/knex';
-import { QueryLayer } from '@/core/engine/QueryLayer';
+import { QueryLayer, generateTimeOrderedId } from '@/core/engine/QueryLayer';
 import { resolveTable } from '@/lib/dynamicTable';
 import format from 'pg-format';
-import crypto from 'crypto';
 import { requireSession } from '@/lib/auth/session';
 import { SYSTEM_PROTECTED_COLUMNS } from '@sails/shared';
 
 type RouteContext = { params: { tableName: string } };
-
-function cloneId(): string {
-  return crypto.randomUUID();
-}
 
 /** Copy user-editable column values; system/auto-number/expression are skipped
  *  (auto-number regenerates via DEFAULT, expressions recompute server-side). */
@@ -63,7 +58,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
         if (!parentRow) throw new Error('Record not found or access denied.');
 
         const audit: string[] = [];
-        const newParentId = cloneId();
+        const newParentId = generateTimeOrderedId();
 
         // 2. Insert the parent copy.
         const parentPayload = buildClonePayload(parentRow, parent.table.fields || []);
@@ -86,7 +81,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
         );
         const newParent = (await client.query(parentInsert)).rows[0];
         audit.push(
-          `INSERT INTO core.data_audit_logs (id, tenant_id, user_id, action, object_name, record_id, new_values) VALUES (${format('%L', cloneId())}, ${format('%L', session.tenantId)}, ${format('%L', session.userId)}, 'CREATE', ${format('%L', tableName)}, ${format('%L', newParentId)}, ${format('%L', JSON.stringify(newParent))})`
+          `INSERT INTO core.data_audit_logs (id, tenant_id, user_id, action, object_name, record_id, new_values) VALUES (${format('%L', generateTimeOrderedId())}, ${format('%L', session.tenantId)}, ${format('%L', session.userId)}, 'CREATE', ${format('%L', tableName)}, ${format('%L', newParentId)}, ${format('%L', JSON.stringify(newParent))})`
         );
 
         // 3. Copy selected child records (one level deep).
@@ -111,7 +106,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
           let count = 0;
           for (const childRow of childRows) {
             const payload = buildClonePayload(childRow, child.table.fields || []);
-            const newChildId = cloneId();
+            const newChildId = generateTimeOrderedId();
             payload[fkCol] = newParentId; // rebind the FK to the new parent
             const data = {
               id: newChildId,
@@ -132,7 +127,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
             );
             const newChild = (await client.query(insert)).rows[0];
             audit.push(
-              `INSERT INTO core.data_audit_logs (id, tenant_id, user_id, action, object_name, record_id, new_values) VALUES (${format('%L', cloneId())}, ${format('%L', session.tenantId)}, ${format('%L', session.userId)}, 'CREATE', ${format('%L', childTableName)}, ${format('%L', newChildId)}, ${format('%L', JSON.stringify(newChild))})`
+              `INSERT INTO core.data_audit_logs (id, tenant_id, user_id, action, object_name, record_id, new_values) VALUES (${format('%L', generateTimeOrderedId())}, ${format('%L', session.tenantId)}, ${format('%L', session.userId)}, 'CREATE', ${format('%L', childTableName)}, ${format('%L', newChildId)}, ${format('%L', JSON.stringify(newChild))})`
             );
             count++;
           }

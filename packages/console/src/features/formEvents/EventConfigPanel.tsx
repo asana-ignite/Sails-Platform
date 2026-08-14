@@ -6,15 +6,29 @@
 import React from 'react';
 import { Plus, X } from 'lucide-react';
 import type { SailsFieldDefinition, FormEvent } from '@sails/shared';
+import ExpressionEditor from '../../components/workflow/ExpressionEditor';
 import { MOCK_SCRIPTS, MOCK_TEMPLATES } from './index';
 
 interface EventConfigPanelProps {
   event: FormEvent;
   fields: SailsFieldDefinition[];
   onPatch: (patch: Partial<FormEvent>) => void;
+  /** JSONata intellisense context — model column suggestions (record.<field>). */
+  recordSchemas?: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
+  drillRoots?: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
+  triggerModelName?: string;
+  sample?: Record<string, any>;
 }
 
-export const EventConfigPanel: React.FC<EventConfigPanelProps> = ({ event, fields, onPatch }) => {
+export const EventConfigPanel: React.FC<EventConfigPanelProps> = ({
+  event,
+  fields,
+  onPatch,
+  recordSchemas,
+  drillRoots,
+  triggerModelName,
+  sample,
+}) => {
   const usableFields = fields.filter((f) => !f.isSystem);
   const patchConfig = (config: Record<string, any>) => onPatch({ config: { ...event.config, ...config } });
 
@@ -34,6 +48,23 @@ export const EventConfigPanel: React.FC<EventConfigPanelProps> = ({ event, field
           onChange={(e) => onPatch({ storeAs: e.target.value || undefined })}
         />
         <p className="ls-prop-hint">Downstream events can reference the value via <code>variables.{event.storeAs || '…'}</code>.</p>
+      </div>
+
+      <div className="ls-prop-group">
+        <label className="ls-prop-label">Condition (JSONata)</label>
+        <ExpressionEditor
+          compact
+          hideVariablePicker
+          variables={[]}
+          recordSchemas={recordSchemas}
+          drillRoots={drillRoots}
+          triggerModelName={triggerModelName}
+          value={event.condition || ''}
+          onChange={(v) => onPatch({ condition: v || undefined })}
+          sample={sample}
+          placeholder="record.budget > 100000"
+        />
+        <p className="ls-prop-hint">Skips this event when the expression evaluates false.</p>
       </div>
 
       {event.type === 'record' && (

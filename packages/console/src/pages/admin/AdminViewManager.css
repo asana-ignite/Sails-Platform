@@ -532,3 +532,37 @@
   font-size: 0.85rem;
   color: var(--sails-text-main);
 }
+
+/* ─── Views table type scale (scoped to this manager) ─────────
+ * primary rows 12px · details 10px · badges 10px · headers 12px */
+
+.sails-layout-studio .ui-table thead th {
+  font-size: 12px;
+}
+
+.sails-layout-studio .ui-table tbody td {
+  font-size: 12px;
+}
+
+.sails-layout-studio .ui-name-secondary {
+  font-size: 10px;
+}
+
+.sails-layout-studio .ui-desc-text {
+  font-size: 10px;
+}
+
+.sails-layout-studio .ui-date-cell {
+  font-size: 10px;
+}
+
+.sails-layout-studio .ui-badge {
+  font-size: 10px;
+}
+
+
+/* Placeholder color — match Data Model Studio (--sails-field-placeholder) */
+.sails-layout-studio input::placeholder {
+  color: var(--sails-field-placeholder, #D9D9D9);
+  opacity: 1;
+}

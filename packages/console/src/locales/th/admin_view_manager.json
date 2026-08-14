@@ -23,7 +23,8 @@
         "viewType": "ประเภทมุมมอง",
         "status": "สถานะ",
         "createdAt": "สร้างเมื่อ",
-        "lastModified": "แก้ไขล่าสุด"
+        "lastModified": "แก้ไขล่าสุด",
+        "default": "ค่าเริ่มต้น"
       },
       "searchPlaceholder": "ค้นหาหน้าจอตามชื่อหรือตาราง...",
       "noLayoutsTitle": "ยังไม่มีหน้าจอ",

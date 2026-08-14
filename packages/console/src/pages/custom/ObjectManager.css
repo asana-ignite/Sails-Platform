@@ -2,7 +2,7 @@
    Object Manager — Data Model Studio
    =========================== */
 .object-manager-container-full {
-    padding: 24px;
+    padding: 0;
 }
 
 /* ── List View ── */
@@ -895,4 +895,37 @@
     color: var(--sails-primary);
     padding: 0 2px;
     border-radius: 2px;
+}
+/* ─── Data Model list type scale (matches AdminViewManager standard) ──
+ * primary rows 12px · details 10px · badges 10px · headers 12px */
+
+.object-manager-container-full .ui-table thead th {
+  font-size: 12px;
+}
+
+.object-manager-container-full .ui-table tbody td {
+  font-size: 12px;
+}
+
+.object-manager-container-full .ui-name-secondary {
+  font-size: 10px;
+}
+
+.object-manager-container-full .ui-desc-text {
+  font-size: 10px;
+}
+
+.object-manager-container-full .ui-date-cell {
+  font-size: 10px;
+}
+
+.object-manager-container-full .ui-badge {
+  font-size: 10px;
+}
+
+/* Icon shrink guard — matches the shared ui.css fix (flexbox would squeeze
+   SVGs when the cell text wraps to multiple lines). */
+.om-table-cell-name svg,
+.om-table-icon-wrapper {
+    flex-shrink: 0;
 }

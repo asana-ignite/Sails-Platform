@@ -4,6 +4,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CustomSelect, SelectOption } from '../common/CustomSelect';
 
 export const UiPagination: React.FC<{
   page: number;
@@ -14,10 +15,26 @@ export const UiPagination: React.FC<{
   onPageChange: (p: number) => void;
   onPageSizeChange?: (n: number) => void;
   pageSizeOptions?: number[];
-}> = ({ page, totalPages, total, pageSize, label, onPageChange, onPageSizeChange, pageSizeOptions = [10, 25, 50] }) => {
+}> = ({ page, totalPages, total, pageSize, label, onPageChange, onPageSizeChange, pageSizeOptions = [10, 25, 50, 100] }) => {
   const { t } = useTranslation();
   const startRecord = total > 0 ? (page - 1) * pageSize + 1 : 0;
   const endRecord = Math.min(page * pageSize, total);
+
+  const pageSizeSelectOptions: SelectOption[] = React.useMemo(
+    () => pageSizeOptions.map((n) => ({ value: n, label: String(n) })),
+    [pageSizeOptions]
+  );
+
+  const pageNumbers = React.useMemo<(number | 'ellipsis')[]>(() => {
+    const items: (number | 'ellipsis')[] = [];
+    for (let p = 1; p <= totalPages; p++) {
+      if (p === 1 || p === totalPages || Math.abs(p - page) <= 1) {
+        if (items.length > 0 && p - (items[items.length - 1] as number) > 1) items.push('ellipsis');
+        items.push(p);
+      }
+    }
+    return items;
+  }, [totalPages, page]);
 
   return (
     <div className="ui-pagination">
@@ -28,14 +45,13 @@ export const UiPagination: React.FC<{
         {onPageSizeChange && (
           <div className="ui-pagination__page-size">
             <span className="ui-pagination__page-size-label">{t('common.pagination.recordsPerPage')}:</span>
-            <select
-              className="sails-input"
-              style={{ width: 'auto', padding: '4px 8px', fontSize: 12, height: 30 }}
+            <CustomSelect
+              size="sm"
               value={pageSize}
-              onChange={(e) => { onPageSizeChange(Number(e.target.value)); }}
-            >
-              {pageSizeOptions.map((n) => <option key={n} value={n}>{n}</option>)}
-            </select>
+              options={pageSizeSelectOptions}
+              onChange={(val) => { onPageSizeChange(Number(val)); }}
+              direction="up"
+            />
           </div>
         )}
       </div>
@@ -44,15 +60,21 @@ export const UiPagination: React.FC<{
           <ChevronLeft size={16} />
         </button>
         <div className="ui-pagination__pages">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              className={`ui-pagination__page ${page === p ? 'ui-pagination__page--active' : ''}`}
-              onClick={() => onPageChange(p)}
-            >
-              {p}
-            </button>
-          ))}
+          {pageNumbers.map((p, i) =>
+            p === 'ellipsis' ? (
+              <span key={`e-${i}`} className="ui-pagination__ellipsis">...</span>
+            ) : page === p ? (
+              <span key={p} className="ui-pagination__page ui-pagination__page--active">{p}</span>
+            ) : (
+              <button
+                key={p}
+                className="ui-pagination__page"
+                onClick={() => onPageChange(p)}
+              >
+                {p}
+              </button>
+            )
+          )}
         </div>
         <button className="ui-pagination__btn" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page >= totalPages || totalPages === 0}>
           <ChevronRight size={16} />

@@ -1178,7 +1178,7 @@ const ObjectManager: React.FC = () => {
                     <UiTr key={table.id} onClick={() => selectRow(table)}>
                       <UiTd>
                         <UiNameCell
-                          icon={<Layers size={18} />}
+                          icon={<Layers size={16} />}
                           primary={renderHighlightedText(table.name, searchTerm)}
                           secondary={renderHighlightedText(table.tableName, searchTerm)}
                           secondaryAsCode
@@ -1201,13 +1201,13 @@ const ObjectManager: React.FC = () => {
                       </UiTd>
                       <UiTd>
                         <UiDateCell>
-                          <Calendar size={14} />
+                          <Calendar size={13} />
                           {renderHighlightedText(dateText, searchTerm)}
                         </UiDateCell>
                       </UiTd>
                       <UiTd>
                         <UiDateCell>
-                          <Calendar size={14} />
+                          <Calendar size={13} />
                           {renderHighlightedText(updatedDateText, searchTerm)}
                         </UiDateCell>
                       </UiTd>
@@ -1252,7 +1252,7 @@ const ObjectManager: React.FC = () => {
               label={t('common.pagination.records')}
               onPageChange={(p) => setCurrentPage(p)}
               onPageSizeChange={(n) => { setPageSize(n); setCurrentPage(1); }}
-              pageSizeOptions={[10, 25, 50]}
+              pageSizeOptions={[10, 25, 50, 100]}
             />
           </UiTableCard>
         </div>

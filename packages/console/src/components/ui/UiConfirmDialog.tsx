@@ -3,6 +3,7 @@
  */
 import React from 'react';
 import { createPortal } from 'react-dom';
+import './ui.css';
 
 export const UiConfirmDialog: React.FC<{
   open: boolean;

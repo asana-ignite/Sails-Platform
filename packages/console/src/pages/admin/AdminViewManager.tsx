@@ -43,7 +43,7 @@ const AdminViewManager: React.FC = () => {
   const [activating, setActivating] = useState<string | null>(null);
   const [activateConfirmId, setActivateConfirmId] = useState<string | null>(null);
   const [activateError, setActivateError] = useState<string | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'description' | 'tableName' | 'viewType' | 'status' | 'createdAt' | 'updatedAt'; direction: 'asc' | 'desc' } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'description' | 'tableName' | 'viewType' | 'status' | 'isDefault' | 'updatedAt'; direction: 'asc' | 'desc' } | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const { setHeaderActions } = useConsole();
 
@@ -76,7 +76,7 @@ const AdminViewManager: React.FC = () => {
     return () => window.removeEventListener('click', handler);
   }, []);
 
-  const handleSort = (key: 'name' | 'description' | 'tableName' | 'viewType' | 'status' | 'createdAt' | 'updatedAt') => {
+  const handleSort = (key: 'name' | 'description' | 'tableName' | 'viewType' | 'status' | 'isDefault' | 'updatedAt') => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -84,7 +84,7 @@ const AdminViewManager: React.FC = () => {
     setSortConfig({ key, direction });
   };
 
-  const getSortIcon = (key: 'name' | 'description' | 'tableName' | 'viewType' | 'status' | 'createdAt' | 'updatedAt') => {
+  const getSortIcon = (key: 'name' | 'description' | 'tableName' | 'viewType' | 'status' | 'isDefault' | 'updatedAt') => {
     if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown size={14} className="lav-sort-icon--idle" />;
     return sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
   };
@@ -261,9 +261,9 @@ const AdminViewManager: React.FC = () => {
                   <UiTh sortable sortState={sortConfig?.key === 'name' ? sortConfig.direction : 'idle'} onSort={() => handleSort('name')}>{t('admin_view_manager.table.columns.name')}</UiTh>
                   <UiTh sortable sortState={sortConfig?.key === 'description' ? sortConfig.direction : 'idle'} onSort={() => handleSort('description')}>{t('admin_view_manager.table.columns.description')}</UiTh>
                   <UiTh sortable sortState={sortConfig?.key === 'tableName' ? sortConfig.direction : 'idle'} onSort={() => handleSort('tableName')}>{t('admin_view_manager.table.columns.model')}</UiTh>
+                  <UiTh sortable sortState={sortConfig?.key === 'isDefault' ? sortConfig.direction : 'idle'} onSort={() => handleSort('isDefault')}>{t('admin_view_manager.table.columns.default')}</UiTh>
                   <UiTh sortable sortState={sortConfig?.key === 'viewType' ? sortConfig.direction : 'idle'} onSort={() => handleSort('viewType')}>{t('admin_view_manager.table.columns.viewType')}</UiTh>
                   <UiTh sortable sortState={sortConfig?.key === 'status' ? sortConfig.direction : 'idle'} onSort={() => handleSort('status')}>{t('admin_view_manager.table.columns.status')}</UiTh>
-                  <UiTh sortable sortState={sortConfig?.key === 'createdAt' ? sortConfig.direction : 'idle'} onSort={() => handleSort('createdAt')}>{t('admin_view_manager.table.columns.createdAt')}</UiTh>
                   <UiTh sortable sortState={sortConfig?.key === 'updatedAt' ? sortConfig.direction : 'idle'} onSort={() => handleSort('updatedAt')}>{t('admin_view_manager.table.columns.lastModified')}</UiTh>
                   <th style={{ textAlign: 'right', width: 48 }}></th>
                 </tr>
@@ -293,12 +293,18 @@ const AdminViewManager: React.FC = () => {
                       <UiTd>
                         {row.table ? (
                           <span className="ui-name-cell" style={{ gap: 8 }}>
-                            <Database size={12} />
+                            <Database size={14} />
                             {renderHighlightedText(row.table.name, search)}
-                            {row.isDefault && <UiBadge tone="default">{t('admin_view_manager.table.default')}</UiBadge>}
                           </span>
                         ) : (
                           <UiBadge tone="neutral">{t('admin_view_manager.table.custom')}</UiBadge>
+                        )}
+                      </UiTd>
+                      <UiTd align="center">
+                        {row.isDefault ? (
+                          <CheckCircle2 size={14} style={{ color: '#f2994a' }} />
+                        ) : (
+                          <span className="ui-text-muted">—</span>
                         )}
                       </UiTd>
                       <UiTd>
@@ -313,9 +319,6 @@ const AdminViewManager: React.FC = () => {
                         ) : (
                           <UiBadge tone="warning"><Clock size={11} /> {t('admin_view_manager.table.status.draft')}</UiBadge>
                         )}
-                      </UiTd>
-                      <UiTd>
-                        <UiDateCell><Calendar size={13} />{formatSystemDateTimeValue(row.createdAt, datetimePrefs)}</UiDateCell>
                       </UiTd>
                       <UiTd>
                         <UiDateCell><Calendar size={13} />{formatSystemDateTimeValue(row.updatedAt, datetimePrefs)}</UiDateCell>

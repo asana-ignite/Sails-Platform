@@ -122,6 +122,14 @@
   gap: 10px;
 }
 
+/* Icons must never shrink when the cell text wraps (flexbox would otherwise
+   squeeze SVGs — min-width:auto resolves to 0 for SVGs). */
+.ui-name-cell svg,
+.ui-name-cell > .ui-name-icon,
+.ui-name-icon {
+  flex-shrink: 0;
+}
+
 .ui-name-icon {
   display: flex;
   align-items: center;
@@ -163,6 +171,10 @@
   font-weight: 600;
   border: 1px solid;
   white-space: nowrap;
+}
+
+.ui-badge svg {
+  flex-shrink: 0;
 }
 
 .ui-badge--neutral {
@@ -209,6 +221,10 @@
   gap: 4px;
   font-size: 0.85rem;
   color: var(--sails-text-muted);
+}
+
+.ui-date-cell svg {
+  flex-shrink: 0;
 }
 
 /* ─── Description cell ──────────────────────────────────────── */
@@ -326,6 +342,14 @@
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.ui-pagination__ellipsis {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  color: var(--sails-text-muted);
+  font-size: 0.8rem;
 }
 
 .ui-pagination__btn {

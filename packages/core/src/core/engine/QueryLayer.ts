@@ -42,8 +42,9 @@ export interface FilterGroupRule {
 /**
  * Generates a time-ordered string ID (similar to CUID/UUIDv7)
  * to prevent B-Tree fragmentation in PostgreSQL.
+ * 24 chars — fits VARCHAR(30) id columns in dynamic tables.
  */
-function generateTimeOrderedId(): string {
+export function generateTimeOrderedId(): string {
   return Date.now().toString(36) + crypto.randomBytes(8).toString('hex');
 }
 

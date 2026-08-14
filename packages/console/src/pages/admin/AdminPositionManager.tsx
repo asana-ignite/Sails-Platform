@@ -721,7 +721,7 @@ export default function AdminPositionManager() {
           label="positions"
           onPageChange={setCurrentPage}
           onPageSizeChange={(n) => { setPageSize(n); setCurrentPage(1); }}
-          pageSizeOptions={[10, 25, 50]}
+          pageSizeOptions={[10, 25, 50, 100]}
         />
       </UiTableCard>
 

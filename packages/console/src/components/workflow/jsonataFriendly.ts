@@ -153,6 +153,21 @@ export function buildPlainSuggestions(
     out.push({ label: v.name, detail: `variable · ${v.fieldType}`, insert: v.name, kind: 'variable' });
   }
 
+  // Drill-root names (record / oldRecord / requestor …) so they are
+  // suggestible even when no workflow variables exist.
+  if (drillRoots) {
+    for (const key of Object.keys(drillRoots)) {
+      if (q && !key.toLowerCase().includes(q)) continue;
+      const cols = drillRoots[key];
+      out.push({
+        label: key,
+        detail: `context · ${key === 'record' ? 'current record' : key === 'oldRecord' ? 'record before update' : key} (${cols?.length ?? 0} fields)`,
+        insert: key,
+        kind: 'keyword',
+      });
+    }
+  }
+
   for (const [jata, friendly] of Object.entries(FN_FRIENDLY)) {
     if (q && !friendly.toLowerCase().includes(q) && !jata.toLowerCase().includes(q)) continue;
     out.push({ label: friendly, detail: `function · compiles to $${jata}(…)`, insert: `${friendly}(`, kind: 'function' });

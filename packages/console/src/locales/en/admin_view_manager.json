@@ -23,7 +23,8 @@
         "viewType": "View Type",
         "status": "Status",
         "createdAt": "Created At",
-        "lastModified": "Last Modified"
+        "lastModified": "Last Modified",
+        "default": "Default"
       },
       "searchPlaceholder": "Search layouts by name or table...",
       "noLayoutsTitle": "No layouts yet",

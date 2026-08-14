@@ -138,6 +138,21 @@ export function buildJsonataSuggestions(
     });
   }
 
+  // Drill-root names (record / oldRecord / requestor …) so they are
+  // suggestible even when no workflow variables exist.
+  if (drillRoots) {
+    for (const key of Object.keys(drillRoots)) {
+      if (q && !key.toLowerCase().includes(q)) continue;
+      const cols = drillRoots[key];
+      out.push({
+        label: key,
+        detail: `context · ${key === 'record' ? 'current record' : key === 'oldRecord' ? 'record before update' : key} (${cols?.length ?? 0} fields)`,
+        insert: key,
+        kind: 'keyword',
+      });
+    }
+  }
+
   for (const f of JSONATA_FUNCTIONS) {
     if (q && !f.name.toLowerCase().includes(q) && !f.signature.toLowerCase().includes(q)) continue;
     out.push({

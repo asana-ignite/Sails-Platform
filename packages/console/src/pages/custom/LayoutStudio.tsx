@@ -23,7 +23,8 @@ import {
   CircleCheck, CircleX, Copy, Printer, Lock,
 } from 'lucide-react';
 import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction, MobileViewMode, DetailAction, FormEvent, ActionSection, PreValidation } from '@sails/shared';
-import { formatDateTimeValue, formatDecimalValue, normalizeFilters } from '@sails/shared';
+import { formatDateTimeValue, formatDecimalValue, normalizeFilters, registerExpressionFunctions } from '@sails/shared';
+import jsonata from 'jsonata';
 import { FilterBuilder } from '../../components/common/FilterBuilder';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import { CustomSelect } from '../../components/common/CustomSelect';
@@ -40,10 +41,11 @@ import { ActionRegistry } from '../../features/actions';
 import { EventConfigPanel } from '../../features/formEvents/EventConfigPanel';
 import IconPicker from '../../components/common/IconPicker';
 import {
-  EVENT_DEFS, EVENT_TYPE_ORDER, ACTION_ICON_OPTIONS, ACTION_BUTTON_ICONS, VARIANT_OPTIONS, VALIDATION_RULES,
+  EVENT_DEFS, EVENT_TYPE_ORDER, ACTION_ICON_OPTIONS, ACTION_BUTTON_ICONS, VARIANT_OPTIONS,
   MOCK_SCRIPTS, MOCK_TEMPLATES, newFormEvent, newActionSection, defaultPreValidation, uid,
   mockEval,
 } from '../../features/formEvents';
+import ExpressionEditor from '../../components/workflow/ExpressionEditor';
 import type { FormEventType, ButtonVariant, EventRunStatus, SectionRunStatus } from '../../features/formEvents';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchCached } from '../../api/client';
@@ -87,6 +89,8 @@ interface PlacedBlock {
   tabs?: { id: string; label: string; sectionIds: string[]; blocks: PlacedBlock[] }[];
   conditions?: BlockCondition[];
   validations?: FieldValidation[];
+  /** JSONata visibility condition — hides the block when it evaluates false. */
+  conditionExpression?: string;
   controlPluginId?: string;
   /** Spacer block: vertical space between controls, in pixels. */
   height?: number;
@@ -290,6 +294,17 @@ function evaluateCondition(cond: BlockCondition, record: Record<string, any>, fi
     case 'lt': return Number(val) < Number(compare);
     case 'lte': return Number(val) <= Number(compare);
     default: return true;
+  }
+}
+
+function evaluateConditionExpression(expression: string | undefined, record: Record<string, any>): boolean {
+  if (!expression || !expression.trim()) return true;
+  try {
+    const fn = jsonata(expression);
+    registerExpressionFunctions(fn);
+    return !!fn.evaluate(record);
+  } catch {
+    return true;
   }
 }
 
@@ -543,6 +558,30 @@ const LayoutStudio: React.FC = () => {
   const [hasPublishedVersion, setHasPublishedVersion] = useState(false);
   const [activateNotes, setActivateNotes] = useState('');
   const [layoutVersions, setLayoutVersions] = useState<{ id: string; version: number; notes: string | null; publishedBy: string | null; publishedAt: string }[]>([]);
+  const [userNames, setUserNames] = useState<Map<string, { name: string; email: string }>>(new Map());
+
+  /** Open the Details modal on the General tab and warm the user-name cache. */
+  const openDetailsModal = () => {
+    setDetailsTab('general');
+    setShowEditMetaOverlay(true);
+    if (userNames.size === 0) {
+      fetchCached('/api/tenant/users', undefined, 60000)
+        .then((data) => {
+          const rows: any[] = Array.isArray(data) ? data : (data?.rows || data?.data || []);
+          if (rows.length > 0) {
+            setUserNames(new Map(rows.map((u) => [u.id, { name: u.name || '', email: u.email || '' }])));
+          }
+        })
+        .catch(() => undefined);
+    }
+  };
+
+  const publisherLabel = (userId: string | null): string => {
+    if (!userId) return '';
+    const hit = userNames.get(userId);
+    if (hit) return hit.name || hit.email || userId.slice(0, 8);
+    return userId.slice(0, 8);
+  };
   const [currentVersion, setCurrentVersion] = useState(1);
   const [rollbackLoading, setRollbackLoading] = useState(false);
   const [rollbackConfirmVersion, setRollbackConfirmVersion] = useState<number | null>(null);
@@ -582,6 +621,7 @@ const LayoutStudio: React.FC = () => {
   const [layoutSystemName, setLayoutSystemName] = useState('');
   const [listSavingMeta, setListSavingMeta] = useState(false);
   const [showEditMetaOverlay, setShowEditMetaOverlay] = useState(false);
+  const [detailsTab, setDetailsTab] = useState<'general' | 'versions'>('general');
   const [showSetDefaultConfirm, setShowSetDefaultConfirm] = useState(false);
   const [setDefaultLoading, setSetDefaultLoading] = useState(false);
   const [showListDeleteConfirm, setShowListDeleteConfirm] = useState(false);
@@ -1465,6 +1505,43 @@ const LayoutStudio: React.FC = () => {
     }
     return out;
   }, [blocks]);
+
+  // ── Pre-validation expression intellisense (record.<field> autocomplete) ──
+  const pvColumns = useMemo(() => allFields.map((f) => ({
+    fieldName: f.fieldName ?? f.id,
+    label: f.name ?? f.fieldName,
+    logicalType: f.logicalType ?? f.physicalType ?? 'text',
+    targetModel: (f.logicalType === 'relation' || f.logicalType === 'lookup')
+      ? ((f.config as any)?.targetTable ?? undefined)
+      : undefined,
+  })), [allFields]);
+  const pvDrillRoots = useMemo(() => ({ record: pvColumns }), [pvColumns]);
+  const pvRecordSchemas = useMemo(() => {
+    const map: Record<string, typeof pvColumns> = {};
+    const tn = tableMeta?.tableName;
+    if (tn) map[tn] = pvColumns;
+    return map;
+  }, [pvColumns, tableMeta]);
+
+  /** Legacy structured rule → JSONata expression (fieldId/rule/value from older drafts). */
+  const pvExpressionFor = (pv: PreValidation): string => {
+    if (pv.expression) return pv.expression;
+    const f = allFields.find((ff) => ff.id === pv.fieldId || ff.fieldName === pv.fieldId);
+    const fn = f?.fieldName || pv.fieldId || '';
+    if (!fn) return '';
+    const v = (pv.value ?? '').replace(/'/g, "''");
+    switch (pv.rule) {
+      case 'eq':       return `record.${fn} = '${v}'`;
+      case 'neq':      return `record.${fn} != '${v}'`;
+      case 'contains': return `$contains($string(record.${fn}), '${v}')`;
+      case 'gt':       return `record.${fn} > ${v}`;
+      case 'gte':      return `record.${fn} >= ${v}`;
+      case 'lt':       return `record.${fn} < ${v}`;
+      case 'lte':      return `record.${fn} <= ${v}`;
+      case 'required': return `$exists(record.${fn}) and $string(record.${fn}) != ''`;
+      default:         return '';
+    }
+  };
 
   // ── Global Canvas Keyboard Shortcuts (Escape / Delete) ──
   useEffect(() => {
@@ -2441,7 +2518,7 @@ const LayoutStudio: React.FC = () => {
             <button
               className={`ls-evt-cond-toggle ${condOn ? 'ls-evt-cond-toggle--on' : ''}`}
               title={condOn ? 'Remove section condition' : 'Gate this whole section on a condition'}
-              onClick={() => patchDetailSection(act.id, sec.id, { condition: condOn ? undefined : `{{record.status = 'pending'}}` })}
+              onClick={() => patchDetailSection(act.id, sec.id, { condition: condOn ? undefined : `record.status = 'pending'` })}
             >
               <GitBranch size={11} /> {condOn ? 'Conditioned' : 'Condition'}
             </button>
@@ -2462,13 +2539,20 @@ const LayoutStudio: React.FC = () => {
             {condOn && (
               <div className="ls-evt-section__cond">
                 <span className="ls-evt-section__cond-label">Condition</span>
-                <input
-                  className="sails-input"
-                  style={{ flex: 1, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 11 }}
-                  value={sec.condition || ''}
-                  onChange={(e) => patchDetailSection(act.id, sec.id, { condition: e.target.value })}
-                  placeholder={`{{record.status = 'pending'}}`}
-                />
+                <div className="ls-evt-section__cond-editor">
+                  <ExpressionEditor
+                    compact
+                    hideVariablePicker
+                    variables={[]}
+                    recordSchemas={pvRecordSchemas}
+                    drillRoots={pvDrillRoots}
+                    triggerModelName={tableMeta?.tableName}
+                    value={sec.condition || ''}
+                    onChange={(v) => patchDetailSection(act.id, sec.id, { condition: v })}
+                    sample={previewRecord}
+                    placeholder="record.status = 'pending'"
+                  />
+                </div>
               </div>
             )}
             <div
@@ -2666,6 +2750,13 @@ const LayoutStudio: React.FC = () => {
                   <span className="ls-table-card__title">Pre-Validations</span>
                   <span className="ls-table-card__badge">{(act.preValidations || []).length}</span>
                   <span className="ls-table-card__hint">Gate the whole chain — failure stops it</span>
+                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      className="ls-block__btn"
+                      title="Add rule"
+                      onClick={() => patchDetailAction(act.id, { preValidations: [...(act.preValidations || []), defaultPreValidation()] })}
+                    ><Plus size={12} /></button>
+                  </div>
                   {detailPvOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                 </div>
                 {detailPvOpen && (
@@ -2673,50 +2764,41 @@ const LayoutStudio: React.FC = () => {
                     {(act.preValidations || []).length === 0 && (
                       <p className="ls-empty" style={{ padding: '8px 0' }}>No pre-validations — the chain runs immediately on click.</p>
                     )}
-                    {(act.preValidations || []).map((pv) => (
-                      <div key={pv.id} className="ls-evt-pvrow">
-                        <select
-                          className="sails-input"
-                          value={pv.fieldId}
-                          onChange={(e) => patchDetailAction(act.id, { preValidations: (act.preValidations || []).map((p) => p.id === pv.id ? { ...p, fieldId: e.target.value } : p) })}
-                        >
-                          <option value="">— field —</option>
-                          {allFields.filter((f) => !f.isSystem).map((f) => (
-                            <option key={f.id} value={f.id}>{f.name}</option>
-                          ))}
-                        </select>
-                        <select
-                          className="sails-input"
-                          value={pv.rule}
-                          onChange={(e) => patchDetailAction(act.id, { preValidations: (act.preValidations || []).map((p) => p.id === pv.id ? { ...p, rule: e.target.value } : p) })}
-                        >
-                          {VALIDATION_RULES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                        </select>
-                        <input
-                          className="sails-input"
-                          placeholder="value"
-                          value={pv.value || ''}
-                          onChange={(e) => patchDetailAction(act.id, { preValidations: (act.preValidations || []).map((p) => p.id === pv.id ? { ...p, value: e.target.value } : p) })}
+                    {(act.preValidations || []).map((pv, idx) => (
+                      <div key={pv.id} className="ls-evt-pvrow-expr">
+                        <div className="ls-evt-pvrow-expr__head">
+                          <span className="ls-evt-pvrow-expr__label">Rule {idx + 1}</span>
+                          <span className="ls-evt-pvrow-expr__hint">JSONata — must evaluate true for the action to run</span>
+                          <button
+                            className="ls-block__btn ls-block__btn--danger"
+                            title="Remove rule"
+                            onClick={() => patchDetailAction(act.id, { preValidations: (act.preValidations || []).filter((p) => p.id !== pv.id) })}
+                          ><X size={11} /></button>
+                        </div>
+                        <ExpressionEditor
+                          compact
+                          hideVariablePicker
+                          variables={[]}
+                          recordSchemas={pvRecordSchemas}
+                          drillRoots={pvDrillRoots}
+                          triggerModelName={tableMeta?.tableName}
+                          value={pvExpressionFor(pv)}
+                          onChange={(v) => patchDetailAction(act.id, {
+                            preValidations: (act.preValidations || []).map((p) => p.id === pv.id
+                              ? { ...p, expression: v, fieldId: undefined, rule: undefined, value: undefined }
+                              : p),
+                          })}
+                          sample={previewRecord}
+                          placeholder="e.g. record.status = 'pending'"
                         />
                         <input
                           className="sails-input"
-                          style={{ flex: 1.4 }}
                           placeholder="Failure message"
                           value={pv.message}
                           onChange={(e) => patchDetailAction(act.id, { preValidations: (act.preValidations || []).map((p) => p.id === pv.id ? { ...p, message: e.target.value } : p) })}
                         />
-                        <button
-                          className="ls-block__btn ls-block__btn--danger"
-                          title="Remove rule"
-                          onClick={() => patchDetailAction(act.id, { preValidations: (act.preValidations || []).filter((p) => p.id !== pv.id) })}
-                        ><X size={11} /></button>
                       </div>
                     ))}
-                    <button
-                      className="sails-btn sails-btn--ghost sails-btn--sm"
-                      style={{ alignSelf: 'flex-start' }}
-                      onClick={() => patchDetailAction(act.id, { preValidations: [...(act.preValidations || []), defaultPreValidation()] })}
-                    ><Plus size={11} /> Add rule</button>
                   </>
                 )}
               </div>
@@ -2865,6 +2947,23 @@ const LayoutStudio: React.FC = () => {
       </div>
       <div className="ls-table-card">
         <div className="ls-table-card__header">
+          <Columns size={13} />
+          <span className="ls-table-card__title">Model Columns</span>
+          <span className="ls-table-card__badge">{allFields.length}</span>
+          <span className="ls-table-card__hint">Available for conditions, validations and formatting</span>
+        </div>
+        <div className="ls-cond-cols">
+          {allFields.length === 0 && <p className="ls-empty" style={{ padding: '8px 0' }}>No fields on this model.</p>}
+          {allFields.map((f) => (
+            <span key={f.id} className="ls-cond-col" title={f.fieldName}>
+              <span className="ls-cond-col__name">{f.name}</span>
+              <span className="ls-type-tag">{f.logicalType}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="ls-table-card">
+        <div className="ls-table-card__header">
           <SlidersHorizontal size={13} />
           <span className="ls-table-card__title">Blocks</span>
           <span className="ls-table-card__badge">{placedBlocks.length}</span>
@@ -2932,8 +3031,8 @@ const LayoutStudio: React.FC = () => {
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setPreviewMode(true)}>
                 <Play size={14} /> Preview
               </button>
-              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowEditMetaOverlay(true)}>
-                <Settings size={12} /> Edit Details
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={openDetailsModal}>
+                <Settings size={12} /> Details
               </button>
               <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={handleStartEdit}>
                 <Edit3 size={14} /> Edit Layout
@@ -2945,8 +3044,8 @@ const LayoutStudio: React.FC = () => {
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setPreviewMode(true)}>
                 <Play size={14} /> Preview
               </button>
-              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowEditMetaOverlay(true)}>
-                <Settings size={12} /> Edit Details
+              <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={openDetailsModal}>
+                <Settings size={12} /> Details
               </button>
               <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={handleStartEdit}>
                 <Edit3 size={14} /> Edit Layout
@@ -2986,8 +3085,8 @@ const LayoutStudio: React.FC = () => {
                       <Undo2 size={13} /> Discard Changes
                     </button>
                   )}
-                  <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowEditMetaOverlay(true)}>
-                    <Settings size={12} /> Edit Details
+                  <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={openDetailsModal}>
+                    <Settings size={12} /> Details
                   </button>
                   <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={handleSaveClick} disabled={saving}>
                     {saving ? 'Saving...' : 'Save Draft'}
@@ -3645,7 +3744,8 @@ const LayoutStudio: React.FC = () => {
                             const condResult = evaluateConditions(blk.conditions, previewRecord, allFields);
                             const hasConditions = blk.conditions && blk.conditions.length > 0;
                             const hasValidations = blk.validations && blk.validations.length > 0;
-                            const isConditionalHidden = hasConditions && !condResult;
+                            const exprVisible = evaluateConditionExpression(blk.conditionExpression, previewRecord);
+                            const isConditionalHidden = (hasConditions && !condResult) || !exprVisible;
 
                             return (
                               <div key={blk.id}
@@ -3803,7 +3903,8 @@ const LayoutStudio: React.FC = () => {
                                           const condResult = evaluateConditions(tb.conditions, previewRecord, allFields);
                                           const hasConditions = tb.conditions && tb.conditions.length > 0;
                                           const hasValidations = tb.validations && tb.validations.length > 0;
-                                          const isCondHidden = hasConditions && !condResult;
+                                          const exprVisible = evaluateConditionExpression(tb.conditionExpression, previewRecord);
+                                          const isCondHidden = (hasConditions && !condResult) || !exprVisible;
                                           const isDragOver = dragOverChildBlockId === tb.id;
                                           return (
                                             <div key={tb.id}
@@ -4409,6 +4510,10 @@ const LayoutStudio: React.FC = () => {
                               const loc = findDetailEventLocation(selectedDetailEvent.id);
                               if (loc) patchDetailEvent(loc.action.id, loc.section.id, selectedDetailEvent.id, patch);
                             }}
+                            recordSchemas={pvRecordSchemas}
+                            drillRoots={pvDrillRoots}
+                            triggerModelName={tableMeta?.tableName}
+                            sample={previewRecord}
                           />
                         </>
                       ) : (
@@ -4659,6 +4764,26 @@ const LayoutStudio: React.FC = () => {
                   )}
                 </div>
 
+                {/* ── Visibility condition (JSONata) ── */}
+                {selectedBlock.blockType === 'field' && (
+                  <div className="ls-prop-group">
+                    <div className="ls-prop-label"><Braces size={12} /> Visibility condition (JSONata)</div>
+                    <ExpressionEditor
+                      compact
+                      hideVariablePicker
+                      variables={[]}
+                      recordSchemas={pvRecordSchemas}
+                      drillRoots={pvDrillRoots}
+                      triggerModelName={tableMeta?.tableName}
+                      value={(selectedBlock as any).conditionExpression || ''}
+                      onChange={(v) => updateBlock(selectedBlock.id, { conditionExpression: v || undefined } as any)}
+                      sample={previewRecord}
+                      placeholder="record.status = 'active'"
+                    />
+                    <p className="ls-prop-hint">Hides the block when false — evaluated alongside the structured rules above.</p>
+                  </div>
+                )}
+
                 {/* ── Validation Rules ── */}
                 {selectedBlock.blockType === 'field' && (
                   <div className="ls-prop-group">
@@ -4840,48 +4965,6 @@ const LayoutStudio: React.FC = () => {
             )}
                     </>)}
                   </>)}
-
-                {/* ── Version History ── */}
-                <div className="ls-prop-group ls-version-history">
-                  <div className="ls-section-divider" style={{ borderTop: 'none', margin: '8px -10px 0' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                      <History size={12} /> Version History
-                    </span>
-                  </div>
-                  {layoutVersions.length === 0 ? (
-                    <p className="ls-vp-empty">No published versions yet. Activate to create version 1.</p>
-                  ) : (
-                    <div className="ls-version-list">
-                      {layoutVersions.map((v) => {
-                        const isLatest = v.version === layoutVersions[0]?.version;
-                        return (
-                          <div key={v.id} className={`ls-version-row ${isLatest ? 'ls-version-row--current' : ''}`}>
-                            <span className="ls-version-badge ls-version-badge--num">v{v.version}</span>
-                            <div className="ls-version-info">
-                              <span className="ls-version-notes">{v.notes || '—'}</span>
-                              <span className="ls-version-meta">
-                                {formatSystemDateTimeValue(v.publishedAt, datetimePrefs)}
-                                {v.publishedBy ? ` · by ${v.publishedBy.slice(0, 8)}` : ''}
-                              </span>
-                            </div>
-                            {!isLatest && (
-                              <button
-                                type="button"
-                                className="sails-btn sails-btn--ghost sails-btn--sm"
-                                disabled={rollbackLoading || isReadOnly}
-                                title="Roll back to this version (copies it into the draft)"
-                                onClick={() => setRollbackConfirmVersion(v.version)}
-                              >
-                                <Undo2 size={11} /> Rollback
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <p className="ls-prop-hint">Rollback copies the chosen version into the draft — activate to publish it as the next version.</p>
-                </div>
           </div>
               </>
             )}
@@ -4981,63 +5064,141 @@ const LayoutStudio: React.FC = () => {
         </div>
       )}
 
-      {/* ── Edit Details Modal ── */}
+      {/* ── Details Modal (General + Versions) ── */}
       {showEditMetaOverlay && (
-        <div className="ls-overlay" onClick={() => setShowEditMetaOverlay(false)}>
-          <div className="ls-overlay-card" onClick={(e) => e.stopPropagation()}>
-            <div className="ls-overlay-card__header">
-              <h3 className="ls-overlay-card__title">
-                <Settings size={14} /> Edit Layout Details
-              </h3>
-              <button className="ls-block__btn" onClick={() => setShowEditMetaOverlay(false)}><X size={14} /></button>
+        <div className="ls-modal-overlay" onClick={() => setShowEditMetaOverlay(false)}>
+          <div className="ls-big-modal ls-big-modal--md" onClick={(e) => e.stopPropagation()}>
+            <div className="ls-big-modal__header">
+              <div className="ls-big-modal__icon-badge">
+                <Settings size={22} />
+              </div>
+              <div className="ls-big-modal__titles">
+                <h2 className="ls-big-modal__title">Details</h2>
+                <p className="ls-big-modal__subtitle">General settings and version history for this layout.</p>
+              </div>
+              <button className="ls-big-modal__close" onClick={() => setShowEditMetaOverlay(false)} aria-label="Close details">
+                <X size={18} />
+              </button>
             </div>
-            <div className="ls-overlay-card__body">
-              <div className="ls-prop-group" style={{ borderTop: 'none', paddingTop: 0 }}>
-                <label className="ls-prop-label">View Name *</label>
-                <input className="sails-input" value={layoutName}
-                  onChange={(e) => setLayoutName(e.target.value)}
-                  style={{ fontSize: 12, padding: '5px 7px' }} />
-              </div>
-              <div className="ls-prop-group">
-                <label className="ls-prop-label">System Name</label>
-                <code style={{ fontSize: 11, padding: '5px 7px', display: 'block', background: 'var(--sails-bg-secondary, #f8fafc)', borderRadius: 4, border: '1px solid var(--sails-border, #e2e8f0)', color: 'var(--sails-text-muted, #94a3b8)' }}>{layoutSystemName}</code>
-                <span style={{ fontSize: 10, color: 'var(--sails-text-muted, #94a3b8)' }}>System names cannot be changed after creation.</span>
-              </div>
-              <div className="ls-prop-group">
-                <label className="ls-prop-label">Description</label>
-                <textarea className="sails-input" value={layoutDescription}
-                  onChange={(e) => setLayoutDescription(e.target.value)}
-                  rows={3}
-                  style={{ fontSize: 12, padding: '5px 7px', resize: 'vertical' }}
-                  placeholder="Optional description of this layout" />
-              </div>
-              <div className="ls-prop-group" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
-                {layoutIsDefault ? (
-                  <span style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: 'var(--sails-success, #22c55e)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '4px 10px',
-                    borderRadius: 4,
-                    background: 'rgba(34, 197, 94, 0.1)',
-                  }}>
-                    ✓ Default View
-                  </span>
-                ) : (
-                  <button className="sails-btn sails-btn--secondary sails-btn--sm ls-overlay-card__set-default"
-                    onClick={() => setShowSetDefaultConfirm(true)}>
-                    Set as Default
+            <div className="ls-big-modal__tabs">
+              <button
+                type="button"
+                className={`ls-tab ${detailsTab === 'general' ? 'ls-tab--active' : ''}`}
+                onClick={() => setDetailsTab('general')}
+              >
+                <Settings size={13} /> General
+              </button>
+              <button
+                type="button"
+                className={`ls-tab ${detailsTab === 'versions' ? 'ls-tab--active' : ''}`}
+                onClick={() => setDetailsTab('versions')}
+              >
+                <History size={13} /> Versions
+              </button>
+            </div>
+            <div className="ls-big-modal__body">
+              {detailsTab === 'general' && (
+                <>
+                  <div className="ls-prop-group" style={{ borderTop: 'none', paddingTop: 0 }}>
+                    <label className="ls-prop-label">View Name *</label>
+                    <input className="sails-input" value={layoutName}
+                      onChange={(e) => setLayoutName(e.target.value)}
+                      style={{ fontSize: 12, padding: '5px 7px' }} />
+                  </div>
+                  <div className="ls-prop-group">
+                    <label className="ls-prop-label">System Name</label>
+                    <code style={{ fontSize: 11, padding: '5px 7px', display: 'block', background: 'var(--sails-bg-secondary, #f8fafc)', borderRadius: 4, border: '1px solid var(--sails-border, #e2e8f0)', color: 'var(--sails-text-muted, #94a3b8)' }}>{layoutSystemName}</code>
+                    <span style={{ fontSize: 10, color: 'var(--sails-text-muted, #94a3b8)' }}>System names cannot be changed after creation.</span>
+                  </div>
+                  <div className="ls-prop-group">
+                    <label className="ls-prop-label">Description</label>
+                    <textarea className="sails-input" value={layoutDescription}
+                      onChange={(e) => setLayoutDescription(e.target.value)}
+                      rows={3}
+                      style={{ fontSize: 12, padding: '5px 7px', resize: 'vertical' }}
+                      placeholder="Optional description of this layout" />
+                  </div>
+                </>
+              )}
+
+              {detailsTab === 'versions' && (
+                <>
+                  <div className="ls-prop-group ls-version-history" style={{ borderTop: 'none', paddingTop: 0 }}>
+                    {layoutVersions.length === 0 ? (
+                      <p className="ls-vp-empty">No published versions yet. Activate to create version 1.</p>
+                    ) : (
+                      <div className="ls-version-list">
+                        {layoutVersions.map((v) => {
+                          const isLatest = v.version === layoutVersions[0]?.version;
+                          return (
+                            <div key={v.id} className={`ls-version-row ${isLatest ? 'ls-version-row--current' : ''}`}>
+                              <span className="ls-version-badge ls-version-badge--num">v{v.version}</span>
+                              <div className="ls-version-info">
+                                <span className="ls-version-notes">{v.notes || '—'}</span>
+                                <span className="ls-version-meta">
+                                  {formatSystemDateTimeValue(v.publishedAt, datetimePrefs)}
+                                  {publisherLabel(v.publishedBy) ? ` · by ${publisherLabel(v.publishedBy)}` : ''}
+                                </span>
+                              </div>
+                              {!isLatest && (
+                                <button
+                                  type="button"
+                                  className="sails-btn sails-btn--ghost sails-btn--sm"
+                                  disabled={rollbackLoading}
+                                  title="Roll back to this version (copies it into the draft)"
+                                  onClick={() => setRollbackConfirmVersion(v.version)}
+                                >
+                                  <Undo2 size={11} /> Rollback
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <p className="ls-prop-hint">Rollback copies the chosen version into the draft — activate to publish it as the next version.</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="ls-big-modal__footer">
+              {detailsTab === 'general' ? (
+                <>
+                  {layoutIsDefault ? (
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: 'var(--sails-success, #22c55e)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '4px 10px',
+                      borderRadius: 4,
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      marginRight: 'auto',
+                    }}>
+                      ✓ Default View
+                    </span>
+                  ) : (
+                    <button className="sails-btn sails-btn--secondary sails-btn--sm ls-modal__set-default"
+                      onClick={() => setShowSetDefaultConfirm(true)}
+                      style={{ marginRight: 'auto' }}>
+                      Set as Default
+                    </button>
+                  )}
+                  <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowEditMetaOverlay(false)}>Cancel</button>
+                  <button className="sails-btn sails-btn--primary sails-btn--sm"
+                    onClick={saveListMetadata} disabled={!layoutName.trim() || listSavingMeta}>
+                    {listSavingMeta ? 'Saving...' : 'Save Changes'}
                   </button>
-                )}
-                <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => setShowEditMetaOverlay(false)}>Cancel</button>
-                <button className="sails-btn sails-btn--primary sails-btn--sm"
-                  onClick={saveListMetadata} disabled={!layoutName.trim() || listSavingMeta}>
-                  {listSavingMeta ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
+                </>
+              ) : (
+                <>
+                  <span style={{ flex: 1 }} />
+                  <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => setShowEditMetaOverlay(false)}>Close</button>
+                </>
+              )}
             </div>
           </div>
         </div>

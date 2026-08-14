@@ -3,7 +3,7 @@
  * active layout, renders its sections/tabs/blocks, supports create/edit
  * with validation, and shows Expression fields evaluated LIVE while typing.
  */
-import React, { useState, useEffect, useMemo, memo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -15,10 +15,12 @@ import {
   Loader2,
   Pencil,
   Copy,
-  Trash2
+  Trash2,
+  List
 } from 'lucide-react';
 import type { TableLayout, SailsFieldDefinition, ConsoleMenu, DetailAction } from '@sails/shared';
-import { isSystemField, SYSTEM_PROTECTED_COLUMNS } from '@sails/shared';
+import { isSystemField, SYSTEM_PROTECTED_COLUMNS, registerExpressionFunctions } from '@sails/shared';
+import jsonata from 'jsonata';
 import LoadingScreen from '../components/common/LoadingScreen';
 import RelatedListView from '../components/common/RelatedListView';
 import { fetchCached } from '../api/client';
@@ -30,6 +32,7 @@ import { useRecordStack } from '../contexts/RecordStackContext';
 import { ActionRegistry } from '../features/actions';
 import { UiConfirmDialog } from '../components/ui/UiConfirmDialog';
 import DynamicIcon from '../components/common/DynamicIcon';
+import SailsPopover from '../components/common/SailsPopover';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
 import './custom/layouts-responsive.css';
@@ -95,11 +98,12 @@ interface DetailHeaderProps {
   onBack: () => void;
   onEdit: () => void;
   onCancelEdit: () => void;
+  onSave: () => void;
   showBack?: boolean;
 }
 
 const DetailHeader: React.FC<DetailHeaderProps> = memo(
-  ({ primaryTitle, isNewMode, isEditing, saving, canEdit, allowEdit = true, headerActions, onBack, onEdit, onCancelEdit, showBack = true }) => (
+  ({ primaryTitle, isNewMode, isEditing, saving, canEdit, allowEdit = true, headerActions, onBack, onEdit, onCancelEdit, onSave, showBack = true }) => (
     <header className="sails-page-header sails-dynamic-table__header">
       <div className="sails-page-header__left" style={{ pointerEvents: 'auto' }}>
         {showBack && (
@@ -128,9 +132,10 @@ const DetailHeader: React.FC<DetailHeaderProps> = memo(
             <span>Cancel</span>
           </button>
           <button
-            type="submit"
+            type="button"
             className="sails-btn sails-btn--primary"
             disabled={saving}
+            onClick={onSave}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
             {saving ? (
@@ -219,6 +224,8 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<{ text: string; openId?: string } | null>(null);
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
+  const actionsMenuRef = useRef<HTMLButtonElement>(null);
 
   const { dataModelId, layoutKey, recordId, isNewMode } = useMemo(() => {
     // 1. Explicit props (stacked record card) override everything else.
@@ -254,7 +261,14 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
     return '/' + parts.slice(0, Math.max(1, parts.length - 2)).join('/');
   }, [location.pathname, tableNameProp]);
 
+  // ── Guard: only reload/reset when the record target actually changes ──
+  const recordTargetKey = `${dataModelId}|${layoutKey}|${recordId}|${isNewMode}`;
+  const loadedKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
+    if (loadedKeyRef.current === recordTargetKey) return; // same record — skip reload/reset
+    loadedKeyRef.current = recordTargetKey;
+
     if (!dataModelId || !recordId) {
       setError('Invalid record detail route parameter');
       setLoading(false);
@@ -397,6 +411,20 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
   const blocks: any[] = useMemo(() => {
     const resolveField = (fieldId?: string) =>
       !!fieldId && fields.some((f) => f.id === fieldId || f.fieldName === fieldId);
+
+    /** JSONata visibility condition (Conditions tab) — hides the block when false. */
+    const visibleByExpression = (b: any): boolean => {
+      const expr = b?.conditionExpression;
+      if (!expr?.trim()) return true;
+      try {
+        const fn = jsonata(expr);
+        registerExpressionFunctions(fn);
+        return !!fn.evaluate(record);
+      } catch {
+        return true; // fail open — never hide a block because of a bad expression
+      }
+    };
+
     const clean = (list: any[]): any[] =>
       (list || []).flatMap((b) => {
         if (!b) return [];
@@ -406,8 +434,11 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
         }
         return [b];
       });
-    return clean((config as any)?.blocks || []);
-  }, [config, fields]);
+
+    return clean((config as any)?.blocks || []).filter((b: any) =>
+      b.blockType === 'tab_group' ? true : visibleByExpression(b)
+    );
+  }, [config, fields, record]);
 
   const handleFieldInputChange = (key: string, value: any) => {
     setTouched((prev) => ({ ...prev, [key]: true }));
@@ -441,6 +472,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
 
   const handleEditRecord = () => {
     if (!record) return;
+    setActionsMenuOpen(false);
     const initialForm: Record<string, any> = {};
     for (const field of fields) {
       const key = field.fieldName || field.id;
@@ -455,6 +487,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
   };
 
   const handleCancelEdit = () => {
+    setActionsMenuOpen(false);
     setIsEditing(false);
     setFormData({});
     setTouched({});
@@ -606,14 +639,41 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
         record: record || undefined,
         cloneInclude: include,
       };
+
+      // Pre-validations gate the WHOLE action — evaluated server-side against
+      // the record BEFORE the fixed step runs.
+      const preValidations = (action.preValidations || []).filter((p) => p.expression?.trim());
+      if (preValidations.length > 0 && tableName) {
+        const gateBody: any = { preValidations };
+        if (action.actionKey === 'delete') {
+          gateBody.snapshot = record || undefined;
+        } else {
+          gateBody.recordId = recordId || undefined;
+        }
+        const gateRes = await fetch(`/api/dynamic/${tableName}/form-event`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(gateBody),
+        });
+        const gateData = await gateRes.json().catch(() => ({}));
+        if (!gateRes.ok) {
+          const first = gateData.validationFailures?.[0]?.message || gateData.error || 'Pre-validation failed.';
+          throw new Error(first);
+        }
+      }
+
       if (plugin) {
         await plugin.execute(ctx);
       }
 
-      // Custom events appended to a standard action run AFTER its fixed step.
-      const extraEvents = (action.sections || []).flatMap((s) => s.events || []);
-      if (extraEvents.length > 0 && tableName) {
-        const body: any = { events: extraEvents };
+      // Custom events (sections with conditions) run AFTER the fixed step.
+      const sections = (action.sections || []).map((s) => ({
+        condition: s.condition || undefined,
+        events: s.events || [],
+      }));
+      const hasSectionEvents = sections.some((s) => (s.events || []).length > 0);
+      if (hasSectionEvents && tableName) {
+        const body: any = { sections };
         if (action.actionKey === 'delete') {
           body.snapshot = record || undefined; // pre-delete snapshot for notifications
         } else if (action.actionKey === 'clone' && ctx.lastResult?.id) {
@@ -855,7 +915,15 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
 
   return (
     <div className={inStack ? 'record-detail-card' : `sails-dynamic-table sails-page-container ${animClass}`}>
-      <form onSubmit={handleSaveRecord}>
+      <form
+        onKeyDown={(e) => {
+          // Enter-to-save: submit on Enter from single-line inputs (the form has
+          // no submit button anymore, so no implicit submission can fire).
+          if (e.key !== 'Enter' || (e.target as HTMLElement)?.tagName !== 'INPUT') return;
+          e.preventDefault();
+          handleSaveRecord();
+        }}
+      >
         <DetailHeader
           primaryTitle={primaryTitle}
           isNewMode={isNewMode}
@@ -865,34 +933,82 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
           allowEdit={(config as any)?.allowEdit !== false}
           headerActions={
             !isNewMode && configuredDetailActions.length > 0 ? (
-              <>
-                {configuredDetailActions.map((a) => {
-                  const plugin = ActionRegistry.getInstance().getAction(a.actionKey);
-                  const variantClass = a.variant === 'primary' ? 'sails-btn--primary'
-                    : a.variant === 'danger' ? 'sails-btn--danger'
-                    : a.variant === 'ghost' ? 'sails-btn--ghost'
-                    : 'sails-btn--secondary';
-                  return (
-                    <button
-                      key={a.id}
-                      type="button"
-                      className={`sails-btn ${variantClass}`}
-                      disabled={actionBusy}
-                      title={plugin?.description || a.label}
-                      onClick={() => runDetailAction(a)}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                    >
-                      <DynamicIcon name={a.iconName || plugin?.iconName || 'Zap'} size={15} />
-                      <span>{a.label}</span>
-                    </button>
-                  );
-                })}
-              </>
+              configuredDetailActions.length > 3 ? (
+                <div className="sails-detail-actions-menu">
+                  <button
+                    ref={actionsMenuRef}
+                    type="button"
+                    className="sails-btn sails-btn--ghost"
+                    disabled={actionBusy}
+                    onClick={() => setActionsMenuOpen((o) => !o)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <List size={15} />
+                    <span>Actions</span>
+                    <ChevronDown size={13} />
+                  </button>
+                  <SailsPopover
+                    open={actionsMenuOpen}
+                    triggerRef={actionsMenuRef}
+                    onClose={() => setActionsMenuOpen(false)}
+                    align="right"
+                    className="sails-detail-actions-menu__pop"
+                  >
+                    <div className="sails-detail-actions-menu__list">
+                      {configuredDetailActions.map((a) => {
+                        const plugin = ActionRegistry.getInstance().getAction(a.actionKey);
+                        const danger = a.variant === 'danger';
+                        return (
+                          <button
+                            key={a.id}
+                            type="button"
+                            className={`sails-detail-actions-menu__item ${danger ? 'sails-detail-actions-menu__item--danger' : ''}`}
+                            disabled={actionBusy}
+                            title={plugin?.description || a.label}
+                            onClick={() => {
+                              setActionsMenuOpen(false);
+                              runDetailAction(a);
+                            }}
+                          >
+                            <DynamicIcon name={a.iconName || plugin?.iconName || 'Zap'} size={14} />
+                            <span>{a.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </SailsPopover>
+                </div>
+              ) : (
+                <>
+                  {configuredDetailActions.map((a) => {
+                    const plugin = ActionRegistry.getInstance().getAction(a.actionKey);
+                    const variantClass = a.variant === 'primary' ? 'sails-btn--primary'
+                      : a.variant === 'danger' ? 'sails-btn--danger'
+                      : a.variant === 'ghost' ? 'sails-btn--ghost'
+                      : 'sails-btn--secondary';
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        className={`sails-btn ${variantClass}`}
+                        disabled={actionBusy}
+                        title={plugin?.description || a.label}
+                        onClick={() => runDetailAction(a)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      >
+                        <DynamicIcon name={a.iconName || plugin?.iconName || 'Zap'} size={15} />
+                        <span>{a.label}</span>
+                      </button>
+                    );
+                  })}
+                </>
+              )
             ) : undefined
           }
           onBack={inStack ? () => requestClose() : () => navigate(-1)}
           onEdit={handleEditRecord}
           onCancelEdit={handleCancelEdit}
+          onSave={() => handleSaveRecord()}
           showBack={!inStack}
         />
 

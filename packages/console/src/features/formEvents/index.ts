@@ -107,8 +107,8 @@ export function defaultEventConfig(type: FormEventType): Record<string, any> {
   }
 }
 
-export function defaultPreValidation(): { id: string; fieldId: string; rule: string; value?: string; message: string } {
-  return { id: `pv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`, fieldId: '', rule: 'required', message: '' };
+export function defaultPreValidation(): { id: string; expression: string; message: string } {
+  return { id: `pv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`, expression: '', message: '' };
 }
 
 export function newFormEvent(type: FormEventType, label?: string): FormEvent {

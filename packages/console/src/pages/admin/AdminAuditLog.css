@@ -235,30 +235,3 @@
 .sails-audit-muted {
   color: var(--sails-text-muted);
 }
-
-.sails-audit__pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 20px;
-  border-top: 1px solid var(--sails-border-color);
-}
-
-.sails-audit__pagination-info {
-  font-size: 0.82rem;
-  color: var(--sails-text-muted);
-}
-
-.sails-audit__pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.sails-audit__page-size {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.82rem;
-  color: var(--sails-text-muted);
-}

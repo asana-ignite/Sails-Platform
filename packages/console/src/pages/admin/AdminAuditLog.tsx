@@ -3,9 +3,10 @@
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowUpDown, ArrowUp, ArrowDown, Search, RefreshCw, ChevronLeft, ChevronRight, Database, Shield, Wrench, Radio } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, RefreshCw, Database, Shield, Wrench, Radio } from 'lucide-react';
 import Spinner from '../../components/common/Spinner';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { UiPagination } from '../../components/ui';
 import { useDateTimePrefs, formatSystemDateTimeValue } from '../../utils/systemDateTime';
 import { useConsole } from '../../contexts/ConsoleContext';
 import './AdminAuditLog.css';
@@ -42,12 +43,6 @@ const ACTION_COLORS: Record<string, string> = {
   LOGIN: 'var(--sails-info)',
   LOGOUT: 'var(--sails-text-muted)',
 };
-
-const PAGE_SIZE_OPTIONS = [
-  { value: 10, label: '10' },
-  { value: 25, label: '25' },
-  { value: 50, label: '50' },
-];
 
 const ACTION_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'All Actions' },
@@ -218,11 +213,7 @@ const AdminAuditLog: React.FC = () => {
     </tr>
   );
 
-  const startRecord = rows.length > 0 ? (page - 1) * pageSize + 1 : 0;
-  const endRecord = Math.min(page * pageSize, total);
-
-  const auditContent = (
-    <div className="sails-audit__inner">
+  const auditContent = (    <div className="sails-audit__inner">
       <nav className="sails-audit__tabs">
         {TABS.map(tab => (
           <button
@@ -291,47 +282,15 @@ const AdminAuditLog: React.FC = () => {
                 )}
               </tbody>
             </table>
-            <div className="ui-pagination">
-              <span className="ui-pagination__range">
-                Showing <strong>{startRecord}</strong> to <strong>{endRecord}</strong> of <strong>{total}</strong> records
-              </span>
-              <div className="ui-pagination__controls">
-                <button
-                  className="ui-pagination__btn"
-                  onClick={() => setPage(prev => Math.max(1, prev - 1))}
-                  disabled={page <= 1}
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <div className="ui-pagination__pages">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                    <button
-                      key={p}
-                      className={`ui-pagination__page ${page === p ? 'ui-pagination__page--active' : ''}`}
-                      onClick={() => setPage(p)}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="ui-pagination__btn"
-                  onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={page >= totalPages || totalPages === 0}
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-              <div className="ui-pagination__page-size">
-                <span className="ui-pagination__page-size-label">Per page:</span>
-                <CustomSelect
-                  size="sm"
-                  value={pageSize}
-                  options={PAGE_SIZE_OPTIONS}
-                  onChange={(val) => { setPageSize(Number(val)); setPage(1); }}
-                />
-              </div>
-            </div>
+            <UiPagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
+              pageSizeOptions={[10, 25, 50, 100]}
+            />
           </>
         )}
       </div>

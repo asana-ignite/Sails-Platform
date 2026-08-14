@@ -465,7 +465,7 @@ const UserManager: React.FC = () => {
           label="users"
           onPageChange={setCurrentPage}
           onPageSizeChange={(n) => { setPageSize(n); setCurrentPage(1); }}
-          pageSizeOptions={[10, 25, 50]}
+          pageSizeOptions={[10, 25, 50, 100]}
         />
       </UiTableCard>
       {/* 4. Add/Edit User Ghost Glass Modal */}
