@@ -28,6 +28,9 @@ export interface FieldPathPickerProps {
   align?: 'left' | 'right' | 'auto';
   className?: string;
   style?: React.CSSProperties;
+  /** Optional terminal 'context' items (ids like '@me', '@var.x') rendered as a
+   *  grouped section at the bottom of the root column. */
+  contextItems?: { id: string; name: string }[];
 }
 
 // Helper to resolve flyout column steps and display labels
@@ -35,7 +38,8 @@ function resolveChainDetails(
   rootModel: string,
   chain: string[] = [],
   modelsSchemas: Record<string, FieldDefinition[]>,
-  searchQuery: string = ''
+  searchQuery: string = '',
+  contextItems: { id: string; name: string }[] = []
 ) {
   let currentModel = rootModel;
   const labels: string[] = [];
@@ -58,6 +62,13 @@ function resolveChainDetails(
     columns.push({ modelName: currentModel, fields: modelFields, activeFieldId });
 
     if (!activeFieldId) break;
+
+    // '@'-prefixed chain entries are context macros (terminal — no drill).
+    if (activeFieldId.startsWith('@')) {
+      const ctx = contextItems.find((c) => c.id === activeFieldId);
+      labels.push(ctx ? ctx.name : activeFieldId);
+      break;
+    }
 
     const selectedF = (modelsSchemas[currentModel] || []).find((f) => f.id === activeFieldId);
     if (selectedF) {
@@ -92,14 +103,17 @@ export const FieldPathPicker: React.FC<FieldPathPickerProps> = ({
   disabled = false,
   align = 'auto',
   className = '',
-  style
+  style,
+  contextItems = []
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [tab, setTab] = useState<'model' | 'context'>('model');
   const containerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const info = resolveChainDetails(rootModel, value, modelsSchemas, isOpen ? searchQuery : '');
+  const info = resolveChainDetails(rootModel, value, modelsSchemas, isOpen ? searchQuery : '', contextItems);
+  const ctxVisible = contextItems.filter((c) => !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   // Viewport-aware positioning: the flyout is portaled to <body>, uses its own
   // natural width, flips above when there is not enough room below, re-aligns
@@ -164,6 +178,7 @@ export const FieldPathPicker: React.FC<FieldPathPickerProps> = ({
           if (!disabled) {
             setIsOpen(!isOpen);
             setSearchQuery('');
+            setTab(value[0]?.startsWith('@') ? 'context' : 'model');
           }
         }}
         title={`Full Path: ${info.fullPath || placeholder}`}
@@ -209,7 +224,53 @@ export const FieldPathPicker: React.FC<FieldPathPickerProps> = ({
             </button>
           </div>
 
-          <div className="field-path-picker__columns">
+          {contextItems.length > 0 && (
+            <div className="field-path-picker__tabs">
+              <button
+                type="button"
+                className={`field-path-picker__tab ${tab === 'context' ? 'field-path-picker__tab--active' : ''}`}
+                onClick={() => setTab('context')}
+              >
+                Context
+              </button>
+              <button
+                type="button"
+                className={`field-path-picker__tab ${tab === 'model' ? 'field-path-picker__tab--active' : ''}`}
+                onClick={() => setTab('model')}
+              >
+                {rootModel || 'Model'}
+              </button>
+            </div>
+          )}
+
+          {tab === 'context' && contextItems.length > 0 ? (
+            <div className="field-path-picker__columns">
+              <div className="field-path-picker__column">
+                <div className="field-path-picker__column-title">Context</div>
+                <div className="field-path-picker__column-items">
+                  {ctxVisible.length === 0 ? (
+                    <div className="field-path-picker__no-match">No context matches</div>
+                  ) : (
+                    ctxVisible.map((c) => (
+                      <div
+                        key={c.id}
+                        className={`field-path-picker__item field-path-picker__item--context ${value[0] === c.id ? 'is-target-selected' : ''}`}
+                        onClick={() => {
+                          if (disabled) return;
+                          onChange([c.id]);
+                          setIsOpen(false);
+                          setSearchQuery('');
+                        }}
+                      >
+                        <span className="field-path-picker__item-label">{c.name}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="field-path-picker__columns">
             {info.columns.map((col, cIdx) => (
               <div key={cIdx} className="field-path-picker__column">
                 <div className="field-path-picker__column-title">{col.modelName}</div>
@@ -247,7 +308,8 @@ export const FieldPathPicker: React.FC<FieldPathPickerProps> = ({
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          )}
           </div>
         </div>,
         document.body

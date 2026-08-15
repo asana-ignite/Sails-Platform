@@ -5,6 +5,7 @@
  */
 import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import {
   ChevronLeft,
   ChevronDown,
@@ -28,7 +29,7 @@ import { DetailFieldInput, DetailFieldDisplay, DetailFieldLabel, validateFieldIs
 import DynamicIcon from '../components/common/DynamicIcon';
 import type { FieldValidation } from '../features/controls/types';
 import { evaluateExpressionFields } from '../utils/expressionLive';
-import { resolveActiveRules, deriveConditionSets } from '../utils/conditionSets';
+import { resolveActiveRules, deriveConditionSets, conditionEvalContext } from '../utils/conditionSets';
 import { useLocalizedText } from '../lib/useLocalizedText';
 import { NotificationMessageModal } from '../components/common/NotificationMessageModal';
 import '../components/common/NotificationMessageModal.css';
@@ -200,6 +201,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
   const navigate = useNavigate();
   const navigationType = useNavigationType();
   const { navigationItems, apps } = useConsole();
+  const auth = useAuth();
   const { requestClose, notifyRecordsChanged } = useRecordStack();
   const animClass = navigationType === 'POP' ? 'sails-dynamic-table--back' : '';
 
@@ -432,8 +434,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
 
   // ── Condition Sets: active rules against record + form vars ──
   const conditionDerived = useMemo(() => {
-    const ctx = { ...record, vars: formVars, variables: formVars };
-    return deriveConditionSets(resolveActiveRules((config as any)?.conditionSets, ctx));
+    return deriveConditionSets(resolveActiveRules((config as any)?.conditionSets, conditionEvalContext(record, formVars, fields, auth.user ? { id: auth.user.id, role: auth.user.role, email: auth.user.email } : undefined)));
   }, [config, record, formVars]);
 
   // Field → block validation rules (sections + tabs), keyed by fieldId.
@@ -761,39 +762,13 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
         onEdit: handleEditRecord,
       };
 
-      // Pre-validations gate the WHOLE action — evaluated server-side against
-      // the record BEFORE the fixed step runs.
-      const preValidations = (action.preValidations || []).filter((p) => p.expression?.trim());
-      if (preValidations.length > 0 && tableName) {
-        const gateBody: any = {
-          preValidations,
-          variables: (config as any)?.formVariables || [],
-          initialVariables: formVars,
-        };
-        if (action.actionKey === 'delete') {
-          gateBody.snapshot = record || undefined;
-        } else {
-          gateBody.recordId = recordId || undefined;
-        }
-        const gateRes = await fetch(`/api/dynamic/${tableName}/form-event`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(gateBody),
-        });
-        const gateData = await gateRes.json().catch(() => ({}));
-        if (!gateRes.ok) {
-          const first = gateData.validationFailures?.[0]?.message || gateData.error || 'Pre-validation failed.';
-          throw new Error(first);
-        }
-      }
-
       if (plugin) {
         await plugin.execute(ctx);
       }
 
       // Custom events (sections with conditions) run AFTER the fixed step.
       const sections = (action.sections || []).map((s) => ({
-        condition: s.condition || undefined,
+        conditionGroups: s.conditionGroups || undefined,
         events: (s.events || []).map((e) => ({
           ...e,
           config: { ...e.config, storeToVariable: e.config?.storeToVariable || e.storeAs || undefined },

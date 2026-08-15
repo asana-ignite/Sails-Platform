@@ -4,9 +4,9 @@
  * Runs an action's pre-validations and ordered event sections inline (no
  * workflow instance). Each event is dispatched to its workflowEventRegistry
  * plugin (record / expression / script / notification / notification_message)
- * with the current record + accumulated variables. Pre-validations gate the
- * whole chain; section and event conditions skip their step when false; a
- * failed event stops the chain.
+ * with the current record + accumulated variables. Section conditions skip
+ * their step when their Query-Studio groups don't match; a failed event stops
+ * the chain.
  *
  * Notification Message events PAUSE the chain: the plugin returns a
  * `notificationMessage` payload, the runner returns it to the client with
@@ -22,9 +22,8 @@
  * Body: {
  *   recordId?: string,              // current record (loaded fresh RLS-scoped)
  *   snapshot?: Record<string, any>, // optional pre-delete snapshot (delete actions)
- *   preValidations?: [{ expression, message }],  // JSONata gates — all must be truthy
- *   sections?: [{ condition?, events: [{ type, label?, condition?, storeAs?, config }] }],
- *   events?: [...]                  // legacy flat events (treated as one section)
+ *   sections?: [{ conditionGroups?, events: [{ type, label?, storeAs?, config }] }],
+ *   events?: [...]                 // legacy flat events (treated as one section)
  *   resume?: { eventId: string; choice: 'confirm' | 'cancel' | 'ok' },
  *   resumeVariables?: Record<string, any>,  // variable snapshot from the paused run
  * }
@@ -37,13 +36,14 @@ import format from 'pg-format';
 import { requireSession } from '@/lib/auth/session';
 import { workflowEventRegistry } from '@sails/plugin-sdk';
 import { evaluateJsonata } from '@/core/engine/WorkflowHelpers';
-import { localize } from '@sails/shared';
+import { evaluateFilterGroups } from '@sails/shared';
+import { registerExpressionFunctions } from '@sails/shared';
 import '@/core/plugins/init';
 
 type RouteContext = { params: { tableName: string } };
 
 interface FlatEvent {
-  section: { condition?: string; events: any[] };
+  section: { conditionGroups?: any[]; events: any[] };
   event: any;
 }
 
@@ -54,7 +54,6 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const {
       recordId = null,
       snapshot = null,
-      preValidations = [],
       sections = null,
       events = null,
       variables: variableDecls = null,
@@ -64,13 +63,12 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     } = await req.json();
 
     // Legacy flat `events` — treated as a single unconditional section.
-    const chain: { condition?: string; events: any[] }[] = Array.isArray(sections)
+    const chain: { conditionGroups?: any[]; events: any[] }[] = Array.isArray(sections)
       ? sections
       : (Array.isArray(events) ? [{ events }] : []);
-    const hasAnyWork = chain.some((s) => (s.events || []).length > 0)
-      || (Array.isArray(preValidations) && preValidations.length > 0);
+    const hasAnyWork = chain.some((s) => (s.events || []).length > 0);
     if (!hasAnyWork) {
-      return NextResponse.json({ error: 'No events or pre-validations provided.' }, { status: 400 });
+      return NextResponse.json({ error: 'No events provided.' }, { status: 400 });
     }
 
     // Resume: locate the paused Notification Message event and validate it.
@@ -131,32 +129,33 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       }
     }
 
-    // ── Pre-validations: all must evaluate truthy (never re-run on resume —
-    //    they already passed when the chain paused). ──
-    if (!resume && Array.isArray(preValidations) && preValidations.length > 0) {
-      const failures: { expression: string; message: string }[] = [];
-      for (const pv of preValidations) {
-        if (!pv?.expression) continue;
-        const res = await evaluateJsonata(pv.expression, { ...recordValues, vars: variables, variables });
-        if (!res.ok || !res.value) {
-          failures.push({
-            expression: pv.expression,
-            message: localize(pv.message, (session as any).locale || 'en') || 'Pre-validation failed.',
-          });
-        }
-      }
-      if (failures.length > 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: failures[0].message || 'Pre-validation failed.',
-            validationFailures: failures,
-            results: [],
-          },
-          { status: 422 }
-        );
-      }
+    // Lazy field map (id → fieldName) for Query-Studio condition evaluation —
+    // only resolved when any conditionGroups are present (keeps the light path).
+    const chainHasRules = (chain || []).some((sec: any) =>
+      Array.isArray(sec?.conditionGroups) && sec.conditionGroups.some((g: any) => (g?.rules || []).length > 0));
+    let condFields: { id: string; fieldName: string }[] = [];
+    if (!resume && tableName && chainHasRules) {
+      try {
+        const { resolveTableMeta } = await import('@/core/engine/WorkflowEventPlugins');
+        const meta = await resolveTableMeta(session.tenantId, tableName);
+        condFields = (meta?.table?.fields || []).map((f: any) => ({ id: f.id, fieldName: f.fieldName ?? f.id }));
+      } catch { /* keep empty — group rules resolve by fieldName fallback */ }
     }
+
+    const condUser = session
+      ? { id: session.userId, role: session.role, email: session.email, activeTeamId: session.activeTeamId }
+      : undefined;
+    // Sync JSONata for the Expression f(x) source (shared evaluator is sync).
+    const evalFilterExpression = (expr: string, input: any): any => {
+      try {
+        const jsonataLib = require('jsonata') as (e: string) => any;
+        const fn = jsonataLib(expr);
+        registerExpressionFunctions(fn);
+        return fn.evaluate(input);
+      } catch {
+        return undefined;
+      }
+    };
 
     const results: any[] = [];
 
@@ -178,24 +177,17 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       const type = event?.type;
       if (!type) continue;
 
-      // Section condition: false skips the whole section (execution continues).
-      // Skipped for the resumed section (already passed) on a resume.
-      if (section.condition && section !== resumeSection) {
-        const c = await evaluateJsonata(section.condition, { ...recordValues, vars: variables, variables });
-        if (!c.ok || !c.value) {
-          results.push({ sectionSkipped: true, condition: section.condition });
-          // Skip the rest of this section.
-          while (i + 1 < flat.length && flat[i + 1].section === section) i++;
-          continue;
-        }
-      }
-
-      // Event condition: false skips just this event.
-      if (event.condition) {
-        const c = await evaluateJsonata(event.condition, { ...recordValues, vars: variables, variables });
-        if (!c.ok || !c.value) {
-          results.push({ type, label: event.label, skipped: true });
-          continue;
+      // Section condition: skipped while the groups don't match (execution
+      // continues). Skipped for the resumed section (already passed) on a resume.
+      if (section !== resumeSection) {
+        const secGroups = section.conditionGroups;
+        if (Array.isArray(secGroups) && secGroups.some((g) => (g?.rules || []).length > 0)) {
+          if (!evaluateFilterGroups(secGroups, { record: recordValues, vars: variables, fields: condFields as any, user: condUser, evaluateExpression: evalFilterExpression })) {
+            results.push({ sectionSkipped: true, conditionGroups: secGroups });
+            // Skip the rest of this section.
+            while (i + 1 < flat.length && flat[i + 1].section === section) i++;
+            continue;
+          }
         }
       }
 
@@ -277,7 +269,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 }
 
 /** Flatten sections into an ordered event list (preserving section grouping). */
-function flattenChain(chain: { condition?: string; events: any[] }[]): FlatEvent[] {
+function flattenChain(chain: { conditionGroups?: any[]; events: any[] }[]): FlatEvent[] {
   const flat: FlatEvent[] = [];
   for (const section of chain) {
     for (const event of section.events || []) {

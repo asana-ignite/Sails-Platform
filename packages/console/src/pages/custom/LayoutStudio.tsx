@@ -22,12 +22,13 @@ import {
   GitBranch, SlidersHorizontal, Braces, Bell, Code, Workflow as WorkflowIcon,
   CircleCheck, CircleX, Copy, Printer, Lock,
 } from 'lucide-react';
-import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction, MobileViewMode, DetailAction, FormEvent, ActionSection, PreValidation, ConditionSet, ConditionSetRule } from '@sails/shared';
-import { resolveActiveRules, deriveConditionSets } from '../../utils/conditionSets';
+import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction, MobileViewMode, DetailAction, FormEvent, ActionSection, ConditionSet, ConditionSetRule } from '@sails/shared';
+import { resolveActiveRules, deriveConditionSets, conditionEvalContext } from '../../utils/conditionSets';
+import { evaluateFilterGroups } from '@sails/shared';
 import { formatDateTimeValue, formatDecimalValue, normalizeFilters, registerExpressionFunctions } from '@sails/shared';
 import type { FormVariable } from '@sails/shared';
 import jsonata from 'jsonata';
-import { FilterBuilder } from '../../components/common/FilterBuilder';
+import { FilterBuilder, filterOperatorLabel } from '../../components/common/FilterBuilder';
 import DynamicIcon from '../../components/common/DynamicIcon';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import SailsPopover from '../../components/common/SailsPopover';
@@ -52,8 +53,7 @@ import type { WizardVariable } from '../../components/workflow/WorkflowEventWiza
 import IconPicker from '../../components/common/IconPicker';
 import {
   EVENT_DEFS, EVENT_TYPE_ORDER, ACTION_ICON_OPTIONS, ACTION_BUTTON_ICONS, VARIANT_OPTIONS,
-  MOCK_SCRIPTS, MOCK_TEMPLATES, newFormEvent, newActionSection, defaultPreValidation, uid,
-  mockEval,
+  MOCK_SCRIPTS, MOCK_TEMPLATES, newFormEvent, newActionSection, uid,
 } from '../../features/formEvents';
 import ExpressionEditor from '../../components/workflow/ExpressionEditor';
 import type { FormEventType, ButtonVariant, EventRunStatus, SectionRunStatus } from '../../features/formEvents';
@@ -608,10 +608,16 @@ const LayoutStudio: React.FC = () => {
   const [conditionSetTitleEditId, setConditionSetTitleEditId] = useState<string | null>(null);
   const [conditionSetTitleDraft, setConditionSetTitleDraft] = useState('');
   const [dragOverConditionSetId, setDragOverConditionSetId] = useState<string | null>(null);
+  const [conditionFilterTarget, setConditionFilterTarget] = useState<{
+    kind: 'set' | 'rule' | 'section';
+    setId?: string;
+    ruleId?: string;
+    actionId?: string;
+    sectionId?: string;
+  } | null>(null);
   const [selectedDetailActionId, setSelectedDetailActionId] = useState<string | null>(null);
   const [dragOverActionId, setDragOverActionId] = useState<string | null>(null);
   const [selectedDetailEventId, setSelectedDetailEventId] = useState<string | null>(null);
-  const [detailPvOpen, setDetailPvOpen] = useState(true);
   const [detailSectionsOpen, setDetailSectionsOpen] = useState(true);
   const [detailRunState, setDetailRunState] = useState<'idle' | 'running' | 'completed'>('idle');
   const [detailRunStep, setDetailRunStep] = useState(-1);
@@ -1396,14 +1402,19 @@ const LayoutStudio: React.FC = () => {
     }));
   };
 
-  /** Preview: evaluate sets against the mock record + declared var defaults. */
-  const previewConditionDerived = useMemo(() => {
-    const varDefaults: Record<string, any> = {};
+  /** Preview: declared var defaults evaluated once per formVariables change. */
+  const previewVarDefaults = useMemo(() => {
+    const out: Record<string, any> = {};
     for (const v of formVariables) {
-      if (v.name && varDefaults[v.name] === undefined) varDefaults[v.name] = v.defaultValue;
+      if (v.name && out[v.name] === undefined) out[v.name] = v.defaultValue;
     }
-    return deriveConditionSets(resolveActiveRules(conditionSets, { ...previewRecord, vars: varDefaults, variables: varDefaults }));
-  }, [conditionSets, previewRecord, formVariables]);
+    return out;
+  }, [formVariables]);
+
+  /** Preview: evaluate sets against the mock record + declared var defaults. */
+  const previewConditionDerived = useMemo(() =>
+    deriveConditionSets(resolveActiveRules(conditionSets, { record: previewRecord, vars: previewVarDefaults, fields: allFields })),
+    [conditionSets, previewRecord, previewVarDefaults, allFields]);
 
   const addDetailAction = () => {
     const na: DetailAction = {
@@ -1413,7 +1424,6 @@ const LayoutStudio: React.FC = () => {
       variant: 'secondary',
       iconName: 'Zap',
       visible: true,
-      preValidations: [],
       sections: [newActionSection()],
     };
     setDetailActions((prev) => [...prev, na]);
@@ -1433,7 +1443,6 @@ const LayoutStudio: React.FC = () => {
       variant: plugin.defaultVariant,
       iconName: plugin.iconName,
       visible: true,
-      preValidations: [],
       sections: [],
     };
     setDetailActions((prev) => [...prev, na]);
@@ -1565,7 +1574,7 @@ const LayoutStudio: React.FC = () => {
     if (!selectedDetailAction) return [];
     const out: { sectionId: string; eventId: string; skipped: boolean; firstInSection: boolean }[] = [];
     for (const s of selectedDetailAction.sections || []) {
-      const skipped = s.condition ? !mockEval(s.condition, previewRecord) : false;
+      const skipped = !evaluateFilterGroups(s.conditionGroups, conditionEvalContext(previewRecord, previewVarDefaults, allFields, user ? { id: user.id, role: user.role, email: user.email } : undefined));
       s.events.forEach((e, i) => out.push({ sectionId: s.id, eventId: e.id, skipped, firstInSection: i === 0 }));
     }
     return out;
@@ -1642,25 +1651,6 @@ const LayoutStudio: React.FC = () => {
   }, [pvColumns, tableMeta]);
 
   /** Legacy structured rule → JSONata expression (fieldId/rule/value from older drafts). */
-  const pvExpressionFor = (pv: PreValidation): string => {
-    if (pv.expression) return pv.expression;
-    const f = allFields.find((ff) => ff.id === pv.fieldId || ff.fieldName === pv.fieldId);
-    const fn = f?.fieldName || pv.fieldId || '';
-    if (!fn) return '';
-    const v = (pv.value ?? '').replace(/'/g, "''");
-    switch (pv.rule) {
-      case 'eq':       return `record.${fn} = '${v}'`;
-      case 'neq':      return `record.${fn} != '${v}'`;
-      case 'contains': return `$contains($string(record.${fn}), '${v}')`;
-      case 'gt':       return `record.${fn} > ${v}`;
-      case 'gte':      return `record.${fn} >= ${v}`;
-      case 'lt':       return `record.${fn} < ${v}`;
-      case 'lte':      return `record.${fn} <= ${v}`;
-      case 'required': return `$exists(record.${fn}) and $string(record.${fn}) != ''`;
-      default:         return '';
-    }
-  };
-
   // ── Global Canvas Keyboard Shortcuts (Escape / Delete) ──
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -2626,7 +2616,7 @@ const LayoutStudio: React.FC = () => {
   );
 
   const renderDetailSection = (act: DetailAction, sec: ActionSection, si: number) => {
-    const condOn = !!sec.condition;
+    const condOn = !!sec.conditionGroups;
     const runStatus = detailSectionRun[sec.id] || 'idle';
     const secCount = (act.sections || []).length;
     return (
@@ -2672,7 +2662,7 @@ const LayoutStudio: React.FC = () => {
             <button
               className={`ls-evt-cond-toggle ${condOn ? 'ls-evt-cond-toggle--on' : ''}`}
               title={condOn ? 'Remove section condition' : 'Gate this whole section on a condition'}
-              onClick={() => patchDetailSection(act.id, sec.id, { condition: condOn ? undefined : `record.status = 'pending'` })}
+              onClick={() => patchDetailSection(act.id, sec.id, { conditionGroups: condOn ? undefined : [] })}
             >
               <GitBranch size={11} /> {condOn ? 'Conditioned' : 'Condition'}
             </button>
@@ -2694,19 +2684,7 @@ const LayoutStudio: React.FC = () => {
               <div className="ls-evt-section__cond">
                 <span className="ls-evt-section__cond-label">Condition</span>
                 <div className="ls-evt-section__cond-editor">
-                  <ExpressionEditor
-                    compact
-                    variables={pickerVariables}
-                    variablesLabel="Layout Variables"
-                    contextLabel="Form Context"
-                    recordSchemas={pvRecordSchemas}
-                    drillRoots={pvDrillRoots}
-                    triggerModelName={tableMeta?.tableName}
-                    value={sec.condition || ''}
-                    onChange={(v) => patchDetailSection(act.id, sec.id, { condition: v })}
-                    sample={previewRecord}
-                    placeholder="record.status = 'pending'"
-                  />
+                  {renderConditionRow('Section skipped while these do not match', sec.conditionGroups, () => setConditionFilterTarget({ kind: 'section', actionId: act.id, sectionId: sec.id }))}
                 </div>
               </div>
             )}
@@ -2952,67 +2930,6 @@ const LayoutStudio: React.FC = () => {
                 );
               })()}
 
-              {/* Pre-validations */}
-              <div className="ls-table-card">
-                <div className="ls-table-card__header" style={{ cursor: 'pointer' }} onClick={() => setDetailPvOpen((o) => !o)}>
-                  <ShieldAlert size={13} />
-                  <span className="ls-table-card__title">Pre-Validations</span>
-                  <span className="ls-table-card__badge">{(act.preValidations || []).length}</span>
-                  <span className="ls-table-card__hint">Gate the whole chain — failure stops it</span>
-                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }} onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className="ls-block__btn"
-                      title="Add rule"
-                      onClick={() => patchDetailAction(act.id, { preValidations: [...(act.preValidations || []), defaultPreValidation()] })}
-                    ><Plus size={12} /></button>
-                  </div>
-                  {detailPvOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                </div>
-                {detailPvOpen && (
-                  <>
-                    {(act.preValidations || []).length === 0 && (
-                      <p className="ls-empty" style={{ padding: '8px 0' }}>No pre-validations — the chain runs immediately on click.</p>
-                    )}
-                    {(act.preValidations || []).map((pv, idx) => (
-                      <div key={pv.id} className="ls-evt-pvrow-expr">
-                        <div className="ls-evt-pvrow-expr__head">
-                          <span className="ls-evt-pvrow-expr__label">Rule {idx + 1}</span>
-                          <span className="ls-evt-pvrow-expr__hint">JSONata — must evaluate true for the action to run</span>
-                          <button
-                            className="ls-block__btn ls-block__btn--danger"
-                            title="Remove rule"
-                            onClick={() => patchDetailAction(act.id, { preValidations: (act.preValidations || []).filter((p) => p.id !== pv.id) })}
-                          ><X size={11} /></button>
-                        </div>
-                        <ExpressionEditor
-                          compact
-                          variables={pickerVariables}
-                          variablesLabel="Layout Variables"
-                          contextLabel="Form Context"
-                          recordSchemas={pvRecordSchemas}
-                          drillRoots={pvDrillRoots}
-                          triggerModelName={tableMeta?.tableName}
-                          value={pvExpressionFor(pv)}
-                          onChange={(v) => patchDetailAction(act.id, {
-                            preValidations: (act.preValidations || []).map((p) => p.id === pv.id
-                              ? { ...p, expression: v, fieldId: undefined, rule: undefined, value: undefined }
-                              : p),
-                          })}
-                          sample={previewRecord}
-                          placeholder="e.g. record.status = 'pending'"
-                        />
-                        <input
-                          className="sails-input"
-                          placeholder="Failure message"
-                          value={pv.message}
-                          onChange={(e) => patchDetailAction(act.id, { preValidations: (act.preValidations || []).map((p) => p.id === pv.id ? { ...p, message: e.target.value } : p) })}
-                        />
-                      </div>
-                    ))}
-                  </>
-                )}
-              </div>
-
               {/* Event sections */}
               <div className="ls-table-card">
                 <div className="ls-table-card__header" style={{ cursor: 'pointer' }} onClick={() => setDetailSectionsOpen((o) => !o)}>
@@ -3175,6 +3092,36 @@ const LayoutStudio: React.FC = () => {
     patchConditionSetRule(setId, ruleId, { targetBlockIds: next });
   };
 
+  const conditionGroupsSummary = (groups?: FilterGroup[]): string => {
+    const flat = (groups || []).flatMap((g) => g.rules || []);
+    if (flat.length === 0) return '';
+    const first = flat[0];
+    const f = allFields.find((x) => x.id === first.fieldId || x.fieldName === first.fieldId);
+    const op = filterOperatorLabel(first.operator || 'eq');
+    const rhs = first.valueSource === 'field'
+      ? (allFields.find((x) => x.id === first.refFieldId)?.name || first.refFieldId || '')
+      : (first.value || '');
+    const rest = flat.length > 1 ? ` +${flat.length - 1} more` : '';
+    return `${f?.name || first.fieldId} ${op} ${rhs}${rest}`;
+  };
+
+  const hasConditionGroups = (groups?: FilterGroup[]): boolean =>
+    !!groups && groups.some((g) => (g.rules || []).length > 0);
+
+  const renderConditionRow = (label: string, groups: FilterGroup[] | undefined, onEdit: () => void) => (
+    <div className="ls-prop-group" style={{ marginTop: 6 }}>
+      <label className="ls-prop-label">{label}</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span className="ls-evt-chip-mini ls-evt-chip-mini--store" style={{ maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Filter size={9} /> {hasConditionGroups(groups) ? conditionGroupsSummary(groups) : 'Always active'}
+        </span>
+        <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={onEdit} disabled={isReadOnly}>
+          <Filter size={11} /> Edit Condition
+        </button>
+      </div>
+    </div>
+  );
+
   const renderConditionRule = (setId: string, rule: ConditionSetRule, rIdx: number, total: number) => {
     const meta = conditionRuleKindMeta[rule.kind];
     const targets = rule.targetBlockIds === 'all' ? [] : (rule.targetBlockIds || []);
@@ -3193,22 +3140,7 @@ const LayoutStudio: React.FC = () => {
           </div>
         </div>
 
-        <div className="ls-prop-group" style={{ marginTop: 6 }}>
-          <label className="ls-prop-label">Rule condition (JSONata) — applies when true</label>
-          <ExpressionEditor
-            compact
-            variables={pickerVariables}
-            variablesLabel="Layout Variables"
-            contextLabel="Form Context"
-            recordSchemas={pvRecordSchemas}
-            drillRoots={pvDrillRoots}
-            triggerModelName={tableMeta?.tableName}
-            value={rule.condition || ''}
-            onChange={(v) => patchConditionSetRule(setId, rule.id, { condition: v || undefined })}
-            sample={previewRecord}
-            placeholder="record.status = 'submitted'"
-          />
-        </div>
+        {renderConditionRow('Rule condition (Query Studio) — applies when these match', rule.conditionGroups, () => setConditionFilterTarget({ kind: 'rule', setId, ruleId: rule.id }))}
 
         <div className="ls-prop-group" style={{ marginTop: 6 }}>
           <label className="ls-prop-label">Applies to</label>
@@ -3380,7 +3312,7 @@ const LayoutStudio: React.FC = () => {
                   }}
                 >
                   <span className="ls-evt-chip__label">{cs.title}</span>
-                  {cs.condition && <span className="ls-evt-chip-mini ls-evt-chip-mini--store"><Braces size={9} /> cond</span>}
+                  {hasConditionGroups(cs.conditionGroups) && <span className="ls-evt-chip-mini ls-evt-chip-mini--store"><Filter size={9} /> cond</span>}
                   <span className="ls-evt-chip__variant ls-evt-chip__variant--secondary">{(cs.rules || []).length} rule{(cs.rules || []).length !== 1 ? 's' : ''}</span>
                   <button className="ls-evt-chip__del" title="Delete set" onClick={(e) => { e.stopPropagation(); removeConditionSet(cs.id); }}><X size={10} /></button>
                 </div>
@@ -3428,20 +3360,7 @@ const LayoutStudio: React.FC = () => {
 
               <div className="ls-summary-panel__body" style={{ padding: 12 }}>
                 <div className="ls-prop-group" style={{ borderTop: 'none', paddingTop: 0 }}>
-                  <label className="ls-prop-label">Set condition (JSONata) — when false, the whole set is inactive</label>
-                  <ExpressionEditor
-                    compact
-                    variables={pickerVariables}
-                    variablesLabel="Layout Variables"
-                    contextLabel="Form Context"
-                    recordSchemas={pvRecordSchemas}
-                    drillRoots={pvDrillRoots}
-                    triggerModelName={tableMeta?.tableName}
-                    value={selSet.condition || ''}
-                    onChange={(v) => patchConditionSet(selSet.id, { condition: v || undefined })}
-                    sample={previewRecord}
-                    placeholder="record.status = 'submitted'"
-                  />
+                  {renderConditionRow('Set condition (Query Studio) — the set is inactive while these do not match', selSet.conditionGroups, () => setConditionFilterTarget({ kind: 'set', setId: selSet.id }))}
                 </div>
 
                 <div className="ls-section-divider" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
@@ -5688,6 +5607,66 @@ const LayoutStudio: React.FC = () => {
                     setRecordFilterEventId(null);
                   }}
                    onCancel={() => setRecordFilterEventId(null)}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Condition filter overlay (Query Studio) — sets / rules / sections / pre-validations ── */}
+      {conditionFilterTarget && (() => {
+        const t = conditionFilterTarget;
+        let cs: ConditionSet | undefined;
+        let rule: ConditionSetRule | undefined;
+        let groups: FilterGroup[] | undefined;
+        let title = 'Condition';
+        let apply: ((g: FilterGroup[]) => void) | null = null;
+
+        if (t.kind === 'set' || t.kind === 'rule') {
+          cs = conditionSets.find((x) => x.id === t.setId);
+          if (!cs) return null;
+          rule = t.ruleId ? (cs.rules || []).find((r) => r.id === t.ruleId) : undefined;
+          if (t.ruleId && !rule) return null;
+          groups = rule ? rule.conditionGroups : cs.conditionGroups;
+          title = rule ? 'Rule Condition' : 'Set Condition';
+          apply = (g) => {
+            if (rule) patchConditionSetRule(cs!.id, rule.id, { conditionGroups: g });
+            else patchConditionSet(cs!.id, { conditionGroups: g });
+          };
+        } else if (t.kind === 'section') {
+          const act = detailActions.find((a) => a.id === t.actionId);
+          const sec = act?.sections?.find((x) => x.id === t.sectionId);
+          if (!act || !sec) return null;
+          groups = sec.conditionGroups;
+          title = 'Section Condition';
+          apply = (g) => patchDetailSection(act.id, sec.id, { conditionGroups: g });
+        }
+
+        return (
+          <div className="ls-overlay sails-qstudio-overlay" style={{ zIndex: 1100 }} onClick={() => setConditionFilterTarget(null)}>
+            <div className="ls-overlay-card sails-qstudio-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="ls-overlay-card__header">
+                <h3 className="ls-overlay-card__title"><Filter size={14} /> {title}</h3>
+                <button className="ls-block__btn" onClick={() => setConditionFilterTarget(null)}><X size={14} /></button>
+              </div>
+              <div className="ls-overlay-card__body">
+                <FilterBuilder
+                  fields={allFields}
+                  rootTableName={tableMeta?.tableName || ''}
+                  initialGroups={groups || []}
+                  terminology="condition"
+                  expressionVariables={pickerVariables}
+                  expressionSample={previewRecord}
+                  extraContextOptions={formVariables.length > 0
+                    ? [
+                        { value: 'cat_Form Variables', label: '── Form Variables ──', disabled: true },
+                        ...formVariables.map((v) => ({ value: `@var.${v.name}`, label: v.name })),
+                      ]
+                    : undefined}
+                  showHeader={false}
+                  onApply={(g) => { apply?.(g); setConditionFilterTarget(null); }}
+                  onCancel={() => setConditionFilterTarget(null)}
                 />
               </div>
             </div>

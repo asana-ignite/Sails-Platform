@@ -17,6 +17,7 @@ export { SYSTEM_PERMISSION_REGISTRY, getAllCapabilities } from './permissions';
 export type { PermissionDefinition, SystemCapability } from './permissions';
 export { PACKAGE_MANIFESTS, getAllPackageCapabilityDefinitions } from './packages';
 export type { PackageManifest } from './packages';
+export { evaluateFilterGroups, type FilterEvalContext, type FilterEvalUser } from './filterEvaluation';
 export {
   validateFieldValue,
   validateRecord,
@@ -584,21 +585,7 @@ export interface ListAction {
   requiresSelection?: boolean;
   iconName?: string;
   /** Optional event chain executed when this toolbar action is clicked. */
-  preValidations?: PreValidation[];
   sections?: ActionSection[];
-}
-
-/** A validation gate evaluated before an action's event chain runs. */
-export interface PreValidation {
-  id: string;
-  /** JSONata condition — must evaluate truthy for the action to run. */
-  expression: string;
-  /** Shown to the user when the expression evaluates falsy. */
-  message: string;
-  /** Legacy structured fields (older drafts) — migrated to `expression` in the studio. */
-  fieldId?: string;
-  rule?: string;
-  value?: string;
 }
 
 /** A single step in an action's event chain (reuses workflow event plugin types). */
@@ -611,11 +598,12 @@ export interface FormEvent {
   config: Record<string, any>;
 }
 
-/** An ordered group of events; a false condition skips the whole section. */
+/** An ordered group of events; the section is skipped while these don't match. */
 export interface ActionSection {
   id: string;
   title?: string;
-  condition?: string;
+  /** Query-Studio filter groups — section skipped while these don't match. */
+  conditionGroups?: FilterGroup[];
   events: FormEvent[];
   collapsed?: boolean;
 }
@@ -623,7 +611,7 @@ export interface ActionSection {
 /**
  * A header-level action on a Detail / Form view.
  * Plain actions carry only actionKey (e.g. 'delete'); form-event actions carry
- * preValidations + event sections executed on click.
+ * event sections executed on click.
  */
 export interface DetailAction {
   id: string;
@@ -632,8 +620,6 @@ export interface DetailAction {
   variant: 'primary' | 'secondary' | 'danger' | 'ghost';
   visible: boolean;
   iconName?: string;
-  /** Validation gates — all must pass before any event runs. */
-  preValidations?: PreValidation[];
   /** Ordered event sections executed when the button is clicked. */
   sections?: ActionSection[];
 }
@@ -656,8 +642,8 @@ export interface ConditionSetStyle {
 /** One rule inside a Condition Set. */
 export interface ConditionSetRule {
   id: string;
-  /** Rule-level JSONata gate (record + vars context); empty = always active. */
-  condition?: string;
+  /** Query-Studio filter groups; the rule applies only while these match. */
+  conditionGroups?: FilterGroup[];
   /** Placed blocks this rule targets, or 'all' (Select All — whole form). */
   targetBlockIds: string[] | 'all';
   kind: 'behavior' | 'formatting' | 'validation';
@@ -676,12 +662,12 @@ export interface ConditionSetRule {
   };
 }
 
-/** A named group of rules; the whole set is inactive while `condition` is false. */
+/** A named group of rules; the whole set is inactive while its groups don't match. */
 export interface ConditionSet {
   id: string;
   title: string;
-  /** Set-level JSONata gate (record + vars context). */
-  condition?: string;
+  /** Query-Studio filter groups; the set is inactive while these don't match. */
+  conditionGroups?: FilterGroup[];
   rules: ConditionSetRule[];
 }
 
@@ -739,7 +725,7 @@ export interface LayoutFilter {
  *  - 'context' → compare against a dynamic macro (`contextMacro`), with optional
  *                N period (`contextN`) for relative date macros
  */
-export type FilterValueSource = 'value' | 'field' | 'record' | 'context' | 'workflow';
+export type FilterValueSource = 'value' | 'field' | 'record' | 'context' | 'workflow' | 'expression';
 
 export interface FilterRule {
   id: string;

@@ -10,6 +10,8 @@ import FieldPathPicker from './FieldPathPicker';
 import type { FieldDefinition as PickerField } from './FieldPathPicker';
 import type { FilterGroup, FilterRule, SailsFieldDefinition, FilterValueSource } from '@sails/shared';
 import { VariableTextInput } from '../workflow/VariableTextInput';
+import ExpressionEditor from '../workflow/ExpressionEditor';
+import type { SuggestionVariable } from '../workflow/jsonataSuggest';
 import { CONTEXT_FLAT_OPTIONS, isNPeriodMacro } from '@sails/shared';
 import { useDateTimePrefs, formatGlobalPrefsValue } from '../../utils/systemDateTime';
 import { SailsDatePicker } from '../../features/controls/plugins/DateControl';
@@ -137,6 +139,14 @@ interface FilterBuilderProps {
    * variables; other QueryStudio hosts leave this unset.
    */
   extraContextOptions?: { value: string; label: string; disabled?: boolean }[];
+  /** 'condition' hosts (Layout Studio events/conditions) relabel the builder:
+   *  "+ Add Condition", "Condition Summary", "Apply" — and enable the LHS
+   *  Context mode + RHS Expression f(x) source. */
+  terminology?: 'filter' | 'condition';
+  /** Declared variables shown in the Expression f(x) editor (condition hosts). */
+  expressionVariables?: SuggestionVariable[];
+  /** Sample record for the Expression f(x) Test runner. */
+  expressionSample?: Record<string, any>;
   /** When provided (Workflow Studio), the 'Workflow' RHS source appears and
    * opens the workflow variable picker for the rule value. */
   workflowVariables?: { id: string; name: string; fieldType: string; targetModel?: string; columns?: any[] }[];
@@ -156,7 +166,10 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
   onCancel,
   showHeader = true,
   title = 'Edit View Filters',
+  terminology = 'filter',
   extraContextOptions,
+  expressionVariables,
+  expressionSample,
   workflowVariables,
   workflowRecordSchemas,
   workflowTriggerFields,
@@ -177,9 +190,15 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
     ? [...CONTEXT_FLAT_OPTIONS, ...extraContextOptions]
     : CONTEXT_FLAT_OPTIONS;
   // The 'Workflow' RHS source exists only where workflow variables are supplied.
-  const sourceOptions: { value: FilterValueSource; label: string }[] = workflowVariables
-    ? [...RHS_SOURCE_OPTIONS, { value: 'workflow', label: 'Workflow' }]
-    : RHS_SOURCE_OPTIONS;
+  const lhsContextItems: { id: string; name: string }[] = contextOptions
+    .filter((o) => !o.value.startsWith('cat_') && !isNPeriodMacro(o.value))
+    .map((o) => ({ id: o.value, name: o.label }));
+
+  const sourceOptions: { value: FilterValueSource; label: string }[] = [
+    ...RHS_SOURCE_OPTIONS,
+    ...(terminology === 'condition' ? [{ value: 'expression' as FilterValueSource, label: 'Expression f(x)' }] : []),
+    ...(workflowVariables ? [{ value: 'workflow' as FilterValueSource, label: 'Workflow' }] : []),
+  ];
   const [groups, setGroups] = useState<FilterGroup[]>(
     initialGroups.length > 0 ? initialGroups : [emptyGroup(allFields, '1')]
   );
@@ -420,6 +439,32 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
       );
     }
 
+    if (source === 'expression') {
+      // JSONata f(x) — evaluated with record + vars + user (client evaluator).
+      const schemas: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]> = {};
+      for (const [model, cols] of Object.entries(modelSchemas)) {
+        schemas[model] = cols.map((c) => ({
+          fieldName: c.fieldName,
+          label: c.name || c.fieldName,
+          logicalType: c.logicalType || 'text',
+          ...(c.targetModel ? { targetModel: c.targetModel } : {}),
+        }));
+      }
+      return (
+        <ExpressionEditor
+          compact
+          hideVariablePicker={!(expressionVariables && expressionVariables.length > 0)}
+          variables={expressionVariables || []}
+          recordSchemas={schemas}
+          triggerModelName={rootTableName}
+          value={rule.value || ''}
+          onChange={(v) => updateRule(rule.id, { value: v })}
+          sample={expressionSample}
+          placeholder="record.amount * 0.1"
+        />
+      );
+    }
+
     if (source === 'workflow') {
       // Workflow value: VariableTextInput — type `{{` for intellisense, use the
       // … picker, or drag a node in. The moustache ref is resolved at runtime
@@ -449,6 +494,9 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
   /** Human-readable field label for the read-only summary. */
   const summaryFieldLabel = (rule: FilterRule): string => {
     if (rule.fieldPath) return rule.fieldPath;
+    if (rule.fieldId.startsWith('@')) {
+      return contextOptions.find((o) => o.value === rule.fieldId)?.label || rule.fieldId;
+    }
     return findFieldAnywhere(rule.fieldId)?.name || rule.fieldId || '(field)';
   };
 
@@ -462,6 +510,9 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
       const macro = rule.contextMacro || '@me';
       const opt = contextOptions.find((o) => o.value === macro);
       return isNPeriodMacro(macro) ? `${opt?.label || macro} (${rule.contextN ?? 30})` : (opt?.label || macro);
+    }
+    if (source === 'expression') {
+      return rule.value ? `ƒ ${rule.value}` : '(expression)';
     }
     if (source === 'field') {
       const ref = rule.refFieldPath || findFieldAnywhere(rule.refFieldId || '')?.name || rule.refFieldId;
@@ -531,7 +582,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
       <div className="fb-body">
         {!activeGroup || activeGroup.rules.length === 0 ? (
           <div className="fb-empty">
-            No rules in this block. Click <strong>+ Add Filter Rule</strong> below.
+            No rules in this block. Click <strong>+ Add {terminology === 'condition' ? 'Condition' : 'Filter Rule'}</strong> below.
           </div>
         ) : (
           activeGroup.rules.map((rule, idx) => {
@@ -558,6 +609,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
                     rootModel={rootTableName}
                     modelsSchemas={modelSchemas}
                     value={rule.fieldChain && rule.fieldChain.length > 0 ? rule.fieldChain : rule.fieldId ? [rule.fieldId] : []}
+                    contextItems={terminology === 'condition' ? lhsContextItems : undefined}
                     onChange={(chain) => {
                       const terminal = chain[chain.length - 1];
                       updateRule(rule.id, {
@@ -594,7 +646,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
                         const src = String(v) as FilterValueSource;
                         updateRule(rule.id, {
                           valueSource: src,
-                          value: src === 'value' ? rule.value : '',
+                          value: src === 'value' || src === 'expression' ? rule.value : '',
                           refFieldId: src === 'field' || src === 'record' ? rule.refFieldId : undefined,
                           refRecordId: src === 'record' ? rule.refRecordId : undefined,
                           contextMacro: src === 'context' ? (rule.contextMacro || '@me') : undefined,
@@ -628,7 +680,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
 
         <div className="fb-add-bar">
           <button type="button" className="sails-btn sails-btn--ghost sails-btn--sm" onClick={addRuleToActiveGroup}>
-            <Plus size={13} /> Add Filter Rule
+            <Plus size={13} /> {terminology === 'condition' ? 'Add Condition' : 'Add Filter Rule'}
           </button>
         </div>
       </div>
@@ -637,14 +689,14 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
         <button type="button" className="fb-summary-head" onClick={() => setShowSummary((v) => !v)}>
           <span className="fb-summary-title">
             <ChevronDown size={13} className={`fb-summary-chev ${showSummary ? '' : 'fb-summary-chev--closed'}`} />
-            Where Summary
+            {terminology === 'condition' ? 'Condition Summary' : 'Where Summary'}
           </span>
           <span className="fb-count-badge">{ruleCountLabel}</span>
         </button>
         {showSummary && (
           <div className="fb-summary-body">
             {groups.filter((g) => g.rules.some((r) => r.fieldId)).length === 0 ? (
-              <p className="fb-summary-empty">No filter rules configured.</p>
+              <p className="fb-summary-empty">{terminology === 'condition' ? 'No conditions configured.' : 'No filter rules configured.'}</p>
             ) : (
               groups.map((grp, gi) => {
                 const rules = grp.rules.filter((r) => r.fieldId);
@@ -692,7 +744,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
             </button>
           )}
           <button type="button" className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => applyGroups(groups)}>
-            <Check size={14} /> Apply Filters
+            <Check size={14} /> {terminology === 'condition' ? 'Apply' : 'Apply Filters'}
           </button>
         </div>
       </div>

@@ -284,3 +284,35 @@
   flex-shrink: 0;
   transition: color 0.15s ease;
 }
+
+/* Context / Model tabs */
+.field-path-picker__tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px 0;
+  border-bottom: 1px solid var(--sails-border, #e2e8f0);
+}
+
+.field-path-picker__tab {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+}
+
+.field-path-picker__tab--active {
+  color: var(--sails-primary, #9dcee0);
+  border-bottom-color: var(--sails-primary, #9dcee0);
+}
+
+.field-path-picker__item--context .field-path-picker__item-label {
+  color: var(--sails-text-secondary, #64748b);
+}
