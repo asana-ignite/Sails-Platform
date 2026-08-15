@@ -39,7 +39,12 @@
 
   /* Typography */
   --sails-font-family: 'Lexend', 'Prompt', sans-serif;
+  --sails-font-size-xs: 11px;
+  --sails-font-size-sm: 12px;
+  --sails-font-size-md: 13px;
   --sails-font-size-base: 14px;
+  --sails-font-size-lg: 16px;
+  --sails-font-size-xl: 20px;
 
   /* Spacing */
   --sails-spacing-unit: 8px;
@@ -48,9 +53,9 @@
   --sails-radius-lg: 12px;
 
   /* Field Controls — single source for input/picker/select metrics */
-  --sails-field-height: 38px;
-  --sails-field-padding: 7px 12px;
-  --sails-field-font-size: 13px;
+  --sails-field-height: 36px;
+  --sails-field-padding: 0 12px;
+  --sails-field-font-size: 14px;
 
   /* Transitions */
   --sails-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
