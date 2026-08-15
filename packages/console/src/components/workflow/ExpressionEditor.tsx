@@ -35,6 +35,10 @@ interface ExpressionEditorProps {
   showSnippets?: boolean;
   /** Hide the … variable picker corner button (e.g. field-formula editors). */
   hideVariablePicker?: boolean;
+  /** Section label for the declared variables in the picker tree. */
+  variablesLabel?: string;
+  /** Section label for the workflow/context branches in the picker tree. */
+  contextLabel?: string;
 }
 
 interface PendingFill {
@@ -133,6 +137,8 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   compact,
   showSnippets,
   hideVariablePicker,
+  variablesLabel,
+  contextLabel,
 }) => {
   const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
   const [suggestIndex, setSuggestIndex] = useState(0);
@@ -501,6 +507,8 @@ export const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
                 triggerModelName={triggerModelName}
                 includeOldRecord={!!drillRoots?.oldRecord}
                 includeRequestor={!!drillRoots?.requestor}
+                variablesLabel={variablesLabel}
+                contextLabel={contextLabel}
                 onChange={insertAtCaret}
                 onExpression={insertAtCaret}
                 onAddVariable={onAddVariable}

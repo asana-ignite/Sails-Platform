@@ -18,6 +18,8 @@ export interface SessionContext {
   email: string;
   teams: { teamId: string; isLeader: boolean }[];
   activeTeamId?: string;
+  /** Resolved UI locale: user preference → tenant default → 'en'. */
+  locale: string;
   /** Set while a workflow executes stage events — QueryLayer skips record triggers. */
   suppressRecordTriggers?: boolean;
 }
@@ -106,5 +108,6 @@ function toSessionContext(session: AppSession): SessionContext {
     email: user.email,
     teams: user.teams ?? [],
     activeTeamId: user.activeTeamId,
+    locale: user.locale || 'en',
   };
 }

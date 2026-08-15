@@ -57,6 +57,8 @@ import {
 } from 'lucide-react';
 import { TableLayout, LayoutType, ViewType, FIELD_TYPE_REGISTRY, FilterGroup } from '@sails/shared';
 import { CustomSelect, SelectOption } from '../../components/common/CustomSelect';
+import TranslatableInput from '../../components/common/TranslatableInput';
+import { DEFAULT_LOCALE, isLocalized, localize, type LocalizedText } from '@sails/shared';
 import { DynamicIcon } from '../../components/common/DynamicIcon';
 import { FilterBuilder } from '../../components/common/FilterBuilder';
 import { UiTableCard, UiTable, UiTh, UiTr, UiTd, UiNameCell, UiBadge, UiDateCell, UiActionsMenu, UiActionsItem, UiActionsDivider, UiPagination, UiConfirmDialog } from '../../components/ui';
@@ -384,15 +386,17 @@ const ObjectManager: React.FC = () => {
 
   const [detailName, setDetailName] = useState('');
   const [detailDesc, setDetailDesc] = useState('');
-  const [savedDetail, setSavedDetail] = useState({ name: '', description: '' });
+  const [detailNameLocal, setDetailNameLocal] = useState<LocalizedText>('');
+  const [detailDescLocal, setDetailDescLocal] = useState<LocalizedText>('');
+  const [savedDetail, setSavedDetail] = useState<{ name: string; description: string; nameI18n?: any; descriptionI18n?: any }>({ name: '', description: '' });
   const [isSavingDetail, setIsSavingDetail] = useState(false);
 
   const [layouts, setLayouts] = useState<(TableLayout & { table?: { id: string; name: string; tableName: string } | null })[]>([]);
   const [layoutsLoading, setLayoutsLoading] = useState(false);
 
   const isDetailDirty =
-    detailName !== savedDetail.name ||
-    detailDesc !== savedDetail.description;
+    detailNameLocal !== (savedDetail.nameI18n ?? savedDetail.name) ||
+    detailDescLocal !== (savedDetail.descriptionI18n ?? savedDetail.description);
 
   const isCurrentDetailTabDirty = (tab?: DetailTab) => {
     const t = tab || activeDetailTab;
@@ -412,6 +416,8 @@ const ObjectManager: React.FC = () => {
   const handleDiscardDetailAndSwitch = () => {
     setDetailName(savedDetail.name);
     setDetailDesc(savedDetail.description);
+    setDetailNameLocal(savedDetail.nameI18n ?? savedDetail.name);
+    setDetailDescLocal(savedDetail.descriptionI18n ?? savedDetail.description);
     if (pendingDetailTabSwitch) {
       setActiveDetailTab(pendingDetailTabSwitch);
       setPendingDetailTabSwitch(null);
@@ -463,12 +469,14 @@ const ObjectManager: React.FC = () => {
   
   // Table form state
   const [newTableName, setNewTableName] = useState('');
+  const [newTableNameLocal, setNewTableNameLocal] = useState<LocalizedText>('');
   const [newTableDbName, setNewTableDbName] = useState('');
   const [newTableDesc, setNewTableDesc] = useState('');
   
   // Field form state
   const [fieldWizardStep, setFieldWizardStep] = useState<1 | 2>(1);
   const [newFieldName, setNewFieldName] = useState('');
+  const [newFieldNameLocal, setNewFieldNameLocal] = useState<LocalizedText>('');
   const [newFieldDbName, setNewFieldDbName] = useState('');
   const [newFieldDesc, setNewFieldDesc] = useState('');
   const [newFieldLogicalType, setNewFieldLogicalType] = useState('short_text');
@@ -482,6 +490,7 @@ const ObjectManager: React.FC = () => {
   const [editingField, setEditingField] = useState<any | null>(null);
   const [editFieldWizardStep, setEditFieldWizardStep] = useState<1 | 2>(1);
   const [editFieldName, setEditFieldName] = useState('');
+  const [editFieldNameLocal, setEditFieldNameLocal] = useState<LocalizedText>('');
   const [editFieldDbName, setEditFieldDbName] = useState('');
   const [editFieldDesc, setEditFieldDesc] = useState('');
   const [editFieldLogicalType, setEditFieldLogicalType] = useState('short_text');
@@ -535,6 +544,7 @@ const ObjectManager: React.FC = () => {
   const resetFieldParams = useCallback(() => {
     setFieldWizardStep(1);
     setNewFieldName('');
+    setNewFieldNameLocal('');
     setNewFieldDbName('');
     setNewFieldDesc('');
     setNewFieldLogicalType('short_text');
@@ -648,12 +658,21 @@ const ObjectManager: React.FC = () => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: detailName,
-          description: detailDesc
+          name: localize(detailNameLocal, DEFAULT_LOCALE) || detailName,
+          description: localize(detailDescLocal, DEFAULT_LOCALE) || detailDesc,
+          nameI18n: isLocalized(detailNameLocal) ? detailNameLocal : undefined,
+          descriptionI18n: isLocalized(detailDescLocal) ? detailDescLocal : undefined
         })
       });
       if (res.ok) {
-        setSavedDetail({ name: detailName, description: detailDesc });
+        setDetailName(localize(detailNameLocal, DEFAULT_LOCALE) || detailName);
+        setDetailDesc(localize(detailDescLocal, DEFAULT_LOCALE) || detailDesc);
+        setSavedDetail({
+          name: localize(detailNameLocal, DEFAULT_LOCALE) || detailName,
+          description: localize(detailDescLocal, DEFAULT_LOCALE) || detailDesc,
+          nameI18n: isLocalized(detailNameLocal) ? detailNameLocal : undefined,
+          descriptionI18n: isLocalized(detailDescLocal) ? detailDescLocal : undefined,
+        });
         fetchTables();
       } else {
         const data = await res.json();
@@ -737,9 +756,10 @@ const ObjectManager: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: newTableName,
+          name: localize(newTableNameLocal, DEFAULT_LOCALE) || newTableName,
           tableName: newTableDbName,
-          description: newTableDesc
+          description: newTableDesc,
+          nameI18n: isLocalized(newTableNameLocal) ? newTableNameLocal : undefined
         })
       });
       if (res.ok) {
@@ -800,12 +820,13 @@ const ObjectManager: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tableId: selectedTable.id,
-          name: newFieldName,
+          name: localize(newFieldNameLocal, DEFAULT_LOCALE) || newFieldName,
           fieldName: newFieldDbName,
           logicalType: newFieldLogicalType,
           physicalType: physicalType,
           isRequired: newFieldRequired,
           description: newFieldDesc,
+          nameI18n: isLocalized(newFieldNameLocal) ? newFieldNameLocal : undefined,
           config: finalConfig
         })
       });
@@ -828,6 +849,7 @@ const ObjectManager: React.FC = () => {
     setEditingField(field);
     setEditFieldWizardStep(1);
     setEditFieldName(field.name);
+    setEditFieldNameLocal((field as any).nameI18n ?? field.name);
     setEditFieldDbName(field.fieldName);
     setEditFieldDesc(field.description || '');
     setEditFieldRequired(!!field.isRequired);
@@ -891,9 +913,10 @@ const ObjectManager: React.FC = () => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: editFieldName,
+          name: localize(editFieldNameLocal, DEFAULT_LOCALE) || editFieldName,
           fieldName: editFieldDbName,
           description: editFieldDesc,
+          nameI18n: isLocalized(editFieldNameLocal) ? editFieldNameLocal : undefined,
           isRequired: editFieldRequired,
           logicalType: editFieldLogicalType,
           config: finalConfig
@@ -1128,6 +1151,8 @@ const ObjectManager: React.FC = () => {
     setSelectedTable(table);
     setActiveDetailTab(initialTab || 'fields');
     setDetailName(table.name);
+    setDetailNameLocal((table as any).nameI18n ?? table.name);
+    setDetailDescLocal(((table as any).descriptionI18n ?? table.description) || '');
     setDetailDesc(table.description || '');
     setSavedDetail({ name: table.name, description: table.description || '' });
     setViewMode('detail');
@@ -1301,11 +1326,10 @@ const ObjectManager: React.FC = () => {
                   <div className="om-form-grid-2">
                     <div className="om-field-group">
                       <label className="om-field-label">{t('admin_object_manager.form.tableName')}</label>
-                      <input
-                        type="text"
-                        className="sails-input"
-                        value={detailName}
-                        onChange={e => setDetailName(e.target.value)}
+                      <TranslatableInput
+                        value={detailNameLocal}
+                        onChange={setDetailNameLocal}
+                        placeholder={t('admin_object_manager.form.tableNamePlaceholder')}
                       />
                     </div>
                     <div className="om-field-group">
@@ -1777,6 +1801,7 @@ const ObjectManager: React.FC = () => {
                 onClick={() => {
                   setIsCreatingTable(false);
                   setNewTableName('');
+                  setNewTableNameLocal('');
                   setNewTableDbName('');
                   setNewTableDesc('');
                 }}
@@ -1876,17 +1901,15 @@ const ObjectManager: React.FC = () => {
                   <div className="om-form-grid-2">
                     <div className="om-field-group">
                       <label className="om-field-label">{t('admin_object_manager.form.fieldName')}</label>
-                      <input 
-                        type="text" 
-                        className="sails-input" 
-                        placeholder={t('admin_object_manager.form.fieldNamePlaceholder')} 
-                        autoFocus 
-                        value={newFieldName}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setNewFieldName(val);
-                          setNewFieldDbName(toSnakeCase(val));
+                      <TranslatableInput
+                        value={newFieldNameLocal}
+                        onChange={(v) => {
+                          setNewFieldNameLocal(v);
+                          const def = typeof v === 'string' ? v : (v && v.en) || '';
+                          setNewFieldName(def);
+                          setNewFieldDbName(toSnakeCase(def));
                         }}
+                        placeholder={t('admin_object_manager.form.fieldNamePlaceholder')}
                       />
                     </div>
 
@@ -2279,17 +2302,15 @@ const ObjectManager: React.FC = () => {
                   <div className="om-form-grid-2">
                     <div className="om-field-group">
                       <label className="om-field-label">{t('admin_object_manager.form.fieldName')}</label>
-                      <input 
-                        type="text" 
-                        className="sails-input" 
-                        placeholder={t('admin_object_manager.form.fieldNamePlaceholder')} 
-                        autoFocus 
-                        value={editFieldName}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setEditFieldName(val);
-                          setEditFieldDbName(toSnakeCase(val));
+                      <TranslatableInput
+                        value={editFieldNameLocal}
+                        onChange={(v) => {
+                          setEditFieldNameLocal(v);
+                          const def = typeof v === 'string' ? v : (v && v.en) || '';
+                          setEditFieldName(def);
+                          setEditFieldDbName(toSnakeCase(def));
                         }}
+                        placeholder={t('admin_object_manager.form.fieldNamePlaceholder')}
                       />
                     </div>
 

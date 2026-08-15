@@ -18,20 +18,24 @@ import {
   Trash2,
   List
 } from 'lucide-react';
-import type { TableLayout, SailsFieldDefinition, ConsoleMenu, DetailAction } from '@sails/shared';
+import type { TableLayout, SailsFieldDefinition, ConsoleMenu, DetailAction, FormVariable } from '@sails/shared';
 import { isSystemField, SYSTEM_PROTECTED_COLUMNS, registerExpressionFunctions } from '@sails/shared';
 import jsonata from 'jsonata';
 import LoadingScreen from '../components/common/LoadingScreen';
 import RelatedListView from '../components/common/RelatedListView';
 import { fetchCached } from '../api/client';
 import { DetailFieldInput, DetailFieldDisplay, DetailFieldLabel, validateFieldIssues } from '../features/controls/DetailFieldControl';
+import DynamicIcon from '../components/common/DynamicIcon';
 import type { FieldValidation } from '../features/controls/types';
 import { evaluateExpressionFields } from '../utils/expressionLive';
+import { resolveActiveRules, deriveConditionSets } from '../utils/conditionSets';
+import { useLocalizedText } from '../lib/useLocalizedText';
+import { NotificationMessageModal } from '../components/common/NotificationMessageModal';
+import '../components/common/NotificationMessageModal.css';
 import { useConsole } from '../contexts/ConsoleContext';
 import { useRecordStack } from '../contexts/RecordStackContext';
 import { ActionRegistry } from '../features/actions';
 import { UiConfirmDialog } from '../components/ui/UiConfirmDialog';
-import DynamicIcon from '../components/common/DynamicIcon';
 import SailsPopover from '../components/common/SailsPopover';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
@@ -202,6 +206,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
   const [layout, setLayout] = useState<TableLayout | null>(null);
   const [fields, setFields] = useState<SailsFieldDefinition[]>([]);
   const [record, setRecord] = useState<any | null>(null);
+  const [formVars, setFormVars] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -224,6 +229,14 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<{ text: string; openId?: string } | null>(null);
+  /** Paused Notification Message modal — set while a chain waits for a choice. */
+  const [pendingMessageBox, setPendingMessageBox] = useState<{
+    box: any;
+    resumeEventId: string;
+    body: Record<string, any>;
+    resumeVariables: Record<string, any>;
+  } | null>(null);
+  const [messageBoxBusy, setMessageBoxBusy] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLButtonElement>(null);
 
@@ -377,6 +390,8 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
     loadDetailData();
   }, [location.pathname, dataModelId, layoutKey, recordId, isNewMode, presetValues]);
 
+  const L = useLocalizedText();
+
   const config = useMemo(() => {
     if (!layout) return null;
     let raw = layout.status === 'active' ? (layout.publishedConfig || layout.config) : layout.config;
@@ -388,13 +403,52 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
     return raw;
   }, [layout]);
 
+  // ── Form variables: initialize defaults when the record loads ──
+  useEffect(() => {
+    const decls: FormVariable[] = (config as any)?.formVariables || [];
+    if (decls.length === 0) {
+      setFormVars({});
+      return;
+    }
+    if (!record) return;
+    const out: Record<string, any> = {};
+    for (const v of decls) {
+      if (!v?.name) continue;
+      let val: any = v.defaultValue;
+      if (v.expression?.trim()) {
+        try {
+          const fn = jsonata(v.expression);
+          registerExpressionFunctions(fn);
+          const r = fn.evaluate({ ...record, vars: out, variables: out });
+          if (r !== undefined) val = r;
+        } catch {
+          /* keep default */
+        }
+      }
+      out[v.name] = val;
+    }
+    setFormVars(out);
+  }, [record?.id]);
+
+  // ── Condition Sets: active rules against record + form vars ──
+  const conditionDerived = useMemo(() => {
+    const ctx = { ...record, vars: formVars, variables: formVars };
+    return deriveConditionSets(resolveActiveRules((config as any)?.conditionSets, ctx));
+  }, [config, record, formVars]);
+
   // Field → block validation rules (sections + tabs), keyed by fieldId.
   const blockRulesByField = useMemo(() => {
     const map: Record<string, FieldValidation[]> = {};
     const collect = (list: any[]) => {
       for (const b of list || []) {
+        if (b?.fieldId) {
+          const setRules = conditionDerived.validationsOf(b.id);
+          if (setRules.length > 0) {
+            map[b.fieldId] = [...(map[b.fieldId] || []), ...(setRules as FieldValidation[])];
+          }
+        }
         if (b?.validations?.length && b.fieldId) {
-          map[b.fieldId] = b.validations;
+          map[b.fieldId] = [...(map[b.fieldId] || []), ...b.validations];
         }
         if (b?.blockType === 'tab_group') {
           for (const t of b.tabs || []) collect(t.blocks);
@@ -403,7 +457,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
     };
     collect((config as any)?.blocks || []);
     return map;
-  }, [config]);
+  }, [config, conditionDerived]);
 
   // Blocks whose model field no longer exists are dropped up front (the server
   // prunes layouts on field delete; this covers layouts saved before that fix)
@@ -411,19 +465,6 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
   const blocks: any[] = useMemo(() => {
     const resolveField = (fieldId?: string) =>
       !!fieldId && fields.some((f) => f.id === fieldId || f.fieldName === fieldId);
-
-    /** JSONata visibility condition (Conditions tab) — hides the block when false. */
-    const visibleByExpression = (b: any): boolean => {
-      const expr = b?.conditionExpression;
-      if (!expr?.trim()) return true;
-      try {
-        const fn = jsonata(expr);
-        registerExpressionFunctions(fn);
-        return !!fn.evaluate(record);
-      } catch {
-        return true; // fail open — never hide a block because of a bad expression
-      }
-    };
 
     const clean = (list: any[]): any[] =>
       (list || []).flatMap((b) => {
@@ -436,9 +477,9 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
       });
 
     return clean((config as any)?.blocks || []).filter((b: any) =>
-      b.blockType === 'tab_group' ? true : visibleByExpression(b)
+      b.blockType === 'tab_group' ? true : !conditionDerived.stateOf(b.id).hidden
     );
-  }, [config, fields, record]);
+  }, [config, fields, conditionDerived]);
 
   const handleFieldInputChange = (key: string, value: any) => {
     setTouched((prev) => ({ ...prev, [key]: true }));
@@ -619,6 +660,85 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
     }
   };
 
+  /**
+   * Adopt a successful form-event chain response: merge the variable
+   * accumulator into page-level form variables, write exposeToForm values
+   * into the form, and apply Record Event formOutputMapping onto controls.
+   * Shared by the normal run and the Notification Message resume.
+   */
+  const adoptChainResponse = (data: any, sections: any[]) => {
+    if (!data) return;
+    if (data.variables && typeof data.variables === 'object') {
+      setFormVars((prev) => ({ ...prev, ...data.variables }));
+    }
+
+    // Variables declared with exposeToForm write into the form controls
+    // (before Record Event mappings apply).
+    const exposed: Record<string, any> = data.exposedVariables || {};
+    if (Object.keys(exposed).length > 0) {
+      setFormData((prev: Record<string, any>) => ({ ...prev, ...exposed }));
+      setRecord((prev: any) => (prev ? { ...prev, ...exposed } : prev));
+    }
+
+    // Apply Record Event results onto the layout's form controls
+    // (config.formOutputMapping: result field → form field).
+    const vars: Record<string, any> = data.variables || {};
+    for (const sec of sections || []) {
+      for (const ev of sec.events || []) {
+        const fm: { sourceField: string; targetFieldId: string }[] = (ev.config as any)?.formOutputMapping || [];
+        if (fm.length === 0 || !ev.storeAs) continue;
+        const rec = vars[ev.storeAs];
+        if (rec == null || typeof rec !== 'object') continue;
+        const patch: Record<string, any> = {};
+        for (const m of fm) {
+          const f = fields.find((ff) => ff.id === m.targetFieldId || ff.fieldName === m.targetFieldId);
+          if (!f) continue;
+          const v = m.sourceField.split('.').reduce<any>((acc, seg) => (acc == null ? undefined : acc[seg]), rec);
+          if (v !== undefined) patch[f.fieldName] = v;
+        }
+        if (Object.keys(patch).length > 0) {
+          setFormData((prev: Record<string, any>) => ({ ...prev, ...patch }));
+          setRecord((prev: any) => (prev ? { ...prev, ...patch } : prev));
+        }
+      }
+    }
+  };
+
+  /**
+   * Resume a paused Notification Message chain with the user's choice.
+   * confirm/ok → the server continues the events below the message;
+   * cancel → the server stops the chain (nothing below runs).
+   */
+  const resumeMessageBox = async (choice: 'confirm' | 'cancel' | 'ok') => {
+    if (!pendingMessageBox || !tableName) return;
+    setMessageBoxBusy(true);
+    try {
+      const body = {
+        ...pendingMessageBox.body,
+        resume: { eventId: pendingMessageBox.resumeEventId, choice },
+        resumeVariables: pendingMessageBox.resumeVariables,
+      };
+      const res = await fetch(`/api/dynamic/${tableName}/form-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Event chain failed.');
+      if (choice === 'cancel' || data.cancelled) {
+        setActionMessage({ text: 'Action cancelled.' });
+      } else {
+        adoptChainResponse(data, sections);
+      }
+    } catch (err: any) {
+      setActionError(err.message || 'Action failed.');
+    } finally {
+      setMessageBoxBusy(false);
+      setPendingMessageBox(null);
+      setActionBusy(false);
+    }
+  };
+
   const executeDetailAction = async (action: DetailAction, include?: string[]) => {
     setActionBusy(true);
     setActionError(null);
@@ -638,13 +758,18 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
         recordId: recordId || undefined,
         record: record || undefined,
         cloneInclude: include,
+        onEdit: handleEditRecord,
       };
 
       // Pre-validations gate the WHOLE action — evaluated server-side against
       // the record BEFORE the fixed step runs.
       const preValidations = (action.preValidations || []).filter((p) => p.expression?.trim());
       if (preValidations.length > 0 && tableName) {
-        const gateBody: any = { preValidations };
+        const gateBody: any = {
+          preValidations,
+          variables: (config as any)?.formVariables || [],
+          initialVariables: formVars,
+        };
         if (action.actionKey === 'delete') {
           gateBody.snapshot = record || undefined;
         } else {
@@ -676,7 +801,11 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
       }));
       const hasSectionEvents = sections.some((s) => (s.events || []).length > 0);
       if (hasSectionEvents && tableName) {
-        const body: any = { sections };
+        const body: any = {
+          sections,
+          variables: (config as any)?.formVariables || [],
+          initialVariables: formVars,
+        };
         if (action.actionKey === 'delete') {
           body.snapshot = record || undefined; // pre-delete snapshot for notifications
         } else if (action.actionKey === 'clone' && ctx.lastResult?.id) {
@@ -692,28 +821,20 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Event chain failed.');
 
-        // Apply Record Event results onto the layout's form controls
-        // (config.formOutputMapping: result field → form field).
-        const vars: Record<string, any> = data.variables || {};
-        for (const sec of action.sections || []) {
-          for (const ev of sec.events || []) {
-            const fm: { sourceField: string; targetFieldId: string }[] = (ev.config as any)?.formOutputMapping || [];
-            if (fm.length === 0 || !ev.storeAs) continue;
-            const rec = vars[ev.storeAs];
-            if (rec == null || typeof rec !== 'object') continue;
-            const patch: Record<string, any> = {};
-            for (const m of fm) {
-              const f = fields.find((ff) => ff.id === m.targetFieldId || ff.fieldName === m.targetFieldId);
-              if (!f) continue;
-              const v = m.sourceField.split('.').reduce<any>((acc, seg) => (acc == null ? undefined : acc[seg]), rec);
-              if (v !== undefined) patch[f.fieldName] = v;
-            }
-            if (Object.keys(patch).length > 0) {
-              setFormData((prev: Record<string, any>) => ({ ...prev, ...patch }));
-              setRecord((prev: any) => (prev ? { ...prev, ...patch } : prev));
-            }
-          }
+        // Notification Message event → the chain is PAUSED server-side: show
+        // the modal and return. The user's choice resumes (confirm/ok →
+        // continue the events below; cancel → stop the chain).
+        if (data.paused && data.notificationMessage) {
+          setPendingMessageBox({
+            box: data.notificationMessage,
+            resumeEventId: data.resumeEventId,
+            body,
+            resumeVariables: (data.variables && typeof data.variables === 'object') ? data.variables : {},
+          });
+          return;
         }
+
+        adoptChainResponse(data, sections);
       }
 
       if (action.actionKey === 'clone') {
@@ -810,6 +931,9 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
 
   const renderBlock = (b: any) => {
     if (!b || b.visible === false) return null;
+    const condState = conditionDerived.stateOf(b.id);
+    const condStyle = conditionDerived.stylesOf(b.id);
+    if (condState.hidden) return null;
 
     if (b.blockType === 'field' || (!b.blockType && b.fieldId)) {
       const field = fields.find((f) => f.id === b.fieldId || f.fieldName === b.fieldId);
@@ -820,7 +944,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
 
       const colSpan = b.width ? (typeof b.width === 'number' ? b.width : 4) : 4;
       const isSystemFieldDef = !!field.isSystem || isSystemField(key);
-      const isEditable = (isNewMode || isEditing) && !isSystemFieldDef;
+      const isEditable = (isNewMode || isEditing) && !isSystemFieldDef && !condState.readOnly;
       const isExpression = (field.logicalType || '').toLowerCase() === 'expression';
       // Expression (computed) fields display the LIVE evaluated value while
       // typing (updates on every keystroke, no save needed); read-only mode
@@ -831,9 +955,26 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
           : (isEditable ? undefined : record ? record[field.fieldName] ?? record[field.id] : undefined)
         : isEditable ? formData[key] ?? '' : record ? record[field.fieldName] ?? record[field.id] : undefined;
 
+      const fieldRules = [...(b.validations || []), ...conditionDerived.validationsOf(b.id)] as FieldValidation[];
       return (
-        <div key={b.id || field.id} className="ls-block ls-block--field" style={{ gridColumn: `span ${colSpan}` }}>
+        <div
+          key={b.id || field.id}
+          className="ls-block ls-block--field"
+          style={{
+            gridColumn: `span ${colSpan}`,
+            ...(condStyle ? {
+              color: condStyle.textColor,
+              background: condStyle.background,
+              fontWeight: condStyle.bold ? 600 : undefined,
+            } : {}),
+          }}
+        >
           <DetailFieldLabel field={field} label={label} />
+          {condStyle?.icon && (
+            <span className="ls-block__cond-icon" style={{ color: condStyle.textColor || undefined }}>
+              <DynamicIcon name={condStyle.icon} size={13} />
+            </span>
+          )}
           {isSystemFieldDef ? (
             <div className="ls-block__value">
               <DetailFieldDisplay field={field} val={val} controlPluginId={b.controlPluginId} />
@@ -845,7 +986,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
               label={label}
               val={val}
               controlPluginId={b.controlPluginId}
-              rules={b.validations as FieldValidation[] | undefined}
+              rules={fieldRules}
               showErrors={!!touched[key] || saveAttempted}
               record={formData}
               onChange={handleFieldInputChange}
@@ -875,7 +1016,18 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
       const colSpan = b.width ? (typeof b.width === 'number' ? b.width : 12) : 12;
 
       return (
-        <div key={b.id} className="ls-block ls-block--tabs" style={{ gridColumn: `span ${colSpan}` }}>
+        <div
+          key={b.id}
+          className="ls-block ls-block--tabs"
+          style={{
+            gridColumn: `span ${colSpan}`,
+            ...(condStyle ? {
+              color: condStyle.textColor,
+              background: condStyle.background,
+              fontWeight: condStyle.bold ? 600 : undefined,
+            } : {}),
+          }}
+        >
           <div className="ls-tabs__bar">
             {tabs.map((tab: any, ti: number) => (
               <div
@@ -910,7 +1062,18 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
       // Configured via "Related List View" block (model + FK field + LIST view).
       if (b.relatedTableName && b.relatedFieldName && recordId) {
         return (
-          <div key={b.id} className="ls-block ls-block--related" style={{ gridColumn: `span ${colSpan}` }}>
+          <div
+            key={b.id}
+            className="ls-block ls-block--related"
+            style={{
+              gridColumn: `span ${colSpan}`,
+              ...(condStyle ? {
+                color: condStyle.textColor,
+                background: condStyle.background,
+                fontWeight: condStyle.bold ? 600 : undefined,
+              } : {}),
+            }}
+          >
             <RelatedListView
               tableName={b.relatedTableName}
               fieldName={b.relatedFieldName}
@@ -956,7 +1119,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
           isEditing={isEditing}
           saving={saving}
           canEdit={!isNewMode && !!record}
-          allowEdit={(config as any)?.allowEdit !== false}
+          allowEdit={!configuredDetailActions.some((a) => a.actionKey === 'edit') && (config as any)?.allowEdit === true}
           headerActions={
             !isNewMode && configuredDetailActions.length > 0 ? (
               configuredDetailActions.length > 3 ? (
@@ -983,12 +1146,14 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
                     <div className="sails-detail-actions-menu__list">
                       {configuredDetailActions.map((a) => {
                         const plugin = ActionRegistry.getInstance().getAction(a.actionKey);
-                        const danger = a.variant === 'danger';
+                        const variantClass = a.variant === 'primary' ? 'sails-detail-actions-menu__item--primary'
+                          : a.variant === 'danger' ? 'sails-detail-actions-menu__item--danger'
+                          : 'sails-detail-actions-menu__item--secondary';
                         return (
                           <button
                             key={a.id}
                             type="button"
-                            className={`sails-detail-actions-menu__item ${danger ? 'sails-detail-actions-menu__item--danger' : ''}`}
+                            className={`sails-detail-actions-menu__item ${variantClass}`}
                             disabled={actionBusy}
                             title={plugin?.description || a.label}
                             onClick={() => {
@@ -997,7 +1162,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
                             }}
                           >
                             <DynamicIcon name={a.iconName || plugin?.iconName || 'Zap'} size={14} />
-                            <span>{a.label}</span>
+                            <span>{L(a.label)}</span>
                           </button>
                         );
                       })}
@@ -1023,7 +1188,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                       >
                         <DynamicIcon name={a.iconName || plugin?.iconName || 'Zap'} size={15} />
-                        <span>{a.label}</span>
+                        <span>{L(a.label)}</span>
                       </button>
                     );
                   })}
@@ -1087,10 +1252,10 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
                       onClick={() => setCollapsedSectionMap((prev) => ({ ...prev, [section.id]: !(prev[section.id] ?? section.collapsed ?? false) }))}
                     >
                       {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                      <span>{section.title || 'Section'}</span>
+                      <span>{L(section.title) || 'Section'}</span>
                     </button>
                   ) : (
-                    <h3 className="sails-detail-section-title">{section.title || 'Section'}</h3>
+                    <h3 className="sails-detail-section-title">{L(section.title) || 'Section'}</h3>
                   )
                 ) : null;
 
@@ -1174,6 +1339,17 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
           loading={actionBusy}
           onConfirm={() => executeDetailAction(cloneDraft.action, Array.from(cloneDraft.selected))}
           onCancel={() => setCloneDraft(null)}
+        />
+      )}
+
+      {/* Notification Message (form-event modal): the chain is paused until
+          the user confirms/cancels. Cancel stops the events below the box. */}
+      {pendingMessageBox && (
+        <NotificationMessageModal
+          box={pendingMessageBox.box}
+          busy={messageBoxBusy}
+          onResolve={resumeMessageBox}
+          onDismiss={() => { if (!messageBoxBusy) setPendingMessageBox(null); }}
         />
       )}
     </div>

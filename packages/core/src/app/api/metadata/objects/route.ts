@@ -12,14 +12,17 @@ export async function POST(req: NextRequest) {
   try {
     const { userId, tenantId } = await requireAdmin();
 
-    const { name, tableName, description } = await req.json();
+    const { name, tableName, description, nameI18n, descriptionI18n } = await req.json();
 
     // Create the table via the translator (handles DDL and Metadata)
     const table = await getTranslator().createTable(
       tenantId,
       name,
       tableName,
-      description
+      description,
+      false,
+      nameI18n,
+      descriptionI18n
     );
 
     // Log Logical Metadata Event

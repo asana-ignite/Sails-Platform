@@ -31,6 +31,7 @@ async function main() {
     email: admin.email,
     teams: [] as { teamId: string; isLeader: boolean }[],
     activeTeamId: undefined,
+    locale: 'en',
   };
 
   const tl = getTranslator();

@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     const tenantId = session.tenantId;
 
     const body = await req.json();
-    const { name, slug, description, icon, order, requiredCapability } = body;
+    const { name, slug, description, icon, order, requiredCapability, nameI18n, descriptionI18n } = body;
 
     if (!name) {
       return NextResponse.json({ success: false, error: 'App name is required' }, { status: 400 });
@@ -66,7 +66,9 @@ export async function POST(req: Request) {
         description: description || undefined,
         icon: icon || 'Box',
         order: order || 0,
-        requiredCapability
+        requiredCapability,
+        ...(nameI18n !== undefined ? { nameI18n } : {}),
+        ...(descriptionI18n !== undefined ? { descriptionI18n } : {})
       }
     });
 

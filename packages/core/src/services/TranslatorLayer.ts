@@ -23,7 +23,15 @@ export class TranslatorLayer {
   /**
    * Translates a UI request to create a new Table into DB operations.
    */
-  async createTable(tenantId: string, name: string, tableName: string, description?: string, isSystem: boolean = false) {
+  async createTable(
+    tenantId: string,
+    name: string,
+    tableName: string,
+    description?: string,
+    isSystem: boolean = false,
+    nameI18n?: any,
+    descriptionI18n?: any,
+  ) {
     const tenant = await db.tenant.findUniqueOrThrow({ where: { id: tenantId } });
 
     // 1. Create the physical table
@@ -38,6 +46,8 @@ export class TranslatorLayer {
         tableName,
         description,
         isSystem,
+        ...(nameI18n !== undefined ? { nameI18n } : {}),
+        ...(descriptionI18n !== undefined ? { descriptionI18n } : {}),
       },
     });
 
@@ -93,17 +103,34 @@ export class TranslatorLayer {
   /**
    * Updates a Data Model name and description.
    */
-  async updateTable(tableId: string, name: string, description?: string) {
+  async updateTable(tableId: string, name: string, description?: string, nameI18n?: any, descriptionI18n?: any) {
     return await db.tableDefinition.update({
       where: { id: tableId },
-      data: { name, description }
+      data: {
+        name,
+        description,
+        ...(nameI18n !== undefined ? { nameI18n } : {}),
+        ...(descriptionI18n !== undefined ? { descriptionI18n } : {}),
+      },
     });
   }
 
   /**
    * Translates a UI request to add a new Field into DB operations.
    */
-  async addFieldDef(tableId: string, name: string, fieldName: string, physicalType: string, logicalType: string, config: any = null, isRequired: boolean = false, description: string | null = null, isSystem: boolean = false) {
+  async addFieldDef(
+    tableId: string,
+    name: string,
+    fieldName: string,
+    physicalType: string,
+    logicalType: string,
+    config: any = null,
+    isRequired: boolean = false,
+    description: string | null = null,
+    isSystem: boolean = false,
+    nameI18n?: any,
+    descriptionI18n?: any,
+  ) {
     const tableDef = await db.tableDefinition.findUniqueOrThrow({
       where: { id: tableId },
       include: { tenant: true }
@@ -167,7 +194,9 @@ export class TranslatorLayer {
         config: config ? { ...config, dependencies: expressionDependencies, referencedFields: expressionReferencedFields } : undefined,
         isRequired,
         isSystem,
-        description
+        description,
+        ...(nameI18n !== undefined ? { nameI18n } : {}),
+        ...(descriptionI18n !== undefined ? { descriptionI18n } : {}),
       },
     });
 
@@ -248,12 +277,14 @@ export class TranslatorLayer {
   async updateFieldDef(
     fieldId: string, 
     data: { 
-      name?: string; 
-      fieldName?: string; 
-      description?: string | null; 
-      isRequired?: boolean; 
+      name?: string;
+      fieldName?: string;
+      description?: string | null;
+      nameI18n?: any;
+      descriptionI18n?: any;
+      isRequired?: boolean;
       logicalType?: string;
-      config?: any 
+      config?: any
     },
     bypassSystemGuard: boolean = false
   ) {
@@ -404,6 +435,8 @@ export class TranslatorLayer {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.fieldName !== undefined && { fieldName: data.fieldName }),
         ...(data.description !== undefined && { description: data.description }),
+        ...(data.nameI18n !== undefined && { nameI18n: data.nameI18n }),
+        ...(data.descriptionI18n !== undefined && { descriptionI18n: data.descriptionI18n }),
         ...(data.isRequired !== undefined && { isRequired: data.isRequired }),
         ...(data.logicalType !== undefined && { 
           logicalType: data.logicalType,
@@ -624,7 +657,7 @@ export class TranslatorLayer {
   /**
    * Adds a validation rule to a field and enforces it in the DB.
    */
-  async addValidationRule(fieldId: string, ruleType: 'min' | 'max' | 'regex' | 'enum', ruleDefinition: string, errorMessage?: string) {
+  async addValidationRule(fieldId: string, ruleType: 'min' | 'max' | 'regex' | 'enum', ruleDefinition: string, errorMessage?: string, errorMessageI18n?: any) {
     const fieldDef = await db.fieldDefinition.findUniqueOrThrow({
       where: { id: fieldId },
       include: { table: { include: { tenant: true } } }
@@ -642,7 +675,8 @@ export class TranslatorLayer {
         fieldId,
         ruleType,
         ruleDefinition,
-        errorMessage
+        errorMessage,
+        ...(errorMessageI18n !== undefined ? { errorMessageI18n } : {}),
       }
     });
 

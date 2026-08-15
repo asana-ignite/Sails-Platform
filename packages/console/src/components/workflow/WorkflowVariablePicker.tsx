@@ -58,6 +58,10 @@ interface Props {
   includeRequestor?: boolean;
   /** When provided, the popup shows a "ƒ Expression…" button that opens the JSONata ExpressionEditor. */
   onExpression?: (expr: string) => void;
+  /** Section label for the declared variables (default 'Variables'). */
+  variablesLabel?: string;
+  /** Section label for the workflow/context branches (default 'Workflow Context'). */
+  contextLabel?: string;
   /** When provided, the popup header shows a '+ Add' button that opens the variable creation flow.
    *  The anchor element (the picker trigger) is passed for popover positioning; a resolved
    *  variable name lets the caller auto-insert it (e.g. as a chip). */
@@ -247,6 +251,10 @@ export interface ContextTreeInput {
   includeRequestor?: boolean;
   /** Result-target mode: no context branches, variables without drill-down. */
   topLevelOnly?: boolean;
+  /** Section label for the declared variables (default 'Variables'). */
+  variablesLabel?: string;
+  /** Section label for the workflow/context branches (default 'Workflow Context'). */
+  contextLabel?: string;
 }
 
 /**
@@ -254,7 +262,7 @@ export interface ContextTreeInput {
  * Workflow Context (Requestor / Request Date / Record / OldRecord), Variables, Collections.
  */
 export function buildContextRoot(input: ContextTreeInput): TreeNode[] {
-  const { variables, recordSchemas = {}, triggerModelFields, triggerModelName, includeOldRecord, includeRequestor, topLevelOnly } = input;
+  const { variables, recordSchemas = {}, triggerModelFields, triggerModelName, includeOldRecord, includeRequestor, topLevelOnly, variablesLabel = 'Variables', contextLabel = 'Workflow Context' } = input;
   const nodes: TreeNode[] = [];
 
   const ctxChildren: TreeNode[] = [];
@@ -276,14 +284,14 @@ export function buildContextRoot(input: ContextTreeInput): TreeNode[] {
     if (includeOldRecord) ctxChildren.push(recordBranch('record_old', 'OldRecord', triggerModelName, triggerModelFields));
   }
   if (ctxChildren.length > 0 && !topLevelOnly) {
-    nodes.push({ key: 'sec:wf', label: 'Workflow Context', typeLabel: 'Context', kind: 'section', seg: '', children: ctxChildren });
+    nodes.push({ key: 'sec:wf', label: contextLabel, typeLabel: 'Context', kind: 'section', seg: '', children: ctxChildren });
   }
 
   const scalarsRecords = topNodes(variables, recordSchemas).filter((n) => n.kind !== 'collection');
   const collections = topNodes(variables, recordSchemas).filter((n) => n.kind === 'collection');
   if (scalarsRecords.length > 0) {
     nodes.push({
-      key: 'sec:vars', label: 'Variables', typeLabel: 'Variables', kind: 'section', seg: '',
+      key: 'sec:vars', label: variablesLabel, typeLabel: variablesLabel, kind: 'section', seg: '',
       children: topLevelOnly ? scalarsRecords.map((n) => ({ ...n, children: undefined })) : scalarsRecords,
     });
   }
@@ -325,7 +333,7 @@ export function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
 export const WorkflowVariablePicker: React.FC<Props> = ({
   variables, recordSchemas = {}, value, onChange, format = 'moustache', placeholder = 'Select variable…', disabled, variant = 'control',
   onExpression, recordSchema, topLevelOnly, triggerModelFields, triggerModelName, includeOldRecord, includeRequestor,
-  onAddVariable, anchorOverride, openSignal,
+  onAddVariable, anchorOverride, openSignal, variablesLabel = 'Variables', contextLabel = 'Workflow Context',
 }) => {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
@@ -417,8 +425,10 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
       includeOldRecord,
       includeRequestor,
       topLevelOnly,
+      variablesLabel,
+      contextLabel,
     }),
-    [variables, recordSchemas, triggerModelFields, triggerModelName, includeOldRecord, includeRequestor, topLevelOnly]
+    [variables, recordSchemas, triggerModelFields, triggerModelName, includeOldRecord, includeRequestor, topLevelOnly, variablesLabel, contextLabel]
   );
   // Search narrows nodes by name; parents of matches are kept.
   const tree = useMemo(() => filterTree(rawTree, searchQuery), [rawTree, searchQuery]);
@@ -684,7 +694,7 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
                 type="button"
                 className="sails-btn sails-btn--ghost sails-btn--sm"
                 style={{ marginLeft: 'auto', padding: '1px 8px' }}
-                title="Add a new workflow variable"
+                title={`Add a new ${variablesLabel.toLowerCase()} variable`}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={(e) => { e.stopPropagation(); setOpen(false); onAddVariable(triggerRef.current ?? undefined); }}
               >
@@ -739,7 +749,7 @@ export const WorkflowVariablePicker: React.FC<Props> = ({
               <span className="ws-modal__icon" style={{ background: 'rgba(168,85,247,.12)', color: '#a855f7' }}><FunctionSquare size={16} /></span>
               <div className="ws-modal__titles">
                 <span className="ws-modal__title">Expression — {format === 'jsonata' ? 'JSONata value' : 'Reference value'}</span>
-                <span className="ws-modal__sub">Evaluate against workflow variables and the triggering record</span>
+                <span className="ws-modal__sub">Evaluate against {variablesLabel.toLowerCase()} and the triggering record</span>
               </div>
               <button className="ws-icon-btn" onClick={() => setExprOpen(false)}><X size={15} /></button>
             </div>

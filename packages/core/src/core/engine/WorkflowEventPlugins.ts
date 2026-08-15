@@ -15,6 +15,7 @@ import type { WorkflowEventContext, WorkflowEventPlugin, WorkflowEventResult } f
 import { workflowEventRegistry } from '@sails/plugin-sdk';
 import { executeScript, SandboxContext } from './ScriptSandbox';
 import { evaluateJsonata, genId, logWfAction, quoteIdent, resolveTenantSchema } from './WorkflowHelpers';
+import { localize, DEFAULT_LOCALE } from '@sails/shared';
 import { normalizeFilters, serializeFilterGroups, validateCollectionValue, validateRecordValue, WORKFLOW_EVENT_CONFIGS } from '@sails/shared';
 import type { SessionContext } from '@/lib/auth/session';
 import { deliverWorkflowNotification } from './notifications';
@@ -31,12 +32,14 @@ export function fail(ctx: WorkflowEventContext, error: string): WorkflowEventRes
 /** Build a minimal SessionContext from the workflow event context (role fetched from DB). */
 export async function buildSession(ctx: WorkflowEventContext): Promise<SessionContext> {
   let role = 'rls_user';
+  let locale = 'en';
   try {
     const u = await db.user.findUnique({
       where: { id: ctx.session.userId },
-      select: { role: true },
+      select: { role: true, locale: true },
     });
     if (u?.role) role = u.role;
+    if (u?.locale) locale = u.locale;
   } catch { /* keep default */ }
   return {
     userId: ctx.session.userId,
@@ -45,6 +48,7 @@ export async function buildSession(ctx: WorkflowEventContext): Promise<SessionCo
     email: '',
     teams: [],
     activeTeamId: ctx.session.teamId || undefined,
+    locale,
     suppressRecordTriggers: !!(ctx as any).suppressRecordTriggers,
   };
 }
@@ -242,6 +246,81 @@ export function makeJsonataEvent(type: 'expression', label: string, description:
       const output: Record<string, any> = {};
       if (assignToVariable) output[assignToVariable] = result.value;
       return { success: true, output };
+    },
+  };
+}
+
+// ─── Notification Message event (Form Events modal) ───────────
+
+/**
+ * Render `{{expr}}` moustache tokens in a template against the evaluation
+ * context (record values + accumulated variables). Plain text passes through
+ * untouched; a token that fails to evaluate renders as empty.
+ */
+async function renderTemplate(raw: string | undefined, ctx: Record<string, any>): Promise<string> {
+  const text = String(raw ?? '').trim();
+  if (!text) return text;
+  const re = /\{\{([^{}]+)\}\}/g;
+  const tokens: { start: number; end: number; expr: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    tokens.push({ start: m.index, end: m.index + m[0].length, expr: m[1].trim() });
+  }
+  if (tokens.length === 0) return text;
+  let out = '';
+  let cursor = 0;
+  for (const t of tokens) {
+    out += text.slice(cursor, t.start);
+    const r = await evaluateJsonata(t.expr, ctx);
+    out += r.ok && r.value !== undefined && r.value !== null ? String(r.value) : '';
+    cursor = t.end;
+  }
+  out += text.slice(cursor);
+  return out;
+}
+
+/**
+ * Notification Message — Form-Events modal (confirm / informational alert).
+ *
+ * Never executes server-side work; it renders the configured box (title,
+ * message with {{expr}} tokens, mode, severity, button labels) and returns it
+ * in the result. The form-event route detects `result.notificationMessage`,
+ * PAUSES the chain and returns the box to the client; the user's choice is
+ * then posted back as a resume (confirm/ok → continue, cancel → stop).
+ */
+export function makeNotificationMessageEvent(): WorkflowEventPlugin {
+  return {
+    type: 'notification_message',
+    label: 'Notification Message',
+    description: 'Modal confirmation or informational alert shown to the user',
+    parametersSchema: WORKFLOW_EVENT_CONFIGS.notification_message,
+    async execute(ctx) {
+      const { eventConfig, variables, record } = ctx;
+      const mode = eventConfig.mode === 'notification' ? 'notification' : 'confirm';
+      const evalCtx: Record<string, any> = {
+        ...(variables || {}),
+        record: record?.values ?? {},
+        oldRecord: record?.oldValues ?? {},
+      };
+      const locale = (ctx as any).locale || DEFAULT_LOCALE;
+      const [title, message] = await Promise.all([
+        renderTemplate(localize(eventConfig.title, locale), evalCtx),
+        renderTemplate(localize(eventConfig.message, locale), evalCtx),
+      ]);
+      return {
+        success: true,
+        notificationMessage: {
+          mode,
+          notificationType: ['information', 'success', 'warning', 'caution', 'error'].includes(eventConfig.notificationType)
+            ? eventConfig.notificationType
+            : 'information',
+          title: title || eventConfig.label || ctx.eventConfig?.label || 'Notification',
+          message,
+          confirmLabel: localize(eventConfig.confirmLabel, locale) || 'Confirm',
+          cancelLabel: localize(eventConfig.cancelLabel, locale) || 'Cancel',
+          okLabel: localize(eventConfig.okLabel, locale) || 'OK',
+        },
+      };
     },
   };
 }

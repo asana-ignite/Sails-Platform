@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { safeT as translate } from '../../lib/translate';
+import { localizeFallback } from '../../lib/translate';
 import { useConsole } from '../../contexts/ConsoleContext';
 import DynamicIcon from '../common/DynamicIcon';
 import './Sidebar.css';
@@ -19,7 +19,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }) => {
-  const { navigationItems, isLoading } = useConsole();
+  const { navigationItems, isLoading, defaultLocale } = useConsole();
   const { t } = useTranslation();
   const location = useLocation();
   const [showStatus, setShowStatus] = React.useState(false);
@@ -187,7 +187,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
                     </span>
                     {!isEffectivelyCollapsed && (
                       <>
-                        <span className="sails-sidebar__text">{translate(item.translationKey, item.label)}</span>
+                        <span className="sails-sidebar__text">{localizeFallback(item.translationKey, (item as any).labelI18n ?? item.label, defaultLocale)}</span>
                         {hasChildren && (
                           <span className="sails-sidebar__chevron">
                             <ChevronRight size={14} style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.3s' }} />
@@ -213,7 +213,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
                             <span className="sails-sidebar__submenu-icon">
                               <DynamicIcon name={sub.icon || 'Circle'} size={16} />
                             </span>
-                            <span className="sails-sidebar__submenu-text">{translate(sub.translationKey, sub.label)}</span>
+                            <span className="sails-sidebar__submenu-text">{localizeFallback(sub.translationKey, (sub as any).labelI18n ?? sub.label, defaultLocale)}</span>
                           </NavLink>
                         </li>
                       ))}

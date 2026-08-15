@@ -199,20 +199,24 @@ function App() {
             <Route path="/form-event-builder" element={<FormEventBuilder />} />
             <Route path="/layout-studio/:tableId/:layoutId" element={
               <ProtectedRoute>
+                <ConsoleProvider>
                 <DateTimePrefsProvider>
                 <Suspense fallback={<LoadingScreen />}>
                   <LayoutStudio />
                 </Suspense>
                 </DateTimePrefsProvider>
+                </ConsoleProvider>
               </ProtectedRoute>
             } />
             <Route path="/workflow-studio/:workflowId" element={
               <ProtectedRoute>
+                <ConsoleProvider>
                 <DateTimePrefsProvider>
                 <Suspense fallback={<LoadingScreen />}>
                   <WorkflowStudio />
                 </Suspense>
                 </DateTimePrefsProvider>
+                </ConsoleProvider>
               </ProtectedRoute>
             } />
 

@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { ConsoleApp, ConsoleMenu, SailsTableDefinition, TableLayout, toSnakeCase } from '@sails/shared';
 import DynamicIcon from '../../components/common/DynamicIcon';
+import TranslatableInput from '../../components/common/TranslatableInput';
+import { DEFAULT_LOCALE, isLocalized, type LocalizedText } from '@sails/shared';
 import IconPicker from '../../components/common/IconPicker';
 import { CustomSelect } from '../../components/common/CustomSelect';
 import { useConsole } from '../../contexts/ConsoleContext';
@@ -298,6 +300,7 @@ const AdminAppManager: React.FC = () => {
 
 const CreateAppModal: React.FC<{ onClose: () => void; onCreated: () => void }> = ({ onClose, onCreated }) => {
   const [name, setName] = useState('');
+  const [nameI18n, setNameI18n] = useState<LocalizedText>('');
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('Box');
@@ -394,12 +397,13 @@ const AppDetailView: React.FC<{
   const [pendingTabSwitch, setPendingTabSwitch] = useState<DetailTab | null>(null);
 
   const [name, setName] = useState(app.name);
+  const [nameI18n, setNameI18n] = useState<LocalizedText>((app as any).nameI18n ?? app.name);
   const [slug, setSlug] = useState(app.slug || '');
   const [description, setDescription] = useState(app.description || '');
   const [icon, setIcon] = useState(app.icon || 'Box');
   const [isSavingTab, setIsSavingTab] = useState(false);
 
-  const [savedGeneral, setSavedGeneral] = useState({
+  const [savedGeneral, setSavedGeneral] = useState<{ name: string; slug: string; description: string; icon: string; nameI18n?: any }>({
     name: app.name,
     slug: app.slug || '',
     description: app.description || '',
@@ -429,6 +433,7 @@ const AppDetailView: React.FC<{
 
   const handleDiscardAndSwitch = () => {
     setName(savedGeneral.name);
+    setNameI18n((savedGeneral as any).nameI18n ?? savedGeneral.name);
     setSlug(savedGeneral.slug);
     setDescription(savedGeneral.description);
     setIcon(savedGeneral.icon);
@@ -454,15 +459,16 @@ const AppDetailView: React.FC<{
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: app.id,
-          name,
+          name: (typeof nameI18n === 'string' ? nameI18n : (nameI18n && nameI18n.en) || name) || name,
           slug: toSnakeCase(slug || name),
           description: description || undefined,
           icon,
+          nameI18n: isLocalized(nameI18n) ? nameI18n : undefined,
         }),
       });
       const result = await res.json();
       if (result.success) {
-        setSavedGeneral({ name, slug, description, icon });
+        setSavedGeneral({ name, slug, description, icon, nameI18n: isLocalized(nameI18n) ? nameI18n : undefined });
         onRefresh();
       } else {
         alert(result.error || 'Failed to save');
@@ -519,7 +525,7 @@ const AppDetailView: React.FC<{
             <div className="sails-app-form-grid">
               <div className="sails-app-field-group">
                 <label className="sails-app-field-label">App Name</label>
-                <input type="text" className="sails-input" value={name} onChange={e => setName(e.target.value)} />
+                <TranslatableInput value={nameI18n ?? name} onChange={(v) => { setNameI18n(v); setName(typeof v === 'string' ? v : (v && v.en) || ''); }} />
               </div>
               <div className="sails-app-field-group">
                 <label className="sails-app-field-label">System Name (Slug)</label>
@@ -602,6 +608,7 @@ const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () =>
   const [menus, setMenus] = useState<ConsoleMenu[]>([]);
   const [menusLoading, setMenusLoading] = useState(false);
   const [isEditingMenu, setIsEditingMenu] = useState<ConsoleMenu | null>(null);
+  const [menuLabelI18n, setMenuLabelI18n] = useState<LocalizedText>('');
   const [saving, setSaving] = useState(false);
   const [hasOrderChanges, setHasOrderChanges] = useState(false);
   const [deleteConfirmMenu, setDeleteConfirmMenu] = useState<ConsoleMenu | null>(null);
@@ -698,9 +705,13 @@ const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () =>
     const method = isEditingMenu.id.startsWith('new-') ? 'POST' : 'PATCH';
     const isNew = isEditingMenu.id.startsWith('new-');
     const { children, appId: _appId, parentId: _parentId, dataModelId: _dataModelId, ...menuData } = isEditingMenu as any;
-    const payload = isNew
-      ? { ...menuData, appId, parentId: _parentId, dataModelId: _dataModelId, id: undefined as string | undefined }
-      : { ...menuData, dataModelId: _dataModelId, id: isEditingMenu.id };
+    const labelI18nPayload = isLocalized(menuLabelI18n) ? menuLabelI18n : undefined;
+    const payload = {
+      ...(isNew
+        ? { ...menuData, appId, parentId: _parentId, dataModelId: _dataModelId, id: undefined as string | undefined }
+        : { ...menuData, dataModelId: _dataModelId, id: isEditingMenu.id }),
+      ...(labelI18nPayload !== undefined ? { labelI18n: labelI18nPayload } : {}),
+    };
     try {
       const res = await fetch('/api/console/menus', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const result = await res.json();
@@ -886,10 +897,10 @@ const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () =>
             title="Move Down" style={idx >= siblingCount - 1 ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}>
             <ChevronDown size={14} />
           </button>
-          <button onClick={() => setIsEditingMenu({
+          <button onClick={() => { setMenuLabelI18n((menu as any).labelI18n ?? menu.label); setIsEditingMenu({
               ...menu,
               actionType: menu.actionType === 'table' ? 'data_model' : menu.actionType === 'plugin' ? 'custom' : menu.actionType
-            })} title="Edit Menu"><Edit2 size={14} /></button>
+            }); }} title="Edit Menu"><Edit2 size={14} /></button>
           <button onClick={() => setIsEditingMenu({ id: 'new-' + Date.now(), label: '', icon: 'Circle', path: '', actionType: 'data_model', parentId: menu.id, order: 0 } as any)}
             title="Add Submenu"><Plus size={14} /></button>
           {!menu.isSystem && <button className="delete" onClick={() => handleDeleteMenu(menu)} title="Delete Menu"><Trash2 size={14} /></button>}
@@ -949,8 +960,13 @@ const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () =>
             <form onSubmit={handleSaveMenu} className="sails-app-create-dialog__body">
               <div className="sails-app-field-group">
                 <label className="sails-app-field-label">Label</label>
-                <input type="text" className="sails-input" value={isEditingMenu.label}
-                  onChange={e => setIsEditingMenu({ ...isEditingMenu, label: e.target.value })} required />
+                <TranslatableInput
+                  value={menuLabelI18n || isEditingMenu.label}
+                  onChange={(v) => {
+                    setMenuLabelI18n(v);
+                    setIsEditingMenu({ ...isEditingMenu, label: typeof v === 'string' ? v : (v && v.en) || '' });
+                  }}
+                />
               </div>
               <div className="sails-app-form-grid">
                 <div className="sails-app-field-group">

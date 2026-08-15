@@ -25,6 +25,7 @@ import { LatLngControl } from '../../features/controls/plugins/LatLngControl';
 import { DetailFieldInput } from '../../features/controls/DetailFieldControl';
 import { useDateTimePrefs, isSystemDateTimeField, formatSystemDateTimeValue } from '../../utils/systemDateTime';
 import { renderListFieldValue, resolveLabel, getVisibleColumns, type RuntimeSortRule } from './ListViewTable';
+import { useI18nLocale } from '../../contexts/I18nContext';
 import './ListViewMobile.css';
 
 export interface ListViewMobileProps {
@@ -153,6 +154,7 @@ export const ListViewMobile: React.FC<ListViewMobileProps> = ({
   const pagingMode = config?.pagingMode || 'dynamic';
   const inlineEnabled = allowInlineEdit;
 
+  const { locale } = useI18nLocale();
   const visibleColumns = useMemo(() => getVisibleColumns(config, fields), [config, fields]);
   const primaryCol = useMemo(
     () => visibleColumns.find((c: any) => c.isPrimaryLink) || visibleColumns[0],
@@ -282,7 +284,7 @@ export const ListViewMobile: React.FC<ListViewMobileProps> = ({
 
   const renderFieldRow = (f: SailsFieldDefinition, rec: any, col: any, isEditing: boolean, draft?: Record<string, any>, errors?: Record<string, string[]>) => (
     <div key={f.fieldName} className="lvm-field-row">
-      <span className="lvm-field-label">{resolveLabel(col, fields)}</span>
+      <span className="lvm-field-label">{resolveLabel(col, fields, locale)}</span>
       <div className="lvm-field-value">
         {isEditing && !isSystemField(f.fieldName) ? (
           renderEditorCell(f, draft, errors)

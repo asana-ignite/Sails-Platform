@@ -12,8 +12,8 @@ export async function PATCH(
   try {
     await requireAdmin();
 
-    const { name, description } = await req.json();
-    const updated = await getTranslator().updateTable(params.id, name, description);
+    const { name, description, nameI18n, descriptionI18n } = await req.json();
+    const updated = await getTranslator().updateTable(params.id, name, description, nameI18n, descriptionI18n);
     return NextResponse.json(updated);
   } catch (error: any) {
     console.error('Error updating table:', error);

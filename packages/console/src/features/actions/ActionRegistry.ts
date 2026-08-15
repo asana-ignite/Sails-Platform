@@ -11,6 +11,7 @@ import { CreateAction } from './plugins/CreateAction';
 import { DeleteAction } from './plugins/DeleteAction';
 import { CloneAction } from './plugins/CloneAction';
 import { PrintAction } from './plugins/PrintAction';
+import { EditAction } from './plugins/EditAction';
 
 export class ActionRegistry {
   private static instance: ActionRegistry;
@@ -24,6 +25,7 @@ export class ActionRegistry {
     this.register(DeleteAction);
     this.register(CloneAction);
     this.register(PrintAction);
+    this.register(EditAction);
     // Future: this.register(ExportAction);
     // Future: this.register(DeleteBulkAction);
   }

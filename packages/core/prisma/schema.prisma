@@ -39,6 +39,8 @@ model TableDefinition {
   name        String
   tableName   String            @map("table_name")
   description String?
+  nameI18n    Json?             @map("name_i18n")
+  descriptionI18n Json?         @map("description_i18n")
   isSystem    Boolean           @default(false) @map("is_system")
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @default(now()) @updatedAt @map("updated_at")
@@ -109,6 +111,8 @@ model FieldDefinition {
   isSystem     Boolean          @default(false) @map("is_system")
   defaultValue String?          @map("default_value")
   description  String?          @map("description")
+  nameI18n     Json?            @map("name_i18n")
+  descriptionI18n Json?         @map("description_i18n")
   createdAt    DateTime         @default(now()) @map("created_at")
   table        TableDefinition  @relation(fields: [tableId], references: [id], onDelete: Cascade)
   rules        ValidationRule[]
@@ -126,6 +130,7 @@ model ValidationRule {
   ruleType       String
   ruleDefinition String
   errorMessage   String?          @map("error_message")
+  errorMessageI18n Json?          @map("error_message_i18n")
   field          FieldDefinition? @relation(fields: [fieldId], references: [id], onDelete: Cascade)
   table          TableDefinition  @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
@@ -149,6 +154,8 @@ model ConsoleApp {
   requiredCapability String?       @map("required_capability")
   widgetBarEnabled   Boolean       @default(false) @map("widget_bar_enabled")
   translationKey    String?       @map("translation_key")
+  nameI18n          Json?         @map("name_i18n")
+  descriptionI18n   Json?         @map("description_i18n")
   tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   menus              ConsoleMenu[]
   widgets            ConsoleWidget[]
@@ -176,6 +183,7 @@ model ConsoleMenu {
   dataModelId        String?          @map("data_model_id")
   listViewId         String?          @map("list_view")
   translationKey    String?          @map("translation_key")
+  labelI18n         Json?            @map("label_i18n")
   app                ConsoleApp?      @relation(fields: [appId], references: [id], onDelete: Cascade)
   parent             ConsoleMenu?     @relation("MenuHierarchy", fields: [parentId], references: [id])
   children           ConsoleMenu[]    @relation("MenuHierarchy")

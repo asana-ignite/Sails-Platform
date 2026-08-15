@@ -1,0 +1,93 @@
+/* Notification Message modal — form-event confirm / informational alert. */
+
+.nm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: nm-fade 0.15s ease;
+}
+
+.nm-modal {
+  width: min(460px, calc(100vw - 32px));
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+  padding: 20px;
+  animation: nm-pop 0.16s ease;
+}
+
+/* Design-time preview inside the config modal — a static card, no overlay. */
+.nm-preview-stage {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(148, 163, 184, 0.05));
+  border: 1px dashed var(--sails-border-color, #cbd5e1);
+  border-radius: 12px;
+  padding: 14px;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nm-preview-stage .nm-modal {
+  width: 100%;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  animation: none;
+  pointer-events: none;
+}
+
+.nm-modal__body {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.nm-modal__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.nm-modal__content {
+  min-width: 0;
+  flex: 1;
+}
+
+.nm-modal__title {
+  margin: 2px 0 6px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--sails-text-main, #0f172a);
+}
+
+.nm-modal__message {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--sails-text-secondary, #475569);
+}
+
+.nm-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+@keyframes nm-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes nm-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}

@@ -153,8 +153,18 @@ export const authOptions: NextAuthOptions = {
               teamId: ut.teamId,
               isLeader: ut.isLeader
             }));
+            // Locale resolution: user preference → tenant default → 'en'.
+            let locale = dbUser.locale || 'en';
+            if (!locale || locale === 'en') {
+              const profile = await db.companyProfile.findUnique({
+                where: { tenantId: dbUser.tenantId },
+                select: { defaultLocale: true },
+              });
+              if (profile?.defaultLocale) locale = profile.defaultLocale || locale;
+            }
+            token.locale = locale || 'en';
             jwtCache.set(token.id as string, {
-              data: { tenantId: token.tenantId, role: token.role, teams: token.teams },
+              data: { tenantId: token.tenantId, role: token.role, teams: token.teams, locale: token.locale },
               expiresAt: Date.now() + JWT_CACHE_TTL
             });
           }
@@ -168,6 +178,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).tenantId = token.tenantId;
         (session.user as any).role = token.role;
         (session.user as any).teams = token.teams;
+        (session.user as any).locale = token.locale || 'en';
       }
       return session;
     },

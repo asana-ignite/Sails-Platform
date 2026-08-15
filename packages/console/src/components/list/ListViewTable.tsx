@@ -96,6 +96,8 @@ export interface ListViewTableProps {
   aggregates?: { fieldName: string; aggregate: string; value: any }[] | null;
 }
 
+import { useI18nLocale } from '../../contexts/I18nContext';
+
 const NUMERIC_COLUMN_TYPES = new Set(['number', 'decimal', 'currency', 'percentage', 'percent']);
 
 const LIST_PER_PAGE_OPTIONS = [
@@ -106,9 +108,18 @@ const LIST_PER_PAGE_OPTIONS = [
   { value: 100, label: '100' },
 ];
 
-export function resolveLabel(col: any, fields: SailsFieldDefinition[]): string {
+export function resolveLabel(col: any, fields: SailsFieldDefinition[], locale?: string | null): string {
   const fd = fields.find((f) => f.id === col.fieldId || f.fieldName === col.fieldId);
-  return col.labelOverride || fd?.name || col.fieldId;
+  const override = (col as any).labelOverride;
+  const raw = override || fd?.name || col.fieldId;
+  if (!locale) return raw;
+  if (typeof raw === 'string') {
+    // Legacy single-language: prefer the field's localized name if present.
+    const fdName = (fd as any)?.nameI18n;
+    return fdName && typeof fdName === 'object' && fdName[locale] ? fdName[locale] : raw;
+  }
+  if (typeof raw === 'object') return raw[locale] || raw.en || Object.values(raw)[0] || col.fieldId;
+  return raw;
 }
 
 /** Resolve the ordered, visible column list for a list view (synthetic fallback when layout has none). */
@@ -228,6 +239,7 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
   aggregates,
 }) => {
   const datetimePrefs = useDateTimePrefs();
+  const { locale } = useI18nLocale();
   const { users: tenantUsers } = useTenantUsers();
   /** Per-column header refs, used to anchor the filter popovers. */
   const filterThRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
@@ -419,7 +431,7 @@ export const ListViewTable: React.FC<ListViewTableProps> = ({
                   )}
                   {visibleListColumns.map((col: any) => {
                     const f = fields.find((ff) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
-                    const label = resolveLabel(col, fields);
+                    const label = resolveLabel(col, fields, locale);
                     const runtimeSortIdx = sortRules.findIndex((r) => r.fieldId === col.fieldId || (f && r.fieldId === f.id));
                     const isSorted = runtimeSortIdx !== -1;
                     const sortDir = isSorted ? sortRules[runtimeSortIdx].direction : null;

@@ -147,10 +147,23 @@ export async function GET() {
       console.warn('[CONFIG] Widget fetch failed (table may not exist yet):', err.message);
     }
 
+    // 5b. Tenant default locale — fallback for dynamic-content localization
+    //     when a user's own locale lacks a translation.
+    let defaultLocale = 'en';
+    try {
+      const profile = await db.companyProfile.findUnique({
+        where: { tenantId },
+        select: { defaultLocale: true },
+      });
+      if (profile?.defaultLocale) defaultLocale = profile.defaultLocale;
+    } catch {
+      /* table may not exist yet */
+    }
+
     const responseData = {
       success: true,
       _debug: { version: '6.5.0', timestamp: new Date().toISOString(), tenantId },
-      data: { apps: filteredApps, widgets }
+      data: { apps: filteredApps, widgets, defaultLocale }
     };
 
     setConfigCache(cacheKey, responseData);

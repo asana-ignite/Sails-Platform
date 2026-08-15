@@ -16,6 +16,8 @@ interface ConsoleContextType {
   activeApp: ConsoleApp | null;
   navigationItems: ConsoleMenu[];
   widgets: ConsoleWidget[];
+  /** Tenant default locale — fallback for dynamic-content localization. */
+  defaultLocale: string;
   isLoading: boolean;
   error: string | null;
   setActiveApp: (appId: string) => void;
@@ -57,6 +59,7 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { user } = useAuth();
   const [apps, setApps] = useState<ConsoleApp[]>([]);
   const [widgets, setWidgets] = useState<ConsoleWidget[]>([]);
+  const [defaultLocale, setDefaultLocale] = useState('en');
   const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +79,7 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (result.success) {
           const fetchedApps = result.data.apps;
           const fetchedWidgets = result.data.widgets || [];
+          if (result.data.defaultLocale) setDefaultLocale(result.data.defaultLocale);
           
           // ROLE-BASED FILTERING:
           // Filter apps based on requiredCapability and user role.
@@ -225,12 +229,13 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [location.pathname, pageTitle, allMenuPaths, navigationItems, activeApp]);
 
   const contextValue = useMemo(() => ({
-    apps, 
-    activeApp, 
+    apps,
+    activeApp,
     navigationItems,
-    widgets, 
-    isLoading, 
-    error, 
+    widgets,
+    defaultLocale,
+    isLoading,
+    error,
     setActiveApp,
     headerActions,
     setHeaderActions,
@@ -242,7 +247,7 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setShowAddUserDrawer,
     refreshConfig
   }), [
-    apps, activeApp, navigationItems, widgets, isLoading, error,
+    apps, activeApp, navigationItems, widgets, defaultLocale, isLoading, error,
     setActiveApp, headerActions, pageTitle, pageSubtitle,
     showAddUserDrawer, refreshConfig
   ]);

@@ -10,6 +10,8 @@
  * from `@sails/plugin-sdk`.
  */
 import '@/core/engine/WorkflowEventPlugins'; // built-in self-registration
+import { makeNotificationMessageEvent } from '@/core/engine/WorkflowEventPlugins';
+import { workflowEventRegistry } from '@sails/plugin-sdk';
 import '@sails/plugin-record-event'; // first-party self-registration
 import '@sails/plugin-notification';
 import '@sails/plugin-expression';
@@ -24,6 +26,11 @@ let initialised = false;
 export function initPlugins(): void {
   if (initialised) return;
   initialised = true;
+
+  // Built-in Notification Message plugin — Form-Events modal (confirm / alert).
+  // Registry-level only: Workflow Studio's palette is a curated list, so it
+  // never surfaces in workflows.
+  workflowEventRegistry.register(makeNotificationMessageEvent());
 
   const api = buildPluginSDK();
 

@@ -9,6 +9,7 @@ import { validateFieldValue, isEmptyValue } from '@sails/shared';
 import { FieldControlRegistry } from './FieldControlRegistry';
 import { ControlLazyBoundary } from './LazyRenderErrorBoundary';
 import type { FieldValidation, ConditionOp } from './types';
+import { useI18nLocale } from '../../contexts/I18nContext';
 
 // ── Shared control resolution ──────────────────────────────────
 // Single source of truth for resolving a field to its control plugin.
@@ -38,10 +39,23 @@ export function mockFieldValue(field: SailsFieldDefinition, controlPluginId?: st
 
 // ── Field label (exact front-end markup) ───────────────────────
 
+/** Resolve a possibly-localized field label for the active locale. */
+function resolveFieldLabel(field: SailsFieldDefinition, override: string | undefined, locale: string): string {
+  const nameI18n = (field as any)?.nameI18n;
+  if (nameI18n && typeof nameI18n === 'object' && nameI18n[locale]) return nameI18n[locale];
+  if (override && typeof override === 'object') {
+    const o = override as any;
+    return o[locale] || o.en || Object.values(o)[0] || field.name || '';
+  }
+  if (override) return override;
+  return field.name || '';
+}
+
 export function DetailFieldLabel({ field, label }: { field: SailsFieldDefinition; label?: string }) {
+  const { locale } = useI18nLocale();
   return (
     <label className="ls-block__label">
-      {label || field.name}
+      {resolveFieldLabel(field, label, locale)}
       {field.isRequired && <span className="ls-block__required">*</span>}
     </label>
   );

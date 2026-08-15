@@ -7,7 +7,7 @@ import {
    Menu, Settings, LogOut, ChevronDown, Languages
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { safeT as translate } from '../../lib/translate';
+import { safeT as translate, localizeFallback } from '../../lib/translate';
 import { useConsole } from '../../contexts/ConsoleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -23,7 +23,7 @@ interface TopbarProps {
 }
 
 const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) => {
-  const { apps, activeApp, setActiveApp, isLoading } = useConsole();
+  const { apps, activeApp, setActiveApp, isLoading, defaultLocale } = useConsole();
   const { user, logout } = useAuth();
   const { logoLightUrl, logoDarkUrl, themeMode } = useTheme();
   const { t } = useTranslation();
@@ -153,7 +153,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
                       <div className="sails-app-switcher__icon">
                         <DynamicIcon name={app.icon || 'Box'} size={20} />
                       </div>
-                      <span className="sails-app-switcher__name">{translate(app.translationKey, app.name)}</span>
+                      <span className="sails-app-switcher__name">{localizeFallback(app.translationKey, (app as any).nameI18n ?? app.name, defaultLocale)}</span>
                     </div>
                   ))}
                 </div>

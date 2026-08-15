@@ -9,12 +9,13 @@
 import React from 'react';
 import {
   Zap, Database, Code, Workflow as WorkflowIcon, Bell, CircleCheck, CircleX,
-  Send, Copy, Archive, Download, Printer, KeyRound,
+  Send, Copy, Archive, Download, Printer, KeyRound, MessageSquare,
+  Info, CheckCircle2, AlertTriangle, AlertOctagon, XCircle,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { FormEvent, ActionSection } from '@sails/shared';
 
-export type FormEventType = 'record' | 'expression' | 'script' | 'notification';
+export type FormEventType = 'record' | 'expression' | 'script' | 'notification' | 'notification_message';
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 export interface EventTypeDef {
@@ -24,14 +25,36 @@ export interface EventTypeDef {
   color: string;
 }
 
-export const EVENT_TYPE_ORDER: FormEventType[] = ['record', 'expression', 'script', 'notification'];
+export const EVENT_TYPE_ORDER: FormEventType[] = ['record', 'expression', 'script', 'notification', 'notification_message'];
 
 export const EVENT_DEFS: Record<FormEventType, EventTypeDef> = {
   record:       { label: 'Record Event',    desc: 'Create / Update / Delete', Icon: Database,     color: '#3b82f6' },
   expression:   { label: 'Expression',      desc: 'JSONata computation',       Icon: Code,        color: '#a855f7' },
   script:       { label: 'Script',          desc: 'BYOC script (sandbox)',     Icon: WorkflowIcon, color: '#8b5cf6' },
   notification: { label: 'Notification',    desc: 'Email / Slack',             Icon: Bell,        color: '#f59e0b' },
+  notification_message: { label: 'Notification Message', desc: 'Modal confirm / alert', Icon: MessageSquare, color: '#0ea5e9' },
 };
+
+/**
+ * Notification Message severity styles — the icon + color shown on the modal
+ * and in the config picker (extensible: add a key here and both surfaces
+ * follow).
+ */
+export interface NotificationTypeDef {
+  label: string;
+  Icon: LucideIcon;
+  color: string;
+}
+
+export const NOTIFICATION_TYPES: Record<string, NotificationTypeDef> = {
+  information: { label: 'Information', Icon: Info,         color: '#3b82f6' },
+  success:     { label: 'Success',     Icon: CheckCircle2, color: '#10b981' },
+  warning:     { label: 'Warning',     Icon: AlertTriangle, color: '#f59e0b' },
+  caution:     { label: 'Caution',     Icon: AlertOctagon, color: '#f97316' },
+  error:       { label: 'Error',       Icon: XCircle,      color: '#ef4444' },
+};
+
+export const NOTIFICATION_TYPE_ORDER = Object.keys(NOTIFICATION_TYPES);
 
 export const ACTION_ICON_OPTIONS: { value: string; label: string; Icon: LucideIcon }[] = [
   { value: 'CircleCheck', label: 'Approve', Icon: CircleCheck },
@@ -91,10 +114,11 @@ export const MOCK_TEMPLATES = [
 
 export function defaultEventLabel(type: FormEventType): string {
   switch (type) {
-    case 'record':       return 'Record update';
-    case 'expression':   return 'Compute value';
-    case 'script':       return 'Run script';
-    case 'notification': return 'Send notification';
+    case 'record':              return 'Record update';
+    case 'expression':          return 'Compute value';
+    case 'script':              return 'Run script';
+    case 'notification':        return 'Send notification';
+    case 'notification_message': return 'Show notification message';
   }
 }
 
@@ -110,10 +134,19 @@ export function defaultEventLabel(type: FormEventType): string {
  */
 export function defaultEventConfig(type: FormEventType): Record<string, any> {
   switch (type) {
-    case 'record':       return { operation: 'update', fieldMapping: [{ targetCol: '', source: 'record', sourceField: '' }] };
-    case 'notification': return { templateId: '', channel: 'email', to: '' };
-    case 'script':       return { scriptId: '', timeoutMs: 10000 };
-    case 'expression':   return { expression: '' };
+    case 'record':              return { operation: 'update', fieldMapping: [{ targetCol: '', source: 'record', sourceField: '' }] };
+    case 'notification':        return { templateId: '', channel: 'email', to: '' };
+    case 'script':              return { scriptId: '', timeoutMs: 10000 };
+    case 'expression':          return { expression: '' };
+    case 'notification_message': return {
+      mode: 'confirm',
+      notificationType: 'information',
+      title: '',
+      message: '',
+      confirmLabel: 'Confirm',
+      cancelLabel: 'Cancel',
+      okLabel: 'OK',
+    };
   }
 }
 

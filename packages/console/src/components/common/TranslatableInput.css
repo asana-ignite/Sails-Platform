@@ -1,0 +1,139 @@
+/* TranslatableInput — label input + per-locale translation popover. */
+
+.tl-input__field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.tl-input__field .sails-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.tl-input__input--fallback {
+  font-style: italic;
+  opacity: 0.75;
+}
+
+.tl-input__globe {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid var(--sails-border-color, #cbd5e1);
+  border-radius: 6px;
+  background: var(--sails-bg-subtle, #f8fafc);
+  color: var(--sails-text-muted, #64748b);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+
+.tl-input__globe:hover {
+  border-color: var(--sails-primary, #3b82f6);
+  color: var(--sails-primary, #3b82f6);
+}
+
+.tl-input__globe--open {
+  border-color: var(--sails-primary, #3b82f6);
+  color: var(--sails-primary, #3b82f6);
+  background: rgba(var(--sails-primary-r, 59), var(--sails-primary-g, 130), var(--sails-primary-b, 246), 0.08);
+}
+
+.tl-input__globe--translated {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.tl-input__dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 1px solid var(--sails-bg-card, #fff);
+}
+
+/* ── Popover ── */
+
+.tl-pop {
+  min-width: 260px;
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+  padding: 8px;
+}
+
+.tl-pop__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--sails-text-muted, #64748b);
+  padding: 2px 6px 8px;
+}
+
+.tl-pop__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.tl-pop__lang {
+  width: 74px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+}
+
+.tl-pop__row .sails-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  padding: 5px 8px;
+}
+
+.tl-pop__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--sails-text-muted, #94a3b8);
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tl-pop__clear:hover {
+  color: var(--sails-danger, #ef4444);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.tl-pop__ok {
+  flex-shrink: 0;
+  color: #10b981;
+}
+
+.tl-pop__hint {
+  margin-top: 8px;
+  padding: 6px 8px 2px;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--sails-text-muted, #94a3b8);
+  border-top: 1px dashed var(--sails-border-color, #e2e8f0);
+}

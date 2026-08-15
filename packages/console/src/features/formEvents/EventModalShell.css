@@ -1,0 +1,16 @@
+/* EventModalShell — shared chrome for all Form-Event configuration modals. */
+
+.em-shell {
+  max-width: min(760px, calc(100vw - 40px));
+}
+
+.em-shell__body {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.em-shell__remove {
+  margin-right: auto;
+  color: var(--sails-danger, #ef4444);
+}

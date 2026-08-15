@@ -40,6 +40,8 @@ export interface ActionContext {
   notifyRecordsChanged?: () => void;
   /** Deep-clone: child table names to copy along with the parent. */
   cloneInclude?: string[];
+  /** Enter edit mode for the current record (Edit action). */
+  onEdit?: () => void;
   /** Set by the plugin's execute() — e.g. the newly cloned record. */
   lastResult?: any;
 }

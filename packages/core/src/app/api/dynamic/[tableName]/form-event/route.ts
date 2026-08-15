@@ -3,9 +3,20 @@
  *
  * Runs an action's pre-validations and ordered event sections inline (no
  * workflow instance). Each event is dispatched to its workflowEventRegistry
- * plugin (record / expression / script / notification) with the current record
- * + accumulated variables. Pre-validations gate the whole chain; section and
- * event conditions skip their step when false; a failed event stops the chain.
+ * plugin (record / expression / script / notification / notification_message)
+ * with the current record + accumulated variables. Pre-validations gate the
+ * whole chain; section and event conditions skip their step when false; a
+ * failed event stops the chain.
+ *
+ * Notification Message events PAUSE the chain: the plugin returns a
+ * `notificationMessage` payload, the runner returns it to the client with
+ * `paused: true` and the accumulated variables, and the events after it are
+ * NOT executed yet. The client shows the modal and re-POSTs the same body
+ * with `resume: { eventId, choice }` + `resumeVariables` (the paused
+ * snapshot). choice 'cancel' stops the chain (later events never run);
+ * 'confirm'/'ok' continues from the next event — the runner skips everything
+ * before the resume point, so side effects never re-execute.
+ *
  * Runs under the same RLS/security pipeline as every dynamic API call.
  *
  * Body: {
@@ -14,6 +25,8 @@
  *   preValidations?: [{ expression, message }],  // JSONata gates — all must be truthy
  *   sections?: [{ condition?, events: [{ type, label?, condition?, storeAs?, config }] }],
  *   events?: [...]                  // legacy flat events (treated as one section)
+ *   resume?: { eventId: string; choice: 'confirm' | 'cancel' | 'ok' },
+ *   resumeVariables?: Record<string, any>,  // variable snapshot from the paused run
  * }
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -24,15 +37,31 @@ import format from 'pg-format';
 import { requireSession } from '@/lib/auth/session';
 import { workflowEventRegistry } from '@sails/plugin-sdk';
 import { evaluateJsonata } from '@/core/engine/WorkflowHelpers';
+import { localize } from '@sails/shared';
 import '@/core/plugins/init';
 
 type RouteContext = { params: { tableName: string } };
+
+interface FlatEvent {
+  section: { condition?: string; events: any[] };
+  event: any;
+}
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
     const { tableName } = params;
     const session = await requireSession();
-    const { recordId = null, snapshot = null, preValidations = [], sections = null, events = null } = await req.json();
+    const {
+      recordId = null,
+      snapshot = null,
+      preValidations = [],
+      sections = null,
+      events = null,
+      variables: variableDecls = null,
+      initialVariables = null,
+      resume = null,
+      resumeVariables = null,
+    } = await req.json();
 
     // Legacy flat `events` — treated as a single unconditional section.
     const chain: { condition?: string; events: any[] }[] = Array.isArray(sections)
@@ -42,6 +71,23 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       || (Array.isArray(preValidations) && preValidations.length > 0);
     if (!hasAnyWork) {
       return NextResponse.json({ error: 'No events or pre-validations provided.' }, { status: 400 });
+    }
+
+    // Resume: locate the paused Notification Message event and validate it.
+    let resumeIndex = -1;
+    if (resume && typeof resume === 'object') {
+      if (!resume.eventId || !resume.choice) {
+        return NextResponse.json({ error: 'resume requires eventId and choice.' }, { status: 400 });
+      }
+      const flat = flattenChain(chain);
+      const idx = flat.findIndex((f) => f.event?.id === resume.eventId);
+      if (idx === -1) {
+        return NextResponse.json({ error: 'resume event not found in the posted chain.' }, { status: 400 });
+      }
+      if (flat[idx].event?.type !== 'notification_message') {
+        return NextResponse.json({ error: 'resume event is not a Notification Message.' }, { status: 400 });
+      }
+      resumeIndex = idx;
     }
 
     // Load the triggering record fresh (RLS-scoped) unless a snapshot is given
@@ -66,14 +112,37 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     }
     const recordValues: Record<string, any> = record?.values || {};
 
-    // ── Pre-validations: all must evaluate truthy ──
-    if (Array.isArray(preValidations) && preValidations.length > 0) {
+    const declaredVars: any[] = Array.isArray(variableDecls) ? variableDecls : [];
+    // On resume the paused run's variable snapshot is the starting point; the
+    // declared-variable initializers were already evaluated when we paused.
+    let variables: Record<string, any> = resume
+      ? { ...(resumeVariables && typeof resumeVariables === 'object' ? resumeVariables : {}) }
+      : { ...(initialVariables && typeof initialVariables === 'object' ? initialVariables : {}) };
+    if (!resume) {
+      for (const v of declaredVars) {
+        if (!v?.name) continue;
+        if (variables[v.name] !== undefined) continue;
+        let val: any = v.defaultValue;
+        if (v.expression?.trim()) {
+          const r = await evaluateJsonata(v.expression, { ...recordValues, vars: variables, variables });
+          if (r.ok) val = r.value;
+        }
+        variables[v.name] = val;
+      }
+    }
+
+    // ── Pre-validations: all must evaluate truthy (never re-run on resume —
+    //    they already passed when the chain paused). ──
+    if (!resume && Array.isArray(preValidations) && preValidations.length > 0) {
       const failures: { expression: string; message: string }[] = [];
       for (const pv of preValidations) {
         if (!pv?.expression) continue;
-        const res = await evaluateJsonata(pv.expression, recordValues);
+        const res = await evaluateJsonata(pv.expression, { ...recordValues, vars: variables, variables });
         if (!res.ok || !res.value) {
-          failures.push({ expression: pv.expression, message: pv.message || 'Pre-validation failed.' });
+          failures.push({
+            expression: pv.expression,
+            message: localize(pv.message, (session as any).locale || 'en') || 'Pre-validation failed.',
+          });
         }
       }
       if (failures.length > 0) {
@@ -89,88 +158,140 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       }
     }
 
-    let variables: Record<string, any> = {};
     const results: any[] = [];
 
-    for (const section of chain) {
+    // ── Execute the chain ──
+    // Resume: skip everything up to (and including) the paused event — those
+    // side effects already ran in the first request. choice 'cancel' stops
+    // here; 'confirm'/'ok' continues from the next event. The resumed
+    // section's condition already passed when the chain paused — it is NOT
+    // re-evaluated (it could legitimately differ with resumed variables).
+    const flat = flattenChain(chain);
+    const startAt = resume ? resumeIndex + 1 : 0;
+    const resumeSection = resume ? flat[resumeIndex]?.section ?? null : null;
+    if (resume && resume.choice === 'cancel') {
+      return NextResponse.json({ success: true, cancelled: true, results, variables, exposedVariables: {} }, { status: 200 });
+    }
+
+    for (let i = startAt; i < flat.length; i++) {
+      const { section, event } = flat[i];
+      const type = event?.type;
+      if (!type) continue;
+
       // Section condition: false skips the whole section (execution continues).
-      if (section.condition) {
-        const c = await evaluateJsonata(section.condition, recordValues);
+      // Skipped for the resumed section (already passed) on a resume.
+      if (section.condition && section !== resumeSection) {
+        const c = await evaluateJsonata(section.condition, { ...recordValues, vars: variables, variables });
         if (!c.ok || !c.value) {
           results.push({ sectionSkipped: true, condition: section.condition });
+          // Skip the rest of this section.
+          while (i + 1 < flat.length && flat[i + 1].section === section) i++;
           continue;
         }
       }
 
-      for (const event of section.events || []) {
-        const type = event?.type;
-        if (!type) continue;
+      // Event condition: false skips just this event.
+      if (event.condition) {
+        const c = await evaluateJsonata(event.condition, { ...recordValues, vars: variables, variables });
+        if (!c.ok || !c.value) {
+          results.push({ type, label: event.label, skipped: true });
+          continue;
+        }
+      }
 
-        // Event condition: false skips just this event.
-        if (event.condition) {
-          const c = await evaluateJsonata(event.condition, recordValues);
-          if (!c.ok || !c.value) {
-            results.push({ type, label: event.label, skipped: true });
-            continue;
+      let plugin;
+      try {
+        plugin = workflowEventRegistry.getPlugin(type);
+      } catch {
+        results.push({ type, label: event.label, success: false, error: 'Unknown event type.' });
+        return NextResponse.json({ success: false, error: `Unknown event type: ${type}`, results }, { status: 422 });
+      }
+
+      const ctx: any = {
+        tenantId: session.tenantId,
+        instanceId: null,
+        stageId: null,
+        tableName: tableName || null,
+        recordId: record?.id ?? null,
+        record,
+        operation: null,
+        variables,
+        variableDefs: declaredVars,
+        session: { userId: session.userId, teamId: session.activeTeamId || null },
+        locale: (session as any).locale || 'en',
+        timing: 'stage_enter',
+        eventConfig: event.config || {},
+      };
+
+      try {
+        const result = await plugin.execute(ctx);
+        if (result?.output) {
+          variables = { ...variables, ...result.output };
+          if (event.storeAs) {
+            // Unwrap single-record outputs (e.g. Record Event results) so the
+            // client can read fields directly for form-control mapping.
+            const out = result.output;
+            const st = event.config?.storeToVariable;
+            variables[event.storeAs] = (out && st && typeof out === 'object' && st in out) ? out[st] : out;
           }
         }
-
-        let plugin;
-        try {
-          plugin = workflowEventRegistry.getPlugin(type);
-        } catch {
-          results.push({ type, label: event.label, success: false, error: 'Unknown event type.' });
-          return NextResponse.json({ success: false, error: `Unknown event type: ${type}`, results }, { status: 422 });
-        }
-
-        const ctx: any = {
-          tenantId: session.tenantId,
-          instanceId: null,
-          stageId: null,
-          tableName: tableName || null,
-          recordId: record?.id ?? null,
-          record,
-          operation: null,
-          variables,
-          variableDefs: [],
-          session: { userId: session.userId, teamId: session.activeTeamId || null },
-          timing: 'stage_enter',
-          eventConfig: event.config || {},
-        };
-
-        try {
-          const result = await plugin.execute(ctx);
-          if (result?.output) {
-            variables = { ...variables, ...result.output };
-            if (event.storeAs) {
-              // Unwrap single-record outputs (e.g. Record Event results) so the
-              // client can read fields directly for form-control mapping.
-              const out = result.output;
-              const st = event.config?.storeToVariable;
-              variables[event.storeAs] = (out && st && typeof out === 'object' && st in out) ? out[st] : out;
-            }
-          }
-          if (!result?.success) {
-            results.push({ type, label: event.label, success: false, error: result?.error || 'Event failed.' });
-            return NextResponse.json(
-              { success: false, error: result?.error || `Event '${event.label || type}' failed.`, results },
-              { status: 422 }
-            );
-          }
-          results.push({ type, label: event.label, success: true, output: result?.output });
-        } catch (error: any) {
-          results.push({ type, label: event.label, success: false, error: error?.message || String(error) });
+        // Notification Message → PAUSE: return the box + the variable snapshot;
+        // the client resumes (confirm/ok/cancel) with the same chain body.
+        if (result?.notificationMessage) {
+          results.push({ type, label: event.label, success: true, paused: true });
           return NextResponse.json(
-            { success: false, error: `Event '${event.label || type}' failed: ${error?.message || String(error)}`, results },
+            {
+              success: true,
+              paused: true,
+              notificationMessage: result.notificationMessage,
+              resumeEventId: event.id,
+              results,
+              variables,
+              exposedVariables: exposedOf(declaredVars, variables),
+            },
+            { status: 200 }
+          );
+        }
+        if (!result?.success) {
+          results.push({ type, label: event.label, success: false, error: result?.error || 'Event failed.' });
+          return NextResponse.json(
+            { success: false, error: result?.error || `Event '${event.label || type}' failed.`, results },
             { status: 422 }
           );
         }
+        results.push({ type, label: event.label, success: true, output: result?.output });
+      } catch (error: any) {
+        results.push({ type, label: event.label, success: false, error: error?.message || String(error) });
+        return NextResponse.json(
+          { success: false, error: `Event '${event.label || type}' failed: ${error?.message || String(error)}`, results },
+          { status: 422 }
+        );
       }
     }
 
-    return NextResponse.json({ success: true, results, variables }, { status: 200 });
+    return NextResponse.json({ success: true, results, variables, exposedVariables: exposedOf(declaredVars, variables) }, { status: 200 });
   } catch (error: any) {
     const status = error.message?.startsWith('Unauthorized') || error.message?.startsWith('Forbidden') ? 403 : 500;
     return NextResponse.json({ error: error.message || 'Failed to run form events.' }, { status });
   }
+}
+
+/** Flatten sections into an ordered event list (preserving section grouping). */
+function flattenChain(chain: { condition?: string; events: any[] }[]): FlatEvent[] {
+  const flat: FlatEvent[] = [];
+  for (const section of chain) {
+    for (const event of section.events || []) {
+      flat.push({ section, event });
+    }
+  }
+  return flat;
+}
+
+/** Variables declared with exposeToForm — written back into form controls. */
+function exposedOf(declaredVars: any[], variables: Record<string, any>): Record<string, any> {
+  const exposed: Record<string, any> = {};
+  for (const v of declaredVars) {
+    if (v?.exposeToForm && v.name) exposed[v.name] = variables[v.name];
+  }
+  return exposed;
 }

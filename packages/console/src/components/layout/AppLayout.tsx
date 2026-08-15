@@ -9,6 +9,7 @@ import MobileNav from './MobileNav';
 import MobileGlobalBar from './MobileGlobalBar';
 import MobileSearchBar from './MobileSearchBar';
 import MobileAppSwitcher from './MobileAppSwitcher';
+import { LocaleSync } from '../../contexts/I18nContext';
 import { useConsole } from '../../contexts/ConsoleContext';
 import './AppLayout.css';
 
@@ -69,6 +70,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   return (
     <div className="sails-layout-wrapper">
+      <LocaleSync />
       <Topbar onMenuToggle={toggleMobileMenu} />
       <div className="sails-layout-wrapper__container">
         <Sidebar 

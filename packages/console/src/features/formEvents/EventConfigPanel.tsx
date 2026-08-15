@@ -1,175 +1,87 @@
 /**
- * EventConfigPanel — per-type configuration editor for a FormEvent.
- * Rendered in the Layout Studio right properties panel when an event is
- * selected in the Events tab.
+ * EventConfigPanel — per-type summary + "Open Editor…" button for a FormEvent.
+ *
+ * All event configuration now happens in per-type MODALS (record / expression /
+ * script / notification / notification_message), so this panel only shows the
+ * event's label, type and a concise config summary. Events have no conditions.
  */
 import React from 'react';
-import { Database } from 'lucide-react';
-import type { SailsFieldDefinition, FormEvent } from '@sails/shared';
-import ExpressionEditor from '../../components/workflow/ExpressionEditor';
-import { MOCK_SCRIPTS, MOCK_TEMPLATES } from './index';
+import type { FormVariable, SailsFieldDefinition, FormEvent } from '@sails/shared';
+import { EVENT_DEFS, NOTIFICATION_TYPES } from './index';
 
 interface EventConfigPanelProps {
   event: FormEvent;
   fields: SailsFieldDefinition[];
   onPatch: (patch: Partial<FormEvent>) => void;
-  /** Open the full Record Event editor modal (record events). */
+  /** Open this event's configuration modal. */
   onOpenEditor?: () => void;
   /** JSONata intellisense context — model column suggestions (record.<field>). */
   recordSchemas?: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
   drillRoots?: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
   triggerModelName?: string;
   sample?: Record<string, any>;
+  /** Layout-level form variables — constrains storeAs to declared names. */
+  formVariables?: FormVariable[];
+}
+
+/** One-line config summary per event type (mirrors what the modal edits). */
+function summaryFor(event: FormEvent): string {
+  const config = event.config || {};
+  switch (event.type) {
+    case 'record': {
+      const mappingCount = (config.fieldMapping || config.mappings || []).length;
+      return `Operation: ${config.operation || 'update'} · ${mappingCount} mapping${mappingCount !== 1 ? 's' : ''}`;
+    }
+    case 'expression':
+      return config.expression
+        ? `JSONata: ${String(config.expression).slice(0, 80)}${String(config.expression).length > 80 ? '…' : ''}`
+        : 'No expression set.';
+    case 'script':
+      return config.scriptId ? `BYOC script ${config.scriptId}` : 'No script selected.';
+    case 'notification':
+      return `Channel: ${config.channel || 'email'}${config.to ? ` · to ${config.to}` : ''}`;
+    case 'notification_message': {
+      const mode = config.mode === 'notification' ? 'Notification (OK)' : 'Confirmation (Confirm / Cancel)';
+      const type = NOTIFICATION_TYPES[config.notificationType]?.label || 'Information';
+      return `Mode: ${mode} · Type: ${type}`;
+    }
+    default:
+      return '';
+  }
 }
 
 export const EventConfigPanel: React.FC<EventConfigPanelProps> = ({
   event,
-  fields,
-  onPatch,
-  recordSchemas,
-  drillRoots,
-  triggerModelName,
-  sample,
+  fields: _fields,
+  onPatch: _onPatch,
   onOpenEditor,
+  recordSchemas: _recordSchemas,
+  drillRoots: _drillRoots,
+  triggerModelName: _triggerModelName,
+  sample: _sample,
+  formVariables: _formVariables,
 }) => {
-  const patchConfig = (config: Record<string, any>) => onPatch({ config: { ...event.config, ...config } });
+  const def = EVENT_DEFS[event.type];
+  const Icon = def.Icon;
 
   return (
     <div className="ls-evt-config">
+      <div className="ls-prop__type">{def.label}</div>
       <div className="ls-prop-group">
         <label className="ls-prop-label">Label</label>
-        <input className="sails-input" value={event.label} onChange={(e) => onPatch({ label: e.target.value })} />
+        <span className="ls-prop-hint" style={{ fontWeight: 500, color: 'var(--sails-text-main)' }}>{event.label}</span>
       </div>
-
-      {event.type !== 'record' && (
-        <div className="ls-prop-group">
-          <label className="ls-prop-label">Store result as (variable)</label>
-          <input
-            className="sails-input"
-            value={event.storeAs || ''}
-            placeholder="myVar — optional"
-            onChange={(e) => onPatch({ storeAs: e.target.value || undefined })}
-          />
-          <p className="ls-prop-hint">Downstream events can reference the value via <code>variables.{event.storeAs || '…'}</code>.</p>
-        </div>
-      )}
-
-      {event.type !== 'record' && (
-        <div className="ls-prop-group">
-          <label className="ls-prop-label">Condition (JSONata)</label>
-          <ExpressionEditor
-            compact
-            hideVariablePicker
-            variables={[]}
-            recordSchemas={recordSchemas}
-            drillRoots={drillRoots}
-            triggerModelName={triggerModelName}
-            value={event.condition || ''}
-            onChange={(v) => onPatch({ condition: v || undefined })}
-            sample={sample}
-            placeholder="record.budget > 100000"
-          />
-          <p className="ls-prop-hint">Skips this event when the expression evaluates false.</p>
-        </div>
-      )}
-
-      {event.type === 'record' && (
-        <>
-          <div className="ls-prop-group">
-            <button
-              type="button"
-              className="sails-btn sails-btn--ghost sails-btn--sm"
-              onClick={onOpenEditor}
-              style={{ width: '100%', justifyContent: 'center' }}
-            >
-              <Database size={12} /> Open Record Editor…
-            </button>
-            <p className="ls-prop-hint">
-              Operation: <strong>{event.config.operation || 'update'}</strong> ·{' '}
-              {(event.config.fieldMapping || event.config.mappings || []).length} mapping{(event.config.fieldMapping || event.config.mappings || []).length !== 1 ? 's' : ''}
-            </p>
-            <p className="ls-prop-hint">Full mapping editor — sources (record / variable / literal), target columns, filters and output.</p>
-          </div>
-        </>
-      )}
-
-      {event.type === 'expression' && (
-        <div className="ls-prop-group">
-          <label className="ls-prop-label">JSONata expression</label>
-          <textarea
-            className="sails-input"
-            rows={4}
-            style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 11, resize: 'vertical' }}
-            value={event.config.expression || ''}
-            onChange={(e) => patchConfig({ expression: e.target.value })}
-            placeholder="record.budget * 1.07"
-          />
-          <p className="ls-prop-hint">Available: <code>record</code> (current values), <code>variables</code> (prior events), <code>request_date</code>.</p>
-        </div>
-      )}
-
-      {event.type === 'script' && (
-        <>
-          <div className="ls-prop-group">
-            <label className="ls-prop-label">BYOC script</label>
-            <select
-              className="sails-input"
-              value={event.config.scriptId || MOCK_SCRIPTS[0].id}
-              onChange={(e) => patchConfig({ scriptId: e.target.value })}
-            >
-              {MOCK_SCRIPTS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-          <div className="ls-prop-group">
-            <label className="ls-prop-label">Timeout (ms)</label>
-            <input
-              className="sails-input"
-              type="number"
-              min={500}
-              step={500}
-              value={event.config.timeoutMs ?? 10000}
-              onChange={(e) => patchConfig({ timeoutMs: Number(e.target.value) })}
-            />
-          </div>
-        </>
-      )}
-
-      {event.type === 'notification' && (
-        <>
-          <div className="ls-prop-group">
-            <label className="ls-prop-label">Template</label>
-            <select
-              className="sails-input"
-              value={event.config.templateId || ''}
-              onChange={(e) => patchConfig({ templateId: e.target.value })}
-            >
-              <option value="">— template —</option>
-              {MOCK_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </div>
-          <div className="ls-prop-group">
-            <label className="ls-prop-label">Channel</label>
-            <select
-              className="sails-input"
-              value={event.config.channel || 'email'}
-              onChange={(e) => patchConfig({ channel: e.target.value })}
-            >
-              <option value="email">Email</option>
-              <option value="slack">Slack</option>
-              <option value="both">Email + Slack</option>
-            </select>
-          </div>
-          <div className="ls-prop-group">
-            <label className="ls-prop-label">Recipients</label>
-            <input
-              className="sails-input"
-              value={event.config.to || ''}
-              placeholder="{{record.email}}, manager@sails.app"
-              onChange={(e) => patchConfig({ to: e.target.value })}
-            />
-          </div>
-        </>
-      )}
+      <div className="ls-prop-group">
+        <button
+          type="button"
+          className="sails-btn sails-btn--ghost sails-btn--sm"
+          onClick={onOpenEditor}
+          style={{ width: '100%', justifyContent: 'center' }}
+        >
+          <Icon size={12} /> Open Editor…
+        </button>
+        <p className="ls-prop-hint">{summaryFor(event)}</p>
+      </div>
     </div>
   );
 };

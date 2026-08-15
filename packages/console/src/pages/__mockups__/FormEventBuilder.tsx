@@ -12,7 +12,7 @@ import {
   Settings, Zap, Database, Code, Workflow as WorkflowIcon, Bell, CircleCheck,
   CircleX, Copy, Send, Eye, EyeOff, Play, RotateCcw, ShieldAlert,
   MousePointerClick, Sparkles, Check, Braces, CircleAlert, LoaderCircle,
-  Archive, Download, Printer, KeyRound, GitBranch, ExternalLink,
+  Archive, Download, Printer, KeyRound, GitBranch, ExternalLink, MessageSquare,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { SailsFieldDefinition } from '@sails/shared';
@@ -21,7 +21,7 @@ import './FormEventBuilder.css';
 
 // ─── Types ────────────────────────────────────────────────────
 
-type EventType = 'record' | 'expression' | 'script' | 'notification';
+type EventType = 'record' | 'expression' | 'script' | 'notification' | 'notification_message';
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 type RunState = 'idle' | 'running' | 'completed';
 type EventRunStatus = 'idle' | 'running' | 'done' | 'skipped';
@@ -67,9 +67,10 @@ const EVENT_DEFS: Record<EventType, { label: string; desc: string; Icon: LucideI
   expression:   { label: 'Expression',      desc: 'JSONata computation',       Icon: Code,        color: '#a855f7' },
   script:       { label: 'Script',          desc: 'BYOC script (sandbox)',     Icon: WorkflowIcon, color: '#8b5cf6' },
   notification: { label: 'Notification',    desc: 'Email / Slack',             Icon: Bell,        color: '#f59e0b' },
+  notification_message: { label: 'Notification Message', desc: 'Modal confirm / alert', Icon: MessageSquare, color: '#0ea5e9' },
 };
 
-const EVENT_TYPE_ORDER: EventType[] = ['record', 'expression', 'script', 'notification'];
+const EVENT_TYPE_ORDER: EventType[] = ['record', 'expression', 'script', 'notification', 'notification_message'];
 
 const ACTION_ICON_OPTIONS: { value: string; label: string; Icon: LucideIcon }[] = [
   { value: 'CircleCheck', label: 'Approve', Icon: CircleCheck },
@@ -502,7 +503,6 @@ const CompactSection: React.FC<CompactSectionProps> = ({
                   <div className="feb-event__head" onClick={() => onExpandEvent(expanded ? null : ev.id)}>
                     <span className="feb-event__icon" style={{ background: `${def.color}22`, color: def.color }}>{<def.Icon size={13} />}</span>
                     <span className="feb-event__label">{ev.label}</span>
-                    {ev.condition && <span className="feb-event__chip feb-event__chip--cond"><GitBranch size={9} /> cond</span>}
                     {ev.storeAs && <span className="feb-event__chip feb-event__chip--store"><Braces size={9} /> {ev.storeAs}</span>}
                     {status === 'running' && <LoaderCircle size={12} className="feb-spin feb-event__runstate" />}
                     {status === 'done' && <CircleCheck size={12} className="feb-event__runstate feb-event__runstate--done" />}
@@ -651,9 +651,11 @@ const FormEventBuilder: React.FC = () => {
       label: type === 'record' ? 'Record update'
         : type === 'expression' ? 'Compute value'
         : type === 'script' ? 'Run script'
-        : 'Send notification',
+        : type === 'notification' ? 'Send notification'
+        : 'Show notification message',
       config: type === 'record' ? { operation: 'update', mappings: [{ fieldId: MOCK_LEADS_FIELDS[0].id, value: '' }] }
         : type === 'notification' ? { templateId: MOCK_TEMPLATES[0].id, channel: 'email', to: '' }
+        : type === 'notification_message' ? { mode: 'confirm', notificationType: 'information', title: '', message: '', confirmLabel: 'Confirm', cancelLabel: 'Cancel', okLabel: 'OK' }
         : type === 'script' ? { scriptId: MOCK_SCRIPTS[0].id, timeoutMs: 10000 }
         : { expression: '' },
     };

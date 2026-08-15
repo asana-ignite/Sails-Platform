@@ -13,7 +13,8 @@ export type WorkflowEventType =
   | 'notification'
   | 'approval'
   | 'expression'
-  | 'script';
+  | 'script'
+  | 'notification_message';
 
 export type WorkflowEventConfigParameterType =
   | 'text' | 'textarea' | 'number' | 'boolean' | 'select'
@@ -229,6 +230,36 @@ export const WORKFLOW_EVENT_CONFIGS: Record<WorkflowEventType, WorkflowEventConf
           ],
         },
         { name: 'timeoutMs', label: 'Timeout (ms)', type: 'number', defaultValue: 5000, placeholder: '5000' },
+      ],
+    },
+  ],
+
+  notification_message: [
+    {
+      label: 'Message',
+      parameters: [
+        {
+          name: 'mode', label: 'Mode', type: 'select', defaultValue: 'confirm',
+          options: [
+            { label: 'Confirmation (Confirm / Cancel)', value: 'confirm' },
+            { label: 'Notification (OK)', value: 'notification' },
+          ],
+        },
+        {
+          name: 'notificationType', label: 'Notification Type', type: 'select', defaultValue: 'information',
+          options: [
+            { label: 'Information', value: 'information' },
+            { label: 'Success', value: 'success' },
+            { label: 'Warning', value: 'warning' },
+            { label: 'Caution', value: 'caution' },
+            { label: 'Error', value: 'error' },
+          ],
+        },
+        { name: 'title', label: 'Title', type: 'text' },
+        { name: 'message', label: 'Message', type: 'textarea', description: 'Supports {{record.field}} / {{variables.name}} tokens.' },
+        { name: 'confirmLabel', label: 'Confirm Button Label', type: 'text', defaultValue: 'Confirm' },
+        { name: 'cancelLabel', label: 'Cancel Button Label', type: 'text', defaultValue: 'Cancel' },
+        { name: 'okLabel', label: 'OK Button Label', type: 'text', defaultValue: 'OK' },
       ],
     },
   ],

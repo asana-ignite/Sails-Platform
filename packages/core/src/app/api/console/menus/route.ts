@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     const { tenantId } = await requireSession();
 
     const body = await req.json();
-    const { appId, label, icon, path, actionType, parentId, order, componentKey, requiredCapability, dataModelId, listViewId } = body;
+    const { appId, label, icon, path, actionType, parentId, order, componentKey, requiredCapability, dataModelId, listViewId, labelI18n } = body;
 
     if (!appId || !label) {
       return NextResponse.json({ success: false, error: 'appId and label are required' }, { status: 400 });
@@ -135,7 +135,8 @@ export async function POST(req: Request) {
         componentKey,
         requiredCapability,
         dataModelId,
-        listViewId
+        listViewId,
+        ...(labelI18n !== undefined ? { labelI18n } : {})
       }
     });
 

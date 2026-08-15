@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
         logicalType, 
         config, 
         isRequired,
-        description
+        description,
+        nameI18n,
+        descriptionI18n
     } = await req.json();
 
     // Verify the table belongs to the user's tenant
@@ -41,7 +43,10 @@ export async function POST(req: NextRequest) {
         logicalType,
         config,
         isRequired,
-        description
+        description,
+        false,
+        nameI18n,
+        descriptionI18n
     );
 
     // Log Logical Metadata Event

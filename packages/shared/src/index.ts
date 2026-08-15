@@ -42,6 +42,16 @@ export type { ExpressionFunction, ExpressionFunctionDoc } from './expressionFunc
 export { coerceExpressionResult, expressionResultType } from './expressionEvaluation';
 export type { ExpressionResultType } from './expressionEvaluation';
 import type { ExpressionResultType } from './expressionEvaluation';
+export {
+  SUPPORTED_LOCALES,
+  DEFAULT_LOCALE,
+  isLocalized,
+  localize,
+  setLocalizedText,
+  localizedTextFor,
+  hasTranslations,
+} from './localization';
+export type { LocalizedText } from './localization';
 
 export {
   WORKFLOW_EVENT_CONFIGS,
@@ -513,9 +523,27 @@ export interface TableLayout {
   updatedAt: string;
 }
 
+/** A layout-level transient variable shared by all form-event chains and
+ * condition expressions. Evaluated per page session — never persisted. */
+export interface FormVariable {
+  id: string;
+  name: string;
+  fieldType: 'text' | 'number' | 'boolean' | 'date' | 'json' | 'record';
+  /** Static default value (used when no expression is set). */
+  defaultValue?: any;
+  /** JSONata default expression — evaluated with record + vars at chain start. */
+  expression?: string;
+  /** Include the resolved value in the chain response so the client writes it into formData. */
+  exposeToForm?: boolean;
+}
+
 export interface LayoutConfig {
   sections?: LayoutSection[];
   fields?: LayoutField[];
+  /** Layout-level transient variables (form-event chains + Conditions tab). */
+  formVariables?: FormVariable[];
+  /** Named groups of behavior / formatting / validation rules (detail view). */
+  conditionSets?: ConditionSet[];
   relatedRecords?: RelatedRecord[];    // only for DETAIL view
 
   // LIST/Table view config
@@ -576,7 +604,7 @@ export interface PreValidation {
 /** A single step in an action's event chain (reuses workflow event plugin types). */
 export interface FormEvent {
   id: string;
-  type: 'record' | 'expression' | 'script' | 'notification';
+  type: 'record' | 'expression' | 'script' | 'notification' | 'notification_message';
   label: string;
   condition?: string;
   storeAs?: string;
@@ -608,6 +636,53 @@ export interface DetailAction {
   preValidations?: PreValidation[];
   /** Ordered event sections executed when the button is clicked. */
   sections?: ActionSection[];
+}
+
+/** Control-state flags a behavior rule enforces on its targets when active. */
+export interface ConditionSetEffect {
+  visible?: boolean;
+  readOnly?: boolean;
+  editable?: boolean;
+}
+
+/** Style a formatting rule applies to its targets when active. */
+export interface ConditionSetStyle {
+  textColor?: string;
+  background?: string;
+  bold?: boolean;
+  icon?: string;
+}
+
+/** One rule inside a Condition Set. */
+export interface ConditionSetRule {
+  id: string;
+  /** Rule-level JSONata gate (record + vars context); empty = always active. */
+  condition?: string;
+  /** Placed blocks this rule targets, or 'all' (Select All — whole form). */
+  targetBlockIds: string[] | 'all';
+  kind: 'behavior' | 'formatting' | 'validation';
+  effect?: ConditionSetEffect;
+  style?: ConditionSetStyle;
+  validation?: {
+    id: string;
+    type: string;
+    message?: string;
+    pattern?: string;
+    min?: number;
+    max?: number;
+    dependentFieldId?: string;
+    dependentOperator?: string;
+    dependentValue?: string;
+  };
+}
+
+/** A named group of rules; the whole set is inactive while `condition` is false. */
+export interface ConditionSet {
+  id: string;
+  title: string;
+  /** Set-level JSONata gate (record + vars context). */
+  condition?: string;
+  rules: ConditionSetRule[];
 }
 
 /** A display-style rule evaluated against the record at runtime. */
