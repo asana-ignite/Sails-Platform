@@ -9,6 +9,7 @@
  */
 import { db } from '../../lib/db';
 import { getSession } from '@/lib/auth/session';
+import { getConfigCache, setConfigCache } from '@/lib/configCache';
 
 export type CrudAction = 'create' | 'read' | 'update' | 'delete';
 
@@ -37,45 +38,53 @@ export class AccessGuard {
       return; // Fast path for system and tenant admins based on JWT role
     }
 
-    const user = await db.user.findUnique({
-      where: { id: resolvedUserId },
-      select: { 
-        teams: {
-          select: { teamId: true }
-        },
-        positionSlots: {
-          select: {
-            position: {
-              select: {
-                id: true,
-                teamLinks: { select: { teamId: true } }
+    const cacheKey = `${resolvedUserId}:perms:${objectName}`;
+    const cached = getConfigCache(cacheKey);
+    let permissions = (cached && cached.expiresAt > Date.now()) ? cached.data : null;
+
+    if (!permissions) {
+      const user = await db.user.findUnique({
+        where: { id: resolvedUserId },
+        select: { 
+          teams: {
+            select: { teamId: true }
+          },
+          positionSlots: {
+            select: {
+              position: {
+                select: {
+                  id: true,
+                  teamLinks: { select: { teamId: true } }
+                }
               }
             }
           }
         }
-      }
-    });
+      });
 
-    if (!user) {
-      throw new Error(`Unauthorized: User ${resolvedUserId} not found.`);
+      if (!user) {
+        throw new Error(`Unauthorized: User ${resolvedUserId} not found.`);
+      }
+
+      const explicitTeamIds = user.teams.map(t => t.teamId);
+      const positionIds = user.positionSlots.map(ps => ps.position.id);
+      const positionTeamIds = user.positionSlots.flatMap(ps => ps.position.teamLinks.map(tl => tl.teamId));
+      
+      const allTeamIds = Array.from(new Set([...explicitTeamIds, ...positionTeamIds]));
+
+      permissions = await db.objectPermission.findMany({
+        where: {
+          objectName: objectName,
+          OR: [
+            { teamId: { in: allTeamIds } },
+            { positionId: { in: positionIds } },
+            { userId: resolvedUserId }
+          ]
+        }
+      });
+
+      setConfigCache(cacheKey, permissions, 15000); // 15s TTL
     }
-
-    const explicitTeamIds = user.teams.map(t => t.teamId);
-    const positionIds = user.positionSlots.map(ps => ps.position.id);
-    const positionTeamIds = user.positionSlots.flatMap(ps => ps.position.teamLinks.map(tl => tl.teamId));
-    
-    const allTeamIds = Array.from(new Set([...explicitTeamIds, ...positionTeamIds]));
-
-    const permissions = await db.objectPermission.findMany({
-      where: {
-        objectName: objectName,
-        OR: [
-          { teamId: { in: allTeamIds } },
-          { positionId: { in: positionIds } },
-          { userId: resolvedUserId }
-        ]
-      }
-    });
 
     if (permissions.length === 0) {
       throw new Error(`Unauthorized: No permissions found for object '${objectName}'.`);

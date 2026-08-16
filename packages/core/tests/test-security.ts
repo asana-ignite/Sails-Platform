@@ -49,6 +49,13 @@ async function assertRejects(fn: () => Promise<any>, expectedMsg: string, label:
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 async function run() {
+  if (process.env.ALLOW_DESTRUCTIVE_TESTS !== 'true') {
+    console.error('⛔ [SAFETY BLOCK] Destructive test aborted.');
+    console.error('This test wipes all database tables (tenants, users, audit logs).');
+    console.error('To run this test against a dedicated throwaway test DB, pass: ALLOW_DESTRUCTIVE_TESTS=true');
+    process.exit(1);
+  }
+
   console.log('🔐 Starting SAILS Security Integration Tests\n');
 
   const pool = new Pool({

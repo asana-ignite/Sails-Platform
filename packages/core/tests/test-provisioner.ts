@@ -3,6 +3,13 @@ import { db } from '../src/lib/db';
 import { TenantProvisioner } from '../src/services/TenantProvisioner';
 
 async function run() {
+  if (process.env.ALLOW_DESTRUCTIVE_TESTS !== 'true') {
+    console.error('⛔ [SAFETY BLOCK] Destructive test aborted.');
+    console.error('This test wipes all database tables (tenants, users, permissions).');
+    console.error('To run this test against a dedicated throwaway test DB, pass: ALLOW_DESTRUCTIVE_TESTS=true');
+    process.exit(1);
+  }
+
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const provisioner = new TenantProvisioner(pool);
 

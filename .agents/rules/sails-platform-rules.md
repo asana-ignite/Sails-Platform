@@ -48,3 +48,11 @@ description: Mandatory development and deployment rules for the Sails Platform.
 - **Rule (Layout Activation Sync)**: Activating or publishing a layout (`action === 'activate'`) MUST atomically update both `config` and `publishedConfig` in database records to ensure instant runtime layout propagation.
 - **Rule (Tenant Admin Bypass)**: AccessGuard object permission checks MUST include fast-path permission approval for both `SUPER_ADMIN` and `TENANT_ADMIN` roles across dynamic tenant objects.
 - **Rule (Dropdown & Popover Overflow)**: Dropdown controls inside bottom containers (such as pagination footers) MUST specify upward dropup direction (`direction="up"`) or boundary detection, and parent containers (`.ls-table-card`, `.ls-pagination`) MUST enforce `overflow: visible` to prevent popover clipping.
+
+## 8. Architectural House Rules & Anti-Patterns (Must NOT Do)
+- **Rule (Database Session Reset)**: NEVER execute `DISCARD ALL` in pool connection wrappers or `TransactionContext`. `DISCARD ALL` invalidates prepared statements, destroys execution plans, and breaks PgBouncer transaction pooling. Use targeted `RESET ROLE` and rely on transaction rollback / `SET LOCAL` automatic cleanup.
+- **Rule (Metadata & Permission Caching)**: Always use `configCache` with TTL for table schemas (`resolveTable`) and object permissions (`AccessGuard`). Never query repetitive Prisma joins on every dynamic CRUD request.
+- **Rule (SQL Role Injection Guard)**: NEVER execute dynamic `SET ROLE` without whitelisting permitted roles (`'rls_user'`, `'postgres'`).
+- **Rule (Test Suite Safety Gate)**: Destructive test scripts (`deleteMany`) MUST enforce `ALLOW_DESTRUCTIVE_TESTS === 'true'` environment gates to prevent accidental wipeout of live dev/prod databases.
+- **Rule (Frontend Code Splitting)**: NEVER statically import a page component (such as `DynamicDetailPage`) inside a layout/panel while also declaring it as `React.lazy` in `App.tsx`. Always maintain pure dynamic imports to preserve Vite bundle chunking.
+- **Rule (Expression AST Cache)**: JSONata formulas evaluated in `ComputedFields` and workflows MUST use compiled AST caching to eliminate re-parsing latency during bulk writes.

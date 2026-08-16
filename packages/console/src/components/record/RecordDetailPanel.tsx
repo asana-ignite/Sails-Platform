@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { X } from 'lucide-react';
 import { useRecordStack, type StackEntry } from '../../contexts/RecordStackContext';
-import DynamicDetailPage from '../../pages/DynamicDetailPage';
 import './RecordDetailPanel.css';
+
+const DynamicDetailPage = lazy(() => import('../../pages/DynamicDetailPage'));
 
 const DESKTOP_PEEK = 36;
 const MOBILE_PEEK = 24;
@@ -54,14 +55,16 @@ const StackCard: React.FC<StackCardProps> = ({ entry, isTop, zIndex, isClosing, 
         )}
       </div>
       <div className="record-stack__card-inner">
-        <DynamicDetailPage
-          key={entry.id}
-          tableName={entry.tableName}
-          layoutKey={entry.layoutKey}
-          recordId={entry.recordId}
-          presetValues={entry.preset}
-          inStack
-        />
+        <Suspense fallback={<div className="sails-loading-screen" style={{ minHeight: 200 }}><div className="sails-spinner" /></div>}>
+          <DynamicDetailPage
+            key={entry.id}
+            tableName={entry.tableName}
+            layoutKey={entry.layoutKey}
+            recordId={entry.recordId}
+            presetValues={entry.preset}
+            inStack
+          />
+        </Suspense>
       </div>
     </div>
   );

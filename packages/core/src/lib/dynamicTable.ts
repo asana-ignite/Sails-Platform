@@ -5,14 +5,21 @@
  */
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth/session';
+import { getConfigCache, setConfigCache } from './configCache';
 
 /**
  * Shared helper: look up the physical table definition and validate tenant ownership.
  * Returns the schemaName for the active session's tenant, or null when the table
- * does not exist for that tenant.
+ * does not exist for that tenant. Cached in-memory with a 30s TTL.
  */
 export async function resolveTable(tableName: string) {
   const { tenantId } = await requireSession();
+
+  const cacheKey = `${tenantId}:table_def:${tableName}`;
+  const cached = getConfigCache(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
 
   const table = await db.tableDefinition.findFirst({
     where: {
@@ -32,5 +39,7 @@ export async function resolveTable(tableName: string) {
     return null;
   }
 
-  return { table, schemaName: table.tenant.schemaName };
+  const result = { table, schemaName: table.tenant.schemaName };
+  setConfigCache(cacheKey, result, 30000);
+  return result;
 }

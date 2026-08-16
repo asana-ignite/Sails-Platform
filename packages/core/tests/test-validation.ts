@@ -7,6 +7,13 @@ import { QueryLayer } from '../src/core/engine/QueryLayer';
 import { TenantProvisioner } from '../src/services/TenantProvisioner';
 
 async function run() {
+  if (process.env.ALLOW_DESTRUCTIVE_TESTS !== 'true') {
+    console.error('⛔ [SAFETY BLOCK] Destructive test aborted.');
+    console.error('This test wipes all database tables (users, teams, audit logs).');
+    console.error('To run this test against a dedicated throwaway test DB, pass: ALLOW_DESTRUCTIVE_TESTS=true');
+    process.exit(1);
+  }
+
   console.log("🚀 Starting Complex Validation Test...");
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL || 'postgresql://postgres:mysecretpassword@host.docker.internal:5432/postgres'

@@ -22,7 +22,10 @@ const jsonataLib: ((expr: string) => any) | null = (() => {
   }
 })();
 
-/** Evaluate a JSONata expression against an input. */
+const compiledExpressionCache = new Map<string, any>();
+const MAX_EXPRESSION_CACHE_SIZE = 500;
+
+/** Evaluate a JSONata expression against an input with AST caching. */
 export async function evaluateJsonata(
   expression: string,
   input: any,
@@ -32,7 +35,16 @@ export async function evaluateJsonata(
     return { ok: false, error: 'JSONata engine is not available — add the jsonata dependency to sails-core' };
   }
   try {
-    const expressionFn = jsonataLib(expression);
+    let expressionFn = compiledExpressionCache.get(expression);
+    if (!expressionFn) {
+      expressionFn = jsonataLib(expression);
+      if (compiledExpressionCache.size >= MAX_EXPRESSION_CACHE_SIZE) {
+        const firstKey = compiledExpressionCache.keys().next().value;
+        if (firstKey) compiledExpressionCache.delete(firstKey);
+      }
+      compiledExpressionCache.set(expression, expressionFn);
+    }
+
     // First-party function library (date/time formulas etc.) — shared with the
     // console so the editor's Test runner produces identical results.
     registerExpressionFunctions(expressionFn, extraFunctions);

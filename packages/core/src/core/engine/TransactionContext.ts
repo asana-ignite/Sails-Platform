@@ -45,7 +45,11 @@ export class TransactionContext {
       await client.query('SET LOCAL lock_timeout = 5000');
 
       if (resolvedRole) {
-        // Switch role if provided (e.g., to a non-superuser for testing RLS)
+        // Whitelist safe roles to prevent role injection
+        const allowedRoles = ['rls_user', 'postgres'];
+        if (!allowedRoles.includes(resolvedRole)) {
+          throw new Error(`Security Violation: Unauthorized database role switch to '${resolvedRole}'`);
+        }
         await client.query(`SET ROLE ${resolvedRole}`);
       }
 
@@ -79,10 +83,12 @@ export class TransactionContext {
       await client.query('ROLLBACK');
       throw error;
     } finally {
-      try {
-        await client.query('DISCARD ALL');
-      } catch (e) {
-        console.error('[TransactionContext] Failed to reset session state:', e);
+      if (resolvedRole) {
+        try {
+          await client.query('RESET ROLE');
+        } catch (e) {
+          console.error('[TransactionContext] Failed to reset role:', e);
+        }
       }
       client.release();
     }
