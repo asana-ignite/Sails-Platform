@@ -29,12 +29,20 @@ Follow these strict guidelines and conventions when executing frontend tasks:
 ### 3. Module Architecture & Headless Integration
 - **Routing:** New custom pages must be built as standalone React components and registered in `src/features/admin/registry.ts`.
 - **Layout:** Rely on `AppPluginShell` to handle the standard layout, Topbar, and Sidebar automatically. Wrap your module content inside a standard `.sails-card` container.
+- **Hook Ordering Rule:** NEVER declare React hooks (`useState`, `useMemo`, `useEffect`, `useCallback`) below early conditional returns (`if (fetchLoading) return ...` / `if (error) return ...`). All hooks MUST be declared unconditionally at the very top of the component.
 
 ### 4. Data Layer & Shared Types
 - **Type Safety:** Never declare duplicate TypeScript interfaces. Always import data models and contracts from `@sails/shared`.
 - **Offline-First Rule:** When performing a `POST` request, generate the `id` (UUIDv4) on the client-side before sending the payload.
 
-### 5. Verification
+### 5. List View & Data Grid Engine Standards
+- **Single Authoritative Fetch**: Never double-fetch on list view initialization. Run `doFetch(1)` once with resolved layout options.
+- **Cell Request Deduplication**: Shared cell pickers (`UserControl`, lookup chips) rendered across table rows must use module-level in-flight Promise deduplication with `fetchCached` (60s TTL) to prevent thundering-herd API bursts.
+- **Defensive Column Resolution**: Table and mobile list components (`ListViewMobile`, `ListViewTable`) must guard column lookups (`col?.fieldId`) with safe fallbacks (`rec.name || rec.id || '\u2014'`) to avoid runtime `TypeError` when columns are loading.
+- **Related Mode Propagation**: Related record fetches (`/api/dynamic/[table]/related`) must populate `fields` along with `rows` and `total` to ensure columns render properly in embedded and mobile views.
+- **Parent Layout Propagation**: Dynamic page shells pass pre-resolved layouts (`initialLayout`) to `ListViewEngine` to avoid redundant `/api/console/layouts` queries.
+
+### 6. Verification
 - Ensure code passes type checking (`bun x tsc --noEmit`) and builds via Vite without errors.
 
 ## 🛠️ Operating Procedures

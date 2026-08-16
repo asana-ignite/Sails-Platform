@@ -20,9 +20,9 @@ import {
   Edit3, Zap, Undo2, Redo2, AlertTriangle, Database, ExternalLink,
   MousePointerClick, Smartphone, List, PanelRight, History,
   GitBranch, SlidersHorizontal, Braces, Bell, Code, Workflow as WorkflowIcon,
-  CircleCheck, CircleX, Copy, Printer, Lock,
+  CircleCheck, CircleX, Copy, Printer, Lock, Palette,
 } from 'lucide-react';
-import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction, MobileViewMode, DetailAction, FormEvent, ActionSection, ConditionSet, ConditionSetRule } from '@sails/shared';
+import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction, MobileViewMode, DetailAction, FormEvent, ActionSection, ConditionSet, ConditionSetRule, ConditionSetEffect, ConditionSetStyle, LayoutValidationRule } from '@sails/shared';
 import { resolveActiveRules, deriveConditionSets, conditionEvalContext } from '../../utils/conditionSets';
 import { evaluateFilterGroups } from '@sails/shared';
 import { formatDateTimeValue, formatDecimalValue, normalizeFilters, registerExpressionFunctions } from '@sails/shared';
@@ -107,7 +107,7 @@ interface BuilderSection {
 }
 
 interface DragPayload {
-  type: 'palette' | 'placed' | 'action' | 'conditionSet';
+  type: 'palette' | 'placed' | 'action' | 'conditionSet' | 'conditionRule' | 'validationRule';
   blockType?: BlockType;
   fieldId?: string;
   paletteId?: string;
@@ -119,6 +119,8 @@ interface DragPayload {
   actionId?: string;
   /** Condition Set chip being reordered (type 'conditionSet'). */
   conditionSetId?: string;
+  /** Condition rule kind dragged from the palette (type 'conditionRule'). */
+  conditionRuleKind?: ConditionSetRule['kind'];
 }
 
 interface PaletteItem {
@@ -598,22 +600,30 @@ const LayoutStudio: React.FC = () => {
   const [listMobileViewMode, setListMobileViewMode] = useState<MobileViewMode>('table');
 
   // ── Studio tabs: Layout | Events | Conditions ──
-  const [activeTab, setActiveTab] = useState<'layout' | 'events' | 'conditions'>('layout');
+  const [activeTab, setActiveTab] = useState<'layout' | 'events' | 'conditions' | 'validation'>('layout');
 
   // ── Detail action buttons + event chains (Events tab) ──
   const [detailActions, setDetailActions] = useState<DetailAction[]>([]);
   const [formVariables, setFormVariables] = useState<FormVariable[]>([]);
   const [conditionSets, setConditionSets] = useState<ConditionSet[]>([]);
+  const [validationRules, setValidationRules] = useState<LayoutValidationRule[]>([]);
   const [selectedConditionSetId, setSelectedConditionSetId] = useState<string | null>(null);
   const [conditionSetTitleEditId, setConditionSetTitleEditId] = useState<string | null>(null);
   const [conditionSetTitleDraft, setConditionSetTitleDraft] = useState('');
   const [dragOverConditionSetId, setDragOverConditionSetId] = useState<string | null>(null);
+  const [conditionRuleModalTarget, setConditionRuleModalTarget] = useState<{ setId: string; ruleId: string } | null>(null);
+  const [conditionRuleLabelEditId, setConditionRuleLabelEditId] = useState<string | null>(null);
+  const [conditionRuleLabelDraft, setConditionRuleLabelDraft] = useState('');
+  const [validationRuleModalTarget, setValidationRuleModalTarget] = useState<string | null>(null);
+  const [validationRuleLabelEditId, setValidationRuleLabelEditId] = useState<string | null>(null);
+  const [validationRuleLabelDraft, setValidationRuleLabelDraft] = useState('');
   const [conditionFilterTarget, setConditionFilterTarget] = useState<{
-    kind: 'set' | 'rule' | 'section';
+    kind: 'set' | 'rule' | 'section' | 'validationRule';
     setId?: string;
     ruleId?: string;
     actionId?: string;
     sectionId?: string;
+    validationRuleId?: string;
   } | null>(null);
   const [selectedDetailActionId, setSelectedDetailActionId] = useState<string | null>(null);
   const [dragOverActionId, setDragOverActionId] = useState<string | null>(null);
@@ -731,8 +741,16 @@ const LayoutStudio: React.FC = () => {
             else setDetailActions([]);
             if (config.formVariables && Array.isArray(config.formVariables)) setFormVariables(config.formVariables);
             else setFormVariables([]);
-            if (config.conditionSets && Array.isArray(config.conditionSets)) setConditionSets(config.conditionSets);
-            else setConditionSets([]);
+            if (config.conditionSets && Array.isArray(config.conditionSets)) {
+              const m = migrateConditionSets(config.conditionSets);
+              setConditionSets(m.sets);
+              const existing: LayoutValidationRule[] = Array.isArray(config.validations) ? config.validations : [];
+              const seen = new Set(existing.map((v) => v.id));
+              setValidationRules([...existing, ...m.validations.filter((v) => !seen.has(v.id))]);
+            } else {
+              setConditionSets([]);
+              setValidationRules(Array.isArray(config.validations) ? config.validations : []);
+            }
             setLayoutAllowEdit(config.allowEdit !== false);
           }
         }
@@ -1132,7 +1150,7 @@ const LayoutStudio: React.FC = () => {
         mobileViewMode: listMobileViewMode,
       };
     }
-    return { sections, blocks, detailActions, formVariables, conditionSets, ...(layoutAllowEdit === false ? { allowEdit: false } : {}) };
+    return { sections, blocks, detailActions, formVariables, conditionSets, validations: validationRules, ...(layoutAllowEdit === false ? { allowEdit: false } : {}) };
   };
 
   // ── Undo / Redo engine ──
@@ -1167,7 +1185,13 @@ const LayoutStudio: React.FC = () => {
       setBlocks(Array.isArray(c.blocks) ? c.blocks : []);
       setDetailActions(Array.isArray(c.detailActions) ? c.detailActions : []);
       setFormVariables(Array.isArray(c.formVariables) ? c.formVariables : []);
-      setConditionSets(Array.isArray(c.conditionSets) ? c.conditionSets : []);
+      {
+        const m = Array.isArray(c.conditionSets) ? migrateConditionSets(c.conditionSets) : { sets: [], validations: [] };
+        setConditionSets(m.sets);
+        const existing: LayoutValidationRule[] = Array.isArray(c.validations) ? c.validations : [];
+        const seen = new Set(existing.map((v) => v.id));
+        setValidationRules([...existing, ...m.validations.filter((v) => !seen.has(v.id))]);
+      }
       setSelectedConditionSetId(null);
       setConditionSetTitleEditId(null);
       setLayoutAllowEdit(c.allowEdit !== false);
@@ -1369,9 +1393,8 @@ const LayoutStudio: React.FC = () => {
       id,
       kind,
       targetBlockIds: [],
-      ...(kind === 'behavior' ? { effect: {} } : {}),
+      ...(kind === 'control' ? { effect: {} } : {}),
       ...(kind === 'formatting' ? { style: {} } : {}),
-      ...(kind === 'validation' ? { validation: { id, type: 'required', message: 'This field is required' } } : {}),
     };
     setConditionSets((prev) => prev.map((cs) => (cs.id === setId ? { ...cs, rules: [...(cs.rules || []), rule] } : cs)));
   };
@@ -1402,6 +1425,33 @@ const LayoutStudio: React.FC = () => {
     }));
   };
 
+  /** Migrate legacy set rules: 'behavior'→'control', block lists → per-block maps,
+   *  and old 'validation' rules → Validation-tab rules. */
+  const migrateConditionSets = (sets: ConditionSet[]): { sets: ConditionSet[]; validations: LayoutValidationRule[] } => {
+    const validations: LayoutValidationRule[] = [];
+    const migrated: ConditionSet[] = (sets || []).map((cs) => ({
+      ...cs,
+      rules: (cs.rules || []).flatMap((r) => {
+        if ((r.kind as string) === 'behavior') {
+          const next: ConditionSetRule = { ...r, kind: 'control' };
+          delete next.targetBlockIds;
+          return [next];
+        }
+
+        if (r.kind === 'formatting' && r.style && Array.isArray(r.targetBlockIds) && r.targetBlockIds.length > 0) {
+          const next: ConditionSetRule = {
+            ...r,
+            targetStyles: Object.fromEntries(r.targetBlockIds.map((id) => [id, { ...(r.style as ConditionSetStyle) }])),
+          };
+          delete next.targetBlockIds;
+          return [next];
+        }
+        return [r];
+      }),
+    }));
+    return { sets: migrated, validations };
+  };
+
   /** Preview: declared var defaults evaluated once per formVariables change. */
   const previewVarDefaults = useMemo(() => {
     const out: Record<string, any> = {};
@@ -1415,6 +1465,21 @@ const LayoutStudio: React.FC = () => {
   const previewConditionDerived = useMemo(() =>
     deriveConditionSets(resolveActiveRules(conditionSets, { record: previewRecord, vars: previewVarDefaults, fields: allFields })),
     [conditionSets, previewRecord, previewVarDefaults, allFields]);
+
+  /** Preview: Validation-tab rules active against the mock record, keyed by target field. */
+  const previewValidationRulesByField = useMemo(() => {
+    const map: Record<string, LayoutValidationRule[]> = {};
+    const ctx = conditionEvalContext(previewRecord, previewVarDefaults, allFields, user ? { id: user.id, role: user.role, email: user.email } : undefined);
+    for (const r of validationRules) {
+      if (r.errorLocation === 'bar') continue;
+      if (!evaluateFilterGroups(r.conditionGroups, ctx)) continue;
+      for (const fid of r.targetFieldIds || []) {
+        const list = map[fid] || (map[fid] = []);
+        list.push(r);
+      }
+    }
+    return map;
+  }, [validationRules, previewRecord, previewVarDefaults, allFields, user]);
 
   const addDetailAction = () => {
     const na: DetailAction = {
@@ -1840,8 +1905,16 @@ const LayoutStudio: React.FC = () => {
             else setDetailActions([]);
             if (config.formVariables && Array.isArray(config.formVariables)) setFormVariables(config.formVariables);
             else setFormVariables([]);
-            if (config.conditionSets && Array.isArray(config.conditionSets)) setConditionSets(config.conditionSets);
-            else setConditionSets([]);
+            if (config.conditionSets && Array.isArray(config.conditionSets)) {
+              const m = migrateConditionSets(config.conditionSets);
+              setConditionSets(m.sets);
+              const existing: LayoutValidationRule[] = Array.isArray(config.validations) ? config.validations : [];
+              const seen = new Set(existing.map((v) => v.id));
+              setValidationRules([...existing, ...m.validations.filter((v) => !seen.has(v.id))]);
+            } else {
+              setConditionSets([]);
+              setValidationRules(Array.isArray(config.validations) ? config.validations : []);
+            }
             setLayoutAllowEdit(config.allowEdit !== false);
           }
         }
@@ -3067,7 +3140,7 @@ const LayoutStudio: React.FC = () => {
   );
 
   const conditionRuleKindMeta = {
-    behavior: { label: 'Behavior', color: '#3b82f6', desc: 'Visible / Read Only / Editable' },
+    control: { label: 'Field Control', color: '#3b82f6', desc: 'Read Only / Visible / Editable per field' },
     formatting: { label: 'Formatting', color: '#8b5cf6', desc: 'Text color / background / bold / icon' },
     validation: { label: 'Validation', color: '#f59e0b', desc: 'Field rules gating the save' },
   } as const;
@@ -3087,7 +3160,7 @@ const LayoutStudio: React.FC = () => {
       patchConditionSetRule(setId, ruleId, { targetBlockIds: rule.targetBlockIds === 'all' ? [] : 'all' });
       return;
     }
-    const cur = rule.targetBlockIds === 'all' ? [] : [...rule.targetBlockIds];
+    const cur = rule.targetBlockIds === 'all' ? [] : [...((rule.targetBlockIds as string[] | undefined) || [])];
     const next = cur.includes(targetId) ? cur.filter((x) => x !== targetId) : [...cur, targetId];
     patchConditionSetRule(setId, ruleId, { targetBlockIds: next });
   };
@@ -3122,140 +3195,563 @@ const LayoutStudio: React.FC = () => {
     </div>
   );
 
-  const renderConditionRule = (setId: string, rule: ConditionSetRule, rIdx: number, total: number) => {
-    const meta = conditionRuleKindMeta[rule.kind];
-    const targets = rule.targetBlockIds === 'all' ? [] : (rule.targetBlockIds || []);
-    const isAll = rule.targetBlockIds === 'all';
+  const ruleSummaryFor = (rule: ConditionSetRule): string => {
+    const parts: string[] = [];
+    if (hasConditionGroups(rule.conditionGroups)) parts.push(conditionGroupsSummary(rule.conditionGroups));
+    if (rule.kind === 'control') {
+      const count = Object.keys(rule.targetStates || {}).length;
+      if (rule.effect || count > 0) {
+        parts.push(rule.effect && count === 0 ? 'All blocks'
+          : count > 0 && rule.effect ? `${count} field${count !== 1 ? 's' : ''} + All blocks`
+          : `${count} field${count !== 1 ? 's' : ''}`);
+      } else {
+        parts.push('No fields configured');
+      }
+    } else {
+      const targets = rule.targetBlockIds === 'all' ? ['All'] : (rule.targetBlockIds || []).map(conditionBlockName);
+      parts.push(targets.length > 0 ? targets.join(', ') : 'No targets');
+    }
+    return parts.join(' \u00b7 ') || 'Always active';
+  };
+
+  const resolveGridState = (effect?: ConditionSetEffect): { visible: boolean; readOnly: boolean; editable: boolean } => {
+    const e = effect || {};
+    return {
+      visible: e.visible !== false,
+      readOnly: e.readOnly === true || e.editable === false,
+      editable: e.editable !== false && e.readOnly !== true,
+    };
+  };
+
+  const setGridRowState = (setId: string, rule: ConditionSetRule, target: 'all' | string, attr: 'visible' | 'readOnly' | 'editable', checked: boolean) => {
+    // Displayed state = own entry, else the All-row effect (mirrors runtime).
+    const base = target === 'all' ? rule.effect : rule.targetStates?.[target];
+    const cur = resolveGridState(base ?? rule.effect);
+    const next = { ...cur };
+    if (attr === 'readOnly') { next.readOnly = checked; if (checked) next.editable = false; }
+    else if (attr === 'editable') { next.editable = checked; if (checked) next.readOnly = false; }
+    else next.visible = checked;
+    const full: ConditionSetEffect = { visible: next.visible, readOnly: next.readOnly, editable: next.editable };
+
+    if (target === 'all') {
+      // Select All: every row follows the All state — clear per-field overrides.
+      patchConditionSetRule(setId, rule.id, { effect: full, targetStates: undefined });
+    } else {
+      const allSt = resolveGridState(rule.effect);
+      const sameAsAll = next.visible === allSt.visible && next.readOnly === allSt.readOnly && next.editable === allSt.editable;
+      const states = { ...(rule.targetStates || {}) };
+      if (sameAsAll) delete states[target];
+      else states[target] = full;
+      patchConditionSetRule(setId, rule.id, { targetStates: Object.keys(states).length ? states : undefined });
+    }
+  };
+
+  const clearColumn = (setId: string, rule: ConditionSetRule, attr: 'visible' | 'readOnly' | 'editable') => {
+    // Uncheck the whole column — explicit off everywhere, not a revert.
+    const e: ConditionSetEffect = { ...(rule.effect || {}), [attr]: false };
+    const states: Record<string, ConditionSetEffect> = {};
+    for (const b of placedBlocks) {
+      const entry: ConditionSetEffect = { ...(rule.targetStates?.[b.id] || {}), [attr]: false };
+      const rs = resolveGridState(entry);
+      if (rs.visible === true && rs.readOnly === false && rs.editable === true) continue; // back to defaults — drop
+      states[b.id] = entry;
+    }
+    patchConditionSetRule(setId, rule.id, {
+      effect: Object.keys(e).length ? e : undefined,
+      targetStates: Object.keys(states).length ? states : undefined,
+    });
+  };
+
+  const allCellChecked = (rule: ConditionSetRule, attr: 'visible' | 'readOnly' | 'editable'): boolean => {
+    // Select All master: checked only when every field is checked for this column.
+    return placedBlocks.every((b) => {
+      const st = resolveGridState(rule.targetStates?.[b.id] ?? rule.effect);
+      return st[attr] === true;
+    });
+  };
+
+  const renderControlGrid = (setId: string, rule: ConditionSetRule) => {
+    const rows: { id: 'all' | string; name: string; isAll: boolean }[] = [
+      { id: 'all', name: 'Check All', isAll: true },
+      ...placedBlocks.map((b) => ({ id: b.id, name: conditionBlockName(b.id), isAll: false })),
+    ];
+    const gridCell = (target: 'all' | string, attr: 'visible' | 'readOnly' | 'editable', label: string) => {
+      const st = resolveGridState(target === 'all' ? rule.effect : (rule.targetStates?.[target] ?? rule.effect));
+      const checked = target === 'all' ? allCellChecked(rule, attr) : (attr === 'visible' ? st.visible : attr === 'readOnly' ? st.readOnly : st.editable);
+      return (
+        <label key={attr} className="ls-prop-hint" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title={label}>
+          <input type="checkbox" checked={checked} disabled={isReadOnly || (target === 'all' && placedBlocks.length === 0)}
+            onChange={(e) => setGridRowState(setId, rule, target, attr, e.target.checked)} />
+        </label>
+      );
+    };
+    const columnHead = (attr: 'visible' | 'readOnly' | 'editable', label: string) => (
+      <th style={{ textAlign: 'center' }}>
+        {label}
+        <div style={{ marginTop: 2, display: 'flex', justifyContent: 'center' }}>
+          <button
+            type="button"
+            className="ls-block__btn"
+            style={{ fontSize: 9, padding: '1px 4px', whiteSpace: 'nowrap' }}
+            title={`Uncheck ${label} for every field`}
+            disabled={isReadOnly}
+            onClick={() => clearColumn(setId, rule, attr)}
+          >
+            Clear All
+          </button>
+        </div>
+      </th>
+    );
     return (
-      <div key={rule.id} className="ls-evt-pvrow-expr" style={{ marginBottom: 8 }}>
-        <div className="ls-evt-pvrow-expr__head">
-          <span className="ls-evt-pvrow-expr__label" style={{ color: meta.color }}>
-            {meta.label} Rule {rIdx + 1}
-          </span>
-          <span className="ls-evt-pvrow-expr__hint">{meta.desc}</span>
-          <div style={{ display: 'flex', gap: 2, marginLeft: 'auto' }}>
-            <button className="ls-block__btn" disabled={rIdx === 0} onClick={() => moveConditionSetRule(setId, rule.id, -1)} title="Move up"><MoveUp size={11} /></button>
-            <button className="ls-block__btn" disabled={rIdx === total - 1} onClick={() => moveConditionSetRule(setId, rule.id, 1)} title="Move down"><MoveDown size={11} /></button>
-            <button className="ls-block__btn ls-block__btn--danger" onClick={() => removeConditionSetRule(setId, rule.id)} title="Delete rule"><X size={11} /></button>
-          </div>
-        </div>
-
-        {renderConditionRow('Rule condition (Query Studio) — applies when these match', rule.conditionGroups, () => setConditionFilterTarget({ kind: 'rule', setId, ruleId: rule.id }))}
-
-        <div className="ls-prop-group" style={{ marginTop: 6 }}>
-          <label className="ls-prop-label">Applies to</label>
-          <div className="ls-evt-chips" style={{ gap: 4 }}>
-            <button
-              type="button"
-              className={`ls-evt-chip ${isAll ? 'ls-evt-chip--selected' : ''}`}
-              style={{ padding: '2px 8px', fontSize: 10 }}
-              onClick={() => toggleConditionTarget(setId, rule.id, 'all', rule)}
-              title="Select All — apply to every block on the form"
-            >
-              <span className="ls-evt-chip__label">All (entire form)</span>
-            </button>
-            {placedBlocks.map((b) => {
-              const on = targets.includes(b.id);
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  className={`ls-evt-chip ${on ? 'ls-evt-chip--selected' : ''}`}
-                  style={{ padding: '2px 8px', fontSize: 10 }}
-                  onClick={() => toggleConditionTarget(setId, rule.id, b.id, rule)}
-                  title={conditionBlockName(b.id)}
-                >
-                  <span className="ls-evt-chip__label">{conditionBlockName(b.id)}</span>
-                </button>
-              );
-            })}
-            {placedBlocks.length === 0 && <p className="ls-empty" style={{ fontSize: 10 }}>No blocks placed yet — add fields on the Layout tab.</p>}
-          </div>
-        </div>
-
-        {rule.kind === 'behavior' && (
-          <div className="ls-prop-group" style={{ marginTop: 6, display: 'flex', gap: 12 }}>
-            <label className="ls-prop-hint" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              <input type="checkbox" checked={!!rule.effect?.visible}
-                onChange={(e) => patchConditionSetRule(setId, rule.id, { effect: { ...rule.effect, visible: e.target.checked } })} /> Visible
-            </label>
-            <label className="ls-prop-hint" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              <input type="checkbox" checked={!!rule.effect?.readOnly}
-                onChange={(e) => patchConditionSetRule(setId, rule.id, { effect: { ...rule.effect, readOnly: e.target.checked, editable: e.target.checked ? false : rule.effect?.editable } })} /> Read Only
-            </label>
-            <label className="ls-prop-hint" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              <input type="checkbox" checked={!!rule.effect?.editable}
-                onChange={(e) => patchConditionSetRule(setId, rule.id, { effect: { ...rule.effect, editable: e.target.checked, readOnly: e.target.checked ? false : rule.effect?.readOnly } })} /> Editable
-            </label>
-          </div>
-        )}
-
-        {rule.kind === 'formatting' && (
-          <div className="ls-prop-group" style={{ marginTop: 6 }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              <label className="ls-prop-hint" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                Text <input type="color" value={rule.style?.textColor || '#000000'}
-                  onChange={(e) => patchConditionSetRule(setId, rule.id, { style: { ...rule.style, textColor: e.target.value } })} />
-              </label>
-              <label className="ls-prop-hint" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                Background <input type="color" value={rule.style?.background || '#ffffff'}
-                  onChange={(e) => patchConditionSetRule(setId, rule.id, { style: { ...rule.style, background: e.target.value } })} />
-              </label>
-              <label className="ls-prop-hint" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <input type="checkbox" checked={!!rule.style?.bold}
-                  onChange={(e) => patchConditionSetRule(setId, rule.id, { style: { ...rule.style, bold: e.target.checked } })} /> Bold
-              </label>
-              <span className="ls-prop-hint" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                Icon
-                <IconPicker
-                  value={rule.style?.icon || ''}
-                  icons={ACTION_BUTTON_ICONS}
-                  onChange={(icon) => patchConditionSetRule(setId, rule.id, { style: { ...rule.style, icon: icon || undefined } })}
-                  disabled={isReadOnly}
-                />
-              </span>
-            </div>
-          </div>
-        )}
-
-        {rule.kind === 'validation' && (
-          <div className="ls-prop-group" style={{ marginTop: 6 }}>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              <select
-                className="sails-input"
-                style={{ fontSize: 10, padding: '3px 4px', flex: 1, minWidth: 90 }}
-                value={rule.validation?.type || 'required'}
-                onChange={(e) => patchConditionSetRule(setId, rule.id, { validation: { ...rule.validation!, type: e.target.value, id: rule.validation?.id || rule.id } })}
-              >
-                <option value="required">Required</option>
-                <option value="cross_field">Cross-Field</option>
-                <option value="regex">Regex Pattern</option>
-                <option value="range">Min / Max</option>
-              </select>
-              {rule.validation?.type === 'regex' && (
-                <input className="sails-input" style={{ fontSize: 10, padding: '3px 4px', flex: 1, minWidth: 120 }}
-                  value={rule.validation?.pattern || ''} placeholder="e.g. ^[A-Z]{3}-\d{4}$"
-                  onChange={(e) => patchConditionSetRule(setId, rule.id, { validation: { ...rule.validation!, pattern: e.target.value } })} />
-              )}
-              {rule.validation?.type === 'range' && (
-                <>
-                  <input className="sails-input" type="number" style={{ fontSize: 10, padding: '3px 4px', width: 70 }}
-                    value={rule.validation?.min ?? ''} placeholder="Min"
-                    onChange={(e) => patchConditionSetRule(setId, rule.id, { validation: { ...rule.validation!, min: e.target.value ? Number(e.target.value) : undefined } })} />
-                  <input className="sails-input" type="number" style={{ fontSize: 10, padding: '3px 4px', width: 70 }}
-                    value={rule.validation?.max ?? ''} placeholder="Max"
-                    onChange={(e) => patchConditionSetRule(setId, rule.id, { validation: { ...rule.validation!, max: e.target.value ? Number(e.target.value) : undefined } })} />
-                </>
-              )}
-              <input className="sails-input" style={{ fontSize: 10, padding: '3px 4px', flex: 2, minWidth: 140 }}
-                value={rule.validation?.message || ''} placeholder="Failure message"
-                onChange={(e) => patchConditionSetRule(setId, rule.id, { validation: { ...rule.validation!, message: e.target.value } })} />
-            </div>
-          </div>
-        )}
+      <div className="ls-table-card" style={{ boxShadow: 'none', marginTop: 6 }}>
+        <table className="ls-cond-table" style={{ width: '100%' }}>
+          <thead>
+            <tr>
+              <th>Fields</th>
+              {columnHead('readOnly', 'Read Only')}
+              {columnHead('visible', 'Visible')}
+              {columnHead('editable', 'Editable')}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id} style={{ background: row.isAll ? 'rgba(157,206,224,.08)' : undefined }}>
+                <td style={{ fontWeight: row.isAll ? 700 : 400, fontSize: 11, textAlign: row.isAll ? 'center' : 'left', whiteSpace: 'nowrap' }}>{row.name}</td>
+                <td style={{ textAlign: 'center' }}>{gridCell(row.id, 'readOnly', 'Read Only')}</td>
+                <td style={{ textAlign: 'center' }}>{gridCell(row.id, 'visible', 'Visible')}</td>
+                <td style={{ textAlign: 'center' }}>{gridCell(row.id, 'editable', 'Editable')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="ls-prop-hint" style={{ padding: 8 }}>
+          Check All applies the column to every field (checked only while all are checked). Clear All under a column unchecks it everywhere — it does not revert.
+        </p>
       </div>
     );
   };
+
+  // ── Formatting grid (per-field styles, All-fields default row) ──
+  const emptyStyle = (st: ConditionSetStyle | undefined): boolean =>
+    !st || (!st.textColor && !st.background && !st.bold && !st.icon);
+
+  const editFormattingCell = (setId: string, rule: ConditionSetRule, target: 'all' | string, patch: Partial<ConditionSetStyle>) => {
+    const base = target === 'all' ? rule.style : rule.targetStyles?.[target];
+    const merged: ConditionSetStyle = { ...(base ?? rule.style ?? {}), ...patch };
+    const clean: ConditionSetStyle = {};
+    if (merged.textColor) clean.textColor = merged.textColor;
+    if (merged.background) clean.background = merged.background;
+    if (merged.bold) clean.bold = true;
+    if (merged.icon) clean.icon = merged.icon;
+    if (target === 'all') {
+      patchConditionSetRule(setId, rule.id, { style: emptyStyle(clean) ? undefined : clean, targetStyles: undefined });
+    } else {
+      const allSt = rule.style && !emptyStyle(rule.style) ? rule.style : undefined;
+      const sameAsAll = emptyStyle(clean)
+        ? (!allSt)
+        : !!allSt && clean.textColor === allSt.textColor && clean.background === allSt.background && clean.bold === allSt.bold && clean.icon === allSt.icon;
+      const states = { ...(rule.targetStyles || {}) };
+      if (sameAsAll) delete states[target];
+      else states[target] = clean;
+      patchConditionSetRule(setId, rule.id, { targetStyles: Object.keys(states).length ? states : undefined });
+    }
+  };
+
+  const clearFormattingColumn = (setId: string, rule: ConditionSetRule, attr: keyof ConditionSetStyle) => {
+    const e: ConditionSetStyle = { ...(rule.style || {}) };
+    delete e[attr];
+    const states: Record<string, ConditionSetStyle> = {};
+    for (const b of placedBlocks) {
+      const entry: ConditionSetStyle = { ...(rule.targetStyles?.[b.id] || {}) };
+      delete entry[attr];
+      if (!emptyStyle(entry)) states[b.id] = entry;
+    }
+    patchConditionSetRule(setId, rule.id, {
+      style: emptyStyle(e) ? undefined : e,
+      targetStyles: Object.keys(states).length ? states : undefined,
+    });
+  };
+
+  const renderFormattingGrid = (setId: string, rule: ConditionSetRule) => {
+    const rows: { id: 'all' | string; name: string; isAll: boolean }[] = [
+      { id: 'all', name: 'All fields', isAll: true },
+      ...placedBlocks.map((b) => ({ id: b.id, name: conditionBlockName(b.id), isAll: false })),
+    ];
+    const styleOf = (target: 'all' | string): ConditionSetStyle =>
+      ({ ...((target === 'all' ? rule.style : rule.targetStyles?.[target]) ?? rule.style ?? {}) });
+    const colHead = (attr: keyof ConditionSetStyle, label: string) => (
+      <th style={{ textAlign: 'center' }}>
+        {label}
+        <div style={{ marginTop: 2, display: 'flex', justifyContent: 'center' }}>
+          <button
+            type="button"
+            className="ls-block__btn"
+            style={{ fontSize: 9, padding: '1px 4px', whiteSpace: 'nowrap' }}
+            title={`Clear ${label} for every field`}
+            disabled={isReadOnly}
+            onClick={() => clearFormattingColumn(setId, rule, attr)}
+          >
+            Clear All
+          </button>
+        </div>
+      </th>
+    );
+    return (
+      <div className="ls-table-card" style={{ boxShadow: 'none', marginTop: 6 }}>
+        <table className="ls-cond-table" style={{ width: '100%' }}>
+          <thead>
+            <tr>
+              <th>Fields</th>
+              {colHead('textColor', 'Text Color')}
+              {colHead('background', 'Background')}
+              {colHead('bold', 'Bold')}
+              {colHead('icon', 'Icon')}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const st = styleOf(row.id);
+              return (
+                <tr key={row.id} style={{ background: row.isAll ? 'rgba(157,206,224,.08)' : undefined }}>
+                  <td style={{ fontWeight: row.isAll ? 700 : 400, fontSize: 11, textAlign: row.isAll ? 'center' : 'left', whiteSpace: 'nowrap' }}>{row.name}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <input type="color" value={st.textColor || '#000000'} disabled={isReadOnly}
+                      title="Text color"
+                      onChange={(e) => editFormattingCell(setId, rule, row.id, { textColor: e.target.value })} />
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <input type="color" value={st.background || '#ffffff'} disabled={isReadOnly}
+                      title="Background color"
+                      onChange={(e) => editFormattingCell(setId, rule, row.id, { background: e.target.value })} />
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <input type="checkbox" checked={!!st.bold} disabled={isReadOnly}
+                      title="Bold"
+                      onChange={(e) => editFormattingCell(setId, rule, row.id, { bold: e.target.checked })} />
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <IconPicker
+                      value={st.icon || ''}
+                      icons={ACTION_BUTTON_ICONS}
+                      onChange={(icon) => editFormattingCell(setId, rule, row.id, { icon: icon || undefined })}
+                      disabled={isReadOnly}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <p className="ls-prop-hint" style={{ padding: 8 }}>
+          All fields sets the default style — a field's cells override it. Clear All under a column clears that style everywhere.
+        </p>
+      </div>
+    );
+  };
+
+  const renderConditionRuleModal = () => {
+    if (!conditionRuleModalTarget) return null;
+    const cs = conditionSets.find((x) => x.id === conditionRuleModalTarget.setId);
+    const rule = cs?.rules.find((r) => r.id === conditionRuleModalTarget.ruleId);
+    if (!cs || !rule) return null;
+    const meta = conditionRuleKindMeta[rule.kind] || conditionRuleKindMeta.control;
+    const rIdx = (cs.rules || []).findIndex((r) => r.id === rule.id);
+    return (
+      <div className="ls-overlay" style={{ zIndex: 1050 }} onClick={() => setConditionRuleModalTarget(null)}>
+        <div className="ls-overlay-card" style={{ width: rule.kind === 'control' ? 760 : 600 }} onClick={(e) => e.stopPropagation()}>
+          <div className="ls-overlay-card__header">
+            <h3 className="ls-overlay-card__title">
+              <span style={{ color: meta.color }}>
+                {rule.kind === 'control' ? <Lock size={14} /> : rule.kind === 'formatting' ? <Palette size={14} /> : <ShieldAlert size={14} />}
+              </span>
+              {rule.label || `${meta.label} Rule ${rIdx + 1}`}
+            </h3>
+            <button className="ls-block__btn" onClick={() => setConditionRuleModalTarget(null)}><X size={14} /></button>
+          </div>
+          <div className="ls-overlay-card__body">
+            {renderConditionRow('Rule condition (Query Studio) — applies when these match', rule.conditionGroups, () => setConditionFilterTarget({ kind: 'rule', setId: cs.id, ruleId: rule.id }))}
+
+            {rule.kind === 'control' && renderControlGrid(cs.id, rule)}
+
+            {rule.kind === 'formatting' && renderFormattingGrid(cs.id, rule)}
+
+          </div>
+          <div className="ls-overlay-card__header" style={{ borderTop: '1px solid var(--sails-border, #e2e8f0)', borderBottom: 'none', justifyContent: 'flex-end', gap: 6 }}>
+            <button className="sails-btn sails-btn--danger sails-btn--sm" onClick={() => { removeConditionSetRule(cs.id, rule.id); setConditionRuleModalTarget(null); }}>
+              <Trash2 size={12} /> Delete Rule
+            </button>
+            <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => setConditionRuleModalTarget(null)}>
+              <CheckCircle2 size={14} /> Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderConditionRuleRow = (setId: string, rule: ConditionSetRule, rIdx: number, total: number) => {
+    const meta = conditionRuleKindMeta[rule.kind] || conditionRuleKindMeta.control;
+    return (
+      <div key={rule.id} className="ls-evt-event" style={{ cursor: 'default' }}>
+        <span className="ls-evt-event__icon" style={{ background: `${meta.color}22`, color: meta.color }}>
+          {rule.kind === 'control' ? <Lock size={12} /> : rule.kind === 'formatting' ? <Palette size={12} /> : <ShieldAlert size={12} />}
+        </span>
+        {conditionRuleLabelEditId === rule.id ? (
+          <input
+            className="sails-input"
+            autoFocus
+            style={{ width: 180, fontSize: 11, padding: '2px 6px' }}
+            value={conditionRuleLabelDraft}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => setConditionRuleLabelDraft(e.target.value)}
+            onBlur={() => {
+              patchConditionSetRule(setId, rule.id, { label: conditionRuleLabelDraft.trim() || undefined });
+              setConditionRuleLabelEditId(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                patchConditionSetRule(setId, rule.id, { label: conditionRuleLabelDraft.trim() || undefined });
+                setConditionRuleLabelEditId(null);
+              }
+              if (e.key === 'Escape') setConditionRuleLabelEditId(null);
+            }}
+          />
+        ) : (
+          <span
+            className="ls-evt-event__label"
+            style={{ fontWeight: 600 }}
+            title="Double-click to rename"
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              if (!isReadOnly) {
+                setConditionRuleLabelEditId(rule.id);
+                setConditionRuleLabelDraft(rule.label || `${meta.label} Rule ${rIdx + 1}`);
+              }
+            }}
+          >{rule.label || `${meta.label} Rule ${rIdx + 1}`}</span>
+        )}
+        <span style={{ fontSize: 10, color: 'var(--sails-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }} title={ruleSummaryFor(rule)}>
+          {ruleSummaryFor(rule)}
+        </span>
+        <div className="ls-evt-event__tools" onClick={(e) => e.stopPropagation()}>
+          <button className="ls-block__btn" disabled={rIdx === 0} onClick={() => moveConditionSetRule(setId, rule.id, -1)} title="Move up"><MoveUp size={11} /></button>
+          <button className="ls-block__btn" disabled={rIdx === total - 1} onClick={() => moveConditionSetRule(setId, rule.id, 1)} title="Move down"><MoveDown size={11} /></button>
+          <button className="sails-btn sails-btn--ghost sails-btn--sm" style={{ padding: '2px 8px', fontSize: 10 }} onClick={() => setConditionRuleModalTarget({ setId, ruleId: rule.id })}>
+            <Settings size={10} /> Open
+          </button>
+          <button className="ls-block__btn ls-block__btn--danger" onClick={() => removeConditionSetRule(setId, rule.id)} title="Delete rule"><X size={11} /></button>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Validation tab (rule items — condition / message / location) ──
+  const patchValidationRule = (id: string, patch: Partial<LayoutValidationRule>) => {
+    setValidationRules((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  };
+
+  const removeValidationRule = (id: string) => {
+    setValidationRules((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const addValidationRule = () => {
+    const id = `vrule_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+    setValidationRules((prev) => [...prev, { id, errorLocation: 'field', targetFieldIds: [] }]);
+  };
+
+  const moveValidationRule = (id: string, dir: -1 | 1) => {
+    setValidationRules((prev) => {
+      const list = [...prev];
+      const i = list.findIndex((r) => r.id === id);
+      const j = i + dir;
+      if (i === -1 || j < 0 || j >= list.length) return prev;
+      [list[i], list[j]] = [list[j], list[i]];
+      return list;
+    });
+  };
+
+  const validationRuleSummary = (r: LayoutValidationRule): string => {
+    const parts: string[] = [];
+    if (hasConditionGroups(r.conditionGroups)) parts.push(conditionGroupsSummary(r.conditionGroups));
+    if (r.errorMessage) parts.push(`"${r.errorMessage}"`);
+    parts.push(r.errorLocation === 'bar' ? 'Error Bar' : 'In Field');
+    const targets = (r.targetFieldIds || []).map((fid) => allFields.find((f) => f.id === fid)?.name || fid);
+    if (targets.length > 0) parts.push(targets.join(', '));
+    return parts.join(' \u00b7 ') || 'Not configured';
+  };
+
+  const renderValidationRuleRow = (r: LayoutValidationRule, rIdx: number, total: number) => (
+    <div key={r.id} className="ls-evt-event" style={{ cursor: 'default' }}>
+      <span className="ls-evt-event__icon" style={{ background: 'rgba(245,158,11,.14)', color: '#d97706' }}>
+        <ShieldAlert size={12} />
+      </span>
+      {validationRuleLabelEditId === r.id ? (
+        <input
+          className="sails-input"
+          autoFocus
+          style={{ width: 180, fontSize: 11, padding: '2px 6px' }}
+          value={validationRuleLabelDraft}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => setValidationRuleLabelDraft(e.target.value)}
+          onBlur={() => {
+            patchValidationRule(r.id, { label: validationRuleLabelDraft.trim() || undefined });
+            setValidationRuleLabelEditId(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              patchValidationRule(r.id, { label: validationRuleLabelDraft.trim() || undefined });
+              setValidationRuleLabelEditId(null);
+            }
+            if (e.key === 'Escape') setValidationRuleLabelEditId(null);
+          }}
+        />
+      ) : (
+        <span
+          className="ls-evt-event__label"
+          style={{ fontWeight: 600 }}
+          title="Double-click to rename"
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            if (!isReadOnly) {
+              setValidationRuleLabelEditId(r.id);
+              setValidationRuleLabelDraft(r.label || `Validation Rule ${rIdx + 1}`);
+            }
+          }}
+        >{r.label || `Validation Rule ${rIdx + 1}`}</span>
+      )}
+      <span style={{ fontSize: 10, color: 'var(--sails-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }} title={validationRuleSummary(r)}>
+        {validationRuleSummary(r)}
+      </span>
+      <div className="ls-evt-event__tools" onClick={(e) => e.stopPropagation()}>
+        <button className="ls-block__btn" disabled={rIdx === 0} onClick={() => moveValidationRule(r.id, -1)} title="Move up"><MoveUp size={11} /></button>
+        <button className="ls-block__btn" disabled={rIdx === total - 1} onClick={() => moveValidationRule(r.id, 1)} title="Move down"><MoveDown size={11} /></button>
+        <button className="sails-btn sails-btn--ghost sails-btn--sm" style={{ padding: '2px 8px', fontSize: 10 }} onClick={() => setValidationRuleModalTarget(r.id)}>
+          <Settings size={10} /> Open
+        </button>
+        <button className="ls-block__btn ls-block__btn--danger" onClick={() => removeValidationRule(r.id)} title="Delete rule"><X size={11} /></button>
+      </div>
+    </div>
+  );
+
+  const renderValidationRuleModal = () => {
+    if (!validationRuleModalTarget) return null;
+    const r = validationRules.find((x) => x.id === validationRuleModalTarget);
+    if (!r) return null;
+    const rIdx = validationRules.findIndex((x) => x.id === r.id);
+    const toggleTarget = (fid: string) => {
+      const cur = r.targetFieldIds || [];
+      const next = cur.includes(fid) ? cur.filter((x) => x !== fid) : [...cur, fid];
+      patchValidationRule(r.id, { targetFieldIds: next });
+    };
+    return (
+      <div className="ls-overlay" style={{ zIndex: 1050 }} onClick={() => setValidationRuleModalTarget(null)}>
+        <div className="ls-overlay-card" style={{ width: 620 }} onClick={(e) => e.stopPropagation()}>
+          <div className="ls-overlay-card__header">
+            <h3 className="ls-overlay-card__title">
+              <span style={{ color: '#d97706' }}><ShieldAlert size={14} /></span>
+              {r.label || `Validation Rule ${rIdx + 1}`}
+            </h3>
+            <button className="ls-block__btn" onClick={() => setValidationRuleModalTarget(null)}><X size={14} /></button>
+          </div>
+          <div className="ls-overlay-card__body">
+            {renderConditionRow('Condition — when these match, the validation fails', r.conditionGroups, () => setConditionFilterTarget({ kind: 'validationRule', validationRuleId: r.id }))}
+
+            <div className="ls-prop-group" style={{ marginTop: 6 }}>
+              <label className="ls-prop-label">Target Fields (where "In Field" errors attach)</label>
+              <div className="ls-evt-chips" style={{ gap: 4 }}>
+                {allFields.map((f) => {
+                  const on = (r.targetFieldIds || []).includes(f.id);
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      className={`ls-evt-chip ${on ? 'ls-evt-chip--selected' : ''}`}
+                      style={{ padding: '2px 8px', fontSize: 10 }}
+                      onClick={() => toggleTarget(f.id)}
+                      title={f.fieldName}
+                    >
+                      <span className="ls-evt-chip__label">{f.name}</span>
+                    </button>
+                  );
+                })}
+                {allFields.length === 0 && <p className="ls-empty" style={{ fontSize: 10 }}>No fields on this model.</p>}
+              </div>
+            </div>
+
+            <div className="ls-prop-group" style={{ marginTop: 6 }}>
+              <label className="ls-prop-label">Error Message</label>
+              <input
+                className="sails-input"
+                value={r.errorMessage || ''}
+                placeholder="e.g. From must be before To"
+                onChange={(e) => patchValidationRule(r.id, { errorMessage: e.target.value || undefined })}
+              />
+            </div>
+
+            <div className="ls-prop-group" style={{ marginTop: 6 }}>
+              <label className="ls-prop-label">Error Message Location</label>
+              <select
+                className="sails-input"
+                value={r.errorLocation || 'field'}
+                onChange={(e) => patchValidationRule(r.id, { errorLocation: e.target.value as 'field' | 'bar' })}
+              >
+                <option value="field">In Field</option>
+                <option value="bar">Error Bar</option>
+              </select>
+              <p className="ls-prop-hint">In Field shows the error under the target fields · Error Bar aggregates failures into the banner above the form.</p>
+            </div>
+          </div>
+          <div className="ls-overlay-card__header" style={{ borderTop: '1px solid var(--sails-border, #e2e8f0)', borderBottom: 'none', justifyContent: 'flex-end', gap: 6 }}>
+            <button className="sails-btn sails-btn--danger sails-btn--sm" onClick={() => { removeValidationRule(r.id); setValidationRuleModalTarget(null); }}>
+              <Trash2 size={12} /> Delete Rule
+            </button>
+            <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => setValidationRuleModalTarget(null)}>
+              <CheckCircle2 size={14} /> Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderDetailValidationArea = () => (
+    <>
+      <div className="ls-page__header" onClick={handleCanvasDeselect}>
+        <h1 className="ls-page__title">Validation</h1>
+        <p className="ls-page__subtitle">Validation rules gating save and create — each with a condition, error message and error location.</p>
+      </div>
+      <div className="ls-evt-container">
+        <div
+          className="ls-table-card"
+          onDragOver={(e) => { e.preventDefault(); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            try {
+              const p = JSON.parse(e.dataTransfer.getData('application/json'));
+              if (p?.type === 'validationRule') addValidationRule();
+            } catch { /* ignore */ }
+          }}
+        >
+          <div className="ls-table-card__header">
+            <ShieldAlert size={13} />
+            <span className="ls-table-card__title">Validation Rules</span>
+            {validationRules.length > 0 && <span className="ls-table-card__badge">{validationRules.length}</span>}
+            <span className="ls-table-card__hint">Saving or creating is blocked while any rule's condition matches</span>
+            <div style={{ marginLeft: 'auto' }}>
+              <button className="ls-block__btn" title="Add validation rule" onClick={() => { if (!isReadOnly) addValidationRule(); }}><Plus size={13} /></button>
+            </div>
+          </div>
+          <div className="ls-evt-events" style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {validationRules.length === 0 ? (
+              <p className="ls-empty" style={{ padding: '10px 0' }}>No validation rules yet — click + or drag "Validation Rule" from the left panel.</p>
+            ) : (
+              validationRules.map((r, ri) => renderValidationRuleRow(r, ri, validationRules.length))
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
 
   const renderDetailConditionsArea = () => {
     const selSet = conditionSets.find((cs) => cs.id === selectedConditionSetId) || null;
@@ -3272,7 +3768,7 @@ const LayoutStudio: React.FC = () => {
               <SlidersHorizontal size={13} />
               <span className="ls-table-card__title">Condition Sets</span>
               {conditionSets.length > 0 && <span className="ls-table-card__badge">{conditionSets.length}</span>}
-              <span className="ls-table-card__hint">Create a set, then add behavior / formatting / validation rules</span>
+              <span className="ls-table-card__hint">Select a set to edit its properties — double-click its label to rename</span>
               <div style={{ marginLeft: 'auto' }}>
                 <button className="ls-block__btn" title="Add condition set" onClick={() => { if (!isReadOnly) addConditionSet(); }}><Plus size={13} /></button>
               </div>
@@ -3311,7 +3807,39 @@ const LayoutStudio: React.FC = () => {
                     } catch { /* ignore */ }
                   }}
                 >
-                  <span className="ls-evt-chip__label">{cs.title}</span>
+                  {conditionSetTitleEditId === cs.id ? (
+                    <input
+                      className="sails-input"
+                      autoFocus
+                      style={{ width: 140, fontSize: 11, padding: '2px 6px' }}
+                      value={conditionSetTitleDraft}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => setConditionSetTitleDraft(e.target.value)}
+                      onBlur={() => {
+                        patchConditionSet(cs.id, { title: conditionSetTitleDraft.trim() || cs.title });
+                        setConditionSetTitleEditId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          patchConditionSet(cs.id, { title: conditionSetTitleDraft.trim() || cs.title });
+                          setConditionSetTitleEditId(null);
+                        }
+                        if (e.key === 'Escape') setConditionSetTitleEditId(null);
+                      }}
+                    />
+                  ) : (
+                    <span
+                      className="ls-evt-chip__label"
+                      title="Double-click to rename"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        if (!isReadOnly) {
+                          setConditionSetTitleEditId(cs.id);
+                          setConditionSetTitleDraft(cs.title);
+                        }
+                      }}
+                    >{cs.title}</span>
+                  )}
                   {hasConditionGroups(cs.conditionGroups) && <span className="ls-evt-chip-mini ls-evt-chip-mini--store"><Filter size={9} /> cond</span>}
                   <span className="ls-evt-chip__variant ls-evt-chip__variant--secondary">{(cs.rules || []).length} rule{(cs.rules || []).length !== 1 ? 's' : ''}</span>
                   <button className="ls-evt-chip__del" title="Delete set" onClick={(e) => { e.stopPropagation(); removeConditionSet(cs.id); }}><X size={10} /></button>
@@ -3320,63 +3848,31 @@ const LayoutStudio: React.FC = () => {
             </div>
           </div>
 
-          {/* Selected set */}
+          {/* Selected set — rules list only (config via modal) */}
           {selSet ? (
-            <div className="ls-table-card" style={{ marginTop: 8 }}>
+            <div
+              className="ls-table-card"
+              style={{ marginTop: 8 }}
+              onDragOver={(e) => { e.preventDefault(); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                try {
+                  const p = JSON.parse(e.dataTransfer.getData('application/json'));
+                  if (p?.type === 'conditionRule' && p.conditionRuleKind) addConditionSetRule(selSet.id, p.conditionRuleKind);
+                } catch { /* ignore */ }
+              }}
+            >
               <div className="ls-table-card__header">
                 <GitBranch size={13} />
-                {conditionSetTitleEditId === selSet.id ? (
-                  <input
-                    className="sails-input"
-                    autoFocus
-                    style={{ width: 220, fontSize: 12, padding: '3px 8px' }}
-                    value={conditionSetTitleDraft}
-                    onChange={(e) => setConditionSetTitleDraft(e.target.value)}
-                    onBlur={() => {
-                      patchConditionSet(selSet.id, { title: conditionSetTitleDraft.trim() || selSet.title });
-                      setConditionSetTitleEditId(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        patchConditionSet(selSet.id, { title: conditionSetTitleDraft.trim() || selSet.title });
-                        setConditionSetTitleEditId(null);
-                      }
-                      if (e.key === 'Escape') setConditionSetTitleEditId(null);
-                    }}
-                  />
-                ) : (
-                  <span
-                    className="ls-table-card__title"
-                    title="Double-click to rename"
-                    onDoubleClick={(e) => { e.stopPropagation(); setConditionSetTitleEditId(selSet.id); setConditionSetTitleDraft(selSet.title); }}
-                  >{selSet.title}</span>
-                )}
-                <span className="ls-table-card__badge">{(selSet.rules || []).length} rule{(selSet.rules || []).length !== 1 ? 's' : ''}</span>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
-                  <span className="ls-table-card__hint">Rules run top-to-bottom — last matching behavior rule wins</span>
-                  <button className="ls-block__btn" title="Delete set" onClick={() => removeConditionSet(selSet.id)}><Trash2 size={12} /></button>
-                </div>
+                <span className="ls-table-card__title">Rules</span>
+                <span className="ls-table-card__badge">{(selSet.rules || []).length}</span>
+                <span className="ls-table-card__hint">Top-to-bottom · last matching control rule wins</span>
               </div>
-
-              <div className="ls-summary-panel__body" style={{ padding: 12 }}>
-                <div className="ls-prop-group" style={{ borderTop: 'none', paddingTop: 0 }}>
-                  {renderConditionRow('Set condition (Query Studio) — the set is inactive while these do not match', selSet.conditionGroups, () => setConditionFilterTarget({ kind: 'set', setId: selSet.id }))}
-                </div>
-
-                <div className="ls-section-divider" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                  <span>Rules</span>
-                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
-                    {(['behavior', 'formatting', 'validation'] as const).map((k) => (
-                      <button key={k} className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => addConditionSetRule(selSet.id, k)}>
-                        <Plus size={11} /> {conditionRuleKindMeta[k].label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              <div className="ls-evt-events" style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {(selSet.rules || []).length === 0 ? (
-                  <p className="ls-empty" style={{ padding: '12px 0' }}>No rules yet. Add a Behavior, Formatting or Validation rule.</p>
+                  <p className="ls-empty" style={{ padding: '10px 0' }}>No rules yet — click or drag a rule type from the left panel.</p>
                 ) : (
-                  selSet.rules.map((r, ri) => renderConditionRule(selSet.id, r, ri, selSet.rules.length))
+                  selSet.rules.map((r, ri) => renderConditionRuleRow(selSet.id, r, ri, selSet.rules.length))
                 )}
               </div>
             </div>
@@ -3524,6 +4020,14 @@ const LayoutStudio: React.FC = () => {
             onClick={() => { setActiveTab('conditions'); handleCanvasDeselect(); }}
           >
             <SlidersHorizontal size={13} /> Conditions
+          </button>
+          <button
+            type="button"
+            className={`ls-tab ${workingTab === 'validation' ? 'ls-tab--active' : ''}`}
+            onClick={() => { setActiveTab('validation'); handleCanvasDeselect(); }}
+          >
+            <ShieldAlert size={13} /> Validation
+            {validationRules.length > 0 && <span className="ls-tab__count">{validationRules.length}</span>}
           </button>
         </div>
       )}
@@ -3699,10 +4203,48 @@ const LayoutStudio: React.FC = () => {
                   </>
                 )}
               </>
+            ) : workingTab === 'validation' ? (
+              <>
+                <div className="ls-palette__group-label">VALIDATION</div>
+                <div
+                  className="ls-palette-field ls-palette-field--block"
+                  draggable={!isReadOnly}
+                  onDragStart={(e) => handleDragStart(e, { type: 'validationRule' })}
+                  onClick={() => { if (!isReadOnly) addValidationRule(); }}
+                >
+                  <span className="ls-evt-palette-icon" style={{ background: 'rgba(245,158,11,.14)', color: '#d97706' }}><ShieldAlert size={13} /></span>
+                  <span>Validation Rule</span>
+                  <span className="ls-type-tag">condition · message · location</span>
+                  <ArrowRight size={12} className="ls-add-icon" />
+                </div>
+                <p className="ls-palette__hint">Click to add — or drag onto the rules list. Each rule opens its configuration modal.</p>
+              </>
             ) : (
               <>
-                <div className="ls-palette__group-label">CONDITIONS</div>
-                <p className="ls-palette__hint">Manage visibility conditions, validation rules and conditional formatting from the Conditions tab.</p>
+                <div className="ls-palette__group-label">RULE TYPES</div>
+                {(['control', 'formatting'] as const).map((k) => {
+                  const meta = conditionRuleKindMeta[k];
+                  return (
+                    <div key={k} className="ls-palette-field ls-palette-field--block"
+                      draggable={!!selectedConditionSetId && !isReadOnly}
+                      onDragStart={(e) => {
+                        if (!selectedConditionSetId) { e.preventDefault(); return; }
+                        handleDragStart(e, { type: 'conditionRule', conditionRuleKind: k });
+                      }}
+                      onClick={() => { if (selectedConditionSetId) addConditionSetRule(selectedConditionSetId, k); }}
+                    >
+                      <span className="ls-evt-palette-icon" style={{ background: `${meta.color}22`, color: meta.color }}>
+                        {k === 'control' ? <Lock size={13} /> : k === 'formatting' ? <Palette size={13} /> : <ShieldAlert size={13} />}
+                      </span>
+                      <span>{meta.label}</span>
+                      <span className="ls-type-tag">{meta.desc}</span>
+                      <ArrowRight size={12} className="ls-add-icon" />
+                    </div>
+                  );
+                })}
+                <p className="ls-palette__hint">
+                  {selectedConditionSetId ? 'Click to add to the selected set — or drag onto its rules.' : 'Select a Condition Set to add rules.'}
+                </p>
               </>
             )}
           </div>
@@ -4123,7 +4665,7 @@ const LayoutStudio: React.FC = () => {
                           if (blk.blockType === 'field' && field) {
                             const condState = previewConditionDerived.stateOf(blk.id);
                             const condStyle = previewConditionDerived.stylesOf(blk.id);
-                            const condVals = previewConditionDerived.validationsOf(blk.id);
+                            const condVals = previewValidationRulesByField[field.id] || [];
                             const isConditionalHidden = condState.hidden;
 
                             return (
@@ -4288,7 +4830,7 @@ const LayoutStudio: React.FC = () => {
                                         if (tb.blockType === 'field' && tbField) {
                                           const tbCondState = previewConditionDerived.stateOf(tb.id);
                                           const tbCondStyle = previewConditionDerived.stylesOf(tb.id);
-                                          const tbCondVals = previewConditionDerived.validationsOf(tb.id);
+                                          const tbCondVals = previewValidationRulesByField[tbField.id] || [];
                                           const isCondHidden = tbCondState.hidden;
                                           const isDragOver = dragOverChildBlockId === tb.id;
                                           return (
@@ -4419,6 +4961,8 @@ const LayoutStudio: React.FC = () => {
               ) : (
                 <>{renderDetailEventsArea()}</>
               )
+            ) : workingTab === 'validation' ? (
+              <>{renderDetailValidationArea()}</>
             ) : (
               viewType === 'LIST' ? (
                 <>{renderListConditionsArea()}</>
@@ -4889,7 +5433,46 @@ const LayoutStudio: React.FC = () => {
                     </>
                   ) : (
                     <>
-                    {activeTab === 'events' ? (
+                    {activeTab === 'validation' ? (
+                      <>
+                        <div className="ls-section-divider">Validation Properties</div>
+                        <p className="ls-empty" style={{ fontSize: 10 }}>Configure per-field rules in the grid — condition, alert message and error location. Failing rules block save and create.</p>
+                      </>
+                    ) : activeTab === 'conditions' ? (
+                      selectedConditionSetId ? (() => {
+                        const cs = conditionSets.find((x) => x.id === selectedConditionSetId);
+                        if (!cs) return null;
+                        return (
+                          <>
+                            <div className="ls-section-divider">Condition Set Properties</div>
+                            <div className="ls-prop__name">{cs.title}</div>
+                            <div className="ls-prop__type">condition set</div>
+                            <div className="ls-prop-group">
+                              <label className="ls-prop-label">Title</label>
+                              <input className="sails-input" value={cs.title} disabled={isReadOnly}
+                                onChange={(e) => patchConditionSet(cs.id, { title: e.target.value })} />
+                            </div>
+                            <div className="ls-prop-group">
+                              {renderConditionRow('Set condition — the set is inactive while these do not match', cs.conditionGroups, () => setConditionFilterTarget({ kind: 'set', setId: cs.id }))}
+                            </div>
+                            <div className="ls-prop-group">
+                              <label className="ls-prop-label">Rules</label>
+                              <p className="ls-prop-hint">{(cs.rules || []).length} rule{(cs.rules || []).length !== 1 ? 's' : ''} · configurable from the canvas via the Open button.</p>
+                            </div>
+                            <button className="sails-btn sails-btn--danger sails-btn--sm" disabled={isReadOnly}
+                              onClick={() => removeConditionSet(cs.id)}
+                              style={{ width: '100%', justifyContent: 'center' }}>
+                              <Trash2 size={12} /> Delete Set
+                            </button>
+                          </>
+                        );
+                      })() : (
+                        <>
+                          <div className="ls-section-divider">Condition Set Properties</div>
+                          <p className="ls-empty" style={{ fontSize: 10 }}>Select a Condition Set to edit its properties.</p>
+                        </>
+                      )
+                    ) : activeTab === 'events' ? (
                       selectedDetailEvent ? (
                         <>
                           <div className="ls-section-divider">Event Properties</div>
@@ -5614,7 +6197,13 @@ const LayoutStudio: React.FC = () => {
         );
       })()}
 
-      {/* ── Condition filter overlay (Query Studio) — sets / rules / sections / pre-validations ── */}
+      {/* ── Condition rule configuration modal ── */}
+      {renderConditionRuleModal()}
+
+      {/* ── Validation rule configuration modal ── */}
+      {renderValidationRuleModal()}
+
+      {/* ── Condition filter overlay (Query Studio) — sets / rules / sections ── */}
       {conditionFilterTarget && (() => {
         const t = conditionFilterTarget;
         let cs: ConditionSet | undefined;
@@ -5634,6 +6223,11 @@ const LayoutStudio: React.FC = () => {
             if (rule) patchConditionSetRule(cs!.id, rule.id, { conditionGroups: g });
             else patchConditionSet(cs!.id, { conditionGroups: g });
           };
+        } else if (t.kind === 'validationRule') {
+          const r = validationRules.find((x) => x.id === t.validationRuleId);
+          groups = r?.conditionGroups;
+          title = 'Validation Condition';
+          apply = (g) => patchValidationRule(r!.id, { conditionGroups: g });
         } else if (t.kind === 'section') {
           const act = detailActions.find((a) => a.id === t.actionId);
           const sec = act?.sections?.find((x) => x.id === t.sectionId);

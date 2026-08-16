@@ -47,8 +47,6 @@ export interface ConditionSetsDerived {
   stateOf: (blockId: string) => ConditionBlockState;
   /** Merged formatting styles per block ('all' rules included). */
   stylesOf: (blockId: string) => ConditionSetStyle | undefined;
-  /** Validation rules per block ('all' rules included), in rule order. */
-  validationsOf: (blockId: string) => NonNullable<ConditionSetRule['validation']>[];
 }
 
 const DEFAULT_STATE: ConditionBlockState = { hidden: false, readOnly: false, editable: true };
@@ -77,7 +75,7 @@ function stateOf(effect: NonNullable<ConditionSetRule['effect']>): ConditionBloc
   return {
     hidden: effect.visible === false,
     readOnly: effect.readOnly === true || effect.editable === false,
-    editable: effect.editable === true && effect.readOnly !== true,
+    editable: effect.editable !== false && effect.readOnly !== true,
   };
 }
 
@@ -85,30 +83,37 @@ function stateOf(effect: NonNullable<ConditionSetRule['effect']>): ConditionBloc
 export function deriveConditionSets(activeRules: ConditionSetRule[]): ConditionSetsDerived {
   const stateByBlock = new Map<string, ConditionBlockState>();
   const stylesByBlock = new Map<string, ConditionSetStyle>();
-  const validationsByBlock = new Map<string, NonNullable<ConditionSetRule['validation']>[]>();
   let allEffect: NonNullable<ConditionSetRule['effect']> | undefined;
   let allStyle: ConditionSetStyle | undefined;
-  const allValidations: NonNullable<ConditionSetRule['validation']>[] = [];
 
   for (const rule of activeRules) {
+    const isControl = rule.kind === 'control' || (rule.kind as string) === 'behavior'; // legacy
     const isAll = rule.targetBlockIds === 'all';
-    const ids = isAll ? [] : (rule.targetBlockIds as string[]);
-    if (rule.kind === 'behavior' && rule.effect) {
-      const st = stateOf(rule.effect);
-      if (isAll) allEffect = rule.effect;
-      else for (const id of ids) stateByBlock.set(id, st);
-    } else if (rule.kind === 'formatting' && rule.style) {
-      if (isAll) allStyle = mergeStyle(allStyle, rule.style);
-      else for (const id of ids) stylesByBlock.set(id, mergeStyle(stylesByBlock.get(id), rule.style));
-    } else if (rule.kind === 'validation' && rule.validation) {
-      if (isAll) {
-        allValidations.push(rule.validation);
-      } else {
-        for (const id of ids) {
-          const list = validationsByBlock.get(id) || [];
-          list.push(rule.validation!);
-          validationsByBlock.set(id, list);
+    const ids = isAll ? [] : ((rule.targetBlockIds as string[] | undefined) || []);
+    if (isControl) {
+      // Field Control: All-row state (effect) + per-block states (targetStates).
+      if (rule.effect) allEffect = rule.effect;
+      if (rule.targetStates) {
+        for (const [id, st] of Object.entries(rule.targetStates)) {
+          if (st) stateByBlock.set(id, stateOf(st));
         }
+      }
+      // Legacy migration fallback: per-block target list + one effect.
+      if (!rule.targetStates && rule.effect && Array.isArray(rule.targetBlockIds)) {
+        for (const id of rule.targetBlockIds) stateByBlock.set(id, stateOf(rule.effect));
+      }
+    } else if (rule.kind === 'formatting' && (rule.style || rule.targetStyles)) {
+      if (rule.targetStyles) {
+        for (const [id, st] of Object.entries(rule.targetStyles)) {
+          if (st) stylesByBlock.set(id, mergeStyle(stylesByBlock.get(id), st));
+        }
+        // All-row style = default for blocks without their own entry.
+        if (rule.style) allStyle = mergeStyle(allStyle, rule.style);
+      } else if (isAll) {
+        if (rule.style) allStyle = mergeStyle(allStyle, rule.style);
+      } else {
+        // Legacy fallback: per-block target list + one style.
+        for (const id of ids) stylesByBlock.set(id, mergeStyle(stylesByBlock.get(id), rule.style));
       }
     }
   }
@@ -120,6 +125,5 @@ export function deriveConditionSets(activeRules: ConditionSetRule[]): ConditionS
       return allEffect ? stateOf(allEffect) : DEFAULT_STATE;
     },
     stylesOf: (blockId) => stylesByBlock.get(blockId) || allStyle || undefined,
-    validationsOf: (blockId) => [...allValidations, ...(validationsByBlock.get(blockId) || [])],
   };
 }

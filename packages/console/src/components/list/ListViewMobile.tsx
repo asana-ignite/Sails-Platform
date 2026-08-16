@@ -226,6 +226,10 @@ export const ListViewMobile: React.FC<ListViewMobileProps> = ({
   }, [renderCellValue]);
 
   const renderPrimaryValue = useCallback((rec: any, col: any) => {
+    if (!col || !col.fieldId) {
+      const firstKey = Object.keys(rec || {}).find(k => k !== 'id' && k !== 'tenant_id' && !k.startsWith('_'));
+      return firstKey ? (rec[firstKey] ?? '\u2014') : (rec?.name || rec?.id || '\u2014');
+    }
     const f = fields.find((ff) => ff.id === col.fieldId || ff.fieldName === col.fieldId);
     if (!f) return rec[col.fieldId] ?? '\u2014';
     return renderCellValue(f, rec);

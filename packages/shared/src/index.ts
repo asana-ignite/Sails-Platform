@@ -543,8 +543,10 @@ export interface LayoutConfig {
   fields?: LayoutField[];
   /** Layout-level transient variables (form-event chains + Conditions tab). */
   formVariables?: FormVariable[];
-  /** Named groups of behavior / formatting / validation rules (detail view). */
+  /** Named groups of behavior / formatting rules (detail view). */
   conditionSets?: ConditionSet[];
+  /** Per-field validation rules (Validation tab) — gate save/create. */
+  validations?: LayoutValidationRule[];
   relatedRecords?: RelatedRecord[];    // only for DETAIL view
 
   // LIST/Table view config
@@ -624,6 +626,24 @@ export interface DetailAction {
   sections?: ActionSection[];
 }
 
+/** A validation rule on the Validation tab.
+ *  When `conditionGroups` MATCH the record, the validation FAILS: the error
+ *  message is shown at `errorLocation` and save/create is blocked.
+ *  errorLocation: 'field' = inline under targetFieldIds; 'bar' = the error bar. */
+export interface LayoutValidationRule {
+  id: string;
+  /** Optional display name (defaults to "Validation Rule <N>"). */
+  label?: string;
+  /** Query-Studio condition — when it matches, the validation fails. */
+  conditionGroups?: FilterGroup[];
+  /** Alert message shown when the rule fails. */
+  errorMessage?: string;
+  /** Where the error is displayed. */
+  errorLocation?: 'field' | 'bar';
+  /** Fields the error attaches to ('field' location). */
+  targetFieldIds?: string[];
+}
+
 /** Control-state flags a behavior rule enforces on its targets when active. */
 export interface ConditionSetEffect {
   visible?: boolean;
@@ -642,13 +662,22 @@ export interface ConditionSetStyle {
 /** One rule inside a Condition Set. */
 export interface ConditionSetRule {
   id: string;
+  /** Optional display name (defaults to "<Kind> Rule <N>"). */
+  label?: string;
   /** Query-Studio filter groups; the rule applies only while these match. */
   conditionGroups?: FilterGroup[];
-  /** Placed blocks this rule targets, or 'all' (Select All — whole form). */
-  targetBlockIds: string[] | 'all';
-  kind: 'behavior' | 'formatting' | 'validation';
+  /** Legacy target list (pre-grid) — migrated to targetStates/effect on load. */
+  targetBlockIds?: string[] | 'all';
+  kind: 'control' | 'formatting';
+  /** Field Control: enforced state for ALL blocks (the 'All blocks' grid row). */
   effect?: ConditionSetEffect;
+  /** Field Control: per-block enforced states (deviant attributes only). */
+  targetStates?: Record<string, ConditionSetEffect>;
+  /** Formatting: style for ALL fields (the 'All fields' grid row). */
   style?: ConditionSetStyle;
+  /** Formatting: per-block full styles (override the All-row style). */
+  targetStyles?: Record<string, ConditionSetStyle>;
+  /** Validation: rule for ALL fields (the 'All fields' grid row). */
   validation?: {
     id: string;
     type: string;
@@ -660,6 +689,15 @@ export interface ConditionSetRule {
     dependentOperator?: string;
     dependentValue?: string;
   };
+  /** Validation: per-block rules (override the All-row rule). */
+  targetValidations?: Record<string, {
+    id: string;
+    type: string;
+    message?: string;
+    pattern?: string;
+    min?: number;
+    max?: number;
+  }>;
 }
 
 /** A named group of rules; the whole set is inactive while its groups don't match. */

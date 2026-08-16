@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, UserCheck, Search, ChevronDown, X, Check } from 'lucide-react';
 import type { FieldControlPlugin, FieldControlProps } from '../types';
 import { useAuth } from '../../../contexts/AuthContext';
+import { fetchCached } from '../../../api/client';
 import '../controls.css';
 
 interface UserItem {
@@ -21,6 +22,33 @@ const DEFAULT_USERS: UserItem[] = [
 ];
 
 let cachedUsers: UserItem[] | null = null;
+let inFlightUsersPromise: Promise<UserItem[]> | null = null;
+
+export function getTenantUsers(): Promise<UserItem[]> {
+  if (cachedUsers) return Promise.resolve(cachedUsers);
+  if (!inFlightUsersPromise) {
+    inFlightUsersPromise = fetchCached('/api/tenant/users', undefined, 60000)
+      .then((data) => {
+        const rows = Array.isArray(data) ? data : (data?.data || []);
+        if (Array.isArray(rows) && rows.length > 0) {
+          const mapped: UserItem[] = rows.map((u: any) => ({
+            id: u.id,
+            name: u.name || u.email,
+            email: u.email,
+            avatar: u.image || u.avatar,
+          }));
+          cachedUsers = mapped;
+          return mapped;
+        }
+        return DEFAULT_USERS;
+      })
+      .catch(() => DEFAULT_USERS)
+      .finally(() => {
+        inFlightUsersPromise = null;
+      });
+  }
+  return inFlightUsersPromise;
+}
 
 /** Load the tenant user list once per session; shared by edit + display renderers. */
 export function useTenantUsers(): { users: UserItem[]; loaded: boolean } {
@@ -30,26 +58,12 @@ export function useTenantUsers(): { users: UserItem[]; loaded: boolean } {
   useEffect(() => {
     if (cachedUsers) return;
     let isMounted = true;
-    fetch('/api/tenant/users')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
-          const mapped: UserItem[] = data.map((u: any) => ({
-            id: u.id,
-            name: u.name || u.email,
-            email: u.email,
-            avatar: u.image || u.avatar,
-          }));
-          cachedUsers = mapped;
-          setUsers(mapped);
-        }
-      })
-      .catch(() => {
-        // Keep DEFAULT_USERS fallback
-      })
-      .finally(() => {
-        if (isMounted) setLoaded(true);
-      });
+    getTenantUsers().then((list) => {
+      if (isMounted) {
+        setUsers(list);
+        setLoaded(true);
+      }
+    });
     return () => {
       isMounted = false;
     };

@@ -19,7 +19,7 @@ import {
   Trash2,
   List
 } from 'lucide-react';
-import type { TableLayout, SailsFieldDefinition, ConsoleMenu, DetailAction, FormVariable } from '@sails/shared';
+import type { TableLayout, SailsFieldDefinition, ConsoleMenu, DetailAction, FormVariable, LayoutValidationRule } from '@sails/shared';
 import { isSystemField, SYSTEM_PROTECTED_COLUMNS, registerExpressionFunctions } from '@sails/shared';
 import jsonata from 'jsonata';
 import LoadingScreen from '../components/common/LoadingScreen';
@@ -30,6 +30,7 @@ import DynamicIcon from '../components/common/DynamicIcon';
 import type { FieldValidation } from '../features/controls/types';
 import { evaluateExpressionFields } from '../utils/expressionLive';
 import { resolveActiveRules, deriveConditionSets, conditionEvalContext } from '../utils/conditionSets';
+import { evaluateFilterGroups } from '@sails/shared';
 import { useLocalizedText } from '../lib/useLocalizedText';
 import { NotificationMessageModal } from '../components/common/NotificationMessageModal';
 import '../components/common/NotificationMessageModal.css';
@@ -432,22 +433,53 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
     setFormVars(out);
   }, [record?.id]);
 
-  // ── Condition Sets: active rules against record + form vars ──
-  const conditionDerived = useMemo(() => {
-    return deriveConditionSets(resolveActiveRules((config as any)?.conditionSets, conditionEvalContext(record, formVars, fields, auth.user ? { id: auth.user.id, role: auth.user.role, email: auth.user.email } : undefined)));
-  }, [config, record, formVars]);
+  const [liveExpressionValues, setLiveExpressionValues] = useState<Record<string, any> | null>(null);
 
-  // Field → block validation rules (sections + tabs), keyed by fieldId.
+  // ── Live record for conditions: form input while editing/creating ──
+  const liveConditionRecord = useMemo(() => {
+    const base = record || {};
+    if (!isEditing && !isNewMode) return base;
+    return { ...base, ...formData, ...(liveExpressionValues || {}) };
+  }, [record, formData, liveExpressionValues, isEditing, isNewMode]);
+
+  const conditionUser = auth.user ? { id: auth.user.id, role: auth.user.role, email: auth.user.email } : undefined;
+
+  // ── Condition Sets: active rules against the LIVE record + form vars ──
+  const conditionDerived = useMemo(() => {
+    return deriveConditionSets(resolveActiveRules((config as any)?.conditionSets, conditionEvalContext(liveConditionRecord, formVars, fields, conditionUser)));
+  }, [config, liveConditionRecord, formVars, fields]);
+
+  // ── Validation tab rules: active (conditions match the live record) ──
+  const activeValidationRules = useMemo(() => {
+    const rules: LayoutValidationRule[] = (config as any)?.validations || [];
+    const ctx = conditionEvalContext(liveConditionRecord, formVars, fields, conditionUser);
+    return rules.filter((r) => evaluateFilterGroups(r.conditionGroups, ctx));
+  }, [config, liveConditionRecord, formVars, fields]);
+
+  /** Bar-location rules (aggregated into the error bar). */
+  const barValidationRules = useMemo(
+    () => activeValidationRules.filter((r) => r.errorLocation === 'bar'),
+    [activeValidationRules],
+  );
+
+  /** In-Field failing rules keyed by target fieldId. */
+  const failingInFieldByField = useMemo(() => {
+    const map: Record<string, LayoutValidationRule[]> = {};
+    for (const r of activeValidationRules) {
+      if (r.errorLocation === 'bar') continue;
+      for (const fid of r.targetFieldIds || []) {
+        const list = map[fid] || (map[fid] = []);
+        list.push(r);
+      }
+    }
+    return map;
+  }, [activeValidationRules]);
+
+  // Field → block validation rules (sections + tabs), keyed by fieldId (legacy block rules only).
   const blockRulesByField = useMemo(() => {
     const map: Record<string, FieldValidation[]> = {};
     const collect = (list: any[]) => {
       for (const b of list || []) {
-        if (b?.fieldId) {
-          const setRules = conditionDerived.validationsOf(b.id);
-          if (setRules.length > 0) {
-            map[b.fieldId] = [...(map[b.fieldId] || []), ...(setRules as FieldValidation[])];
-          }
-        }
         if (b?.validations?.length && b.fieldId) {
           map[b.fieldId] = [...(map[b.fieldId] || []), ...b.validations];
         }
@@ -458,7 +490,16 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
     };
     collect((config as any)?.blocks || []);
     return map;
-  }, [config, conditionDerived]);
+  }, [config]);
+
+  // ── Live error bar: bar-location failures for touched fields (or all on save) ──
+  const liveBarFailures = useMemo(() => {
+    const out: string[] = [];
+    for (const r of barValidationRules) {
+      if (r.errorMessage) out.push(r.errorMessage);
+    }
+    return out;
+  }, [barValidationRules]);
 
   // Blocks whose model field no longer exists are dropped up front (the server
   // prunes layouts on field delete; this covers layouts saved before that fix)
@@ -491,7 +532,6 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
   // Re-evaluate computed fields on every keystroke so formulas update in real
   // time while editing/creating (no save needed). Read-only mode evaluates
   // against the stored record (harmless; keeps the value fresh).
-  const [liveExpressionValues, setLiveExpressionValues] = useState<Record<string, any> | null>(null);
   useEffect(() => {
     let cancelled = false;
     const hasExpressions = (fields || []).some(
@@ -547,6 +587,10 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
       const key = field.fieldName || field.id;
       if (!key || isSystemField(key)) continue;
       issues.push(...validateFieldIssues(field, formData[key], blockRulesByField[field.id], formData));
+    }
+    // Validation-tab rules gate the save — a matched condition = failing.
+    for (const r of activeValidationRules) {
+      if (r.errorMessage) issues.push(r.errorMessage);
     }
     if (issues.length > 0) {
       setSaveAttempted(true);
@@ -930,7 +974,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
           : (isEditable ? undefined : record ? record[field.fieldName] ?? record[field.id] : undefined)
         : isEditable ? formData[key] ?? '' : record ? record[field.fieldName] ?? record[field.id] : undefined;
 
-      const fieldRules = [...(b.validations || []), ...conditionDerived.validationsOf(b.id)] as FieldValidation[];
+      const fieldRules = (b.validations || []) as FieldValidation[];
       return (
         <div
           key={b.id || field.id}
@@ -969,6 +1013,13 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
           ) : (
             <div className="ls-block__value">
               <DetailFieldDisplay field={field} val={val} controlPluginId={b.controlPluginId} />
+            </div>
+          )}
+          {(!!touched[key] || saveAttempted) && (failingInFieldByField[field.id] || []).length > 0 && (
+            <div className="sails-field-error">
+              {failingInFieldByField[field.id].map((fr, i) => (
+                <div key={i}>{fr.errorMessage || 'Validation failed.'}</div>
+              ))}
             </div>
           )}
         </div>
@@ -1177,6 +1228,15 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
           onSave={() => handleSaveRecord()}
           showBack={!inStack}
         />
+
+        {liveBarFailures.length > 0 && (
+          <div className="sails-detail-error-banner" style={{ margin: '0 24px 16px' }}>
+            <AlertCircle size={18} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {liveBarFailures.map((m, i) => <span key={i}>{m}</span>)}
+            </div>
+          </div>
+        )}
 
         <section className="sails-page-body" style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', gap: 24 }}>
           {saveError && (

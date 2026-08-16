@@ -12,6 +12,9 @@ Multi-tenant, schema-per-tenant platform. Monorepo: `packages/core` (Next.js API
 6. **`packages/core/tests/*` (test-engine, test-security, test-validation, test-provisioner) are DESTRUCTIVE** — their CLEANUP phases run `tenant.deleteMany({})` / `user.deleteMany({})` on the LIVE dev DB. They require `ALLOW_DESTRUCTIVE_TESTS=true` to run, preventing accidental execution against non-test databases.
 7. **Never run `DISCARD ALL` in PostgreSQL connection transaction wrappers.** `DISCARD ALL` kills prepared statements and degrades PgBouncer transaction pooling. Use targeted `RESET ROLE` and rely on `SET LOCAL` automatic cleanup.
 8. **Always use `configCache` for frequent metadata & permission checks** (`resolveTable`, `AccessGuard`) to avoid redundant relational Prisma joins before every tenant data transaction.
+9. **Never execute concurrent queries on a single `pg` connection socket via `Promise.all`**. Run `dataSQL` and `countSQL` sequentially with `await` to prevent connection pipeline lock contention.
+10. **Always deduplicate cell-level API requests (`fetchCached` / in-flight Promise)**. Never dispatch per-row un-deduplicated API fetches in table cell renderers (`UserControl`, lookups) to prevent "Thundering Herd" API bursts.
+11. **Never declare React hooks below early conditional returns**. All hooks (`useState`, `useMemo`, `useEffect`, `useCallback`) MUST be called at the unconditional top-level of the component to prevent React Hook Ordering crashes on state/loading transitions.
 
 ## Environment
 

@@ -57,6 +57,7 @@ const DynamicTablePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [tableName, setTableName] = useState<string | null>(null);
   const [layoutId, setLayoutId] = useState<string | null>(null);
+  const [resolvedLayout, setResolvedLayout] = useState<any>(null);
   const [pageActions, setPageActions] = useState<{ actions: ListAction[]; execute: (a: ListAction) => void } | null>(null);
 
   const handleActionsReady = useCallback((actions: ListAction[], execute: (a: ListAction) => void) => {
@@ -113,6 +114,7 @@ const DynamicTablePage: React.FC = () => {
 
         setTableName(tn);
         setLayoutId(targetLayout?.id || null);
+        setResolvedLayout(targetLayout || null);
       } catch (err: any) {
         setError(err.message || 'Failed to load data');
       } finally {
@@ -200,6 +202,7 @@ const DynamicTablePage: React.FC = () => {
           <ListViewEngine
             tableName={tableName}
             layoutId={layoutId}
+            initialLayout={resolvedLayout}
             title={displayTitle}
             menuPath={activeMenu?.path || undefined}
             navigate={(p) => navigate(p as any)}

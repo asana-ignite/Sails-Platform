@@ -763,10 +763,8 @@ export class QueryLayer {
         schemaName, tableName, whereSQL
       );
 
-      const [dataResult, countResult] = await Promise.all([
-        client.query(dataSQL),
-        client.query(countSQL),
-      ]);
+      const dataResult = await client.query(dataSQL);
+      const countResult = await client.query(countSQL);
 
       const total = parseInt(countResult.rows[0]?.total || '0', 10);
 

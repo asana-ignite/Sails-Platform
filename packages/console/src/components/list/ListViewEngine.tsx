@@ -21,6 +21,10 @@ export interface ListViewEngineProps {
   tableName: string;
   /** LIST layout id or systemName to render (undefined → synthetic default). */
   layoutId?: string;
+  /** Pre-resolved layout (optional, avoids extra network requests). */
+  initialLayout?: any;
+  /** Pre-resolved field definitions (optional). */
+  initialFields?: SailsFieldDefinition[];
   /** Related mode: list only records whose FK `fieldName` equals `parentRecordId`. */
   related?: { fieldName: string; parentRecordId: string };
   /** Table/card title. */
@@ -76,6 +80,8 @@ function parseConfig(layout: any): any {
 export const ListViewEngine: React.FC<ListViewEngineProps> = ({
   tableName,
   layoutId,
+  initialLayout,
+  initialFields,
   related,
   title,
   menuPath,
@@ -180,6 +186,10 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
       const data = await res.json();
       setRecords(data.rows || []);
       setTotalRecords(data.total || 0);
+      if (data.fields && data.fields.length > 0) {
+        fieldsRef.current = data.fields;
+        setFields(data.fields);
+      }
       if (pageOverride !== undefined) setCurrentPage(pageOverride);
       return;
     }
@@ -226,6 +236,10 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
     setRecords(data.rows || []);
     setTotalRecords(data.total || 0);
     setAggregates(data.aggregates || null);
+    if (data.fields && data.fields.length > 0) {
+      fieldsRef.current = data.fields;
+      setFields(data.fields);
+    }
     if (pageOverride !== undefined) setCurrentPage(pageOverride);
   }, [layoutId]);
 
@@ -240,10 +254,10 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
       setError(null);
       initialLoadDone.current = false;
       try {
-        let targetLayout: any = null;
-        let dataModelId = tableId || null;
+        let targetLayout: any = initialLayout || null;
+        let dataModelId = tableId || targetLayout?.tableId || null;
 
-        if (layoutId && layoutId !== '_default') {
+        if (!targetLayout && layoutId && layoutId !== '_default') {
           const byId = await fetchCached(`/api/console/layouts?id=${layoutId}`);
           if (byId.success) targetLayout = byId.data;
         }
@@ -268,49 +282,28 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
           targetLayout = rows.find((r: any) => r.id === layoutId || r.systemName === layoutId) || null;
         }
 
-        const params = new URLSearchParams();
-        params.set('page', '1');
-        params.set('limit', String(recordsPerPageRef.current || 25));
-
-        let recordsData: any;
-        if (related) {
-          params.set('field', related.fieldName);
-          params.set('parentId', related.parentRecordId);
-          if (layoutId) params.set('viewId', layoutId);
-          const res = await fetch(`/api/dynamic/${tableName}/related?${params}`);
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            setError(errData.error || 'Failed to load related records');
-            return;
-          }
-          recordsData = await res.json();
-        } else {
-          const res = await fetch(`/api/dynamic/${tableName}?${params}`);
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            setError(errData.error || 'Failed to load records');
-            return;
-          }
-          recordsData = await res.json();
-        }
-
-        const tableFields: SailsFieldDefinition[] = recordsData.fields || [];
-
         if (!targetLayout) {
-          targetLayout = {
-            id: 'default-synthetic-list',
-            viewType: 'LIST',
-            status: 'active',
-            tableId: dataModelId || null,
-            config: defaultSyntheticConfig(tableFields),
-          };
+          targetLayout =
+            rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active' && r.isDefault) ||
+            rows.find((r: any) => r.viewType === 'LIST' && r.status === 'active') ||
+            rows.find((r: any) => r.viewType === 'LIST') ||
+            {
+              id: 'default-synthetic-list',
+              viewType: 'LIST',
+              status: 'active',
+              tableId: dataModelId || null,
+              config: defaultSyntheticConfig(initialFields || []),
+            };
         }
 
         const cfg = parseConfig(targetLayout);
         recordsPerPageRef.current = cfg?.recordsPerPage || 25;
 
         tableNameRef.current = tableName;
-        fieldsRef.current = tableFields;
+        if (initialFields && initialFields.length > 0) {
+          fieldsRef.current = initialFields;
+          setFields(initialFields);
+        }
         layoutConfigRef.current = cfg;
         currentPageRef.current = 1;
 
@@ -319,9 +312,9 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
         setAppliedFilterGroups(initialGroups);
 
         setRecordsPerPage(cfg?.recordsPerPage || 25);
-        setFields(tableFields);
         setLayout(targetLayout);
 
+        // Perform a single, authoritative data fetch with the resolved configuration
         await doFetch(1);
       } catch (err: any) {
         setError(err.message || 'Failed to load data');
@@ -332,7 +325,7 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
     };
 
     init();
-  }, [tableName, layoutId, related?.parentRecordId, tableId, doFetch]);
+  }, [tableName, layoutId, related?.parentRecordId, tableId, doFetch, initialLayout]);
 
   useEffect(() => {
     if (!initialLoadDone.current) return;
