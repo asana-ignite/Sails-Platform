@@ -143,10 +143,12 @@ interface FilterBuilderProps {
    *  "+ Add Condition", "Condition Summary", "Apply" — and enable the LHS
    *  Context mode + RHS Expression f(x) source. */
   terminology?: 'filter' | 'condition';
+  /** When set, the default context list (CONTEXT_FLAT_OPTIONS) is omitted and
+   *  only `extraContextOptions` is shown — hosts supply the exact Context list
+   *  (e.g. workflow Condition builders curate it to resolvable macros only). */
+  hideDefaultContext?: boolean;
   /** Declared variables shown in the Expression f(x) editor (condition hosts). */
   expressionVariables?: SuggestionVariable[];
-  /** Sample record for the Expression f(x) Test runner. */
-  expressionSample?: Record<string, any>;
   /** When provided (Workflow Studio), the 'Workflow' RHS source appears and
    * opens the workflow variable picker for the rule value. */
   workflowVariables?: { id: string; name: string; fieldType: string; targetModel?: string; columns?: any[] }[];
@@ -168,8 +170,8 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
   title = 'Edit View Filters',
   terminology = 'filter',
   extraContextOptions,
+  hideDefaultContext = false,
   expressionVariables,
-  expressionSample,
   workflowVariables,
   workflowRecordSchemas,
   workflowTriggerFields,
@@ -186,9 +188,11 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
     return [...base, { id: 'id', name: 'ID', fieldName: 'id', logicalType: 'uuid' } as any];
   }, [fields]);
   const modelSchemas = useModelSchemas(allFields, rootTableName);
-  const contextOptions = extraContextOptions && extraContextOptions.length > 0
-    ? [...CONTEXT_FLAT_OPTIONS, ...extraContextOptions]
-    : CONTEXT_FLAT_OPTIONS;
+  const contextOptions = hideDefaultContext
+    ? (extraContextOptions || [])
+    : extraContextOptions && extraContextOptions.length > 0
+      ? [...CONTEXT_FLAT_OPTIONS, ...extraContextOptions]
+      : CONTEXT_FLAT_OPTIONS;
   // The 'Workflow' RHS source exists only where workflow variables are supplied.
   const lhsContextItems: { id: string; name: string }[] = contextOptions
     .filter((o) => !o.value.startsWith('cat_') && !isNPeriodMacro(o.value))
@@ -459,7 +463,6 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
           triggerModelName={rootTableName}
           value={rule.value || ''}
           onChange={(v) => updateRule(rule.id, { value: v })}
-          sample={expressionSample}
           placeholder="record.amount * 0.1"
         />
       );

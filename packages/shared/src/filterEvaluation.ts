@@ -35,8 +35,12 @@ export interface FilterEvalContext {
   /** Model fields — resolves filter fieldId → fieldName for record lookups. */
   fields: SailsFieldDefinition[];
   /** JSONata evaluator for the Expression f(x) source (host-injected).
-   *  When absent, expression rules never match. */
+   *  May return a value OR a Promise (jsonata 2.x evaluate() is always
+   *  async) — awaited either way. When absent, expression rules never match. */
   evaluateExpression?: (expr: string, input: any) => any;
+  /** Extra keys merged into the Expression f(x) input (host-specific context
+   *  such as workflow votes/assigneeCount). Canonical keys win. */
+  expressionContext?: Record<string, any>;
 }
 
 function fieldNameOf(fieldId: string, ctx: FilterEvalContext): string {
@@ -75,7 +79,7 @@ function contextMacroValue(macro: string, ctx: FilterEvalContext): { matched: bo
 }
 
 /** Resolve the RHS of a rule; `matched: false` = unsupported source (no match). */
-function resolveRhs(rule: FilterRule, ctx: FilterEvalContext): { matched: boolean; value: any } {
+async function resolveRhs(rule: FilterRule, ctx: FilterEvalContext): Promise<{ matched: boolean; value: any }> {
   switch (rule.valueSource) {
     case 'field':
       return { matched: true, value: recordValue(rule.refFieldId || '', ctx) };
@@ -84,8 +88,18 @@ function resolveRhs(rule: FilterRule, ctx: FilterEvalContext): { matched: boolea
     case 'expression': {
       const expr = rule.value || '';
       if (!expr.trim() || !ctx.evaluateExpression) return { matched: false, value: undefined };
-      const input = { ...(ctx.record || {}), record: ctx.record || {}, vars: ctx.vars || {}, variables: ctx.vars || {}, user: ctx.user || {} };
-      return { matched: true, value: ctx.evaluateExpression(expr, input) };
+      const input = {
+        ...(ctx.expressionContext || {}),
+        ...(ctx.record || {}),
+        record: ctx.record || {},
+        vars: ctx.vars || {},
+        variables: ctx.vars || {},
+        user: ctx.user || {},
+      };
+      // The host evaluator may be async (jsonata 2.x evaluate() returns a
+      // Promise even for pure expressions) — await it either way.
+      const value = await ctx.evaluateExpression(expr, input);
+      return { matched: true, value };
     }
     case 'record':
     case 'workflow':
@@ -113,19 +127,19 @@ function compare(op: string, lhs: any, rhs: any): boolean {
   }
 }
 
-function evalRule(rule: FilterRule, ctx: FilterEvalContext): boolean {
+async function evalRule(rule: FilterRule, ctx: FilterEvalContext): Promise<boolean> {
   const lhs = recordValue(rule.fieldId, ctx);
-  const rhs = resolveRhs(rule, ctx);
+  const rhs = await resolveRhs(rule, ctx);
   if (!rhs.matched) return false;
   return compare(rule.operator, lhs, rhs.value);
 }
 
-function evalGroup(group: FilterGroup, ctx: FilterEvalContext): boolean {
+async function evalGroup(group: FilterGroup, ctx: FilterEvalContext): Promise<boolean> {
   const rules = group?.rules || [];
   if (rules.length === 0) return true;
-  let result = evalRule(rules[0], ctx);
+  let result = await evalRule(rules[0], ctx);
   for (let i = 1; i < rules.length; i++) {
-    const next = evalRule(rules[i], ctx);
+    const next = await evalRule(rules[i], ctx);
     result = rules[i].logic === 'or' ? (result || next) : (result && next);
   }
   return result;
@@ -133,11 +147,11 @@ function evalGroup(group: FilterGroup, ctx: FilterEvalContext): boolean {
 
 /** Evaluate Query-Studio filter groups against a single record + vars.
  *  Empty/absent groups → true (always active). */
-export function evaluateFilterGroups(groups: FilterGroup[] | undefined, ctx: FilterEvalContext): boolean {
+export async function evaluateFilterGroups(groups: FilterGroup[] | undefined, ctx: FilterEvalContext): Promise<boolean> {
   if (!groups || groups.length === 0) return true;
-  let result = evalGroup(groups[0], ctx);
+  let result = await evalGroup(groups[0], ctx);
   for (let i = 1; i < groups.length; i++) {
-    const next = evalGroup(groups[i], ctx);
+    const next = await evalGroup(groups[i], ctx);
     result = groups[i].groupLogic === 'or' ? (result || next) : (result && next);
   }
   return result;

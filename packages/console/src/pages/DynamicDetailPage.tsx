@@ -29,7 +29,7 @@ import { DetailFieldInput, DetailFieldDisplay, DetailFieldLabel, validateFieldIs
 import DynamicIcon from '../components/common/DynamicIcon';
 import type { FieldValidation } from '../features/controls/types';
 import { evaluateExpressionFields } from '../utils/expressionLive';
-import { resolveActiveRules, deriveConditionSets, conditionEvalContext } from '../utils/conditionSets';
+import { resolveActiveRules, deriveConditionSets, conditionEvalContext, type ConditionSetsDerived } from '../utils/conditionSets';
 import { evaluateFilterGroups } from '@sails/shared';
 import { useLocalizedText } from '../lib/useLocalizedText';
 import { NotificationMessageModal } from '../components/common/NotificationMessageModal';
@@ -445,15 +445,31 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
   const conditionUser = auth.user ? { id: auth.user.id, role: auth.user.role, email: auth.user.email } : undefined;
 
   // ── Condition Sets: active rules against the LIVE record + form vars ──
-  const conditionDerived = useMemo(() => {
-    return deriveConditionSets(resolveActiveRules((config as any)?.conditionSets, conditionEvalContext(liveConditionRecord, formVars, fields, conditionUser)));
+  const [conditionDerived, setConditionDerived] = useState<ConditionSetsDerived>(() => deriveConditionSets([]));
+  useEffect(() => {
+    let mounted = true;
+    resolveActiveRules((config as any)?.conditionSets, conditionEvalContext(liveConditionRecord, formVars, fields, conditionUser))
+      .then((rules) => { if (mounted) setConditionDerived(deriveConditionSets(rules)); })
+      .catch(() => undefined);
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config, liveConditionRecord, formVars, fields]);
 
   // ── Validation tab rules: active (conditions match the live record) ──
-  const activeValidationRules = useMemo(() => {
-    const rules: LayoutValidationRule[] = (config as any)?.validations || [];
-    const ctx = conditionEvalContext(liveConditionRecord, formVars, fields, conditionUser);
-    return rules.filter((r) => evaluateFilterGroups(r.conditionGroups, ctx));
+  const [activeValidationRules, setActiveValidationRules] = useState<LayoutValidationRule[]>([]);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const rules: LayoutValidationRule[] = (config as any)?.validations || [];
+      const ctx = conditionEvalContext(liveConditionRecord, formVars, fields, conditionUser);
+      const out: LayoutValidationRule[] = [];
+      for (const r of rules) {
+        if (await evaluateFilterGroups(r.conditionGroups, ctx)) out.push(r);
+      }
+      if (mounted) setActiveValidationRules(out);
+    })();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config, liveConditionRecord, formVars, fields]);
 
   /** Bar-location rules (aggregated into the error bar). */

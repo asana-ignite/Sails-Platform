@@ -95,20 +95,6 @@ function buildExpressionEditorSchema(tables: SailsTableDefinition[], table: Sail
   return { variables, recordSchemas };
 }
 
-/** Sample record for the expression Test runner (same-record fields only). */
-function buildSampleRecord(fields: any[]): Record<string, any> {
-  const rec: Record<string, any> = {};
-  for (const f of fields || []) {
-    const lt = f.logicalType || 'text';
-    if (['number', 'decimal', 'currency', 'percentage', 'auto_number'].includes(lt)) rec[f.fieldName] = 100;
-    else if (lt === 'boolean') rec[f.fieldName] = true;
-    else if (lt === 'date' || lt === 'datetime') rec[f.fieldName] = new Date().toISOString();
-    else if (lt === 'relation' || lt === 'lookup') rec[f.fieldName] = null;
-    else rec[f.fieldName] = `Sample ${f.name || f.fieldName}`;
-  }
-  return rec;
-}
-
 /** Expression (JSONata) editor block used in the field wizard. */
 const ExpressionParam: React.FC<{
   tables: SailsTableDefinition[];
@@ -135,7 +121,6 @@ const ExpressionParam: React.FC<{
       })),
     [table]
   );
-  const sample = useMemo(() => buildSampleRecord(table?.fields || []), [table]);
   return (
     <div className="om-field-group om-field-group--full">
       <label className="om-field-label">{label}</label>
@@ -144,7 +129,6 @@ const ExpressionParam: React.FC<{
         recordSchemas={recordSchemas}
         drillRoots={recordColumns.length > 0 ? { record: recordColumns } : undefined}
         triggerModelName={table?.tableName}
-        sample={sample}
         value={value || ''}
         onChange={onChange}
         compact={compact}

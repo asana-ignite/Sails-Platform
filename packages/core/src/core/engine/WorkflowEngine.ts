@@ -15,7 +15,8 @@ import { db } from '@/lib/db';
 import { workflowEventRegistry } from '@sails/plugin-sdk';
 import type { WorkflowEventContext } from '@sails/plugin-sdk';
 import { evaluateJsonata, genId, logWfAction, quoteIdent, resolveTenantSchema } from './WorkflowHelpers';
-import { evaluateExitConditions, majorityAction, type VoteLookup, type VotePolicyBranch } from './exitConditions';
+import { evaluateExitConditions, majorityAction, type ExitEvaluator, type VoteLookup, type VotePolicyBranch } from './exitConditions';
+import { evaluateFilterGroups } from '@sails/shared';
 import '@/core/plugins/init'; // side-effect: registers event plugins + starts the scheduler (bare import — never tree-shaken)
 
 export interface WorkflowInstanceInput {
@@ -480,6 +481,60 @@ export const advanceInstance = proceedInstance;
 /** Max stage transitions per proceedInstance call (guards cycles / bad configs). */
 const MAX_STAGE_HOPS = 20;
 
+/**
+ * Exit-condition evaluator: Condition-builder groups via the shared filter
+ * evaluator, with the AST-cached JSONata engine for the Expression f(x) RHS
+ * source (a failing expression never matches — same rule as the old gate).
+ */
+const exitEvaluator: ExitEvaluator = {
+  evaluateGroups: (groups, evalCtx) => evaluateFilterGroups(groups, evalCtx),
+  evaluateExpression: async (expr, input) => {
+    const r = await evaluateJsonata(expr, input);
+    return r.ok ? r.value : undefined;
+  },
+};
+
+/** The workflow's root record for Condition-builder field rules (trigger
+ *  values + id live in the instance vars, exactly like ctx.record). */
+function exitRecordOf(vars: Record<string, any>): Record<string, any> {
+  return { ...(vars.values || {}), id: vars.recordId, ...(vars.oldValues ? { oldValues: vars.oldValues } : {}) };
+}
+
+/** Enrich the deciding user with role/email so @user.* / @me macros resolve
+ *  in Condition-builder exit gates — one indexed lookup, only when the stage
+ *  actually carries gates (id-only otherwise). */
+async function exitUserOf(
+  actorId: string,
+  hasGates: boolean,
+): Promise<{ id: string; role?: string; email?: string } | undefined> {
+  if (!actorId) return undefined;
+  if (!hasGates) return { id: actorId };
+  try {
+    const u = await db.user.findUnique({ where: { id: actorId }, select: { role: true, email: true } });
+    return u ? { id: actorId, role: u.role || undefined, email: u.email || undefined } : { id: actorId };
+  } catch {
+    return { id: actorId };
+  }
+}
+
+/**
+ * Resolve the root table's field map (id → fieldName) for Condition-builder
+ * exit gates — only when any exit line of the DAG carries one (legacy
+ * workflows without groups skip the metadata lookup entirely). Null when the
+ * table can't be resolved — rules then fall back to fieldName matching.
+ */
+async function resolveExitCondFields(tenantId: string, dag: any): Promise<{ id: string; fieldName: string }[] | null> {
+  const hasGroups = (dag?.stages || []).some((st: any) =>
+    (st?.branches || []).some((b: any) =>
+      Array.isArray(b?.conditionGroups) && b.conditionGroups.some((g: any) => (g?.rules || []).length > 0)));
+  if (!hasGroups) return null;
+  const tableId = dag?.tableId;
+  if (!tableId) return null;
+  const td = await db.tableDefinition.findFirst({ where: { tenantId, id: tableId }, include: { fields: true } });
+  if (!td) return null;
+  return (td.fields || []).map((f: any) => ({ id: f.id, fieldName: f.fieldName ?? f.id }));
+}
+
 /** Load the pinned-version DAG for an instance (or live config fallback for NULL). */
 async function loadDag(instance: any): Promise<any> {
   let dag: any = null;
@@ -511,6 +566,10 @@ async function proceedCore(
   const dag = await loadDag(instance);
   if (!dag) throw new Error('No workflow configuration available for this instance');
 
+  // Root-table field map for Condition-builder exit gates (null when the DAG
+  // has none — legacy workflows skip the metadata lookup).
+  const exitFields = await resolveExitCondFields(tenantId, dag);
+
   const stages: any[] = dag?.stages || [];
   let currentIds: string[] = Array.isArray(instance.current_step_ids) ? instance.current_step_ids : [];
   let stageId = currentIds.length ? currentIds[currentIds.length - 1] : stages[0]?.id || null;
@@ -522,7 +581,7 @@ async function proceedCore(
 
     // 1. Record an assignee's decision for the current stage (if provided).
     if (decision && decision.stepId === stageId) {
-      const handled = await recordVote(schema, wf, instance, dag, stage, decision);
+      const handled = await recordVote(schema, wf, instance, dag, stage, decision, exitFields);
       if (!handled) return { state: 'running' }; // resolved concurrently elsewhere
     }
 
@@ -535,7 +594,7 @@ async function proceedCore(
     if ((pending.rows[0]?.n || 0) > 0) return { state: 'running' };
 
     // 3. No pending tasks → resolve the stage's exit and route onward.
-    const exit = await resolveStageExit(schema, wf, instance, dag, stage);
+    const exit = await resolveStageExit(schema, wf, instance, dag, stage, exitFields);
     if (!exit) return { state: 'running' }; // no branch matched — scheduler retries
 
     if (exit.type === 'completed') {
@@ -603,8 +662,8 @@ async function fireStageExit(
 /**
  * Determine where the instance routes after a stage with no pending tasks:
  * the branch a resolved task pinned via matchedBranch, else the first branch
- * whose vote policy + JSONata gate pass (fallback branches have no action and
- * an empty expression, so they always match last). Returns null while the
+ * whose vote policy + Condition-builder gate pass (fallback branches have no
+ * action and no groups, so they always match last). Returns null while the
  * stage stays open.
  */
 async function resolveStageExit(
@@ -613,6 +672,7 @@ async function resolveStageExit(
   instance: any,
   dag: any,
   stage: any,
+  exitFields: { id: string; fieldName: string }[] | null,
 ): Promise<{ type: 'stage'; stageId: string } | { type: 'completed' } | null> {
   const branches: VotePolicyBranch[] = (stage?.branches || []).map((b: any) => ({
     id: b.id,
@@ -620,6 +680,7 @@ async function resolveStageExit(
     votePolicy: b.votePolicy,
     voteCount: b.voteCount,
     expression: b.expression,
+    conditionGroups: b.conditionGroups,
   }));
   // A stage with no outgoing branches is an implicit end.
   if (branches.length === 0) return { type: 'completed' };
@@ -646,8 +707,14 @@ async function resolveStageExit(
   const match = await evaluateExitConditions(
     votes,
     branches,
-    { variables: instance.vars || {}, stageId: stage.id, assigneeCount },
-    { evaluate: (expr, ctx) => evaluateJsonata(expr, ctx) },
+    {
+      variables: instance.vars || {},
+      stageId: stage.id,
+      assigneeCount,
+      record: exitRecordOf(instance.vars || {}),
+      fields: exitFields || undefined,
+    },
+    exitEvaluator,
   );
   if (!match) return null;
   return exitTargetOf(match.branch);
@@ -672,6 +739,7 @@ async function recordVote(
   dag: any,
   stage: any,
   decision: { stepId: string; outcome: string; actorId?: string; comment?: string },
+  exitFields: { id: string; fieldName: string }[] | null,
 ): Promise<boolean> {
   const instanceId = instance.id;
   const taskRes = await pool.query(
@@ -713,12 +781,20 @@ async function recordVote(
     votePolicy: b.votePolicy,
     voteCount: b.voteCount,
     expression: b.expression,
+    conditionGroups: b.conditionGroups,
   }));
   const match = await evaluateExitConditions(
     votes,
     branches,
-    { variables: instance.vars || {}, stageId: decision.stepId, assigneeCount: assignees.length },
-    { evaluate: (expr, ctx) => evaluateJsonata(expr, ctx) },
+    {
+      variables: instance.vars || {},
+      stageId: decision.stepId,
+      assigneeCount: assignees.length,
+      record: exitRecordOf(instance.vars || {}),
+      fields: exitFields || undefined,
+      user: await exitUserOf(actorId, !!exitFields),
+    },
+    exitEvaluator,
   );
 
   if (match) {

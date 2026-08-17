@@ -19,7 +19,6 @@ interface EventConfigPanelProps {
   recordSchemas?: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
   drillRoots?: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
   triggerModelName?: string;
-  sample?: Record<string, any>;
   /** Layout-level form variables — constrains storeAs to declared names. */
   formVariables?: FormVariable[];
 }
@@ -58,7 +57,6 @@ export const EventConfigPanel: React.FC<EventConfigPanelProps> = ({
   recordSchemas: _recordSchemas,
   drillRoots: _drillRoots,
   triggerModelName: _triggerModelName,
-  sample: _sample,
   formVariables: _formVariables,
 }) => {
   const def = EVENT_DEFS[event.type];

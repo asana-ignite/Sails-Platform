@@ -23,7 +23,7 @@ import {
   CircleCheck, CircleX, Copy, Printer, Lock, Palette,
 } from 'lucide-react';
 import type { SailsFieldDefinition, LayoutColumn, FilterGroup, FilterRule, LayoutSort, ViewType, SummaryField, LayoutStatus, ListAction, MobileViewMode, DetailAction, FormEvent, ActionSection, ConditionSet, ConditionSetRule, ConditionSetEffect, ConditionSetStyle, LayoutValidationRule } from '@sails/shared';
-import { resolveActiveRules, deriveConditionSets, conditionEvalContext } from '../../utils/conditionSets';
+import { resolveActiveRules, deriveConditionSets, conditionEvalContext, type ConditionSetsDerived } from '../../utils/conditionSets';
 import { evaluateFilterGroups } from '@sails/shared';
 import { formatDateTimeValue, formatDecimalValue, normalizeFilters, registerExpressionFunctions } from '@sails/shared';
 import type { FormVariable } from '@sails/shared';
@@ -56,7 +56,7 @@ import {
   MOCK_SCRIPTS, MOCK_TEMPLATES, newFormEvent, newActionSection, uid,
 } from '../../features/formEvents';
 import ExpressionEditor from '../../components/workflow/ExpressionEditor';
-import type { FormEventType, ButtonVariant, EventRunStatus, SectionRunStatus } from '../../features/formEvents';
+import type { FormEventType, ButtonVariant } from '../../features/formEvents';
 import type { SuggestionVariable } from '../../components/workflow/jsonataSuggest';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchCached } from '../../api/client';
@@ -629,10 +629,6 @@ const LayoutStudio: React.FC = () => {
   const [dragOverActionId, setDragOverActionId] = useState<string | null>(null);
   const [selectedDetailEventId, setSelectedDetailEventId] = useState<string | null>(null);
   const [detailSectionsOpen, setDetailSectionsOpen] = useState(true);
-  const [detailRunState, setDetailRunState] = useState<'idle' | 'running' | 'completed'>('idle');
-  const [detailRunStep, setDetailRunStep] = useState(-1);
-  const [detailEventStatus, setDetailEventStatus] = useState<Record<string, EventRunStatus>>({});
-  const [detailSectionRun, setDetailSectionRun] = useState<Record<string, SectionRunStatus>>({});
   const [detailAddMenuOpen, setDetailAddMenuOpen] = useState(false);
   /** The event currently being configured in a modal (any type — one shell). */
   const [eventModalEventId, setEventModalEventId] = useState<string | null>(null);
@@ -1462,23 +1458,33 @@ const LayoutStudio: React.FC = () => {
   }, [formVariables]);
 
   /** Preview: evaluate sets against the mock record + declared var defaults. */
-  const previewConditionDerived = useMemo(() =>
-    deriveConditionSets(resolveActiveRules(conditionSets, { record: previewRecord, vars: previewVarDefaults, fields: allFields })),
-    [conditionSets, previewRecord, previewVarDefaults, allFields]);
+  const [previewConditionDerived, setPreviewConditionDerived] = useState<ConditionSetsDerived>(() => deriveConditionSets([]));
+  useEffect(() => {
+    let mounted = true;
+    resolveActiveRules(conditionSets, { record: previewRecord, vars: previewVarDefaults, fields: allFields })
+      .then((rules) => { if (mounted) setPreviewConditionDerived(deriveConditionSets(rules)); })
+      .catch(() => undefined);
+    return () => { mounted = false; };
+  }, [conditionSets, previewRecord, previewVarDefaults, allFields]);
 
   /** Preview: Validation-tab rules active against the mock record, keyed by target field. */
-  const previewValidationRulesByField = useMemo(() => {
-    const map: Record<string, LayoutValidationRule[]> = {};
-    const ctx = conditionEvalContext(previewRecord, previewVarDefaults, allFields, user ? { id: user.id, role: user.role, email: user.email } : undefined);
-    for (const r of validationRules) {
-      if (r.errorLocation === 'bar') continue;
-      if (!evaluateFilterGroups(r.conditionGroups, ctx)) continue;
-      for (const fid of r.targetFieldIds || []) {
-        const list = map[fid] || (map[fid] = []);
-        list.push(r);
+  const [previewValidationRulesByField, setPreviewValidationRulesByField] = useState<Record<string, LayoutValidationRule[]>>({});
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const map: Record<string, LayoutValidationRule[]> = {};
+      const ctx = conditionEvalContext(previewRecord, previewVarDefaults, allFields, user ? { id: user.id, role: user.role, email: user.email } : undefined);
+      for (const r of validationRules) {
+        if (r.errorLocation === 'bar') continue;
+        if (!(await evaluateFilterGroups(r.conditionGroups, ctx))) continue;
+        for (const fid of r.targetFieldIds || []) {
+          const list = map[fid] || (map[fid] = []);
+          list.push(r);
+        }
       }
-    }
-    return map;
+      if (mounted) setPreviewValidationRulesByField(map);
+    })();
+    return () => { mounted = false; };
   }, [validationRules, previewRecord, previewVarDefaults, allFields, user]);
 
   const addDetailAction = () => {
@@ -1494,7 +1500,6 @@ const LayoutStudio: React.FC = () => {
     setDetailActions((prev) => [...prev, na]);
     setSelectedDetailActionId(na.id);
     setSelectedDetailEventId(null);
-    resetDetailRun();
   };
 
   /** Instantiate a standard action (delete/clone) from its registry plugin. */
@@ -1513,7 +1518,6 @@ const LayoutStudio: React.FC = () => {
     setDetailActions((prev) => [...prev, na]);
     setSelectedDetailActionId(na.id);
     setSelectedDetailEventId(null);
-    resetDetailRun();
   };
 
   const detailStandardPlugins = useMemo(() => actionRegistry.getActionsByCategory('detail'), []);
@@ -1626,65 +1630,6 @@ const LayoutStudio: React.FC = () => {
       };
     }));
   };
-
-  // ── Detail run simulation ──
-  const resetDetailRun = () => {
-    setDetailRunState('idle');
-    setDetailRunStep(-1);
-    setDetailEventStatus({});
-    setDetailSectionRun({});
-  };
-
-  const detailRunSteps = useMemo(() => {
-    if (!selectedDetailAction) return [];
-    const out: { sectionId: string; eventId: string; skipped: boolean; firstInSection: boolean }[] = [];
-    for (const s of selectedDetailAction.sections || []) {
-      const skipped = !evaluateFilterGroups(s.conditionGroups, conditionEvalContext(previewRecord, previewVarDefaults, allFields, user ? { id: user.id, role: user.role, email: user.email } : undefined));
-      s.events.forEach((e, i) => out.push({ sectionId: s.id, eventId: e.id, skipped, firstInSection: i === 0 }));
-    }
-    return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDetailAction, previewRecord]);
-
-  const startDetailRun = () => {
-    setDetailEventStatus({});
-    setDetailSectionRun({});
-    setDetailRunStep(0);
-    setDetailRunState('running');
-  };
-
-  useEffect(() => {
-    if (detailRunState !== 'running') return;
-    if (detailRunStep >= detailRunSteps.length) {
-      setDetailRunState('completed');
-      return;
-    }
-    const step = detailRunSteps[detailRunStep];
-    const t1 = window.setTimeout(() => {
-      setDetailEventStatus((prev) => ({ ...prev, [step.eventId]: step.skipped ? 'skipped' : 'running' }));
-      if (step.firstInSection) {
-        setDetailSectionRun((prev) => ({ ...prev, [step.sectionId]: step.skipped ? 'skipped' : 'running' }));
-      }
-    }, 80);
-    const t2 = window.setTimeout(() => {
-      setDetailEventStatus((prev) => ({ ...prev, [step.eventId]: step.skipped ? 'skipped' : 'done' }));
-      if (step.firstInSection) {
-        setDetailSectionRun((prev) => ({ ...prev, [step.sectionId]: step.skipped ? 'skipped' : 'passed' }));
-      }
-      setDetailRunStep((i) => i + 1);
-    }, 650);
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
-  }, [detailRunState, detailRunStep, detailRunSteps]);
-
-  const detailDoneCount = selectedDetailAction
-    ? (selectedDetailAction.sections || []).reduce((n, s) => n + s.events.filter((e) => detailEventStatus[e.id] === 'done').length, 0)
-    : 0;
-  const detailSkippedCount = selectedDetailAction
-    ? (selectedDetailAction.sections || []).reduce((n, s) => n + s.events.filter((e) => detailEventStatus[e.id] === 'skipped').length, 0)
-    : 0;
 
   /** Flat list of placed blocks (top-level + tab children) for the Conditions tab. */
   const placedBlocks = useMemo(() => {
@@ -2684,13 +2629,8 @@ const LayoutStudio: React.FC = () => {
     return <DynamicIcon name={name || 'Zap'} size={size} />;
   };
 
-  const renderRunChip = (tone: 'passed' | 'skipped' | 'running', children: React.ReactNode) => (
-    <span className={`ls-evt-runchip ls-evt-runchip--${tone}`}>{children}</span>
-  );
-
   const renderDetailSection = (act: DetailAction, sec: ActionSection, si: number) => {
     const condOn = !!sec.conditionGroups;
-    const runStatus = detailSectionRun[sec.id] || 'idle';
     const secCount = (act.sections || []).length;
     return (
       <div key={sec.id} className="ls-evt-section">
@@ -2728,9 +2668,6 @@ const LayoutStudio: React.FC = () => {
           {sec.collapsed && (
             <span className="ls-evt-section__summary">{sec.events.length} event{sec.events.length !== 1 ? 's' : ''}{condOn ? ' · conditioned' : ''}</span>
           )}
-          {runStatus === 'passed' && renderRunChip('passed', <><CheckCircle2 size={10} /> passed</>)}
-          {runStatus === 'skipped' && renderRunChip('skipped', 'condition not met')}
-          {runStatus === 'running' && renderRunChip('running', <><Loader2 size={10} className="sails-spin" /> running</>)}
           <div className="ls-evt-section__tools">
             <button
               className={`ls-evt-cond-toggle ${condOn ? 'ls-evt-cond-toggle--on' : ''}`}
@@ -2777,12 +2714,11 @@ const LayoutStudio: React.FC = () => {
               )}
               {sec.events.map((ev, ei) => {
                 const d = EVENT_DEFS[ev.type as FormEventType] || EVENT_DEFS.notification;
-                const status = detailEventStatus[ev.id] || 'idle';
                 const selected = selectedDetailEventId === ev.id;
                 return (
                   <div
                     key={ev.id}
-                    className={`ls-evt-event ${selected ? 'ls-evt-event--selected' : ''} ${status === 'done' ? 'ls-evt-event--done' : ''} ${status === 'running' ? 'ls-evt-event--running' : ''}`}
+                    className={`ls-evt-event ${selected ? 'ls-evt-event--selected' : ''}`}
                     onClick={() => { setSelectedDetailEventId(selected ? null : ev.id); }}
                   >
                     <span className="ls-evt-event__icon" style={{ background: `${d.color}22`, color: d.color }}>{<d.Icon size={12} />}</span>
@@ -2817,9 +2753,6 @@ const LayoutStudio: React.FC = () => {
                       >{ev.label}</span>
                     )}
                     {ev.storeAs && <span className="ls-evt-chip-mini ls-evt-chip-mini--store"><Braces size={9} /> {ev.storeAs}</span>}
-                    {status === 'running' && <Loader2 size={12} className="sails-spin" />}
-                    {status === 'done' && <CheckCircle2 size={12} style={{ color: '#10b981' }} />}
-                    {status === 'skipped' && <span className="ls-evt-event__skipped">skipped</span>}
                     <span className="ls-evt-event__type">{d.label}</span>
                     <div className="ls-evt-event__tools" onClick={(e) => e.stopPropagation()}>
                       <button className="ls-block__btn" disabled={ei === 0} onClick={() => moveDetailEvent(act.id, sec.id, ev.id, -1)} title="Move up"><MoveUp size={11} /></button>
@@ -3020,30 +2953,6 @@ const LayoutStudio: React.FC = () => {
                     {(act.sections || []).length === 0 && <p className="ls-empty" style={{ padding: '8px 0' }}>No sections. Add one from the palette or the + button.</p>}
                     {(act.sections || []).map((sec, si) => renderDetailSection(act, sec, si))}
                   </div>
-                )}
-              </div>
-
-              {/* Run bar */}
-              <div className="ls-evt-runbar">
-                {detailRunState === 'idle' && (
-                  <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={startDetailRun} disabled={detailRunSteps.length === 0}>
-                    <Play size={12} /> Run Simulation
-                  </button>
-                )}
-                {detailRunState === 'running' && (
-                  <button className="sails-btn sails-btn--ghost sails-btn--sm" disabled>
-                    <Loader2 size={12} className="sails-spin" /> Running {detailDoneCount}/{detailRunSteps.length}…
-                  </button>
-                )}
-                {detailRunState === 'completed' && (
-                  <span className={`ls-evt-banner ${detailSkippedCount > 0 ? 'ls-evt-banner--warn' : 'ls-evt-banner--ok'}`}>
-                    {detailSkippedCount > 0
-                      ? `${detailDoneCount} succeeded · ${detailSkippedCount} skipped by condition`
-                      : `${detailDoneCount} event${detailDoneCount !== 1 ? 's' : ''} succeeded`}
-                  </span>
-                )}
-                {detailRunState !== 'idle' && (
-                  <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={resetDetailRun}><RotateCcw size={12} /> Reset</button>
                 )}
               </div>
             </>
@@ -3690,14 +3599,15 @@ const LayoutStudio: React.FC = () => {
 
             <div className="ls-prop-group" style={{ marginTop: 6 }}>
               <label className="ls-prop-label">Error Message Location</label>
-              <select
-                className="sails-input"
+              <CustomSelect
+                size="sm"
                 value={r.errorLocation || 'field'}
-                onChange={(e) => patchValidationRule(r.id, { errorLocation: e.target.value as 'field' | 'bar' })}
-              >
-                <option value="field">In Field</option>
-                <option value="bar">Error Bar</option>
-              </select>
+                options={[
+                  { value: 'field', label: 'In Field' },
+                  { value: 'bar', label: 'Error Bar' },
+                ]}
+                onChange={(v) => patchValidationRule(r.id, { errorLocation: v as 'field' | 'bar' })}
+              />
               <p className="ls-prop-hint">In Field shows the error under the target fields · Error Bar aggregates failures into the banner above the form.</p>
             </div>
           </div>
@@ -5488,7 +5398,6 @@ const LayoutStudio: React.FC = () => {
                             recordSchemas={pvRecordSchemas}
                             drillRoots={pvDrillRoots}
                             triggerModelName={tableMeta?.tableName}
-                            sample={previewRecord}
                             onOpenEditor={() => setEventModalEventId(selectedDetailEvent.id)}
                           />
                         </>
@@ -6150,7 +6059,6 @@ const LayoutStudio: React.FC = () => {
               recordSchemas={pvRecordSchemas}
               drillRoots={pvDrillRoots}
               triggerModelName={tableMeta?.tableName}
-              sample={previewRecord}
               variables={formVariables}
               variablesLabel="Layout Variables"
               contextLabel="Form Context"
@@ -6251,7 +6159,6 @@ const LayoutStudio: React.FC = () => {
                   initialGroups={groups || []}
                   terminology="condition"
                   expressionVariables={pickerVariables}
-                  expressionSample={previewRecord}
                   extraContextOptions={formVariables.length > 0
                     ? [
                         { value: 'cat_Form Variables', label: '── Form Variables ──', disabled: true },

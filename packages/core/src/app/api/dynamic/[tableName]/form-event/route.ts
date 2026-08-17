@@ -182,7 +182,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       if (section !== resumeSection) {
         const secGroups = section.conditionGroups;
         if (Array.isArray(secGroups) && secGroups.some((g) => (g?.rules || []).length > 0)) {
-          if (!evaluateFilterGroups(secGroups, { record: recordValues, vars: variables, fields: condFields as any, user: condUser, evaluateExpression: evalFilterExpression })) {
+          if (!(await evaluateFilterGroups(secGroups, { record: recordValues, vars: variables, fields: condFields as any, user: condUser, evaluateExpression: evalFilterExpression }))) {
             results.push({ sectionSkipped: true, conditionGroups: secGroups });
             // Skip the rest of this section.
             while (i + 1 < flat.length && flat[i + 1].section === section) i++;

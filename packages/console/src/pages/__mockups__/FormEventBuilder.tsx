@@ -6,12 +6,12 @@
  * are collapsible accordions; the preview + run simulation live inline
  * (toggled), no side columns. Mirrors the LIST view's Actions card pattern.
  */
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus, X, Trash2, MoveUp, MoveDown, ChevronDown, ChevronRight,
   Settings, Zap, Database, Code, Workflow as WorkflowIcon, Bell, CircleCheck,
-  CircleX, Copy, Send, Eye, EyeOff, Play, RotateCcw, ShieldAlert,
-  MousePointerClick, Sparkles, Check, Braces, CircleAlert, LoaderCircle,
+  CircleX, Copy, Send, Eye, EyeOff, RotateCcw, ShieldAlert,
+  MousePointerClick, Sparkles, Check, Braces,
   Archive, Download, Printer, KeyRound, GitBranch, ExternalLink, MessageSquare,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -23,8 +23,6 @@ import './FormEventBuilder.css';
 
 type EventType = 'record' | 'expression' | 'script' | 'notification' | 'notification_message';
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
-type RunState = 'idle' | 'running' | 'completed';
-type EventRunStatus = 'idle' | 'running' | 'done' | 'skipped';
 
 interface FormEvent {
   id: string;
@@ -230,24 +228,6 @@ function buildMockActions(): FormAction[] {
   ];
 }
 
-function mockEval(cond: string, rec: Record<string, any>): boolean {
-  if (!cond.trim()) return true;
-  const m = cond.match(/record\.(\w+)\s*(>=|<=|==|!=|>|<)\s*(-?\d+)/);
-  if (!m) return true;
-  const val = rec[m[1]];
-  if (typeof val !== 'number') return false;
-  const op = m[2];
-  const num = Number(m[3]);
-  switch (op) {
-    case '>':  return val > num;
-    case '<':  return val < num;
-    case '>=': return val >= num;
-    case '<=': return val <= num;
-    case '==': return val === num;
-    default:   return val !== num;
-  }
-}
-
 // ─── Sub-components ───────────────────────────────────────────
 
 const ActionIcon: React.FC<{ name: string; size?: number }> = ({ name, size = 14 }) => {
@@ -255,10 +235,6 @@ const ActionIcon: React.FC<{ name: string; size?: number }> = ({ name, size = 14
   const Icon = opt?.Icon || Zap;
   return <Icon size={size} />;
 };
-
-const RunChip: React.FC<{ tone: 'passed' | 'skipped' | 'running'; children: React.ReactNode }> = ({ tone, children }) => (
-  <span className={`feb-run-chip feb-run-chip--${tone}`}>{children}</span>
-);
 
 interface EventConfigPanelProps {
   event: FormEvent;
@@ -420,8 +396,6 @@ interface CompactSectionProps {
   section: ActionSection;
   index: number;
   total: number;
-  runSection: 'idle' | 'passed' | 'skipped' | 'running';
-  eventStatus: Record<string, EventRunStatus>;
   expandedEventId: string | null;
   onExpandEvent: (id: string | null) => void;
   onPatch: (patch: Partial<ActionSection>) => void;
@@ -434,7 +408,7 @@ interface CompactSectionProps {
 }
 
 const CompactSection: React.FC<CompactSectionProps> = ({
-  section, index, total, runSection, eventStatus, expandedEventId,
+  section, index, total, expandedEventId,
   onExpandEvent, onPatch, onMove, onDelete, onAddEvent,
   onPatchEvent, onMoveEvent, onDeleteEvent,
 }) => {
@@ -452,9 +426,6 @@ const CompactSection: React.FC<CompactSectionProps> = ({
             {condOn ? ' · conditioned' : ''}
           </span>
         )}
-        {runSection === 'passed' && <RunChip tone="passed"><Check size={10} /> passed</RunChip>}
-        {runSection === 'skipped' && <RunChip tone="skipped">condition not met</RunChip>}
-        {runSection === 'running' && <RunChip tone="running"><LoaderCircle size={10} className="feb-spin" /> running</RunChip>}
         <div className="feb-section__tools">
           <button
             className={`feb-cond-toggle ${condOn ? 'feb-cond-toggle--on' : ''}`}
@@ -496,17 +467,13 @@ const CompactSection: React.FC<CompactSectionProps> = ({
             )}
             {section.events.map((ev, ei) => {
               const def = EVENT_DEFS[ev.type];
-              const status = eventStatus[ev.id] || 'idle';
               const expanded = expandedEventId === ev.id;
               return (
-                <div key={ev.id} className={`feb-event ${expanded ? 'feb-event--expanded' : ''} ${status === 'done' ? 'feb-event--done' : ''} ${status === 'running' ? 'feb-event--running' : ''}`}>
+                <div key={ev.id} className={`feb-event ${expanded ? 'feb-event--expanded' : ''}`}>
                   <div className="feb-event__head" onClick={() => onExpandEvent(expanded ? null : ev.id)}>
                     <span className="feb-event__icon" style={{ background: `${def.color}22`, color: def.color }}>{<def.Icon size={13} />}</span>
                     <span className="feb-event__label">{ev.label}</span>
                     {ev.storeAs && <span className="feb-event__chip feb-event__chip--store"><Braces size={9} /> {ev.storeAs}</span>}
-                    {status === 'running' && <LoaderCircle size={12} className="feb-spin feb-event__runstate" />}
-                    {status === 'done' && <CircleCheck size={12} className="feb-event__runstate feb-event__runstate--done" />}
-                    {status === 'skipped' && <span className="feb-event__runstate feb-event__runstate--skipped">skipped</span>}
                     <span className="feb-event__type">{def.label}</span>
                     <div className="feb-event__tools" onClick={(e) => e.stopPropagation()}>
                       <button className="feb-icon-btn" disabled={ei === 0} onClick={() => onMoveEvent(ev.id, -1)} title="Move up"><MoveUp size={11} /></button>
@@ -560,10 +527,6 @@ const CompactSection: React.FC<CompactSectionProps> = ({
 const FormEventBuilder: React.FC = () => {
   const [actions, setActions] = useState<FormAction[]>(buildMockActions);
   const [selectedId, setSelectedId] = useState<string>(() => '');
-  const [runState, setRunState] = useState<RunState>('idle');
-  const [stepIndex, setStepIndex] = useState(-1);
-  const [eventStatus, setEventStatus] = useState<Record<string, EventRunStatus>>({});
-  const [sectionRun, setSectionRun] = useState<Record<string, 'idle' | 'passed' | 'skipped' | 'running'>>({});
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pvOpen, setPvOpen] = useState(true);
@@ -582,15 +545,7 @@ const FormEventBuilder: React.FC = () => {
   useEffect(() => {
     setExpandedEventId(null);
     setPreviewOpen(false);
-    resetRun();
   }, [selectedId]);
-
-  const resetRun = () => {
-    setRunState('idle');
-    setStepIndex(-1);
-    setEventStatus({});
-    setSectionRun({});
-  };
 
   const updateAction = (patch: Partial<FormAction>) => {
     setActions((prev) => prev.map((a) => (a.id === selectedId ? { ...a, ...patch } : a)));
@@ -702,57 +657,6 @@ const FormEventBuilder: React.FC = () => {
   };
 
   // ── Run simulation ──
-  const steps = useMemo(() => {
-    if (!action) return [];
-    const out: { sectionId: string; eventId: string; skipped: boolean; firstInSection: boolean }[] = [];
-    for (const s of action.sections) {
-      const skipped = s.condition ? !mockEval(s.condition, MOCK_RECORD) : false;
-      s.events.forEach((e, i) => out.push({ sectionId: s.id, eventId: e.id, skipped, firstInSection: i === 0 }));
-    }
-    return out;
-  }, [action]);
-
-  const startRun = () => {
-    setEventStatus({});
-    setSectionRun({});
-    setStepIndex(0);
-    setRunState('running');
-    setPreviewOpen(true);
-  };
-
-  useEffect(() => {
-    if (runState !== 'running') return;
-    if (stepIndex >= steps.length) {
-      setRunState('completed');
-      return;
-    }
-    const step = steps[stepIndex];
-    const t1 = window.setTimeout(() => {
-      setEventStatus((prev) => ({ ...prev, [step.eventId]: step.skipped ? 'skipped' : 'running' }));
-      if (step.firstInSection) {
-        setSectionRun((prev) => ({ ...prev, [step.sectionId]: step.skipped ? 'skipped' : 'running' }));
-      }
-    }, 80);
-    const t2 = window.setTimeout(() => {
-      setEventStatus((prev) => ({ ...prev, [step.eventId]: step.skipped ? 'skipped' : 'done' }));
-      if (step.firstInSection) {
-        setSectionRun((prev) => ({ ...prev, [step.sectionId]: step.skipped ? 'skipped' : 'passed' }));
-      }
-      setStepIndex((i) => i + 1);
-    }, 700);
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
-  }, [runState, stepIndex, steps]);
-
-  const totalEvents = action ? action.sections.reduce((n, s) => n + s.events.length, 0) : 0;
-  const doneCount = action
-    ? action.sections.reduce((n, s) => n + s.events.filter((e) => eventStatus[e.id] === 'done').length, 0)
-    : 0;
-  const skippedCount = action
-    ? action.sections.reduce((n, s) => n + s.events.filter((e) => eventStatus[e.id] === 'skipped').length, 0)
-    : 0;
 
   return (
     <div className="feb-root">
@@ -762,7 +666,7 @@ const FormEventBuilder: React.FC = () => {
         <span className="feb-badge">compact · Layout Studio</span>
         <div className="feb-toolbar__actions">
           <span className="feb-toolbar__hint">Fits the right config panel (~420px)</span>
-          <button className="feb-btn feb-btn--ghost" onClick={() => { setActions(buildMockActions()); resetRun(); }}>
+          <button className="feb-btn feb-btn--ghost" onClick={() => setActions(buildMockActions())}>
             <RotateCcw size={13} /> Reset
           </button>
           <button className="feb-btn feb-btn--primary"><Check size={13} /> Save Layout</button>
@@ -942,8 +846,6 @@ const FormEventBuilder: React.FC = () => {
                         section={s}
                         index={si}
                         total={action.sections.length}
-                        runSection={sectionRun[s.id] || 'idle'}
-                        eventStatus={eventStatus}
                         expandedEventId={expandedEventId}
                         onExpandEvent={setExpandedEventId}
                         onPatch={(patch) => updateSection(s.id, patch)}
@@ -956,34 +858,6 @@ const FormEventBuilder: React.FC = () => {
                       />
                     ))}
                   </div>
-                )}
-              </div>
-
-              {/* ── Run bar ── */}
-              <div className="feb-runbar">
-                {runState === 'idle' && (
-                  <button className="feb-btn feb-btn--primary feb-btn--sm" onClick={startRun}>
-                    <Play size={12} /> Run Simulation
-                  </button>
-                )}
-                {runState === 'running' && (
-                  <button className="feb-btn feb-btn--sm" disabled>
-                    <LoaderCircle size={12} className="feb-spin" /> Running {doneCount}/{totalEvents || steps.length}…
-                  </button>
-                )}
-                {runState === 'completed' && (
-                  <div className={`feb-banner feb-banner--${skippedCount > 0 ? 'warn' : 'ok'}`} style={{ flex: 1 }}>
-                    {skippedCount > 0 ? (
-                      <><CircleAlert size={13} /> {doneCount} succeeded · {skippedCount} skipped by condition</>
-                    ) : (
-                      <><CircleCheck size={13} /> {doneCount} event{doneCount !== 1 ? 's' : ''} succeeded</>
-                    )}
-                  </div>
-                )}
-                {runState !== 'idle' && (
-                  <button className="feb-btn feb-btn--ghost feb-btn--sm" onClick={resetRun}>
-                    <RotateCcw size={12} /> Reset
-                  </button>
                 )}
               </div>
 
@@ -1006,52 +880,36 @@ const FormEventBuilder: React.FC = () => {
                       <div className="feb-preview__gate">
                         <span className="feb-preview__gate-icon"><ShieldAlert size={12} /></span>
                         <span className="feb-preview__gate-label">Pre-validations ({action.preValidations.length})</span>
-                        {runState !== 'idle' && (
-                          <span className={`feb-run-chip ${runState === 'completed' ? 'feb-run-chip--passed' : 'feb-run-chip--running'}`}>
-                            {runState === 'completed' ? <><Check size={10} /> passed</> : <><LoaderCircle size={10} className="feb-spin" /> checking</>}
-                          </span>
-                        )}
                       </div>
                     )}
 
-                    {action.sections.map((s, si) => {
-                      const skip = s.condition ? !mockEval(s.condition, MOCK_RECORD) : false;
-                      return (
-                        <div key={s.id} className={`feb-preview__section ${sectionRun[s.id] === 'skipped' ? 'feb-preview__section--skipped' : ''}`}>
-                          <div className="feb-preview__section-head">
-                            <span className="feb-preview__section-title">Section {si + 1}</span>
-                            {s.condition && (
-                              <span className="feb-preview__section-cond">
-                                <GitBranch size={9} /> {s.condition}
-                                {runState !== 'idle' && skip && <span className="feb-run-chip feb-run-chip--skipped">not met</span>}
-                              </span>
-                            )}
-                            {runState === 'completed' && !skip && <span className="feb-run-chip feb-run-chip--passed"><Check size={10} /> passed</span>}
-                          </div>
-                          <div className="feb-preview__steps">
-                            {s.events.map((e, ei) => {
-                              const def = EVENT_DEFS[e.type];
-                              const status = eventStatus[e.id] || 'idle';
-                              return (
-                                <div key={e.id} className="feb-preview__step">
-                                  <span className="feb-preview__step-num">{ei + 1}</span>
-                                  <span className="feb-preview__step-icon" style={{ background: `${def.color}22`, color: def.color }}>{<def.Icon size={12} />}</span>
-                                  <span className="feb-preview__step-label">{e.label}</span>
-                                  {e.storeAs && <span className="feb-event__chip feb-event__chip--store"><Braces size={9} /> {e.storeAs}</span>}
-                                  <span className="feb-preview__step-status">
-                                    {status === 'running' && <LoaderCircle size={12} className="feb-spin" />}
-                                    {status === 'done' && <CircleCheck size={12} className="feb-ok" />}
-                                    {status === 'skipped' && <span className="feb-skip-text">skipped</span>}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
+                    {action.sections.map((s, si) => (
+                      <div key={s.id} className="feb-preview__section">
+                        <div className="feb-preview__section-head">
+                          <span className="feb-preview__section-title">Section {si + 1}</span>
+                          {s.condition && (
+                            <span className="feb-preview__section-cond">
+                              <GitBranch size={9} /> {s.condition}
+                            </span>
+                          )}
                         </div>
-                      );
-                    })}
+                        <div className="feb-preview__steps">
+                          {s.events.map((e, ei) => {
+                            const def = EVENT_DEFS[e.type];
+                            return (
+                              <div key={e.id} className="feb-preview__step">
+                                <span className="feb-preview__step-num">{ei + 1}</span>
+                                <span className="feb-preview__step-icon" style={{ background: `${def.color}22`, color: def.color }}>{<def.Icon size={12} />}</span>
+                                <span className="feb-preview__step-label">{e.label}</span>
+                                {e.storeAs && <span className="feb-event__chip feb-event__chip--store"><Braces size={9} /> {e.storeAs}</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <p className="feb-preview__hint">Simulated record: budget ฿250,000 — “Clone &amp; Notify” section 1 (budget &gt; 300,000) is skipped.</p>
+                  <p className="feb-preview__hint">Simulated record: budget ฿250,000 — “Clone &amp; Notify” section 1 (budget &gt; 300,000) would be skipped by its condition.</p>
                 </div>
               )}
             </>

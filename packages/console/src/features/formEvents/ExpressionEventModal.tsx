@@ -1,7 +1,7 @@
 /**
  * ExpressionEventModal — modal configuration for a form-event Expression
  * (JSONata computation), built on the shared EventModalShell. Reuses the full
- * ExpressionEditor (intellisense, snippets, Test runner).
+ * ExpressionEditor (intellisense, snippets).
  */
 import React from 'react';
 import { Code } from 'lucide-react';
@@ -19,7 +19,6 @@ interface Props {
   recordSchemas?: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
   drillRoots?: Record<string, { fieldName: string; label: string; logicalType: string; targetModel?: string }[]>;
   triggerModelName?: string;
-  sample?: Record<string, any>;
   /** Declared layout variables — shown in the picker (json → collection). */
   variables?: FormVariable[];
   variablesLabel?: string;
@@ -28,7 +27,7 @@ interface Props {
 
 export const ExpressionEventModal: React.FC<Props> = ({
   event, onPatch, onConfigChange, onDone, onRemove, onClose,
-  recordSchemas, drillRoots, triggerModelName, sample, variables, variablesLabel, contextLabel,
+  recordSchemas, drillRoots, triggerModelName, variables, variablesLabel, contextLabel,
 }) => {
   const cancel = useEventModalClose(event, onPatch, onClose);
   const config = event.config || {};
@@ -64,25 +63,11 @@ export const ExpressionEventModal: React.FC<Props> = ({
             recordSchemas={recordSchemas}
             drillRoots={drillRoots}
             triggerModelName={triggerModelName}
-            sample={sample}
             value={config.expression || ''}
             onChange={(v) => onConfigChange('expression', v)}
             placeholder="record.budget * 1.07"
           />
           <p className="ls-prop-hint">Available: <code>record</code> (current values), <code>variables</code> (prior events), <code>request_date</code>.</p>
-        </div>
-
-        <div className="ls-prop-group">
-          <label className="ls-prop-label">Store result as (variable)</label>
-          <input
-            className="sails-input"
-            value={event.storeAs || ''}
-            placeholder="myVar — optional"
-            onChange={(e) => onPatch({ storeAs: e.target.value || undefined })}
-          />
-          <p className="ls-prop-hint">
-            Downstream events reference via <code>variables.{event.storeAs || '…'}</code>.
-          </p>
         </div>
       </div>
     </EventModalShell>

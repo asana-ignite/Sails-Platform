@@ -54,13 +54,13 @@ const DEFAULT_STATE: ConditionBlockState = { hidden: false, readOnly: false, edi
 // ── Set/rule resolution ───────────────────────────────────────
 
 /** Active rules: set groups match AND rule groups match. */
-export function resolveActiveRules(sets: ConditionSet[] | undefined, ctx: FilterEvalContext): ConditionSetRule[] {
+export async function resolveActiveRules(sets: ConditionSet[] | undefined, ctx: FilterEvalContext): Promise<ConditionSetRule[]> {
   const active: ConditionSetRule[] = [];
   for (const set of sets || []) {
-    if (!evaluateFilterGroups(set?.conditionGroups, ctx)) continue;
+    if (!(await evaluateFilterGroups(set?.conditionGroups, ctx))) continue;
     for (const rule of set?.rules || []) {
       if (!rule?.id) continue;
-      if (!evaluateFilterGroups(rule.conditionGroups, ctx)) continue;
+      if (!(await evaluateFilterGroups(rule.conditionGroups, ctx))) continue;
       active.push(rule);
     }
   }

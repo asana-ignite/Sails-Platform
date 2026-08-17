@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import type { SailsFieldDefinition } from '@sails/shared';
 import { MOCK_LEADS_FIELDS } from './sample-layout-data';
+import { CustomSelect, SelectOption } from '../../components/common/CustomSelect';
 import './LayoutBuilder.css';
 
 // ─── Types ────────────────────────────────────────────────────
@@ -21,6 +22,20 @@ type Width = number;
 type BlockType = 'field' | 'related_list' | 'tab_group';
 type ConditionOp = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'empty' | 'not_empty';
 type ValidationType = 'required' | 'cross_field' | 'regex' | 'range';
+
+const VALIDATION_TYPE_OPTIONS: SelectOption[] = [
+  { value: 'required', label: 'Required' },
+  { value: 'cross_field', label: 'Cross-Field' },
+  { value: 'regex', label: 'Regex Pattern' },
+  { value: 'range', label: 'Min / Max' },
+];
+
+const VALIDATION_OPERATOR_OPTIONS: SelectOption[] = [
+  { value: 'eq', label: '=' },
+  { value: 'neq', label: '≠' },
+  { value: 'gt', label: '>' },
+  { value: 'lt', label: '<' },
+];
 
 interface BlockCondition {
   id: string;
@@ -1241,17 +1256,17 @@ export const LayoutBuilder: React.FC = () => {
                       (selectedBlock.validations || []).map((val, vi) => (
                         <div key={val.id} className="wys-cond-card">
                           <div className="wys-cond-body" style={{ flexWrap: 'wrap' }}>
-                            <select className="sails-input" value={val.type}
-                              onChange={(e) => {
+                            <CustomSelect
+                              size="sm"
+                              value={val.type}
+                              options={VALIDATION_TYPE_OPTIONS}
+                              onChange={(v) => {
                                 const vals = [...(selectedBlock.validations || [])];
-                                vals[vi] = { ...vals[vi], type: e.target.value as ValidationType };
+                                vals[vi] = { ...vals[vi], type: v as ValidationType };
                                 updateBlock(selectedBlock.id, { validations: vals });
-                              }} style={{ fontSize: 10, padding: '3px 4px', flex: 1, minWidth: 80 }}>
-                              <option value="required">Required</option>
-                              <option value="cross_field">Cross-Field</option>
-                              <option value="regex">Regex Pattern</option>
-                              <option value="range">Min / Max</option>
-                            </select>
+                              }}
+                              style={{ flex: 1, minWidth: 80 }}
+                            />
                             <button className="wys-block__btn wys-block__btn--danger"
                               onClick={() => {
                                 updateBlock(selectedBlock.id, {
@@ -1262,29 +1277,33 @@ export const LayoutBuilder: React.FC = () => {
 
                           {val.type === 'cross_field' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 4 }}>
-                              <select className="sails-input" value={val.dependentFieldId || ''}
-                                onChange={(e) => {
+                              <CustomSelect
+                                size="sm"
+                                value={val.dependentFieldId || ''}
+                                options={[
+                                  { value: '', label: '— depends on field —' },
+                                  ...MOCK_LEADS_FIELDS.filter((f) => f.id !== selectedBlock.fieldId).map((f) => ({
+                                    value: f.id, label: f.name,
+                                  })),
+                                ]}
+                                onChange={(v) => {
                                   const vals = [...(selectedBlock.validations || [])];
-                                  vals[vi] = { ...vals[vi], dependentFieldId: e.target.value };
+                                  vals[vi] = { ...vals[vi], dependentFieldId: v as string };
                                   updateBlock(selectedBlock.id, { validations: vals });
-                                }} style={{ fontSize: 10, padding: '3px 4px' }}>
-                                <option value="">— depends on field —</option>
-                                {MOCK_LEADS_FIELDS.filter((f) => f.id !== selectedBlock.fieldId).map((f) => (
-                                  <option key={f.id} value={f.id}>{f.name}</option>
-                                ))}
-                              </select>
+                                }}
+                              />
                               <div style={{ display: 'flex', gap: 3 }}>
-                                <select className="sails-input" value={val.dependentOperator || 'eq'}
-                                  onChange={(e) => {
+                                <CustomSelect
+                                  size="sm"
+                                  value={val.dependentOperator || 'eq'}
+                                  options={VALIDATION_OPERATOR_OPTIONS}
+                                  onChange={(v) => {
                                     const vals = [...(selectedBlock.validations || [])];
-                                    vals[vi] = { ...vals[vi], dependentOperator: e.target.value as ConditionOp };
+                                    vals[vi] = { ...vals[vi], dependentOperator: v as ConditionOp };
                                     updateBlock(selectedBlock.id, { validations: vals });
-                                  }} style={{ fontSize: 10, padding: '3px 4px', flex: 1 }}>
-                                  <option value="eq">=</option>
-                                  <option value="neq">≠</option>
-                                  <option value="gt">&gt;</option>
-                                  <option value="lt">&lt;</option>
-                                </select>
+                                  }}
+                                  style={{ flex: 1 }}
+                                />
                                 <input className="sails-input" value={val.dependentValue || ''}
                                   onChange={(e) => {
                                     const vals = [...(selectedBlock.validations || [])];

@@ -2093,14 +2093,6 @@
   box-shadow: 0 0 0 1px rgba(157, 206, 224, 0.25);
 }
 
-.ls-evt-event--done {
-  border-color: rgba(16, 185, 129, 0.5);
-}
-
-.ls-evt-event--running {
-  border-color: #a855f7;
-}
-
 .ls-evt-event__icon {
   display: flex;
   align-items: center;
@@ -2142,15 +2134,6 @@
   font-family: ui-monospace, Menlo, monospace;
 }
 
-.ls-evt-event__skipped {
-  font-size: 9.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--sails-text-muted, #94a3b8);
-  flex-shrink: 0;
-}
-
 .ls-evt-event__type {
   font-size: 10px;
   font-weight: 600;
@@ -2164,61 +2147,6 @@
   align-items: center;
   gap: 0;
   flex-shrink: 0;
-}
-
-/* ─── Run bar / chips / banner ─────────────────────────────── */
-
-.ls-evt-runbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ls-evt-runchip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 9.5px;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 999px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.ls-evt-runchip--passed {
-  background: rgba(16, 185, 129, 0.12);
-  color: #059669;
-}
-
-.ls-evt-runchip--skipped {
-  background: rgba(148, 163, 184, 0.14);
-  color: var(--sails-text-muted, #64748b);
-}
-
-.ls-evt-runchip--running {
-  background: rgba(168, 85, 247, 0.12);
-  color: #7c3aed;
-}
-
-.ls-evt-banner {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 7px 10px;
-  border-radius: 7px;
-}
-
-.ls-evt-banner--ok {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
-}
-
-.ls-evt-banner--warn {
-  background: rgba(245, 158, 11, 0.12);
-  color: #b45309;
 }
 
 /* ─── Conditions table ─────────────────────────────────────── */
