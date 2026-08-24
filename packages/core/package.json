@@ -20,7 +20,7 @@
     "next": "^14.0.0",
     "next-auth": "^4.24.14",
     "nodemailer": "^6.9.0",
-    "pg": "^8.11.3",
+    "pg": "^8.13.1",
     "pg-format": "^1.0.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -34,7 +34,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20.0.0",
-    "@types/pg": "^8.11.0",
+    "@types/pg": "^8.11.10",
     "@types/pg-format": "^1.0.5",
     "@types/react": "^18.2.0",
     "prisma": "^6.19.3",

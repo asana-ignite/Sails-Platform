@@ -39,7 +39,13 @@ services:
       - /app/packages/core/node_modules
       - /app/packages/console/node_modules
       - /app/packages/shared/node_modules
-    command: sh -c "cd packages/core && bun prisma generate && bun run dev"
+      - /app/packages/plugin-sdk/node_modules
+      - /app/packages/plugin-script/node_modules
+      - /app/packages/plugin-approval/node_modules
+      - /app/packages/plugin-expression/node_modules
+      - /app/packages/plugin-notification/node_modules
+      - /app/packages/plugin-record-event/node_modules
+    command: sh -c "cd packages/core && bun x prisma generate && bun run dev"
 
   console:
     build:
@@ -55,6 +61,12 @@ services:
       - /app/packages/core/node_modules
       - /app/packages/console/node_modules
       - /app/packages/shared/node_modules
+      - /app/packages/plugin-sdk/node_modules
+      - /app/packages/plugin-script/node_modules
+      - /app/packages/plugin-approval/node_modules
+      - /app/packages/plugin-expression/node_modules
+      - /app/packages/plugin-notification/node_modules
+      - /app/packages/plugin-record-event/node_modules
     environment:
       - VITE_CORE_URL=http://localhost:3000
     command: sh -c "cd packages/console && bun run dev -- --host"

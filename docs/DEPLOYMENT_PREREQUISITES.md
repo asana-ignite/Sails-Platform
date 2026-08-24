@@ -42,9 +42,12 @@ The SAILS Platform operates as a high-throughput, multi-tenant system:
 | Component | Minimum Version | Recommended Version | Purpose |
 |---|---|---|---|
 | **Bun** | `v1.4.0` | `v1.4.x` (latest) | Native TypeScript runtime, package manager (`bun.lock`), and CLI engine. |
-| **Docker Engine** | `24.0.0` | `26.0+` | Containerized process isolation. |
-| **Docker Compose** | `v2.20.0` | `v2.27+` | Multi-container orchestration (`docker-compose.yml`). |
-| **PostgreSQL** | `16.0` (Alpine) | `16-alpine` | Core metadata and tenant data stores. |
+| **Docker Engine** | `24.0.0` | `26.0+` (v29.x compatible) | Containerized process isolation. |
+| **Docker Compose** | `v2.20.0` | `v2.27+` | Multi-container orchestration (`docker-compose.yml` with anonymous plugin volume masks). |
+| **PostgreSQL** | `16.0` (Alpine) | `16-alpine` | Core metadata and tenant data stores with RLS isolation. |
+| **Node-Postgres (`pg`)**| `8.11.3` | `8.13.1` | Native high-throughput connection pooling & PgBouncer alignment. |
+| **Prisma ORM** | `^6.19.3` | `6.19.3` | Multi-schema dynamic query engine. |
+| **Lucide React** | `^0.378.0` | `^0.470.0` | Enterprise UI icon pack. |
 
 ### B. Compute & Memory Sizing
 * **Development / Staging**: 2 vCPU, 4 GB RAM, 20 GB SSD.
