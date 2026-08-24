@@ -188,6 +188,32 @@ docker exec sails-core sh -c "cd packages/core && bun x prisma migrate diff \
 - Policies reference `core.object_permissions`. The current schema uses `read_scope`/`modify_scope` (`core."AccessScope"` enum) — older dumps use `view_all_data`/`modify_all_data` booleans.
 - After adding `tenant_id` to `object_permissions`, any policy with an unqualified `tenant_id` in a subquery becomes **ambiguous** — qualify as `"Lead".tenant_id` / `t.tenant_id`.
 
+### Seeding standard business models & default layouts (Customers, Leads, etc.)
+When a standard model (e.g. `customers`, `leads`) shows 0 rows or empty column headers:
+1. Run the seeding script to register custom business fields (`customer_name`, `email`, `phone`, etc.), create physical columns, activate a default `LIST` layout, and insert sample data:
+```bash
+docker exec sails-core sh -c "cd packages/core && bun scripts/seed-customers.ts"
+```
+2. Verify query output:
+```bash
+docker exec sails-core sh -c "cd packages/core && bun -e \"
+const { QueryLayer } = require('./src/core/engine/QueryLayer');
+const { db } = require('./src/lib/db');
+const { Pool } = require('pg');
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+async function test() {
+  const tenant = await db.tenant.findFirst({ where: { schemaName: 'tenant_sails_default' } });
+  const user = await db.user.findFirst({ where: { tenantId: tenant.id } });
+  const session = { userId: user.id, tenantId: tenant.id, role: user.role, tenantSchema: tenant.schemaName };
+  const res = await QueryLayer.listRecords(pool, 'tenant_sails_default', 'customers', {
+    page: 1, limit: 10, validFields: new Set(['id', 'customer_name', 'email', 'created_at']), textFields: ['customer_name'], ctx: session
+  });
+  console.log('Customers found:', res.total);
+  await pool.end();
+}
+test();\""
+```
+
 ### Reset a tenant admin password
 ```bash
 docker exec sails-core sh -c "cd /app/packages/core && bun -e \"
@@ -195,6 +221,7 @@ import bcrypt from 'bcryptjs'; console.log(await bcrypt.hash('Welcome2Ignite', 1
 docker exec sails-db psql -U postgres -c \
   "UPDATE core.users SET password = '<hash>' WHERE email = 'admin@klao.app';"
 ```
+
 
 ---
 
