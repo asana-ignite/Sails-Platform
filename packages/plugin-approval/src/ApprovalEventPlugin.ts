@@ -8,7 +8,8 @@ import { pool } from 'sails-core/src/lib/knex';
 import { fail, referencesWorkflowContext, buildWorkflowCtx } from 'sails-core/src/core/engine/WorkflowEventPlugins';
 import { resolveTenantSchema, evaluateJsonata, quoteIdent, genId, logWfAction } from 'sails-core/src/core/engine/WorkflowHelpers';
 import { deliverWorkflowNotification } from 'sails-core/src/core/engine/notifications';
-import { WORKFLOW_EVENT_CONFIGS } from '@sails/shared';
+import { WORKFLOW_EVENT_CONFIGS, evaluateFilterGroups } from '@sails/shared';
+import type { FilterEvalContext, FilterEvalUser, SailsFieldDefinition } from '@sails/shared';
 
 export interface ResolvedAssigneeUser {
   id: string;
@@ -79,7 +80,7 @@ export async function resolveAssigneeUsers(tenantId: string, type: AssigneeRef['
 const approvalEventPlugin: WorkflowEventPlugin = {
   type: 'approval',
   label: 'Task Approval',
-  description: 'Create an approval task assigned to a router (user/team/position/role/field)',
+  description: 'Create an approval task assigned to a router (user/team/position/role)',
   parametersSchema: WORKFLOW_EVENT_CONFIGS.approval,
   async execute(ctx: WorkflowEventContext) {
     const { eventConfig, timing } = ctx;
@@ -89,11 +90,69 @@ const approvalEventPlugin: WorkflowEventPlugin = {
     // re-notify assignees on an already-resolved stage.
     if (timing === 'stage_exit') return { success: true };
 
-    const routerType = (eventConfig.routerType as string) || 'role';
-    const routerValue = (eventConfig.routerValue as string) || '';
-    const routerRefs = Array.isArray(eventConfig.routerRefs) ? eventConfig.routerRefs.filter(Boolean) : [];
+    let routerType = (eventConfig.routerType as string) || 'role';
+    let routerValue = (eventConfig.routerValue as string) || '';
+    let routerRefs = Array.isArray(eventConfig.routerRefs) ? eventConfig.routerRefs.filter(Boolean) : [];
     const routerLabel = (eventConfig.routerLabel as string) || 'Approver';
     const timeoutHours = eventConfig.timeoutHours as number | null | undefined;
+    let routerValueType = (eventConfig.routerValueType as string) || 'user';
+    let matchedRuleId: string | null = null;
+
+    // ── Assignee Conditions: rules are evaluated top-to-bottom; the FIRST
+    //    matching rule's assignee config wins. The default (fallback) config
+    //    is used when no rule matches — or when there are no rules at all.
+    const assigneeRules = Array.isArray(eventConfig.assigneeRules) ? eventConfig.assigneeRules : [];
+    if (assigneeRules.length > 0) {
+      const record = {
+        ...(ctx.record?.values || {}),
+        id: ctx.record?.id ?? ctx.recordId ?? undefined,
+        ...(ctx.record?.oldValues ? { oldValues: ctx.record.oldValues } : {}),
+      };
+      let user: FilterEvalUser | undefined;
+      if (ctx.session?.userId) {
+        try {
+          const u = await db.user.findUnique({ where: { id: ctx.session.userId }, select: { role: true, email: true } });
+          user = u ? { id: ctx.session.userId, role: u.role || undefined, email: u.email || undefined } : { id: ctx.session.userId };
+        } catch {
+          user = { id: ctx.session.userId };
+        }
+      }
+      let fields: SailsFieldDefinition[] = [];
+      if (ctx.tableName) {
+        try {
+          const td = await db.tableDefinition.findFirst({
+            where: { tenantId: ctx.tenantId, tableName: ctx.tableName },
+            include: { fields: true },
+          });
+          if (td) fields = (td.fields || []) as unknown as SailsFieldDefinition[];
+        } catch {
+          // No fields metadata — record rules fall back to fieldName keys.
+        }
+      }
+      const evalCtx: FilterEvalContext = {
+        record,
+        vars: ctx.variables || {},
+        user,
+        fields,
+        evaluateExpression: async (expr: string, input: any) => {
+          const r = await evaluateJsonata(expr, input);
+          return r.ok ? r.value : undefined;
+        },
+      };
+      for (const rule of assigneeRules) {
+        const groups = Array.isArray(rule?.conditionGroups) ? rule.conditionGroups : [];
+        const hasRules = groups.some((g: any) => (g?.rules || []).length > 0);
+        if (!hasRules) continue; // no condition built yet — inactive
+        if (await evaluateFilterGroups(groups, evalCtx)) {
+          matchedRuleId = String(rule?.id ?? '');
+          if (rule?.routerType) routerType = String(rule.routerType);
+          routerValue = String(rule?.routerValue ?? '');
+          routerRefs = Array.isArray(rule?.routerRefs) ? rule.routerRefs.filter(Boolean) : [];
+          routerValueType = (rule?.routerValueType as string) || 'user';
+          break;
+        }
+      }
+    }
 
     if (!routerValue && !routerRefs.length && routerType !== 'field') {
       return fail(ctx, `Approval Event requires config.routerValue for router type '${routerType}'`);
@@ -109,7 +168,7 @@ const approvalEventPlugin: WorkflowEventPlugin = {
 
     try {
       const staticLike = ['user', 'role', 'team', 'position'].includes(routerType);
-      const defaultType = staticLike ? routerType : 'user';
+      let defaultType = staticLike ? routerType : 'user';
 
       let rawRefs: any[];
       if (routerRefs.length > 0) {
@@ -117,6 +176,10 @@ const approvalEventPlugin: WorkflowEventPlugin = {
       } else if (routerType === 'field') {
         rawRefs = [ctx.record?.values?.[routerValue]];
       } else if (routerType === 'variable') {
+        // The "Variable holds" kind declared in the Assign To picker decides
+        // how the variable's VALUE resolves; an explicit type: prefix in the
+        // value itself still wins over the declared kind.
+        defaultType = routerValueType;
         rawRefs = [ctx.variables[routerValue]];
       } else if (routerType === 'expression') {
         let evalCtx: Record<string, any> = ctx.variables;
@@ -217,6 +280,7 @@ const approvalEventPlugin: WorkflowEventPlugin = {
           routerType,
           routerValue,
           routerLabel,
+          ruleId: matchedRuleId,
           refs: refs.map((r) => `${r.type}:${r.value}`),
         });
         return { success: true, output: { [`task_${ctx.stageId}`]: taskId, [`task_${ctx.stageId}_assignees`]: [] } };
@@ -227,6 +291,7 @@ const approvalEventPlugin: WorkflowEventPlugin = {
         routerType,
         routerValue,
         routerLabel,
+        ruleId: matchedRuleId,
         assigneeType,
         assigneeId,
         assignees: resolved.map((u) => u.id),

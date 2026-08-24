@@ -20,7 +20,7 @@ admins create at runtime are **configurations** of those types (like
 |---|---|---|
 | `record` | Record Event | Full CRUD on a model (create / read / update / delete / list) via QueryLayer (RLS-enforced); results stored into collection workflow variables with field mapping |
 | `notification` | Notification | Bell / Email delivery |
-| `approval` | Task Approval | Assign approval task to a router (user / team / position / role / record field) |
+| `approval` | Task Approval | Assign approval task to a router (user / team / position / workflow variable) |
 | `expression` | Expression Event | JSONata compute (condition / assignment) |
 | `transform` | Transform Event | JSONata mapping |
 | `script` | Script Event | Execute a tenant BYOC script in a sandbox |
@@ -536,6 +536,39 @@ events: `VariableTextInput` (textbox/textarea with inline `{{var}}` chips),
 intellisense with record/collection drill-down), `VariableEditor`. All share
 the same tree data (`variableTree.tsx`), drag-and-drop, and the ƒ JSONata
 editor. Export barrel: `components/workflow/index.ts`.
+
+### Task Approval — Assign To picker
+
+`AssignToEditor` (`components/workflow/AssignToEditor.tsx`) manages the
+approval event's assignee fields (`routerType` / `routerValue` /
+`routerRefs` / `routerValueType`):
+
+- **User, Position and Team** are multi-select: every pick appends a
+  `user:<id>` / `position:<id>` / `team:<id>` token to `routerRefs` (shown as
+  removable chips on their own line, scrolling when many are selected). All
+  references resolve at task time — one `wf_task` row with an
+  `assignee_users` array; vote policies (All / Any / At least) evaluate
+  against every assignee. Team fans out to every current member. Each
+  selection is **single-type** — switching the type while assignees are
+  selected asks for confirmation and clears the selection (runtime still
+  resolves legacy mixed-ref configs by each token's prefix).
+- **Variable** reads a workflow variable at task time. A "Variable holds:
+  User / Team / Position" selector (`routerValueType`) declares how the
+  variable's value is resolved: a plain id / email / name is treated as that
+  kind, while an explicit `team:…` / `position:…` prefix in the value always
+  wins. Backward compatible — configs saved before `routerValueType` default
+  to `user`.
+- **Assignee Conditions** (`config.assigneeRules`): an ordered list of
+  `{ conditionGroups, routerType, routerValue, routerRefs, routerValueType }`
+  rules. Conditions are built with the QueryStudio FilterBuilder (over the
+  workflow's root table; LHS and RHS support Context — workflow variables,
+  `@me`/`@user.*`, `@today`-style date macros — plus the Expression f(x)
+  source). At task time
+  the approval plugin evaluates the rules top-to-bottom with
+  `evaluateFilterGroups` (same evaluator as exit-condition gates) — the FIRST
+  matching rule's assignees get the task; rules without a built condition are
+  inactive. The default Assignee section acts as the fallback when no rule
+  matches (or when there are no rules).
 
 ## 11. Related Concepts
 

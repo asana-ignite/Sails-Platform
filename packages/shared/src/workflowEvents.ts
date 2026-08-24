@@ -178,16 +178,7 @@ export const WORKFLOW_EVENT_CONFIGS: Record<WorkflowEventType, WorkflowEventConf
       label: 'Assignee',
       parameters: [
         {
-          name: 'routerType', label: 'Assign To', type: 'assignee', defaultValue: 'role',
-          description: 'Who receives this approval task. Resolved to the CURRENT holders at task time — a role/team/position reference always targets whoever holds it right now (newly added members get the next task automatically).',
-        },
-        {
-          name: 'routerValue', label: 'Assignee Reference', type: 'text', defaultValue: '',
-          description: 'The assignee reference — role/team/position/user name-or-id, a record field name, a workflow variable name, or a JSONata expression. Managed by the Assign To picker.',
-        },
-        {
-          name: 'routerRefs', label: 'Assignees', type: 'text', defaultValue: [],
-          description: 'Multiple assignee references (multi-assignee). Managed by the Assign To picker.',
+          name: 'routerType', label: 'Assign To', type: 'assignee', defaultValue: 'team',
         },
       ],
     },

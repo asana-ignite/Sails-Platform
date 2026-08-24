@@ -181,7 +181,7 @@ const TabTitle: React.FC = () => {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <I18nProvider>
       <TabTitle />
       <ThemeProvider>

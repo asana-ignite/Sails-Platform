@@ -65,9 +65,32 @@ function shiftDays(n: number): string {
   return dateStr(d);
 }
 
+/** Deep-get a dotted path through an object (numeric segments index arrays).
+ *  Returns undefined when any segment is unresolvable. */
+function getPath(value: any, segs: string[]): any {
+  let cur = value;
+  for (const seg of segs) {
+    if (cur == null) return undefined;
+    const idx = /^\d+$/.test(seg) ? parseInt(seg, 10) : null;
+    if (Array.isArray(cur)) {
+      if (idx == null || idx < 0 || idx >= cur.length) return undefined;
+      cur = cur[idx];
+    } else {
+      cur = cur[seg];
+    }
+  }
+  return cur;
+}
+
 /** Resolve a context macro; `matched: false` = unsupported (server-only). */
 function contextMacroValue(macro: string, ctx: FilterEvalContext): { matched: boolean; value: any } {
-  if (macro.startsWith('@var.')) return { matched: true, value: ctx.vars?.[macro.slice(5)] };
+  if (macro.startsWith('@var.')) {
+    // @var.<name> (top-level) and @var.<name>.<path> (record-variable fields).
+    // Unresolvable paths never match — a broken reference can't pass the rule.
+    const path = macro.slice(5).split('.').filter(Boolean);
+    if (path.length === 0) return { matched: false, value: undefined };
+    return { matched: true, value: getPath(ctx.vars?.[path[0]], path.slice(1)) };
+  }
   if (macro === '@today') return { matched: true, value: dateStr(new Date()) };
   if (macro === '@yesterday') return { matched: true, value: shiftDays(-1) };
   if (macro === '@tomorrow') return { matched: true, value: shiftDays(1) };

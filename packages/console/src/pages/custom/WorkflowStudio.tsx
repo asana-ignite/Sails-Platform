@@ -339,7 +339,7 @@ function newEvent(type: WorkflowEventType): WorkflowEvent {
   switch (type) {
     case 'record': return { ...base, label: 'Record Event', config: { model: '', operation: '', storeToVariable: '' } };
     case 'notification': return { ...base, label: 'Notification', config: { channel: 'bell', recipients: '', subject: '', message: '' } };
-    case 'approval': return { ...base, label: 'Task Approval', config: { routerType: 'role', routerValue: '', routerLabel: 'Approver', canApprove: true, canReject: true, timeoutHours: null } };
+    case 'approval': return { ...base, label: 'Task Approval', config: { routerType: 'team', routerValue: '', routerLabel: 'Approver', canApprove: true, canReject: true, timeoutHours: null } };
     case 'expression': return { ...base, label: 'Expression', config: { expression: '', assignToVariable: '' } };
     case 'script': return { ...base, label: 'Script', config: { scriptId: '', scriptName: '', timeoutMs: 5000 } };
   }
@@ -672,6 +672,9 @@ export const WorkflowStudio: React.FC = () => {
   // Workflow definition
   const [def, setDef] = useState<WorkflowDef | null>(null);
   const [versions, setVersions] = useState<WorkflowVersionRow[]>([]);
+  /** Details modal (General + Versions) — version history lives here. */
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsTab, setDetailsTab] = useState<'general' | 'versions'>('general');
 
   // Process (canvas data)
   const [process, setProcess] = useState<RoutingProcess>(emptyProcess);
@@ -749,6 +752,60 @@ export const WorkflowStudio: React.FC = () => {
     ];
   }, [process.variables]);
 
+  // Curated context list for the Assignee Condition builder (Task Approval):
+  // only macros the shared JS evaluator (evaluateFilterGroups) actually
+  // resolves — workflow variables (scalars + record-variable field leaves),
+  // @me / @user.role / @user.email, and the fixed date macros. Server-only
+  // macros (@wf.*, @my_team, @my_subordinates, @this_*, N-period) are omitted
+  // so every offered option really works. Collections stay out (no meaningful
+  // comparator) — use Expression f(x) for those.
+  const assigneeConditionContextOptions = useMemo(() => {
+    const NON_SCALAR_LEAF = new Set(['relation', 'lookup', 'record', 'collection', 'json', 'jsonb', 'blob', 'file', 'image', 'attachment']);
+    const varEntries: { value: string; label: string }[] = [];
+    for (const v of process.variables) {
+      if (!v.name) continue;
+      if (v.fieldType === 'collection') continue;
+      if (v.fieldType === 'record') {
+        for (const c of v.columns || []) {
+          if (!c.fieldName || NON_SCALAR_LEAF.has((c.logicalType || 'text').toLowerCase())) continue;
+          varEntries.push({ value: `@var.${v.name}.${c.fieldName}`, label: `${v.name} \u2192 ${c.label || c.fieldName}` });
+        }
+      } else {
+        varEntries.push({ value: `@var.${v.name}`, label: `${v.name} (${VAR_TYPE_LABELS[v.fieldType] || v.fieldType})` });
+      }
+    }
+    return [
+      { value: 'cat_Workflow Variables', label: '\u2500\u2500 Workflow Variables \u2500\u2500', disabled: true },
+      ...varEntries,
+      { value: 'cat_User Context', label: '\u2500\u2500 User Context \u2500\u2500', disabled: true },
+      { value: '@me', label: 'Current User' },
+      { value: '@user.role', label: 'Current User Role' },
+      { value: '@user.email', label: 'Current User Email' },
+      { value: 'cat_Fixed Date Macros', label: '\u2500\u2500 Fixed Date Macros \u2500\u2500', disabled: true },
+      { value: '@today', label: 'Today' },
+      { value: '@yesterday', label: 'Yesterday' },
+      { value: '@tomorrow', label: 'Tomorrow' },
+    ];
+  }, [process.variables]);
+
+  // Expression f(x) intellisense payload for the Assignee Condition builder
+  // (structural mapping of the workflow variables).
+  const assigneeExpressionVariables = useMemo(
+    () => process.variables.map((v) => ({
+      id: v.id,
+      name: v.name,
+      fieldType: v.fieldType,
+      ...(v.targetModel ? { targetModel: v.targetModel } : {}),
+      columns: (v.columns || []).map((c) => ({
+        fieldName: c.fieldName,
+        label: c.label || c.fieldName,
+        logicalType: c.logicalType || 'text',
+        ...(c.targetModel ? { targetModel: c.targetModel } : {}),
+      })),
+    })),
+    [process.variables],
+  );
+
   // API / UI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -785,6 +842,8 @@ export const WorkflowStudio: React.FC = () => {
   const [wizardStep, setWizardStep] = useState<1 | 2>(1);
   const [conditionOpen, setConditionOpen] = useState(false);
   const [recordFilterEventId, setRecordFilterEventId] = useState<string | null>(null);
+  /** Task Approval assignee-rule condition being built (QueryStudio modal). */
+  const [assigneeRuleCond, setAssigneeRuleCond] = useState<{ eventId: string; ruleId: string } | null>(null);
   /** Config snapshot taken when the event wizard opens — restored on Cancel so
    * write-through edits don't survive an abandoned wizard session. */
   const [wizardSnapshot, setWizardSnapshot] = useState<Record<string, any> | null>(null);
@@ -985,7 +1044,7 @@ export const WorkflowStudio: React.FC = () => {
       // QueryStudio dialogs, start-condition, remove-event confirm), the canvas
       // shortcuts (undo/redo, Delete/Backspace) are inert — keyboard input
       // belongs to the modal.
-      const modalOpen = !!wizardEventId || !!exprModalEventId || conditionOpen || !!recordFilterEventId || !!confirmRemoveEvent;
+      const modalOpen = !!wizardEventId || !!exprModalEventId || conditionOpen || !!recordFilterEventId || !!assigneeRuleCond || !!confirmRemoveEvent;
       if (modalOpen) return;
 
       // Undo / Redo: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl/Cmd+Y.
@@ -1023,7 +1082,7 @@ export const WorkflowStudio: React.FC = () => {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
     // eslint-disable-next-line
-  }, [selectedStageId, selectedEventId, selectedEdgeId, selectedStart, editingLabelId, process, undoStack, redoStack, isActiveStatus, wizardEventId, exprModalEventId, conditionOpen, recordFilterEventId, confirmRemoveEvent]);
+  }, [selectedStageId, selectedEventId, selectedEdgeId, selectedStart, editingLabelId, process, undoStack, redoStack, isActiveStatus, wizardEventId, exprModalEventId, conditionOpen, recordFilterEventId, assigneeRuleCond, confirmRemoveEvent]);
 
   // ── Panel resize ──
   useEffect(() => {
@@ -2212,14 +2271,6 @@ export const WorkflowStudio: React.FC = () => {
           <span className="ws-panel-title"><Settings size={12} /> Workflow</span>
           <button className="ws-props-header__float" onClick={() => setPropsFloating(!propsFloating)} title={propsFloating ? 'Dock panel' : 'Float panel over canvas'}>{propsFloating ? <Maximize2 size={12} /> : <Minimize2 size={12} />}</button>
         </div>
-        <div className="ws-props-group">
-          <label className="ws-props-label">Display Name</label>
-          <input className="ws-props-input" value={process.name} onChange={(e) => setProcess((p) => ({ ...p, name: e.target.value }))} disabled={isReadonly} />
-        </div>
-        <div className="ws-props-group">
-          <label className="ws-props-label">Description</label>
-          <textarea className="ws-props-input ws-props-textarea" value={process.description || ''} onChange={(e) => setProcess((p) => ({ ...p, description: e.target.value }))} disabled={isReadonly} rows={2} />
-        </div>
         <div className="ws-props-section-title">Start Condition</div>
         <div className="ws-props-group">
           <p className="ws-props-hint" style={{ paddingTop: 0 }}>
@@ -2355,24 +2406,6 @@ export const WorkflowStudio: React.FC = () => {
             </div>
           );
         })()}
-
-        {versions.length > 0 && (
-          <>
-            <div className="ws-props-section-title"><History size={11} /> Version History</div>
-            <div className="ws-version-list">
-              {[...versions].sort((a, b) => b.version - a.version).map((v) => (
-                <div key={v.id} className={`ws-version-item ${v.version === def?.currentVersion ? 'ws-version-item--current' : ''}`}>
-                  <span className="ws-version-item__num">v{v.version}</span>
-                  <span className="ws-version-item__info">{v.notes || '—'} {v.publishedBy ? `by ${v.publishedBy}` : ''}</span>
-                  <span className="ws-version-item__date">{formatSystemDateTimeValue(v.publishedAt, datetimePrefs)}</span>
-                  {!isReadonly && v.version !== def?.currentVersion && (
-                    <button className="ws-icon-btn" title="Rollback to this version" onClick={() => doRollback(v.version)}><RotateCcw size={11} /></button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
       </div>
     );
 
@@ -2780,6 +2813,7 @@ export const WorkflowStudio: React.FC = () => {
         onBindVariableToEvent={bindVariableToEvent}
         onOpenExpressionEditor={(id) => setExprModalEventId(id)}
         onOpenFilterBuilder={(id) => setRecordFilterEventId(id)}
+        onOpenAssigneeRuleCondition={(eventId, ruleId) => setAssigneeRuleCond({ eventId, ruleId })}
         onConfigChange={(name, value) => updateLiveEventConfig(wizardEventId, name, value)}
         onAddVariable={isReadonly ? undefined : openVarAdd}
         onSelectVariable={(varId) => { setSelectedVarId(varId); setVarEditorOpen(true); }}
@@ -2879,6 +2913,7 @@ export const WorkflowStudio: React.FC = () => {
         </div>
 
         <div className="ws-toolbar__actions">
+          <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={() => { setDetailsTab('general'); setDetailsOpen(true); }} title="General settings and version history"><Settings size={12} /> Details</button>
           {!isActive && (
             <>
               <button className="sails-btn sails-btn--ghost sails-btn--sm" onClick={handleUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" aria-label="Undo">
@@ -3783,6 +3818,122 @@ export const WorkflowStudio: React.FC = () => {
           </div>
         );
       })()}
+      {/* Task Approval — assignee rule condition (QueryStudio) */}
+      {assigneeRuleCond && (() => {
+        const { eventId, ruleId } = assigneeRuleCond;
+        const hostEvent = process.startEvents.find((e) => e.id === eventId)
+          || process.stages.flatMap((s) => s.events).find((e) => e.id === eventId);
+        const rootTable = tables.find((t) => t.id === process.tableId);
+        const rule = (hostEvent?.config?.assigneeRules || []).find((r: any) => r.id === ruleId);
+        const closeAssigneeRuleCond = () => setAssigneeRuleCond(null);
+        return (
+          <div className="ws-modal-overlay sails-qstudio-overlay" onClick={closeAssigneeRuleCond}>
+            <div className="ws-modal sails-qstudio-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="ws-modal__header">
+                <span className="ws-modal__icon" style={{ background: 'rgba(16,185,129,.12)', color: '#10b981' }}><Filter size={16} /></span>
+                <div className="ws-modal__titles">
+                  <span className="ws-modal__title">Assignee Condition</span>
+                  <span className="ws-modal__sub">Task Approval · {rootTable?.name || 'No model selected'}</span>
+                </div>
+                <button className="ws-icon-btn" onClick={closeAssigneeRuleCond}><X size={15} /></button>
+              </div>
+              <div className="ws-modal__body">
+                {!rule ? (
+                  <p className="ws-props-hint" style={{ padding: 12 }}>This rule no longer exists.</p>
+                ) : (
+                  <FilterBuilder
+                    fields={rootTable?.fields || []}
+                    rootTableName={rootTable?.tableName || ''}
+                    initialGroups={Array.isArray(rule.conditionGroups) ? rule.conditionGroups : []}
+                    showHeader={false}
+                    title="Assignee Condition"
+                    terminology="condition"
+                    expressionVariables={assigneeExpressionVariables as any}
+                    extraContextOptions={assigneeConditionContextOptions}
+                    hideDefaultContext
+                    onApply={(groups) => {
+                      const patchRules = (cfg: any) => {
+                        const current = Array.isArray(cfg?.assigneeRules) ? cfg.assigneeRules : [];
+                        return current.map((r: any) => (r.id === ruleId ? { ...r, conditionGroups: groups } : r));
+                      };
+                      if (process.startEvents.some((e) => e.id === eventId)) {
+                        updateStartEventConfig(eventId, { assigneeRules: patchRules(hostEvent?.config) });
+                      } else {
+                        const st = process.stages.find((s) => s.events.some((e) => e.id === eventId));
+                        if (st) updateEventConfig(st.id, eventId, { assigneeRules: patchRules(hostEvent?.config) });
+                      }
+                      closeAssigneeRuleCond();
+                    }}
+                    onCancel={closeAssigneeRuleCond}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+      {/* ── Details Modal (General + Versions) ── */}
+      {detailsOpen && (
+        <div className="ws-modal-overlay sails-qstudio-overlay" onClick={() => setDetailsOpen(false)}>
+          <div className="ws-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="ws-modal__header">
+              <span className="ws-modal__icon" style={{ background: 'rgba(100,116,139,.12)', color: '#64748b' }}><Settings size={16} /></span>
+              <div className="ws-modal__titles">
+                <span className="ws-modal__title">Details</span>
+                <span className="ws-modal__sub">General settings and version history for this workflow.</span>
+              </div>
+              <button className="ws-icon-btn" onClick={() => setDetailsOpen(false)} aria-label="Close details"><X size={15} /></button>
+            </div>
+            <div className="ws-modal__body">
+              <div className="ws-mode-toggle" style={{ alignSelf: 'flex-start' }}>
+                <button type="button" className={`ws-mode-btn ${detailsTab === 'general' ? 'ws-mode-btn--active' : ''}`} onClick={() => setDetailsTab('general')}><Settings size={13} /> General</button>
+                <button type="button" className={`ws-mode-btn ${detailsTab === 'versions' ? 'ws-mode-btn--active' : ''}`} onClick={() => setDetailsTab('versions')}><History size={13} /> Versions</button>
+              </div>
+              {detailsTab === 'general' ? (
+                <>
+                  <div className="ws-props-group">
+                    <label className="ws-props-label">Display Name</label>
+                    <input className="ws-props-input" value={process.name} onChange={(e) => setProcess((p) => ({ ...p, name: e.target.value }))} disabled={isActive} />
+                  </div>
+                  <div className="ws-props-group">
+                    <label className="ws-props-label">System Name</label>
+                    <code style={{ fontSize: 11, padding: '5px 7px', display: 'block', background: 'var(--sails-bg-secondary, #f8fafc)', borderRadius: 4, border: '1px solid var(--sails-border, #e2e8f0)', color: 'var(--sails-text-muted, #94a3b8)' }}>{def?.systemName || '—'}</code>
+                    <p className="ws-props-hint" style={{ paddingTop: 2 }}>System names cannot be changed after creation.</p>
+                  </div>
+                  <div className="ws-props-group">
+                    <label className="ws-props-label">Description</label>
+                    <textarea className="ws-props-input ws-props-textarea" rows={3} value={process.description || ''} onChange={(e) => setProcess((p) => ({ ...p, description: e.target.value }))} disabled={isActive} placeholder="Optional description of this workflow" />
+                  </div>
+                </>
+              ) : (
+                <div className="ws-props-group">
+                  {versions.length === 0 ? (
+                    <p className="ws-props-hint">No published versions yet. Activate to create version 1.</p>
+                  ) : (
+                    <div className="ws-version-list">
+                      {[...versions].sort((a, b) => b.version - a.version).map((v) => (
+                        <div key={v.id} className={`ws-version-item ${v.version === def?.currentVersion ? 'ws-version-item--current' : ''}`}>
+                          <span className="ws-version-item__num">v{v.version}</span>
+                          <span className="ws-version-item__info">{v.notes || '—'} {v.publishedBy ? `by ${v.publishedBy}` : ''}</span>
+                          <span className="ws-version-item__date">{formatSystemDateTimeValue(v.publishedAt, datetimePrefs)}</span>
+                          {!isActive && v.version !== def?.currentVersion && (
+                            <button className="ws-icon-btn" title="Rollback to this version" onClick={() => doRollback(v.version)}><RotateCcw size={11} /></button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="ws-props-hint" style={{ paddingTop: 2 }}>Rollback copies the chosen version into the draft — activate to publish it as the next version.</p>
+                </div>
+              )}
+            </div>
+            <div className="ws-modal__footer">
+              <span style={{ flex: 1 }} />
+              <button className="sails-btn sails-btn--primary sails-btn--sm" onClick={() => setDetailsOpen(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

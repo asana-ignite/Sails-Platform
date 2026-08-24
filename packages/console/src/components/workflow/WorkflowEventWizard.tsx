@@ -90,6 +90,8 @@ export interface WorkflowEventWizardProps {
   onBindVariableToEvent: (varId: string, eventId: string, modelName: string, fieldType?: 'record' | 'collection') => void;
   onOpenExpressionEditor: (eventId: string) => void;
   onOpenFilterBuilder: (eventId: string) => void;
+  /** Task Approval only: opens the QueryStudio builder for an assignee rule's condition. */
+  onOpenAssigneeRuleCondition?: (eventId: string, ruleId: string) => void;
   /** When provided, variable pickers in this wizard show a '+ Add' button. */
   onAddVariable?: (anchorEl?: HTMLElement) => void | Promise<string | null>;
   /**
@@ -184,7 +186,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
   eventId, eventType, config, label, onLabelChange, description, onDescriptionChange,
   variables, tables, triggerModel, hasOldRecord, recordSchemas, recordSchema, drillRoots, exitConditions, formControls, formOutputOnly,
   onCreateCollectionVariable, onCreateRecordVariable, onBindVariableToEvent,
-  onOpenExpressionEditor, onOpenFilterBuilder, onAddVariable, onSelectVariable,
+  onOpenExpressionEditor, onOpenFilterBuilder, onOpenAssigneeRuleCondition, onAddVariable, onSelectVariable,
   onConfigChange, onDone, onRemove, onClose,
 }) => {
   const [activeTab, setActiveTab] = useState(0);
@@ -531,9 +533,6 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
     const value = config[p.name];
     // Notification delivery rows for Task Approval.
     if (eventType === 'approval' && p.name === 'notifyBell') return null;
-    // The Assign To picker manages routerType + routerValue + routerRefs
-    // together — hide the plain value fields it replaces.
-    if (eventType === 'approval' && (p.name === 'routerValue' || p.name === 'routerRefs')) return null;
     switch (p.type) {
       case 'assignee':
         return (
@@ -550,7 +549,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
                 : {}),
             }))}
             recordSchemas={recordSchemas}
-            drillRoots={drillRoots}
+            onOpenAssigneeRuleCondition={onOpenAssigneeRuleCondition ? (ruleId) => onOpenAssigneeRuleCondition(eventId, ruleId) : undefined}
           />
         );
       case 'workflow_actions':
