@@ -48,3 +48,7 @@ backups/
 
 # Graphify analysis artifacts
 graphify-out/
+
+# Salesforce CLI
+.sf/
+.sfdx/
