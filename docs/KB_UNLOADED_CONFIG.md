@@ -15,6 +15,8 @@ This incident has recurred multiple times. Follow the diagnosis order below — 
 | Logs show `[CONFIG] Returning 0 apps` | Query or filtering produced nothing |
 | `The column X does not exist` / `The table core.Y does not exist` | **Schema drift** — DB predates `prisma/schema.prisma` |
 | Login works but data is wrong | **Stale JWT** — session holds pre-restore tenant/user IDs |
+| Dynamic table shows 0 rows or empty headers | **Missing `rls_user` grants** on tenant schema OR unconfigured table (only system fields / no LIST layout) |
+
 
 ---
 
@@ -56,7 +58,19 @@ This incident has recurred multiple times. Follow the diagnosis order below — 
 - `full_database_backup.sql` starts with `DROP DATABASE IF EXISTS postgres;` which fails when executed by `/docker-entrypoint-initdb.d` (connected to that very database). It also contains `\restrict`/`\unrestrict` wrapper lines psql rejects.
 - **The init-restore mount has been removed from `docker-compose.yml`.** Restore manually instead (see §4).
 
+### 2.7 Missing `rls_user` Grants on Tenant Schemas (`permission denied for schema tenant_*`)
+- `QueryLayer` executes all dynamic reads and writes under the restricted PostgreSQL role `rls_user` with `SET LOCAL ROLE rls_user`.
+- After database dumps/restores (which use `pg_dump --no-privileges`) or when creating schemas outside standard provisioning, `rls_user` lacks `USAGE` on `tenant_*` and `SELECT` on `core` metadata tables.
+- **Symptom:** Dynamic table queries fail with `error: permission denied for schema tenant_<schemaName>` and return 0 rows to the UI.
+- **Fix:** Re-apply grants across tenant and core schemas (see §4).
+
+### 2.8 Unconfigured Dynamic Model (Only System Fields & Missing List Layout)
+- Standard models provisioned by `TenantProvisioner` (such as `customers`, `leads`, `companies`) initialize base physical tables with system audit columns (`id`, `created_at`, `updated_at`, `owner_id`).
+- By platform rule, fallback column resolution automatically hides system fields (`is_system: true`). If a model has no user-defined business fields (`name`, `email`, `phone`, etc.), no `LIST` layout, and 0 rows, the UI displays an empty table shell without columns.
+- **Fix:** Register business fields in `core.fields`, add physical columns, create and activate a `LIST` view layout, and seed data via CLI/migration script.
+
 ---
+
 
 ## 3. Diagnosis Checklist (run in order)
 
@@ -114,24 +128,32 @@ cat backups/sails_schema_<TIMESTAMP>.sql | docker exec -i sails-db psql -U postg
 cat backups/sails_data_<TIMESTAMP>.sql   | docker exec -i sails-db psql -U postgres -v ON_ERROR_STOP=1
 
 # 2b. RESTORE rls_user GRANTS (pg_dump --no-privileges does NOT carry them!)
-# Without this: "permission denied for schema tenant_*" on every data query.
-# Tenant schema grants (USAGE + tables + sequences + future DDL defaults):
+# Without this: "permission denied for schema tenant_*" on every dynamic data query.
+# Run this universal grant block across ALL tenant schemas + core permission tables:
 docker exec -i sails-db psql -U postgres -v ON_ERROR_STOP=1 -c "
-  GRANT USAGE ON SCHEMA tenant_sails_default TO rls_user;
-  ALTER DEFAULT PRIVILEGES IN SCHEMA tenant_sails_default GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rls_user;
-  ALTER DEFAULT PRIVILEGES IN SCHEMA tenant_sails_default GRANT USAGE ON SEQUENCES TO rls_user;
-  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA tenant_sails_default TO rls_user;
-  GRANT USAGE ON ALL SEQUENCES IN SCHEMA tenant_sails_default TO rls_user;"
-# Core schema grants (RLS policies query core.object_permissions / user_teams /
-# position_slots / team_positions as rls_user):
-docker exec -i sails-db psql -U postgres -v ON_ERROR_STOP=1 -c "
+  DO \$\$
+  DECLARE
+    s text;
+  BEGIN
+    FOR s IN SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE 'tenant_%' LOOP
+      EXECUTE format('
+        GRANT USAGE ON SCHEMA %I TO rls_user;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rls_user;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT USAGE ON SEQUENCES TO rls_user;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA %I TO rls_user;
+        GRANT USAGE ON ALL SEQUENCES IN SCHEMA %I TO rls_user;
+      ', s, s, s, s, s);
+    END LOOP;
+  END \$\$;
+
   GRANT USAGE ON SCHEMA core TO rls_user;
   GRANT SELECT ON core.users TO rls_user;
   GRANT SELECT ON core.teams TO rls_user;
   GRANT SELECT ON core.user_teams TO rls_user;
   GRANT SELECT ON core.object_permissions TO rls_user;
   GRANT SELECT ON core.position_slots TO rls_user;
-  GRANT SELECT ON core.team_positions TO rls_user;"
+  GRANT SELECT ON core.team_positions TO rls_user;
+"
 
 # 3. Sync any drift introduced since the backup (new Prisma models/columns)
 docker exec sails-core sh -c "cd packages/core && bun x prisma migrate diff \

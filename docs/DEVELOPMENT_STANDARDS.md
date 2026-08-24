@@ -134,3 +134,14 @@ The following constraints are **pre-declared** to prevent architectural decision
 | **Tenant Relocation** | Tenants move between Zones via `bun run cli tenant:relocate`. PostgreSQL sequence states (`setval`) and RLS policies are preserved natively. |
 | **Telemetry Dispatch** | Critical database or container health events emit async `fire-and-forget` alerts to the Global Control Plane. |
 
+---
+
+## 6. Runtime & Deployment Standards (Bun 1.4 Baseline)
+
+- **Runtime Engine**: **Bun >= 1.4.0** across all workspaces and Docker images (`oven/bun:1.4`).
+- **High-Performance Architecture (10k OPS Target)**: Leverage Bun 1.4's Rust core engine for sub-millisecond API startup, 5x lower idle CPU overhead, and high-concurrency request routing.
+- **Dependency & Workspace Hygiene**: All monorepo packages (`@sails/shared`, `@sails/plugin-sdk`, `@sails/plugin-*`, `core`, `console`) use `bun.lock` text-based lockfile format and `bun pm dedupe`.
+- **Authoritative Guide**: Full deployment, sizing, and container lifecycle specifications are documented in [`docs/DEPLOYMENT_PREREQUISITES.md`](./DEPLOYMENT_PREREQUISITES.md).
+
+
+

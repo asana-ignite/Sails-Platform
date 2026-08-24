@@ -1,5 +1,5 @@
-# Use the official Bun image
-FROM oven/bun:latest
+# Use the official Bun 1.4 image (Rust-based high-performance runtime)
+FROM oven/bun:1.4
 
 WORKDIR /app
 

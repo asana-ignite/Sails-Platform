@@ -5,8 +5,9 @@ description: Mandatory development and deployment rules for the Sails Platform.
 
 # Sails Platform Rules
 
-## 1. Development Environment (Docker)
-- **Mandatory Usage**: Local `docker-compose.yml` for testing.
+## 1. Development & Runtime Environment (Docker & Bun 1.4)
+- **Mandatory Usage**: Local `docker-compose.yml` for testing and development.
+- **Runtime Standard**: **Bun >= 1.4.0** across all workspaces and base Docker images (`oven/bun:1.4`).
 - **Ports**: DB: `5433` (Ext) / `5432` (Int). Core: `3000`. Console: `5173`.
 - **Warning**: Run `bun x prisma migrate dev` ONLY when `schema.prisma` is modified.
 - **Warning**: Run `bun x prisma generate` immediately after migrations.
