@@ -1,0 +1,220 @@
+.sails-approval-banner {
+  background: var(--bg-surface-elevated, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.sails-approval-banner__main {
+  padding: 16px 20px;
+}
+
+.sails-approval-banner__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sails-approval-banner__badge-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sails-approval-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+}
+
+.sails-approval-status-chip--pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+
+.sails-approval-status-chip--decided,
+.sails-approval-status-chip--approved {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.sails-approval-workflow-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+}
+
+.sails-approval-stage-tag {
+  background: var(--bg-surface-secondary, #f1f5f9);
+  color: var(--text-secondary, #475569);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sails-approval-sla {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  background: var(--bg-surface-secondary, #f8fafc);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.sails-approval-sla--overdue {
+  color: #e11d48;
+  background: rgba(244, 63, 94, 0.1);
+  border-color: rgba(244, 63, 94, 0.2);
+}
+
+.sails-approval-instructions {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(99, 102, 241, 0.06);
+  border-left: 3px solid #6366f1;
+  padding: 10px 14px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--text-primary, #334155);
+}
+
+.sails-approval-instructions p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.sails-approval-action-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color, #f1f5f9);
+}
+
+.sails-approval-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #e11d48;
+  font-size: 12px;
+  background: rgba(244, 63, 94, 0.08);
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.sails-approval-action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sails-approval-comment-box {
+  flex: 1;
+}
+
+.sails-approval-comment-input {
+  width: 100%;
+  padding: 8px 14px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 8px;
+  font-size: 13px;
+  background: var(--bg-surface, #ffffff);
+  color: var(--text-primary, #0f172a);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  height: 38px;
+}
+
+.sails-approval-comment-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.sails-approval-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.sails-btn-decision {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, transform 0.05s;
+}
+
+.sails-btn-decision:active {
+  transform: scale(0.98);
+}
+
+.sails-btn-decision:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sails-btn-decision--success {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.sails-btn-decision--success:hover:not(:disabled) {
+  background: #059669;
+}
+
+.sails-btn-decision--danger {
+  background: #f43f5e;
+  color: #ffffff;
+}
+
+.sails-btn-decision--danger:hover:not(:disabled) {
+  background: #e11d48;
+}
+
+.sails-btn-decision--secondary {
+  background: var(--bg-surface-secondary, #e2e8f0);
+  color: var(--text-primary, #1e293b);
+}
+
+.sails-approval-decided-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg-surface-secondary, #f8fafc);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-secondary, #475569);
+}
+
+.sails-spin {
+  animation: sails-spin 1s linear infinite;
+}
+
+@keyframes sails-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

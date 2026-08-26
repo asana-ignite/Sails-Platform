@@ -980,15 +980,40 @@ const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () =>
                     value={isEditingMenu.actionType}
                     options={[
                       { value: 'data_model', label: 'Data Model' },
+                      { value: 'plugin', label: 'Plugin / System Component' },
                       { value: 'custom', label: 'Custom' }
                     ]}
                     onChange={val => setIsEditingMenu({
                       ...isEditingMenu,
                       actionType: String(val),
-                      dataModelId: String(val) === 'custom' ? null : isEditingMenu.dataModelId
+                      dataModelId: String(val) === 'data_model' ? isEditingMenu.dataModelId : null
                     })} />
                 </div>
               </div>
+              {isEditingMenu.actionType === 'plugin' && (
+                <div className="sails-app-field-group">
+                  <label className="sails-app-field-label">Plugin Component</label>
+                  <CustomSelect
+                    searchable
+                    value={(isEditingMenu as any).componentKey || ''}
+                    options={[
+                      { value: 'TaskInbox', label: 'Task Inbox (My Approvals)' },
+                      { value: 'TaskInboxHistory', label: 'Approval History' },
+                      { value: 'ApprovalDetailPage', label: 'Approval Detail Page' },
+                      { value: 'AdminUserManager', label: 'User Manager' },
+                      { value: 'AdminTeamManager', label: 'Team Manager' },
+                      { value: 'AdminPositionManager', label: 'Position Manager' },
+                      { value: 'AdminAuditLog', label: 'Audit Log' },
+                      { value: 'ReportDesigner', label: 'Report Designer' },
+                      { value: 'WorkflowStudio', label: 'Workflow Studio' },
+                      { value: 'LayoutStudio', label: 'Layout Studio' },
+                    ]}
+                    onChange={val => setIsEditingMenu({
+                      ...isEditingMenu,
+                      componentKey: String(val)
+                    } as any)} />
+                </div>
+              )}
               {isEditingMenu.actionType === 'data_model' && (
                 <div className="sails-app-field-group">
                   <label className="sails-app-field-label">Data Model</label>
@@ -1022,7 +1047,7 @@ const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () =>
               <div className="sails-app-field-group">
                 <label className="sails-app-field-label">Browser Path</label>
                 <input type="text" className="sails-input" value={isEditingMenu.path || ''}
-                  onChange={e => setIsEditingMenu({ ...isEditingMenu, path: e.target.value })} placeholder="/crm/leads" />
+                  onChange={e => setIsEditingMenu({ ...isEditingMenu, path: e.target.value })} placeholder="/inbox/approvals" />
               </div>
               {isEditingMenu.actionType === 'custom' && (
                 <div className="sails-app-field-group">
@@ -1032,6 +1057,7 @@ const NavigationTab: React.FC<{ appId: string; appSlug: string; onRefresh: () =>
                   </div>
                 </div>
               )}
+
               <div className="sails-app-create-dialog__footer">
                 <button type="button" className="sails-btn sails-btn--ghost" onClick={() => setIsEditingMenu(null)} disabled={saving}>Cancel</button>
                 <button type="submit" className="sails-btn sails-btn--primary" disabled={saving}>

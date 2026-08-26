@@ -135,7 +135,8 @@ const recordEventPlugin: WorkflowEventPlugin = {
           }
         } else {
           const idEntry = (eventConfig.fieldMapping || []).find((m: any) => m.targetCol === 'id');
-          const targetId = idEntry ? (valueFor(ctx, idEntry, workflowCtx) as string) ?? null : resolveTargetId(ctx, eventConfig);
+          const mappedId = idEntry ? (valueFor(ctx, idEntry, workflowCtx) as string) ?? null : null;
+          const targetId = mappedId || resolveTargetId(ctx, eventConfig) || ctx.recordId || ctx.record?.id || null;
           if (!targetId) return fail(ctx, 'Record Event update requires a target record id (map a source onto the id column, or set a Record Filter)');
           stored = await QueryLayer.updateRecord(pool, schema, model, targetId, data, ses, meta.table.fields as any[]);
         }
@@ -179,14 +180,16 @@ const recordEventPlugin: WorkflowEventPlugin = {
         return fail(ctx, `Operation '${operation}' is not supported`);
       }
 
-      if (!batchMode && storeToVariable && stored !== null && stored !== undefined) {
-        const varDef = (ctx.variableDefs || []).find((v: any) => v.name === storeToVariable);
+      const cleanStoreVar = storeToVariable ? String(storeToVariable).replace(/[\u200B-\u200D\uFEFF]/g, '').trim() : '';
+
+      if (!batchMode && cleanStoreVar && stored !== null && stored !== undefined) {
+        const varDef = (ctx.variableDefs || []).find((v: any) => v.name === cleanStoreVar || v.name === storeToVariable);
         if (varDef) {
           if (varDef.fieldType === 'record') {
             const row = Array.isArray(stored) ? stored[0] : stored;
             const check = validateRecordValue(row, varDef.columns || []);
             if (!check.ok) {
-              return fail(ctx, `Record Event result does not match variable '${storeToVariable}' structure: ${check.errors.slice(0, 3).join('; ')}`);
+              return fail(ctx, `Record Event result does not match variable '${cleanStoreVar}' structure: ${check.errors.slice(0, 3).join('; ')}`);
             }
           } else {
             const shape = {
@@ -197,7 +200,7 @@ const recordEventPlugin: WorkflowEventPlugin = {
               const toValidate = Array.isArray(stored) ? stored : [stored];
               const result = validateCollectionValue(toValidate, shape);
               if (!result.ok) {
-                return fail(ctx, `Record Event result does not match variable '${storeToVariable}' structure: ${result.errors.slice(0, 3).join('; ')}`);
+                return fail(ctx, `Record Event result does not match variable '${cleanStoreVar}' structure: ${result.errors.slice(0, 3).join('; ')}`);
               }
             }
           }
@@ -208,11 +211,20 @@ const recordEventPlugin: WorkflowEventPlugin = {
       if (!batchMode && operation !== 'list' && operation !== 'delete' && stored != null && !Array.isArray(stored)) {
         const outMap = (eventConfig.outputMapping || []) as { sourceField: string; targetVar: string }[];
         for (const om of outMap) {
-          if (om.targetVar) outVals[om.targetVar] = getPath(stored, om.sourceField);
+          if (om.targetVar) {
+            const cleanTgt = String(om.targetVar).replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+            outVals[cleanTgt] = getPath(stored, om.sourceField);
+          }
         }
       }
 
-      return { success: true, output: { ...(storeToVariable ? { [storeToVariable]: stored } : {}), ...outVals } };
+      return {
+        success: true,
+        output: {
+          ...(cleanStoreVar ? { [cleanStoreVar]: stored } : {}),
+          ...outVals,
+        },
+      };
     } catch (error: any) {
       return fail(ctx, `Record Event failed: ${error?.message || error}`);
     }

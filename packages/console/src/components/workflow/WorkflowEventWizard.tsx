@@ -114,13 +114,25 @@ const STR = new Set(['short_text', 'long_text', 'rich_text', 'email', 'phone', '
 const NUM = new Set(['number', 'decimal', 'currency', 'percentage', 'auto_number', 'integer', 'numeric']);
 const DTM = new Set(['date', 'datetime', 'timestamp', 'time']);
 
-function isCompatibleType(src: string, tgt: string): boolean {
+function isCompatibleType(src: string, tgt: string, tgtConfig?: any): boolean {
+  // If target is an expression field, check its declared resultType (defaults to number or text)
+  if (tgt === 'expression') {
+    const exprResultType = tgtConfig?.resultType || 'number';
+    if (exprResultType === 'number' && NUM.has(src)) return true;
+    if (exprResultType === 'text' && STR.has(src)) return true;
+    if (exprResultType === 'date' && DTM.has(src)) return true;
+    if (exprResultType === 'boolean' && src === 'boolean') return true;
+    // Allow any scalar type to be read from an expression field
+    return true;
+  }
+  if (src === 'expression') return true;
   if (STR.has(src) && STR.has(tgt)) return true;
   if (NUM.has(src) && NUM.has(tgt)) return true;
   if (DTM.has(src) && DTM.has(tgt)) return true;
   if (src === 'boolean' && tgt === 'boolean') return true;
   return false;
 }
+
 
 const OPERATION_LABELS: Record<string, string> = {
   create: 'Create (Insert)', update: 'Update', upsert: 'Upsert (insert or update)',
@@ -443,9 +455,10 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
       if (!c.fieldName) continue;
       if (c.fieldName === 'id') continue; // every record carries its ID (UUID)
       const field = modelFields.find((f: any) => (f.fieldName || f.name) === c.fieldName);
-      if (!field || !isCompatibleType(c.logicalType || 'text', field.logicalType || field.physicalType || 'text')) {
+      if (!field || !isCompatibleType(c.logicalType || 'text', field.logicalType || field.physicalType || 'text', field.config)) {
         missing.push(c.fieldName);
       }
+
     }
     if (missing.length > 0) {
       return `Variable '${varName}' needs column${missing.length > 1 ? 's' : ''} ${missing.map((m) => `'${m}'`).join(', ')} which '${config.model}' doesn't match — the event would fail at runtime.`;
@@ -719,7 +732,7 @@ export const WorkflowEventWizard: React.FC<WorkflowEventWizardProps> = ({
         const srcTree = searching ? filterTree(srcTreeAll, srcSearch) : srcTreeAll;
         // Sections + record branches default open; [N] indices stay closed.
         // While searching, everything expands so matches are visible.
-        const DEFAULT_EXPANDED = new Set(['sec:wf', 'sec:vars', 'sec:collections', 'wf:requestor', 'rec:root', 'old:root']);
+        const DEFAULT_EXPANDED = new Set(['sec:wf', 'sec:vars', 'sec:collections', 'wf:requestor', 'record:root', 'record_old:root']);
         const expandedSet = searching
           ? (() => {
               const s = new Set<string>();

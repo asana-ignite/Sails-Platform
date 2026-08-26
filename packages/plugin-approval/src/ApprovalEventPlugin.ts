@@ -48,8 +48,19 @@ export async function resolveAssigneeUsers(tenantId: string, type: AssigneeRef['
     return u ? [u] : [];
   }
   if (type === 'role') {
+    const rawVal = value.trim();
+    const cleanRole = rawVal.toUpperCase().replace(/\s+/g, '_');
     return db.user.findMany({
-      where: { tenantId, role: value, isActive: true },
+      where: {
+        tenantId,
+        isActive: true,
+        OR: [
+          { role: rawVal },
+          { role: cleanRole },
+          { role: { equals: rawVal, mode: 'insensitive' } },
+          { role: { equals: cleanRole, mode: 'insensitive' } },
+        ],
+      },
       select: userSel,
     });
   }
@@ -214,16 +225,20 @@ const approvalEventPlugin: WorkflowEventPlugin = {
       }
 
       const resolved: ResolvedAssigneeUser[] = [];
+      const seenIds = new Set<string>();
       for (const ref of refs) {
         const found = await resolveAssigneeUsers(ctx.tenantId, ref.type, ref.value);
         for (const u of found) {
-          if (!resolved.some((x) => x.id === u.id)) resolved.push(u);
+          if (!seenIds.has(u.id)) {
+            seenIds.add(u.id);
+            resolved.push(u);
+          }
         }
       }
 
       const assigneeType = refs.length === 1 ? refs[0].type : routerType;
       const assigneeId = refs.length === 1 ? refs[0].value : JSON.stringify(refs.map((r) => r.value));
-      const assigneeUserIds = resolved.map((u) => u.id);
+      const assigneeUserIds = Array.from(seenIds);
 
       const s = quoteIdent(schema);
       const taskId = genId('wft');

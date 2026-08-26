@@ -1,0 +1,213 @@
+/** NotificationDropdown styles matching reference apps-add-doctor.html */
+
+.sails-notif-wrapper {
+  position: relative;
+}
+
+.sails-notif-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -80px;
+  width: 350px;
+  background-color: var(--sails-bg-card, #ffffff);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: var(--sails-radius-lg, 12px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.16);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: sails-fade-in 0.2s ease-out forwards;
+}
+
+.sails-notif-dropdown__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--sails-border-color, #f1f5f9);
+  background: var(--sails-bg-secondary, #f8fafc);
+}
+
+.sails-notif-dropdown__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sails-text-main, #0f172a);
+}
+
+.sails-notif-badge {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.sails-notif-dropdown__list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.sails-notif-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-bottom: 1px solid var(--sails-border-color, #f8fafc);
+}
+
+.sails-notif-item:last-child {
+  border-bottom: none;
+}
+
+.sails-notif-item:hover {
+  background-color: var(--sails-bg-secondary, #f1f5f9);
+}
+
+.sails-notif-item__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sails-notif-item__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.sails-notif-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.sails-notif-item__name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sails-notif-item__time {
+  font-size: 10.5px;
+  color: var(--sails-text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.sails-notif-item__desc {
+  font-size: 11.5px;
+  color: var(--sails-text-muted, #64748b);
+  margin: 0 0 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sails-notif-item__desc strong {
+  color: var(--sails-text-main, #334155);
+}
+
+.sails-notif-item__due {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #d97706;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.sails-notif-item__arrow {
+  color: var(--sails-text-muted, #94a3b8);
+  opacity: 0.6;
+}
+
+.sails-notif-empty {
+  padding: 28px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.sails-notif-empty-icon {
+  color: var(--sails-text-muted, #94a3b8);
+  margin-bottom: 4px;
+}
+
+.sails-notif-empty-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+  margin: 0;
+}
+
+.sails-notif-empty-subtitle {
+  font-size: 11.5px;
+  color: var(--sails-text-muted, #64748b);
+  margin: 0;
+}
+
+.sails-notif-skeleton {
+  width: 100%;
+  height: 48px;
+  background: var(--sails-bg-secondary, #f1f5f9);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+  100% { opacity: 0.6; }
+}
+
+.sails-notif-dropdown__footer {
+  padding: 8px;
+  border-top: 1px solid var(--sails-border-color, #f1f5f9);
+  background: var(--sails-bg-secondary, #f8fafc);
+  text-align: center;
+}
+
+.sails-notif-footer-btn {
+  width: 100%;
+  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4f46e5;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sails-notif-footer-btn:hover {
+  background-color: rgba(99, 102, 241, 0.08);
+}

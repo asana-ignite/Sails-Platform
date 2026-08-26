@@ -25,7 +25,7 @@ import { VariableTextInput } from './VariableTextInput';
 import type { PickerColumn, PickerSchemaMap } from './WorkflowVariablePicker';
 import './AssignToEditor.css';
 
-type AssigneeMode = 'user' | 'team' | 'position' | 'variable';
+type AssigneeMode = 'user' | 'role' | 'team' | 'position' | 'variable';
 
 export interface AssignToEditorVariable {
   id: string;
@@ -62,33 +62,31 @@ interface AssignToEditorProps {
 }
 
 interface AssigneeOptions {
+  roles?: string[];
   teams: { id: string; name: string }[];
   positions: { id: string; name: string }[];
   users: { id: string; name: string; email: string }[];
 }
 
-const STATIC_MODES: AssigneeMode[] = ['user', 'team', 'position'];
+const STATIC_MODES: AssigneeMode[] = ['user', 'role', 'team', 'position'];
 
 const MODES: { mode: AssigneeMode; label: string; icon: React.ReactNode; hint: string }[] = [
+  { mode: 'role', label: 'Role', icon: <Users size={13} />, hint: 'Task goes to every active user with this role (e.g. Tenant Admin) — pick multiple roles.' },
   { mode: 'team', label: 'Team', icon: <Users size={13} />, hint: 'Task goes to every current team member — pick multiple teams.' },
   { mode: 'position', label: 'Position', icon: <Briefcase size={13} />, hint: 'Task goes to the current holder(s) of the position — pick multiple positions.' },
   { mode: 'user', label: 'User', icon: <User size={13} />, hint: 'A specific person — pick multiple users at once.' },
   { mode: 'variable', label: 'Variable', icon: <VariableIcon size={13} />, hint: 'Read a workflow variable at task time — declare what its value holds (user / team / position).' },
 ];
 
-// Module-level cache so the wizard doesn't refetch on every open.
-let optionsCache: AssigneeOptions | null | undefined;
-
 async function fetchAssigneeOptions(): Promise<AssigneeOptions | null> {
-  if (optionsCache !== undefined) return optionsCache ?? null;
   try {
     const res = await fetch('/api/tenant/workflow-assignees');
     if (!res.ok) throw new Error(String(res.status));
-    optionsCache = await res.json();
-    return optionsCache ?? null;
+    const json = await res.json();
+    optionsCache = json;
+    return json;
   } catch {
-    optionsCache = null;
-    return null;
+    return optionsCache ?? null;
   }
 }
 
@@ -124,7 +122,7 @@ const AssigneeField: React.FC<{
     ? value.routerRefs.map(String).filter(Boolean)
     : [];
 
-  const mode: AssigneeMode = (['user', 'team', 'position', 'variable'].includes(routerType)
+  const mode: AssigneeMode = (['user', 'role', 'team', 'position', 'variable'].includes(routerType)
     ? routerType
     : 'team') as AssigneeMode;
 
@@ -188,6 +186,8 @@ const AssigneeField: React.FC<{
       if (t === 'user') {
         const u = options.users.find((x) => x.id === v);
         if (u) return `${u.name}${u.email ? ` (${u.email})` : ''}`;
+      } else if (t === 'role') {
+        return v.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
       } else if (t === 'position') {
         const p = options.positions.find((x) => x.id === v);
         if (p) return p.name;
@@ -208,11 +208,32 @@ const AssigneeField: React.FC<{
     onChange({ routerRefs: next, routerValue: '' });
   };
 
-  // ── Option lists per static mode ──
+  // ── Option lists per static mode with member count indicators ──
   const staticOptions = useMemo(() => {
     if (!options) return [];
-    if (mode === 'team') return options.teams.map((t) => ({ value: t.id, label: t.name }));
-    if (mode === 'position') return options.positions.map((p) => ({ value: p.id, label: p.name }));
+    if (mode === 'role') {
+      return (options.roles || []).map((r) => {
+        const clean = r.toUpperCase().replace(/\s+/g, '_');
+        const count = options.users.filter((u: any) => u.role === r || u.role === clean || (u.role && u.role.toLowerCase() === r.toLowerCase())).length;
+        const countLabel = count > 0 ? ` (${count} user${count > 1 ? 's' : ''})` : ' (0 users ⚠️)';
+        return {
+          value: r,
+          label: `${r.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}${countLabel}`,
+        };
+      });
+    }
+    if (mode === 'team') {
+      return options.teams.map((t: any) => {
+        const count = typeof t.memberCount === 'number' ? ` (${t.memberCount} member${t.memberCount !== 1 ? 's' : ''})` : '';
+        return { value: t.id, label: `${t.name}${count}` };
+      });
+    }
+    if (mode === 'position') {
+      return options.positions.map((p: any) => {
+        const count = typeof p.slotCount === 'number' ? ` (${p.slotCount} holder${p.slotCount !== 1 ? 's' : ''})` : '';
+        return { value: p.id, label: `${p.name}${count}` };
+      });
+    }
     if (mode === 'user') return options.users.map((u) => ({ value: u.id, label: `${u.name}${u.email ? ` (${u.email})` : ''}` }));
     return [];
   }, [options, mode]);
@@ -275,7 +296,7 @@ const AssigneeField: React.FC<{
               value=""
               options={staticOptions}
               onChange={(v) => addChip(String(v))}
-              placeholder={mode === 'user' ? 'Search people to add…' : mode === 'position' ? 'Search positions to add…' : 'Search teams to add…'}
+              placeholder={mode === 'user' ? 'Search people to add…' : mode === 'role' ? 'Search roles to add…' : mode === 'position' ? 'Search positions to add…' : 'Search teams to add…'}
             />
           </div>
         </div>

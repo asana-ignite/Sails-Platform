@@ -28,6 +28,9 @@ const LayoutStudio = lazy(() => import('./pages/custom/LayoutStudio'));
 const WorkflowStudio = lazy(() => import('./pages/custom/WorkflowStudio'));
 const TableBuilder = lazy(() => import('./pages/__mockups__/TableBuilder'));
 const FormEventBuilder = lazy(() => import('./pages/__mockups__/FormEventBuilder'));
+const TaskInboxPage = lazy(() => import('./pages/custom/TaskInboxPage'));
+const ApprovalDetailPage = lazy(() => import('./pages/custom/ApprovalDetailPage'));
+
 /**
  * ProtectedRoute
  * Redirects to /login if not authenticated.
@@ -236,8 +239,11 @@ function App() {
                           <Routes>
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                             <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/tasks" element={<Suspense fallback={<LoadingScreen />}><TaskInboxPage /></Suspense>} />
+                            <Route path="/tasks/:taskId" element={<Suspense fallback={<LoadingScreen />}><ApprovalDetailPage /></Suspense>} />
                             <Route path="/:appSlug/*" element={<SmartPageRouter />} />
                             <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
                           </Routes>
                         </AppLayout>
                       } />

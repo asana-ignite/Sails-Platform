@@ -268,3 +268,78 @@ export interface WorkflowFieldMappingEntry {
   itemIndex?: number;
   targetCol: string;
 }
+
+// ─── Workflow Tasks & Approvals Contracts ──────────────────────
+
+export interface WorkflowTaskAction {
+  label: string;
+  value: string;
+  variant?: 'primary' | 'secondary' | 'danger' | 'success';
+}
+
+export interface WorkflowTaskItem {
+  id: string;
+  instance_id: string;
+  step_id: string;
+  status: 'pending' | 'decided' | 'expired' | 'canceled' | string;
+  assignee_type: string;
+  assignee_id: string;
+  assignee_users: string[];
+  decisions: Array<{ action: string; comment?: string; userId: string; timestamp: string }> | null;
+  actions: WorkflowTaskAction[];
+  due_at: string | null;
+  decided_by: string | null;
+  decision: string | null;
+  decided_at: string | null;
+  created_at: string;
+  def_id: string;
+  instance_state: string;
+  def_name: string;
+}
+
+export interface WorkflowTaskDetail {
+  task: WorkflowTaskItem;
+  instance: {
+    id: string;
+    state: string;
+    vars: Record<string, any>;
+    createdBy: string | null;
+    createdAt: string;
+    trigger: string;
+    recordId: string | null;
+    defName: string | null;
+    tableId: string | null;
+    tableName: string | null;
+  };
+  stage: {
+    id: string;
+    label: string | null;
+    description: string | null;
+  } | null;
+  approvalEvent: {
+    message?: string;
+    subject?: string;
+    actions?: WorkflowTaskAction[];
+    canApprove?: boolean;
+    canReject?: boolean;
+    attachments?: Array<{ id: string; name: string; url?: string; size?: number }>;
+    [key: string]: any;
+  } | null;
+  timeline: Array<{
+    id: string;
+    stepId: string | null;
+    action: string;
+    actorId: string | null;
+    actorName: string | null;
+    detail: any;
+    createdAt: string;
+  }>;
+  users: Record<string, { id: string; name: string | null; email: string | null }>;
+  variableDefs: any[];
+}
+
+export interface WorkflowDecisionPayload {
+  action: string;
+  comment?: string;
+}
+

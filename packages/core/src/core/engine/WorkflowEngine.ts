@@ -188,6 +188,10 @@ export async function fireStageEvents(
   let currentVars = { ...vars };
   for (const event of stage.events) {
     if (!event?.type) continue;
+    // An event's timing defaults to 'stage_enter'. Stage exit only runs events explicitly declared as stage_exit.
+    const eventTiming = event.timing || 'stage_enter';
+    if (eventTiming !== timing) continue;
+
     let plugin;
     try {
       plugin = workflowEventRegistry.getPlugin(event.type);
@@ -238,25 +242,25 @@ export async function fireStageEvents(
         summary.success = false;
         summary.error = result.error || 'unknown error';
         await logEventFailure(event, result.error || 'unknown error');
-        if (timing === 'stage_enter') {
-          throw new Error(`Workflow event '${event.type}' failed: ${result.error}`);
-        }
+        throw new Error(`Workflow event '${event.type}' failed: ${result.error}`);
       }
+
+      // Incrementally persist variables to DB so intermediate results are safe
+      await pool.query(
+        `UPDATE ${wf}.wf_instance SET vars = $1, updated_at = now() WHERE id = $2`,
+        [JSON.stringify(currentVars), instanceId],
+      );
     } catch (error: any) {
       summary.success = false;
       summary.error = error?.message || String(error);
       await logEventFailure(event, error?.message || String(error));
-      if (timing === 'stage_enter') throw error;
+      throw error;
     } finally {
       summary.durationMs = Date.now() - t0;
       onEvent?.(summary);
     }
   }
 
-  await pool.query(
-    `UPDATE ${wf}.wf_instance SET vars = $1, updated_at = now() WHERE id = $2`,
-    [JSON.stringify(currentVars), instanceId],
-  );
   return currentVars;
 }
 
@@ -442,7 +446,7 @@ export async function proceedInstance(
 
   const wf = quoteIdent(schema);
   const res = await pool.query(
-    `SELECT id, def_id, version_id, state, vars, current_step_ids FROM ${wf}.wf_instance WHERE id = $1`,
+    `SELECT id, def_id, version_id, state, vars, current_step_ids, record_id, trigger FROM ${wf}.wf_instance WHERE id = $1`,
     [instanceId],
   );
   const instance = res.rows[0];
@@ -575,6 +579,16 @@ async function proceedCore(
   let stageId = currentIds.length ? currentIds[currentIds.length - 1] : stages[0]?.id || null;
   let vars: Record<string, any> = { ...(instance.vars || {}) };
 
+  // Reconstruct triggering record context if available on the instance
+  const recordInfo: RecordTriggerInfo | null = instance.record_id
+    ? {
+        recordId: instance.record_id,
+        operation: (instance.trigger as any) || 'update',
+        values: vars.record || vars.values || undefined,
+        oldValues: vars.oldRecord || vars.oldValues || undefined,
+      }
+    : null;
+
   for (let hops = 0; hops < MAX_STAGE_HOPS; hops++) {
     const stage = stages.find((st: any) => st.id === stageId) || null;
     if (!stage) throw new Error(`Stage '${stageId}' not found in the workflow configuration`);
@@ -598,6 +612,7 @@ async function proceedCore(
     if (!exit) return { state: 'running' }; // no branch matched — scheduler retries
 
     if (exit.type === 'completed') {
+      vars = await fireStageExit(tenantId, schema, instanceId, dag, stage, vars, eventLog, recordInfo);
       const upd = await pool.query(
         `UPDATE ${wf}.wf_instance SET state = 'completed', updated_at = now() WHERE id = $1 AND state = 'running'`,
         [instanceId],
@@ -606,13 +621,16 @@ async function proceedCore(
         const reread = await pool.query(`SELECT state FROM ${wf}.wf_instance WHERE id = $1`, [instanceId]);
         return { state: reread.rows[0]?.state || 'running' };
       }
-      vars = await fireStageExit(tenantId, schema, instanceId, dag, stage, vars, eventLog);
       await logWfAction(schema, instanceId, null, 'completed', null, {});
       void writeExecutionLog(schema, instanceId, { status: 'success', events: eventLog }).catch(() => undefined);
       return { state: 'completed' };
     }
 
-    // 4. Route to the next stage — CAS-claim the transition, then fire events.
+    // 4. Route to the next stage:
+    // First, fire current stage's exit events. If an exit event fails, it throws and halts the instance here.
+    vars = await fireStageExit(tenantId, schema, instanceId, dag, stage, vars, eventLog, recordInfo);
+
+    // Next, CAS-claim the transition to the next stage.
     const nextStageId = exit.stageId as string;
     const nextIds = [...currentIds, nextStageId];
     const claimed = await pool.query(
@@ -624,12 +642,13 @@ async function proceedCore(
       const reread = await pool.query(`SELECT state FROM ${wf}.wf_instance WHERE id = $1`, [instanceId]);
       return { state: reread.rows[0]?.state || 'running' };
     }
-    vars = await fireStageExit(tenantId, schema, instanceId, dag, stage, vars, eventLog);
+
+    // Fire stage_enter events on the newly claimed stage.
     const nextStage = stages.find((st: any) => st.id === nextStageId);
     if (nextStage?.events?.length) {
       vars = await fireStageEvents(
         tenantId, schema, instanceId, dag, nextStageId, 'stage_enter', null, vars,
-        null, undefined, (summary) => eventLog.push(summary),
+        recordInfo, undefined, (summary) => eventLog.push(summary),
       );
     }
     await logWfAction(schema, instanceId, nextStageId, `entered:${nextStageId}`, null, {
@@ -651,11 +670,12 @@ async function fireStageExit(
   stage: any,
   vars: Record<string, any>,
   eventLog: WorkflowEventExec[],
+  recordInfo: RecordTriggerInfo | null = null,
 ): Promise<Record<string, any>> {
   if (!stage?.events?.length) return vars;
   return fireStageEvents(
     tenantId, schema, instanceId, dag, stage.id, 'stage_exit', null, vars,
-    null, undefined, (summary) => eventLog.push(summary),
+    recordInfo, undefined, (summary) => eventLog.push(summary),
   );
 }
 
@@ -681,6 +701,8 @@ async function resolveStageExit(
     voteCount: b.voteCount,
     expression: b.expression,
     conditionGroups: b.conditionGroups,
+    targetType: b.targetType,
+    targetStageId: b.targetStageId,
   }));
   // A stage with no outgoing branches is an implicit end.
   if (branches.length === 0) return { type: 'completed' };

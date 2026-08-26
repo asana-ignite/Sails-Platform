@@ -88,10 +88,19 @@ async function evaluateTriggerCondition(args: RecordTriggerArgs, groups: any[]):
     const meta = await resolveTableMeta(args.tenantId, args.tableName);
     if (!meta) return false;
 
+    let userRole = 'rls_user';
+    if (args.actorId) {
+      const u = await db.user.findUnique({
+        where: { id: args.actorId },
+        select: { role: true },
+      }).catch(() => null);
+      if (u?.role) userRole = u.role;
+    }
+
     const ses: any = {
       userId: args.actorId || '',
       tenantId: args.tenantId,
-      role: 'rls_user',
+      role: userRole,
       email: '',
       teams: [],
     };
@@ -126,6 +135,7 @@ async function evaluateTriggerCondition(args: RecordTriggerArgs, groups: any[]):
       validFields: meta.validFields,
       textFields: meta.textFields,
       jsonbFields: meta.jsonbFields,
+      ctx: ses,
     });
     return (rows.rows || []).length > 0;
   } catch (err: any) {
@@ -150,16 +160,20 @@ export async function triggerBoundWorkflows(args: RecordTriggerArgs): Promise<vo
 
     const defs = await db.workflowDefinition.findMany({
       where: { tenantId: args.tenantId, tableId: tableDef.id, status: 'active' },
-      select: { id: true, config: true },
+      select: { id: true, config: true, publishedConfig: true },
     });
     if (defs.length === 0) return;
 
-    const matches = defs.filter((d) => triggerMatches((d.config as any)?.triggerOn, args.operation));
+    const matches = defs.filter((d) => {
+      const cfg = (d.publishedConfig || d.config || {}) as any;
+      return triggerMatches(cfg.triggerOn, args.operation);
+    });
     if (matches.length === 0) return;
 
     const { startInstance } = await import('./WorkflowEngine');
     for (const def of matches) {
-      const conditionOk = await evaluateTriggerCondition(args, (def.config as any)?.triggerCondition);
+      const cfg = (def.publishedConfig || def.config || {}) as any;
+      const conditionOk = await evaluateTriggerCondition(args, cfg.triggerCondition);
       if (!conditionOk) continue;
 
       startInstance(

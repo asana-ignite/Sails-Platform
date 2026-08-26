@@ -259,6 +259,55 @@ export class TenantProvisioner {
       });
     }
 
+    // Approvals & Tasks
+    if (!existingNames.includes('Approvals & Tasks')) {
+      await db.consoleApp.create({
+        data: {
+          tenantId,
+          name: 'Approvals & Tasks',
+          translationKey: 'app.approvals_tasks',
+          icon: 'CheckSquare',
+          order: 3,
+          menus: {
+            create: [
+              {
+                label: 'Inbox',
+                translationKey: 'menu.inbox',
+                icon: 'Inbox',
+                order: 0,
+                actionType: 'plugin',
+                tenantId,
+                children: {
+                  create: [
+                    {
+                      label: 'My Approvals',
+                      translationKey: 'menu.my_approvals',
+                      icon: 'Clock',
+                      path: '/inbox/approvals',
+                      order: 0,
+                      componentKey: 'TaskInbox',
+                      actionType: 'plugin',
+                      tenantId
+                    },
+                    {
+                      label: 'History',
+                      translationKey: 'menu.approval_history',
+                      icon: 'CheckCircle',
+                      path: '/inbox/history',
+                      order: 1,
+                      componentKey: 'TaskInboxHistory',
+                      actionType: 'plugin',
+                      tenantId
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      });
+    }
+
     await db.$executeRaw`
       UPDATE core.console_menus 
       SET app_id = parent_id_table.app_id
@@ -266,6 +315,7 @@ export class TenantProvisioner {
       WHERE core.console_menus.parent_id = parent_id_table.id
       AND core.console_menus.app_id IS NULL
     `;
+
   }
 
   async provisionDefaultWidgets(tenantId: string) {

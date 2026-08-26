@@ -1,0 +1,246 @@
+.sails-inbox-page {
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+}
+
+.sails-inbox-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.sails-inbox-header__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  margin: 0 0 4px 0;
+}
+
+.sails-inbox-header__subtitle {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  margin: 0;
+}
+
+.sails-inbox-actions-zone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sails-btn-inbox-refresh {
+  background: var(--bg-surface-secondary, #f1f5f9);
+  border: 1px solid var(--border-color, #cbd5e1);
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary, #1e293b);
+  height: 34px;
+}
+
+.sails-btn-inbox-refresh:hover {
+  background: var(--bg-surface-elevated, #e2e8f0);
+}
+
+.sails-inbox-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.sails-inbox-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.sails-inbox-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface-secondary, #f1f5f9);
+  border: 1px solid transparent;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sails-inbox-tab.active {
+  background: var(--bg-surface-elevated, #ffffff);
+  color: var(--text-accent, #4f46e5);
+  border-color: var(--border-color, #e2e8f0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.sails-inbox-tab-badge {
+  background: #f43f5e;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.sails-inbox-search {
+  position: relative;
+  min-width: 260px;
+}
+
+.sails-inbox-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary, #94a3b8);
+}
+
+.sails-inbox-search-input {
+  width: 100%;
+  padding: 7px 12px 7px 32px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 8px;
+  font-size: 13px;
+  background: var(--bg-surface, #ffffff);
+  color: var(--text-primary, #0f172a);
+  outline: none;
+}
+
+.sails-inbox-search-input:focus {
+  border-color: #6366f1;
+}
+
+.sails-inbox-table-card {
+  background: var(--bg-surface-elevated, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.sails-inbox-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.sails-inbox-table th {
+  background: var(--bg-surface-secondary, #f8fafc);
+  padding: 12px 16px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.sails-inbox-row {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.sails-inbox-row:hover {
+  background: var(--bg-surface-secondary, #f8fafc);
+}
+
+.sails-inbox-row td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
+  vertical-align: middle;
+}
+
+.sails-inbox-chip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.sails-inbox-chip--pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+
+.sails-inbox-chip--decided,
+.sails-inbox-chip--approved {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.sails-inbox-assignee-tag {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  background: var(--bg-surface-secondary, #f1f5f9);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.sails-inbox-step-name {
+  font-size: 12px;
+  color: var(--text-primary, #334155);
+}
+
+.sails-inbox-date {
+  font-size: 12px;
+  color: var(--text-tertiary, #64748b);
+}
+
+.sails-btn-inbox-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--bg-surface-secondary, #f1f5f9);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-accent, #4f46e5);
+  cursor: pointer;
+}
+
+.sails-btn-inbox-open:hover {
+  background: #6366f1;
+  color: #ffffff;
+  border-color: #6366f1;
+}
+
+.sails-inbox-loading,
+.sails-inbox-empty,
+.sails-inbox-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  gap: 12px;
+  text-align: center;
+  background: var(--bg-surface-elevated, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  padding: 32px;
+}
+
+.sails-inbox-empty h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sails-inbox-empty p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}

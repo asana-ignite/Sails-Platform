@@ -53,8 +53,9 @@ export const AdminPluginRegistry: Record<string, any> = {
   SalesForecastAdmin: lazy(() => import('../../pages/admin/sales/SalesForecastAdmin')),
   PipelineStagesAdmin: lazy(() => import('../../pages/admin/sales/PipelineStagesAdmin')),
 
-  // Customer Service Package Admin
-  // LineIntegrationAdmin: lazy(() => import('../../pages/admin/cs/LineIntegrationAdmin')),
-  // AutoReplyRulesAdmin: lazy(() => import('../../pages/admin/cs/AutoReplyRulesAdmin')),
-  // AgentRoutingAdmin: lazy(() => import('../../pages/admin/cs/AgentRoutingAdmin')),
+  // Workflow & Approvals
+  TaskInbox: lazy(() => import('../../pages/custom/TaskInboxPage')),
+  TaskInboxHistory: lazy(() => import('../../pages/custom/TaskInboxPage')),
+  ApprovalDetailPage: lazy(() => import('../../pages/custom/ApprovalDetailPage')),
 };
+

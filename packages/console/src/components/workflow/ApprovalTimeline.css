@@ -1,0 +1,140 @@
+.sails-timeline-container {
+  padding: 12px 4px;
+}
+
+.sails-timeline-track {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+}
+
+.sails-timeline-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-tertiary, #64748b);
+  font-size: 13px;
+  padding: 16px;
+}
+
+.sails-timeline-item {
+  display: flex;
+  gap: 14px;
+  position: relative;
+}
+
+.sails-timeline-bullet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.sails-timeline-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-surface-elevated, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.sails-timeline-line {
+  position: absolute;
+  top: 28px;
+  bottom: -16px;
+  width: 2px;
+  background: var(--border-color, #e2e8f0);
+  z-index: 1;
+}
+
+.sails-timeline-content {
+  flex: 1;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.sails-timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.sails-timeline-actor {
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+}
+
+.sails-timeline-date {
+  font-size: 11px;
+  color: var(--text-tertiary, #64748b);
+}
+
+.sails-timeline-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sails-timeline-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.sails-timeline-badge--emerald {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.sails-timeline-badge--rose {
+  background: rgba(244, 63, 94, 0.12);
+  color: #e11d48;
+}
+
+.sails-timeline-badge--sky {
+  background: rgba(2, 132, 199, 0.12);
+  color: #0284c7;
+}
+
+.sails-timeline-badge--indigo {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+}
+
+.sails-timeline-badge--amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.sails-timeline-badge--slate {
+  background: rgba(148, 163, 184, 0.12);
+  color: #475569;
+}
+
+.sails-timeline-step-name {
+  color: var(--text-secondary, #475569);
+  font-size: 12px;
+}
+
+.sails-timeline-comment {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: var(--bg-surface-secondary, #f8fafc);
+  border-left: 3px solid var(--border-accent, #6366f1);
+  border-radius: 4px;
+  color: var(--text-secondary, #334155);
+  font-style: italic;
+  font-size: 12px;
+}

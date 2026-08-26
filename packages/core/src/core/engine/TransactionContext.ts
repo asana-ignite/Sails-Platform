@@ -45,12 +45,23 @@ export class TransactionContext {
       await client.query('SET LOCAL lock_timeout = 5000');
 
       if (resolvedRole) {
-        // Whitelist safe roles to prevent role injection
-        const allowedRoles = ['rls_user', 'postgres'];
-        if (!allowedRoles.includes(resolvedRole)) {
-          throw new Error(`Security Violation: Unauthorized database role switch to '${resolvedRole}'`);
+        // Map application/JWT user roles to PostgreSQL database roles
+        let dbRole: string | null = null;
+        if (resolvedRole === 'postgres' || resolvedRole === 'rls_user') {
+          dbRole = resolvedRole;
+        } else if (resolvedRole === 'SUPER_ADMIN') {
+          dbRole = null; // Super Admin uses default connection role
+        } else {
+          dbRole = 'rls_user'; // All authenticated tenant users switch to rls_user for PostgreSQL RLS
         }
-        await client.query(`SET ROLE ${resolvedRole}`);
+
+        if (dbRole) {
+          const allowedRoles = ['rls_user', 'postgres'];
+          if (!allowedRoles.includes(dbRole)) {
+            throw new Error(`Security Violation: Unauthorized database role switch to '${dbRole}'`);
+          }
+          await client.query(`SET ROLE ${dbRole}`);
+        }
       }
 
       // Inject the user context into the PostgreSQL session in a single round-trip

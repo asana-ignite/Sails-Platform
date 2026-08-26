@@ -83,21 +83,35 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: { count: res.rows[0]?.n || 0 } });
     }
 
+    const countParams = [...params];
+    const limitParam = param(limit);
+    const offsetParam = param((page - 1) * limit);
+
     const [rowsRes, countRes] = await Promise.all([
       pool.query(
-        `SELECT ${TASK_COLUMNS} ${fromSql} WHERE ${whereSql}
+        `SELECT ${TASK_COLUMNS}, d.config AS def_config, d.published_config AS def_published_config ${fromSql} WHERE ${whereSql}
          ORDER BY (t.status = 'pending') DESC, t.due_at ASC NULLS LAST, t.created_at DESC
-         LIMIT ${param(limit)} OFFSET ${param((page - 1) * limit)}`,
+         LIMIT ${limitParam} OFFSET ${offsetParam}`,
         params,
       ),
-      pool.query(`SELECT COUNT(*)::int AS n ${fromSql} WHERE ${whereSql}`, params),
+      pool.query(`SELECT COUNT(*)::int AS n ${fromSql} WHERE ${whereSql}`, countParams),
     ]);
+
+    const enrichedRows = rowsRes.rows.map((row: any) => {
+      const dag = row.def_published_config || row.def_config;
+      const stage = (dag?.stages || []).find((s: any) => s.id === row.step_id);
+      const { def_config, def_published_config, ...cleanRow } = row;
+      return {
+        ...cleanRow,
+        stage_name: stage?.name || row.step_id,
+      };
+    });
 
     const total = countRes.rows[0]?.n || 0;
     return NextResponse.json({
       success: true,
       data: {
-        rows: rowsRes.rows,
+        rows: enrichedRows,
         total,
         page,
         limit,

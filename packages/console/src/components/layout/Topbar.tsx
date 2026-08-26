@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import DynamicIcon from '../common/DynamicIcon';
 import './Topbar.css';
 import Spinner from '../common/Spinner';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface TopbarProps {
   onMenuToggle: () => void;
@@ -33,9 +34,11 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   
   const switcherRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<any>(null);
 
   const handleAppClick = (appId: string) => {
@@ -77,6 +80,9 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setIsProfileOpen(false);
       }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -98,6 +104,30 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
       default: return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
     }
   };
+
+  const [pendingTaskCount, setPendingTaskCount] = useState<number>(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPendingTaskCount = async () => {
+      try {
+        const res = await fetch('/api/workflow/tasks?count=true');
+        const json = await res.json();
+        if (json.success && isMounted) {
+          setPendingTaskCount(json.data.count || 0);
+        }
+      } catch {
+        // Silently catch network failures
+      }
+    };
+
+    fetchPendingTaskCount();
+    const interval = setInterval(fetchPendingTaskCount, 30000); // 30s poll
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <header className={`sails-topbar ${isMobileSearchVisible ? 'sails-topbar--mobile-visible' : ''}`}>
@@ -123,6 +153,47 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
       </div>
 
       <div className="sails-topbar__right">
+        <div className="sails-notif-wrapper" ref={notifRef}>
+          <button
+            className={`sails-topbar__action ${isNotifOpen ? 'sails-topbar__action--active' : ''}`}
+            title="Notifications & Approvals"
+            onClick={() => setIsNotifOpen(!isNotifOpen)}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Bell size={20} />
+            {pendingTaskCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  borderRadius: 10,
+                  minWidth: 17,
+                  height: 17,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 4px',
+                  lineHeight: 1,
+                  border: '2px solid var(--sails-bg-topbar, #ffffff)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                  pointerEvents: 'none',
+                }}
+              >
+                {pendingTaskCount > 99 ? '99+' : pendingTaskCount}
+              </span>
+            )}
+          </button>
+
+          {isNotifOpen && (
+            <NotificationDropdown onClose={() => setIsNotifOpen(false)} />
+          )}
+        </div>
+
         <div
           className="sails-topbar__action-wrapper"
           ref={switcherRef}
@@ -162,10 +233,6 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
           )}
         </div>
 
-        <button className="sails-topbar__action">
-          <Bell size={20} />
-          <span className="sails-topbar__badge"></span>
-        </button>
 
         <div className="sails-topbar__profile-container" ref={profileRef}>
           <div 
