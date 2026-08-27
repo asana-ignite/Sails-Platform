@@ -60,7 +60,7 @@ export async function resolveTableMeta(tenantId: string, tableName: string) {
     include: { fields: true },
   });
   if (!table) return null;
-  const validFields = new Set<string>(table.fields.map((f) => f.fieldName));
+  const validFields = new Set<string>(['id', ...table.fields.map((f) => f.fieldName)]);
   const textTypes = new Set(['text','varchar','string','char','email','phone','url','description']);
   const textFields = table.fields
     .filter((f) => textTypes.has((f.physicalType || '').toLowerCase()))

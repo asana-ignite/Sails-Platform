@@ -9,6 +9,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { I18nProvider } from './contexts/I18nContext';
 import { DateTimePrefsProvider } from './utils/systemDateTime';
 import { RecordStackProvider } from './contexts/RecordStackContext';
+import { ToastProvider } from './contexts/ToastContext';
 import RecordDetailPanel from './components/record/RecordDetailPanel';
 
 // Lazy load pages
@@ -189,6 +190,7 @@ function App() {
       <TabTitle />
       <ThemeProvider>
       <AuthProvider>
+      <ToastProvider>
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
             {/* Public Routes */}
@@ -256,6 +258,7 @@ function App() {
             />
           </Routes>
         </Suspense>
+      </ToastProvider>
       </AuthProvider>
       </ThemeProvider>
       </I18nProvider>

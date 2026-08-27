@@ -17,7 +17,8 @@ import {
   Pencil,
   Copy,
   Trash2,
-  List
+  List,
+  Zap
 } from 'lucide-react';
 import type { TableLayout, SailsFieldDefinition, ConsoleMenu, DetailAction, FormVariable, LayoutValidationRule } from '@sails/shared';
 import { isSystemField, SYSTEM_PROTECTED_COLUMNS, registerExpressionFunctions } from '@sails/shared';
@@ -36,6 +37,7 @@ import { NotificationMessageModal } from '../components/common/NotificationMessa
 import '../components/common/NotificationMessageModal.css';
 import { useConsole } from '../contexts/ConsoleContext';
 import { useRecordStack } from '../contexts/RecordStackContext';
+import { useToast } from '../contexts/ToastContext';
 import { ActionRegistry } from '../features/actions';
 import { UiConfirmDialog } from '../components/ui/UiConfirmDialog';
 import SailsPopover from '../components/common/SailsPopover';
@@ -204,6 +206,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
   const { navigationItems, apps } = useConsole();
   const auth = useAuth();
   const { requestClose, notifyRecordsChanged } = useRecordStack();
+  const { toast } = useToast();
   const animClass = navigationType === 'POP' ? 'sails-dynamic-table--back' : '';
 
   const [layout, setLayout] = useState<TableLayout | null>(null);
@@ -646,9 +649,11 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
         setFormData({});
         setTouched({});
         setSaveAttempted(false);
+        toast.success('Record updated successfully.');
       } else {
         const createdRecord = data.record || (Array.isArray(data.rows) ? data.rows[0] : data.rows) || data.data || data;
         const newId = createdRecord?.id || data.id;
+        toast.success('Record created successfully.');
 
         if (inStack) {
           // Stacked create: close the "new" card fully (no created-record card) and
@@ -664,6 +669,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
       }
     } catch (err: any) {
       setSaveError(err.message || 'Failed to save record.');
+      toast.error(err.message || 'Failed to save record.');
     } finally {
       setSaving(false);
     }
@@ -685,7 +691,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
       openCloneDraft(action);
       return;
     }
-    if (plugin?.confirm) {
+    if (action.requireConfirm || plugin?.confirm) {
       setPendingConfirmAction(action);
       return;
     }
@@ -875,6 +881,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
       if (action.actionKey === 'clone') {
         const newId = ctx.lastResult?.id;
         notifyRecordsChanged();
+        toast.success('Record cloned successfully.');
         if (newId && !inStack) {
           setRecord(ctx.lastResult);
           setActionMessage({
@@ -886,9 +893,13 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
         } else {
           setActionMessage({ text: 'Record cloned successfully.' });
         }
+      } else if (action.actionKey !== 'delete' && action.actionKey !== 'edit') {
+        const actLabel = action.label || 'Action';
+        toast.success(`${actLabel} executed successfully.`);
       }
     } catch (err: any) {
       setActionError(err.message || 'Action failed.');
+      toast.error(err.message || 'Action failed.');
     } finally {
       setActionBusy(false);
       setPendingConfirmAction(null);
@@ -1335,19 +1346,23 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
         </section>
       </form>
 
-      {/* ── Standard action: themed confirm (delete) ── */}
+      {/* ── Standard action & Custom action confirm modal ── */}
       {pendingConfirmAction && (() => {
         const plugin = ActionRegistry.getInstance().getAction(pendingConfirmAction.actionKey);
         const confirm = plugin?.confirm;
-        if (!confirm) return null;
+        const title = pendingConfirmAction.confirmTitle || confirm?.title || `Execute ${pendingConfirmAction.label}?`;
+        const body = pendingConfirmAction.confirmMessage || confirm?.message || `Are you sure you want to execute '${pendingConfirmAction.label}'?`;
+        const confirmLabel = pendingConfirmAction.confirmLabel || confirm?.confirmLabel || pendingConfirmAction.label || 'Confirm';
+        const tone = pendingConfirmAction.confirmTone || confirm?.tone || (pendingConfirmAction.variant === 'danger' ? 'danger' : 'primary');
+
         return (
           <UiConfirmDialog
             open
-            title={confirm.title}
-            icon={<Trash2 size={18} />}
-            body={confirm.message}
-            confirmLabel={confirm.confirmLabel}
-            tone={confirm.tone}
+            title={title}
+            icon={pendingConfirmAction.actionKey === 'delete' ? <Trash2 size={18} /> : <Zap size={18} />}
+            body={body}
+            confirmLabel={confirmLabel}
+            tone={tone}
             loading={actionBusy}
             onConfirm={() => executeDetailAction(pendingConfirmAction)}
             onCancel={() => setPendingConfirmAction(null)}

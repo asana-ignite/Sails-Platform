@@ -4,11 +4,11 @@ import './ApprovalTimeline.css';
 
 export interface TimelineEntry {
   id: string;
-  stepId: string | null;
+  stepId?: string | null;
   action: string;
-  actorId: string | null;
-  actorName: string | null;
-  detail: any;
+  actorId?: string | null;
+  actorName?: string | null;
+  detail?: any;
   createdAt: string;
 }
 

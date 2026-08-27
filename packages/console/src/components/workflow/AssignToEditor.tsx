@@ -68,6 +68,8 @@ interface AssigneeOptions {
   users: { id: string; name: string; email: string }[];
 }
 
+let optionsCache: AssigneeOptions | null = null;
+
 const STATIC_MODES: AssigneeMode[] = ['user', 'role', 'team', 'position'];
 
 const MODES: { mode: AssigneeMode; label: string; icon: React.ReactNode; hint: string }[] = [

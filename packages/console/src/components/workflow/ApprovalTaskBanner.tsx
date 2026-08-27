@@ -14,6 +14,7 @@ import {
   Calendar
 } from 'lucide-react';
 import type { WorkflowTaskDetail, WorkflowTaskAction } from '@sails/shared';
+import { useToast } from '../../contexts/ToastContext';
 import './ApprovalTaskBanner.css';
 
 interface ApprovalTaskBannerProps {
@@ -23,6 +24,7 @@ interface ApprovalTaskBannerProps {
 
 export const ApprovalTaskBanner: React.FC<ApprovalTaskBannerProps> = ({ detail, onDecided }) => {
   const { task, instance, stage, approvalEvent } = detail;
+  const { toast } = useToast();
   const [comment, setComment] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,11 +77,14 @@ export const ApprovalTaskBanner: React.FC<ApprovalTaskBannerProps> = ({ detail, 
         throw new Error(json.error || 'Failed to submit decision');
       }
 
+      toast.success(`Request ${actionVal.toLowerCase().includes('reject') ? 'rejected' : 'approved'} successfully.`);
+
       if (onDecided) {
         onDecided(actionVal);
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred while submitting decision.');
+      toast.error(err.message || 'An error occurred while submitting decision.');
     } finally {
       setIsBusy(false);
     }

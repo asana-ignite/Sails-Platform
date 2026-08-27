@@ -355,7 +355,7 @@ export async function startInstance(
   });
   if (!def) throw new Error('Workflow definition not found or access denied');
   if (def.status === 'deactivated') throw new Error('Workflow is deactivated — no new instances can be started');
-  if (def.status !== 'active' || !def.publishedConfig) {
+  if (!def.publishedConfig) {
     throw new Error('Workflow has no published version — activate it before starting instances');
   }
 

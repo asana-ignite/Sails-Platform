@@ -2913,6 +2913,38 @@ const LayoutStudio: React.FC = () => {
                       <input type="checkbox" checked={act.visible} onChange={(e) => patchDetailAction(act.id, { visible: e.target.checked })} /> Visible
                     </label>
                   </label>
+                  <label className="ls-evt-field" style={{ gridColumn: 'span 2' }}>
+                    <span className="ls-evt-field__label">Require Confirmation</span>
+                    <label className="ls-radio-label" style={{ height: 30, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <input
+                        type="checkbox"
+                        checked={!!act.requireConfirm}
+                        onChange={(e) => patchDetailAction(act.id, { requireConfirm: e.target.checked })}
+                      /> Prompt confirmation dialog before running
+                    </label>
+                  </label>
+                  {act.requireConfirm && (
+                    <>
+                      <label className="ls-evt-field" style={{ gridColumn: 'span 2' }}>
+                        <span className="ls-evt-field__label">Confirm Title</span>
+                        <input
+                          className="sails-input"
+                          value={act.confirmTitle || ''}
+                          placeholder={`Execute ${act.label}?`}
+                          onChange={(e) => patchDetailAction(act.id, { confirmTitle: e.target.value })}
+                        />
+                      </label>
+                      <label className="ls-evt-field" style={{ gridColumn: 'span 2' }}>
+                        <span className="ls-evt-field__label">Confirm Message</span>
+                        <input
+                          className="sails-input"
+                          value={act.confirmMessage || ''}
+                          placeholder={`Are you sure you want to ${act.label.toLowerCase()}?`}
+                          onChange={(e) => patchDetailAction(act.id, { confirmMessage: e.target.value })}
+                        />
+                      </label>
+                    </>
+                  )}
                 </div>
               </div>
 

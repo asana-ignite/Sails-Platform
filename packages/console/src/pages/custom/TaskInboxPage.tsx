@@ -14,6 +14,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import type { WorkflowTaskItem } from '@sails/shared';
+import { useToast } from '../../contexts/ToastContext';
 import './TaskInboxPage.css';
 
 interface TaskInboxPageProps {
@@ -23,6 +24,7 @@ interface TaskInboxPageProps {
 const TaskInboxPage: React.FC<TaskInboxPageProps> = ({ defaultTab = 'pending' }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
 
   const isHistoryPath = location.pathname.includes('/history');
   const [tab, setTab] = useState<'pending' | 'decided' | 'overdue' | 'all'>(
@@ -137,7 +139,10 @@ const TaskInboxPage: React.FC<TaskInboxPageProps> = ({ defaultTab = 'pending' })
           <button
             type="button"
             className="sails-btn-inbox-refresh"
-            onClick={fetchTasks}
+            onClick={async () => {
+              await fetchTasks();
+              toast.info('Task list refreshed.');
+            }}
             disabled={loading}
             title="Refresh list"
           >
@@ -212,7 +217,7 @@ const TaskInboxPage: React.FC<TaskInboxPageProps> = ({ defaultTab = 'pending' })
                       </td>
                       <td>
                         <span className="sails-inbox-date">
-                          {formatDate(t.due_at)}
+                          {formatDate(t.due_at || null)}
                         </span>
                       </td>
                       <td>

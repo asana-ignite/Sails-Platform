@@ -15,6 +15,7 @@ import LoadingScreen from '../common/LoadingScreen';
 import { fetchCached } from '../../api/client';
 import { ActionRegistry } from '../../features/actions';
 import { useRecordStack } from '../../contexts/RecordStackContext';
+import { useToast } from '../../contexts/ToastContext';
 
 export interface ListViewEngineProps {
   /** Physical table name of the model being listed. */
@@ -93,6 +94,7 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
   onActionsReady,
 }) => {
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   const [layout, setLayout] = useState<TableLayout | null>(null);
   const [records, setRecords] = useState<any[]>([]);
   const [fields, setFields] = useState<SailsFieldDefinition[]>([]);
@@ -423,13 +425,15 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
         return;
       }
       cancelEdit();
+      toast.success('Record updated successfully.');
       doFetch();
     } catch {
       setFormError('Failed to update record.');
+      toast.error('Failed to update record.');
     } finally {
       setSavingRow(false);
     }
-  }, [editingRowId, editDraft, cancelEdit, doFetch]);
+  }, [editingRowId, editDraft, cancelEdit, doFetch, toast]);
 
   // ── Inline create ──
   const startCreate = useCallback(() => {
@@ -489,13 +493,15 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
         return;
       }
       cancelCreate();
+      toast.success('Record created successfully.');
       doFetch(1);
     } catch {
       setFormError('Failed to create record.');
+      toast.error('Failed to create record.');
     } finally {
       setSavingCreate(false);
     }
-  }, [createDraft, cancelCreate, doFetch]);
+  }, [createDraft, cancelCreate, doFetch, toast]);
 
   // ── Inline delete (with confirmation) ──
   const requestDelete = useCallback((rec: any) => {
@@ -520,16 +526,19 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setFormError(data.error || 'Failed to delete record.');
+        toast.error(data.error || 'Failed to delete record.');
         return;
       }
       setConfirmDeleteId(null);
+      toast.success('Record deleted successfully.');
       doFetch();
     } catch {
       setFormError('Failed to delete record.');
+      toast.error('Failed to delete record.');
     } finally {
       setDeletingRow(false);
     }
-  }, [confirmDeleteId, doFetch]);
+  }, [confirmDeleteId, doFetch, toast]);
 
   // ── Actions ──
   const { pushRecord, recordsVersion } = useRecordStack();

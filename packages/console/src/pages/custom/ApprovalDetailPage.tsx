@@ -96,7 +96,7 @@ const ApprovalDetailPage: React.FC = () => {
             onClick={() => setActiveTab('timeline')}
           >
             <History size={16} />
-            <span>Audit History ({timeline.length})</span>
+            <span>Audit History ({(timeline || []).length})</span>
           </button>
         </div>
       </div>
@@ -105,11 +105,11 @@ const ApprovalDetailPage: React.FC = () => {
         <ApprovalTaskBanner detail={detail} onDecided={handleDecisionComplete} />
 
         {activeTab === 'record' ? (
-          instance.tableName && instance.recordId ? (
+          (instance.tableName || instance.table_name) && (instance.recordId || instance.record_id) ? (
             <div className="sails-approval-dynamic-wrapper">
               <DynamicDetailPage
-                tableName={instance.tableName}
-                recordId={instance.recordId}
+                tableName={(instance.tableName || instance.table_name)!}
+                recordId={(instance.recordId || instance.record_id)!}
                 inStack={false}
               />
             </div>
@@ -120,7 +120,7 @@ const ApprovalDetailPage: React.FC = () => {
           )
         ) : (
           <div className="sails-approval-timeline-wrapper">
-            <ApprovalTimeline timeline={timeline} users={users} />
+            <ApprovalTimeline timeline={timeline || []} users={users || {}} />
           </div>
         )}
       </div>

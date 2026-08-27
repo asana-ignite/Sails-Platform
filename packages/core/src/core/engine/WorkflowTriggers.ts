@@ -159,7 +159,12 @@ export async function triggerBoundWorkflows(args: RecordTriggerArgs): Promise<vo
     if (!tableDef) return;
 
     const defs = await db.workflowDefinition.findMany({
-      where: { tenantId: args.tenantId, tableId: tableDef.id, status: 'active' },
+      where: {
+        tenantId: args.tenantId,
+        tableId: tableDef.id,
+        status: { not: 'deactivated' },
+        publishedConfig: { not: null as any },
+      },
       select: { id: true, config: true, publishedConfig: true },
     });
     if (defs.length === 0) return;
