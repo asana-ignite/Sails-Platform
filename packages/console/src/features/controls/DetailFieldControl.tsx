@@ -202,7 +202,7 @@ export const DetailFieldInput: React.FC<DetailFieldInputProps> = ({
   return (
     <div
       className={`ls-block__input-wrapper${showError ? ' is-error' : ''}`}
-      style={{ marginTop: 6, ...(inert ? { pointerEvents: 'none' as const } : null) }}
+      style={{ marginTop: 2, ...(inert ? { pointerEvents: 'none' as const } : null) }}
     >
       {inner}
       {showError && (

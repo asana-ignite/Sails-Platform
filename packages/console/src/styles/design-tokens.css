@@ -9,10 +9,15 @@
   --sails-primary-dark: #6b8ba4;
 
   /* Layout Colors */
-  --sails-bg-body: #f4f7f9;
+  --sails-bg-body: #f2f2f4;
   --sails-bg-sidebar: #ffffff;
   --sails-bg-topbar: #ffffff;
   --sails-bg-card: #ffffff;
+
+  /* 3-Tier Surface Elevation Tokens */
+  --sails-surface-subtle: rgba(0, 0, 0, 0.025);
+  --sails-surface-hover: rgba(0, 0, 0, 0.045);
+  --sails-border-subtle: rgba(0, 0, 0, 0.05);
 
   /* Text Colors */
   --sails-text-main: #344759;
@@ -23,9 +28,11 @@
   --sails-text-sidebar-active: #9DCEE0;
 
   /* Border & Shadows */
-  --sails-border-color: #f1f2f6;
-  --sails-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.03);
-  --sails-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --sails-border-color: #e9ebec;
+  --sails-shadow-sm: 0 1px 2px rgba(56, 65, 74, 0.06);
+  --sails-shadow-md: 0 4px 12px rgba(56, 65, 74, 0.08);
+  --sails-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --sails-shadow-card-hover: 0 4px 14px rgba(56, 65, 74, 0.10);
 
   /* Status Colors */
   --sails-success: #4ec5ad;
@@ -37,20 +44,47 @@
   --sails-info: #7588de;
   --sails-info-light: #f1f3fc;
 
+  /* Soft-Tint Category & Tone Tokens (10-12% bg tints) */
+  --sails-tone-primary-text: var(--sails-primary-dark, #5288af);
+  --sails-tone-primary-bg: rgba(var(--sails-primary-r, 157), var(--sails-primary-g, 206), var(--sails-primary-b, 224), 0.14);
+  --sails-tone-primary-border: rgba(var(--sails-primary-r, 157), var(--sails-primary-g, 206), var(--sails-primary-b, 224), 0.35);
+
+  --sails-tone-success-text: #16a34a;
+  --sails-tone-success-bg: #ecfdf5;
+  --sails-tone-success-border: rgba(22, 163, 74, 0.25);
+
+  --sails-tone-warning-text: #d97706;
+  --sails-tone-warning-bg: #fffbeb;
+  --sails-tone-warning-border: rgba(217, 119, 6, 0.25);
+
+  --sails-tone-danger-text: #dc2626;
+  --sails-tone-danger-bg: #fef2f2;
+  --sails-tone-danger-border: rgba(220, 38, 38, 0.25);
+
+  --sails-tone-info-text: #2563eb;
+  --sails-tone-info-bg: #eff6ff;
+  --sails-tone-info-border: rgba(37, 99, 235, 0.25);
+
+  --sails-tone-neutral-text: #4b5563;
+  --sails-tone-neutral-bg: #f3f4f6;
+  --sails-tone-neutral-border: #e5e7eb;
+
   /* Typography */
-  --sails-font-family: 'Lexend', 'Prompt', sans-serif;
+  --sails-font-family: 'Lexend', 'Prompt', system-ui, -apple-system, sans-serif;
   --sails-font-size-xs: 11px;
   --sails-font-size-sm: 12px;
   --sails-font-size-md: 13px;
   --sails-font-size-base: 14px;
   --sails-font-size-lg: 16px;
   --sails-font-size-xl: 20px;
+  --sails-font-size-2xl: 24px;
 
   /* Spacing */
   --sails-spacing-unit: 8px;
   --sails-radius-sm: 4px;
-  --sails-radius-md: 8px;
-  --sails-radius-lg: 12px;
+  --sails-radius-md: 6px;
+  --sails-radius-lg: 8px;
+  --sails-radius-xl: 12px;
 
   /* Field Controls — single source for input/picker/select metrics */
   --sails-field-height: 36px;
@@ -58,20 +92,33 @@
   --sails-field-font-size: 14px;
 
   /* Transitions */
-  --sails-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --sails-transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
 
   /* Gradient */
   --sails-bg-gradient: none;
 }
 
 [data-theme='dark'] {
-  --sails-bg-body: #1a1d23;
-  --sails-bg-topbar: #252b3b;
-  --sails-bg-card: #252b3b;
+  --sails-bg-body: #14171f;
+  --sails-bg-topbar: #1e222d;
+  --sails-bg-card: #1e222d;
+  --sails-surface-subtle: rgba(255, 255, 255, 0.035);
+  --sails-surface-hover: rgba(255, 255, 255, 0.065);
+  --sails-border-subtle: rgba(255, 255, 255, 0.06);
   --sails-text-main: #f5f6fa;
-  --sails-text-muted: #aeb7c2;
-  --sails-field-placeholder: #D9D9D9;
-  --sails-border-color: #2d3436;
+  --sails-text-muted: #9ca3af;
+  --sails-field-placeholder: #6b7280;
+  --sails-border-color: #2b303c;
+  --sails-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --sails-shadow-card-hover: 0 4px 14px rgba(0, 0, 0, 0.4);
+
+  --sails-tone-success-bg: rgba(22, 163, 74, 0.12);
+  --sails-tone-warning-bg: rgba(217, 119, 6, 0.12);
+  --sails-tone-danger-bg: rgba(220, 38, 38, 0.12);
+  --sails-tone-info-bg: rgba(37, 99, 235, 0.12);
+  --sails-tone-neutral-bg: rgba(255, 255, 255, 0.05);
+  --sails-tone-neutral-text: #9ca3af;
+  --sails-tone-neutral-border: rgba(255, 255, 255, 0.08);
 }
 
 /* ─── Display Density ─────────────────────────────────────── */

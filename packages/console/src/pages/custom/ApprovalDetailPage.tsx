@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, History, FileText, AlertCircle, Loader2 } from 'lucide-react';
+import { ChevronLeft, AlertCircle, Loader2 } from 'lucide-react';
 import type { WorkflowTaskDetail } from '@sails/shared';
 import DynamicDetailPage from '../DynamicDetailPage';
 import { ApprovalTaskBanner } from '../../components/workflow/ApprovalTaskBanner';
@@ -72,38 +72,16 @@ const ApprovalDetailPage: React.FC = () => {
 
   return (
     <div className="sails-approval-detail-page">
-      <div className="sails-approval-page-header">
-        <button
-          type="button"
-          className="sails-btn-back"
-          onClick={() => navigate(-1)}
-        >
-          <ChevronLeft size={18} />
-          <span>Back to Inbox</span>
-        </button>
-        <div className="sails-approval-nav-tabs">
-          <button
-            type="button"
-            className={`sails-approval-nav-tab ${activeTab === 'record' ? 'active' : ''}`}
-            onClick={() => setActiveTab('record')}
-          >
-            <FileText size={16} />
-            <span>Record Details</span>
-          </button>
-          <button
-            type="button"
-            className={`sails-approval-nav-tab ${activeTab === 'timeline' ? 'active' : ''}`}
-            onClick={() => setActiveTab('timeline')}
-          >
-            <History size={16} />
-            <span>Audit History ({(timeline || []).length})</span>
-          </button>
-        </div>
-      </div>
+      {/* Floating Ghost-Glass Approval Banner with Integrated Switcher Tabs */}
+      <ApprovalTaskBanner
+        detail={detail}
+        onDecided={handleDecisionComplete}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        timelineCount={(timeline || []).length}
+      />
 
       <div className="sails-approval-page-content">
-        <ApprovalTaskBanner detail={detail} onDecided={handleDecisionComplete} />
-
         {activeTab === 'record' ? (
           (instance.tableName || instance.table_name) && (instance.recordId || instance.record_id) ? (
             <div className="sails-approval-dynamic-wrapper">

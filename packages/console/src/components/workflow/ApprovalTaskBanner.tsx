@@ -6,29 +6,38 @@ import {
   User,
   AlertCircle,
   FileText,
+  History,
   ChevronDown,
   ChevronUp,
-  Send,
   Loader2,
   ShieldCheck,
   Calendar
 } from 'lucide-react';
 import type { WorkflowTaskDetail, WorkflowTaskAction } from '@sails/shared';
+import { UiActionGroup, UiActionItem, UiActionDivider } from '../ui';
 import { useToast } from '../../contexts/ToastContext';
 import './ApprovalTaskBanner.css';
 
-interface ApprovalTaskBannerProps {
+export interface ApprovalTaskBannerProps {
   detail: WorkflowTaskDetail;
   onDecided?: (action: string) => void;
+  activeTab?: 'record' | 'timeline';
+  onTabChange?: (tab: 'record' | 'timeline') => void;
+  timelineCount?: number;
 }
 
-export const ApprovalTaskBanner: React.FC<ApprovalTaskBannerProps> = ({ detail, onDecided }) => {
+export const ApprovalTaskBanner: React.FC<ApprovalTaskBannerProps> = ({
+  detail,
+  onDecided,
+  activeTab,
+  onTabChange,
+  timelineCount,
+}) => {
   const { task, instance, stage, approvalEvent } = detail;
   const { toast } = useToast();
   const [comment, setComment] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showTimeline, setShowTimeline] = useState(false);
 
   const isPending = task.status === 'pending';
 
@@ -97,20 +106,14 @@ export const ApprovalTaskBanner: React.FC<ApprovalTaskBannerProps> = ({ detail, 
         { label: 'Reject', value: 'reject', variant: 'danger' }
       ];
 
-  const getActionVariantClass = (action: WorkflowTaskAction) => {
-    const v = action.variant || (action.value.toLowerCase().includes('reject') ? 'danger' : 'primary');
-    if (v === 'danger') return 'sails-btn-decision--danger';
-    if (v === 'success' || v === 'primary') return 'sails-btn-decision--success';
-    return 'sails-btn-decision--secondary';
-  };
-
   return (
     <div className="sails-approval-banner">
       <div className="sails-approval-banner__main">
+        {/* Top Header: Badge, Def Name, SLA, and Integrated Switcher Tabs */}
         <div className="sails-approval-banner__header">
           <div className="sails-approval-banner__badge-group">
             <span className={`sails-approval-status-chip sails-approval-status-chip--${task.status}`}>
-              {task.status === 'pending' ? <Clock size={14} /> : <CheckCircle size={14} />}
+              {task.status === 'pending' ? <Clock size={13} /> : <CheckCircle size={13} />}
               {task.status.toUpperCase()}
             </span>
             <span className="sails-approval-workflow-name">
@@ -121,19 +124,39 @@ export const ApprovalTaskBanner: React.FC<ApprovalTaskBannerProps> = ({ detail, 
                 {stage.label}
               </span>
             )}
+            {dueInfo && isPending && (
+              <div className={`sails-approval-sla ${dueInfo.isOverdue ? 'sails-approval-sla--overdue' : ''}`}>
+                <Calendar size={13} />
+                <span>{dueInfo.text}</span>
+              </div>
+            )}
           </div>
 
-          {dueInfo && isPending && (
-            <div className={`sails-approval-sla ${dueInfo.isOverdue ? 'sails-approval-sla--overdue' : ''}`}>
-              <Calendar size={14} />
-              <span>{dueInfo.text}</span>
+          {onTabChange && (
+            <div className="sails-approval-header-tabs">
+              <button
+                type="button"
+                className={`sails-approval-tab-btn ${activeTab === 'record' ? 'sails-approval-tab-btn--active' : ''}`}
+                onClick={() => onTabChange('record')}
+              >
+                <FileText size={13} />
+                <span>Record Details</span>
+              </button>
+              <button
+                type="button"
+                className={`sails-approval-tab-btn ${activeTab === 'timeline' ? 'sails-approval-tab-btn--active' : ''}`}
+                onClick={() => onTabChange('timeline')}
+              >
+                <History size={13} />
+                <span>Audit History {typeof timelineCount === 'number' && `(${timelineCount})`}</span>
+              </button>
             </div>
           )}
         </div>
 
         {approvalEvent?.message && (
           <div className="sails-approval-instructions">
-            <FileText size={16} />
+            <FileText size={14} />
             <p>{approvalEvent.message}</p>
           </div>
         )}
@@ -142,7 +165,7 @@ export const ApprovalTaskBanner: React.FC<ApprovalTaskBannerProps> = ({ detail, 
           <div className="sails-approval-action-area">
             {error && (
               <div className="sails-approval-error">
-                <AlertCircle size={14} />
+                <AlertCircle size={13} />
                 <span>{error}</span>
               </div>
             )}
@@ -160,18 +183,33 @@ export const ApprovalTaskBanner: React.FC<ApprovalTaskBannerProps> = ({ detail, 
               </div>
 
               <div className="sails-approval-buttons">
-                {actions.map((act) => (
-                  <button
-                    key={act.value}
-                    type="button"
-                    className={`sails-btn-decision ${getActionVariantClass(act)}`}
-                    onClick={() => handleDecision(act.value)}
-                    disabled={isBusy}
-                  >
-                    {isBusy ? <Loader2 size={14} className="sails-spin" /> : act.value.toLowerCase().includes('reject') ? <XCircle size={14} /> : <CheckCircle size={14} />}
-                    <span>{act.label}</span>
-                  </button>
-                ))}
+                <UiActionGroup size="md">
+                  {actions.map((act, index) => {
+                    const isReject = act.value.toLowerCase().includes('reject');
+                    const isApprove = act.value.toLowerCase().includes('approve');
+                    const tone = isReject ? 'danger-fill' : isApprove ? 'success-fill' : 'neutral';
+                    return (
+                      <React.Fragment key={act.value}>
+                        {index > 0 && <UiActionDivider />}
+                        <UiActionItem
+                          icon={
+                            isBusy ? (
+                              <Loader2 size={13} className="sails-spin" />
+                            ) : isReject ? (
+                              <XCircle size={13} />
+                            ) : (
+                              <CheckCircle size={13} />
+                            )
+                          }
+                          label={act.label}
+                          tone={tone}
+                          disabled={isBusy}
+                          onClick={() => handleDecision(act.value)}
+                        />
+                      </React.Fragment>
+                    );
+                  })}
+                </UiActionGroup>
               </div>
             </div>
           </div>

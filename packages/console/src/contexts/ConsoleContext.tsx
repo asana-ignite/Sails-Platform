@@ -55,6 +55,45 @@ const findFirstPath = (menus: ConsoleMenu[]): string | null => {
   return null;
 };
 
+const resolveAppForPath = (apps: ConsoleApp[], currentPath: string): string | null => {
+  if (!currentPath || currentPath === '/' || currentPath === '/dashboard' || currentPath.startsWith('/notifications') || currentPath.startsWith('/tasks')) {
+    return null; // Global neutral paths
+  }
+
+  // 1. Direct record detail path: /_r/:tableName/...
+  const pathParts = currentPath.split('/').filter(Boolean);
+  if (pathParts[0] === '_r' && pathParts[1]) {
+    const tableName = pathParts[1].toLowerCase();
+    for (const app of apps) {
+      const match = (app.menus || []).some(m => {
+        const checkMenu = (item: ConsoleMenu): boolean => {
+          const norm = normalizePath(item.path);
+          if (norm.endsWith(`/${tableName}`) || norm.includes(`/tables/${tableName}`) || norm.includes(`/${tableName}/`)) return true;
+          return item.children ? item.children.some(checkMenu) : false;
+        };
+        return checkMenu(m);
+      });
+      if (match) return app.id;
+    }
+  }
+
+  // 2. First segment is app slug: /:appSlug/...
+  const firstSegment = pathParts[0]?.toLowerCase();
+  if (firstSegment) {
+    const slugApp = apps.find(a => a.slug && a.slug.toLowerCase() === firstSegment);
+    if (slugApp) return slugApp.id;
+  }
+
+  // 3. Fallback: menu path prefix match
+  for (const app of apps) {
+    if (hasMatchingMenu(app.menus || [], currentPath)) {
+      return app.id;
+    }
+  }
+
+  return null;
+};
+
 export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [apps, setApps] = useState<ConsoleApp[]>([]);
@@ -82,15 +121,11 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (result.data.defaultLocale) setDefaultLocale(result.data.defaultLocale);
           
           // ROLE-BASED FILTERING:
-          // Filter apps based on requiredCapability and user role.
           const filteredApps = fetchedApps.filter((app: ConsoleApp) => {
             if (!app.requiredCapability) return true;
-            
-            // ADMIN apps only for TENANT_ADMIN and SUPER_ADMIN
             if (app.requiredCapability === 'ADMIN') {
               return user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN' || user?.role === 'ADMIN';
             }
-            
             return true;
           });
           
@@ -100,30 +135,7 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
           // Try to find which app contains the current URL path
           const currentPath = pathnameRef.current;
           const currentActiveAppId = activeAppIdRef.current;
-          let matchedAppId = null;
-
-          if (currentPath !== '/') {
-            // 1. App-first routing: match the first URL segment against app slugs
-            //    (e.g. /test/testtype/test_type_details_view/<recordId> -> slug "test").
-            //    This handles deep links that don't prefix any menu path.
-            const firstSegment = currentPath.split('/').filter(Boolean)[0]?.toLowerCase();
-            if (firstSegment) {
-              const slugApp = filteredApps.find((a: ConsoleApp) => a.slug && a.slug.toLowerCase() === firstSegment);
-              if (slugApp) {
-                matchedAppId = slugApp.id;
-              }
-            }
-
-            // 2. Fallback: match by menu path prefix (legacy paths like /table/..., /admin/...)
-            if (!matchedAppId) {
-              for (const app of filteredApps) {
-                if (hasMatchingMenu(app.menus, currentPath)) {
-                  matchedAppId = app.id;
-                  break;
-                }
-              }
-            }
-          }
+          const matchedAppId = resolveAppForPath(filteredApps, currentPath);
 
           // Sync activeAppId: Switch active app if matchedAppId is found, or default to first app if none set
           if (matchedAppId && matchedAppId !== currentActiveAppId) {
@@ -146,6 +158,15 @@ export const ConsoleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       loadConfig();
     }
   }, [user, loadConfig]);
+
+  // Reactive URL routing sync: update activeAppId when navigating across apps or record links
+  useEffect(() => {
+    if (apps.length === 0) return;
+    const matchedAppId = resolveAppForPath(apps, location.pathname);
+    if (matchedAppId && matchedAppId !== activeAppId) {
+      setActiveAppId(matchedAppId);
+    }
+  }, [location.pathname, apps, activeAppId]);
 
   /**
    * Refetches the console config after a mutation (menu/widget/app save, delete, toggle).

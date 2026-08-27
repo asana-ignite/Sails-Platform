@@ -27,18 +27,17 @@
   /* DETAIL: reduce section grid to 6 columns */
   .ls-section__grid {
     grid-template-columns: repeat(6, 1fr);
-    gap: 14px;
-    padding: 14px;
+    gap: 6px 10px;
+    padding: 10px 12px;
   }
 
-  /* DETAIL: reduce block padding */
+  /* DETAIL: compact block padding */
   .ls-block {
-    padding: 12px 12px 20px;
+    padding: 6px 10px;
   }
 
   .ls-block--field {
-    padding-top: 12px;
-    padding-bottom: 20px;
+    padding: 6px 10px;
   }
 
   /* DETAIL: reduce page title */
@@ -103,8 +102,8 @@
   /* DETAIL: single-column grid */
   .ls-section__grid {
     grid-template-columns: 1fr;
-    gap: 10px;
-    padding: 10px;
+    gap: 6px;
+    padding: 8px 10px;
   }
 
   /* DETAIL + FORM: force all blocks to full width */
@@ -112,14 +111,13 @@
     grid-column: 1 / -1 !important;
   }
 
-  /* DETAIL: reduce block spacing */
+  /* DETAIL: compact block spacing */
   .ls-block {
-    padding: 10px 10px 16px;
+    padding: 6px 10px;
   }
 
   .ls-block--field {
-    padding-top: 10px;
-    padding-bottom: 16px;
+    padding: 6px 10px;
   }
 
   /* DETAIL: page title */

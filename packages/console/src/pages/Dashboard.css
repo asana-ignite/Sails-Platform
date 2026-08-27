@@ -1,9 +1,238 @@
+/**
+ * Dashboard — Executive Dashboard Archetype Styles
+ */
+
 .sails-dashboard {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--sails-spacing-unit) * 4);
+  gap: calc(var(--sails-spacing-unit) * 3);
 }
 
+.sails-dash-header-actions {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sails-spacing-unit) * 1.5);
+}
+
+/* Integration Channels Widget */
+.sails-channel-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--sails-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sails-channel-icon--success {
+  background: var(--sails-tone-success-bg);
+  color: var(--sails-tone-success-text);
+  border: 1px solid var(--sails-tone-success-border);
+}
+
+.sails-channel-icon--info {
+  background: var(--sails-tone-info-bg);
+  color: var(--sails-tone-info-text);
+  border: 1px solid var(--sails-tone-info-border);
+}
+
+.sails-channel-icon--warning {
+  background: var(--sails-tone-warning-bg);
+  color: var(--sails-tone-warning-text);
+  border: 1px solid var(--sails-tone-warning-border);
+}
+
+.sails-channel-icon--primary {
+  background: var(--sails-tone-primary-bg);
+  color: var(--sails-tone-primary-text);
+  border: 1px solid var(--sails-tone-primary-border);
+}
+
+/* Quick Dispatch Widget */
+.sails-quick-dispatch {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--sails-spacing-unit) * 1.5);
+}
+
+.sails-quick-dispatch__label {
+  font-size: var(--sails-font-size-xs);
+  font-weight: 600;
+  color: var(--sails-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sails-quick-dispatch__avatars {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sails-spacing-unit) * 1);
+  flex-wrap: wrap;
+}
+
+.sails-avatar--selected {
+  outline: 2px solid var(--sails-primary) !important;
+  outline-offset: 2px;
+}
+
+.sails-avatar-add-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px dashed var(--sails-border-color);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sails-text-muted);
+  cursor: pointer;
+  transition: var(--sails-transition);
+}
+
+.sails-avatar-add-btn:hover {
+  border-color: var(--sails-primary);
+  color: var(--sails-primary);
+  background: var(--sails-surface-hover);
+}
+
+.sails-quick-dispatch__form {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--sails-spacing-unit) * 1.5);
+  margin-top: calc(var(--sails-spacing-unit) * 0.5);
+}
+
+.sails-quick-select {
+  width: 100%;
+}
+
+.sails-quick-dispatch__btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hero Welcome Banner */
+.sails-dash-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(var(--sails-primary-r, 157), var(--sails-primary-g, 206), var(--sails-primary-b, 224), 0.12) 0%, var(--sails-bg-card) 60%);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-lg);
+  padding: calc(var(--sails-spacing-unit) * 3);
+}
+
+.sails-dash-hero__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--sails-spacing-unit) * 1.5);
+}
+
+.sails-dash-hero__badge {
+  display: inline-flex;
+  width: fit-content;
+}
+
+.sails-dash-hero__headline {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+  margin: 0;
+}
+
+.sails-dash-hero__desc {
+  font-size: var(--sails-font-size-base);
+  color: var(--sails-text-muted);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 620px;
+}
+
+.sails-dash-hero__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: calc(var(--sails-spacing-unit) * 1);
+  flex-wrap: wrap;
+  gap: calc(var(--sails-spacing-unit) * 2);
+}
+
+.sails-dash-hero__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sails-dash-hero__stat-val {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--sails-text-main);
+}
+
+.sails-dash-hero__stat-label {
+  font-size: var(--sails-font-size-xs);
+  color: var(--sails-text-muted);
+}
+
+.sails-dash-hero__glow {
+  position: absolute;
+  right: -50px;
+  bottom: -50px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(var(--sails-primary-r, 157), var(--sails-primary-g, 206), var(--sails-primary-b, 224), 0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* KPI Stat Grid */
+.sails-dash-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: calc(var(--sails-spacing-unit) * 2);
+}
+
+/* 2-Column Split Products / Customers */
+.sails-dash-dual-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: calc(var(--sails-spacing-unit) * 2.5);
+}
+
+.sails-product-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--sails-radius-md);
+  background: var(--sails-surface-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sails-primary);
+  border: 1px solid var(--sails-border-color);
+  flex-shrink: 0;
+}
+
+.sails-link-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--sails-font-size-xs);
+  font-weight: 600;
+  color: var(--sails-primary);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.sails-link-sm:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+/* Legacy Stat Card support */
 .sails-dashboard__stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

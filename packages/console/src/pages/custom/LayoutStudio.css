@@ -302,11 +302,12 @@
 
 .ls-section {
   background: var(--sails-bg-card, #ffffff);
-  border: 1px solid var(--sails-border, #e2e8f0);
-  border-radius: 8px;
-  margin-bottom: 20px;
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: var(--sails-radius-lg, 8px);
+  box-shadow: var(--sails-shadow-card);
+  margin-bottom: 14px;
   overflow: hidden;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: var(--sails-transition);
 }
 
 /* Preview mode: let picker popovers (Time/Date/DateTime) escape the section
@@ -317,22 +318,23 @@
 
 .ls-section--drag-over {
   border-color: var(--sails-primary, #9dcee0);
-  box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.2);
-  background: rgba(157, 206, 224, 0.03);
+  box-shadow: 0 0 0 3px rgba(var(--sails-primary-r, 157), var(--sails-primary-g, 206), var(--sails-primary-b, 224), 0.2);
+  background: rgba(var(--sails-primary-r, 157), var(--sails-primary-g, 206), var(--sails-primary-b, 224), 0.03);
 }
 
 .ls-section--selected {
   border-color: var(--sails-primary, #9dcee0);
-  box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.18);
+  box-shadow: 0 0 0 3px rgba(var(--sails-primary-r, 157), var(--sails-primary-g, 206), var(--sails-primary-b, 224), 0.18);
 }
 
 .ls-section__header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
-  background: var(--sails-bg-secondary, #f8fafc);
-  border-bottom: 1px solid var(--sails-border, #e2e8f0);
+  padding: 6px 12px;
+  background: var(--sails-surface-subtle, #f8fafc);
+  border-bottom: 1px solid var(--sails-border-color, #e2e8f0);
+  min-height: 36px;
 }
 
 .ls-section__col-btn {
@@ -419,8 +421,8 @@
 .ls-section__grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: 20px;
-  padding: 20px;
+  gap: 8px 12px;
+  padding: 12px 14px;
   /* Backfill freed cells — a removed block (deleted model field, manual
      delete) must never leave an empty hole in the form grid. */
   grid-auto-flow: dense;
@@ -431,8 +433,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 60px;
-  border: 2px dashed var(--sails-border, #e2e8f0);
+  min-height: 48px;
+  border: 2px dashed var(--sails-border-color, #e2e8f0);
   border-radius: 6px;
   font-size: 12px;
   color: var(--sails-text-muted, #94a3b8);
@@ -449,29 +451,29 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 14px 14px 26px;
+  padding: 8px 10px 18px;
   border: 2px solid transparent;
-  border-radius: 6px;
-  background: var(--sails-bg-secondary, #f8fafc);
+  border-radius: var(--sails-radius-md, 6px);
+  background: var(--sails-surface-subtle, #f8fafc);
   cursor: pointer;
   transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
-  min-height: 48px;
+  min-height: 38px;
 }
 
 .ls-block:hover {
-  border-color: var(--sails-border, #e2e8f0);
+  border-color: var(--sails-border-color, #e2e8f0);
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 
 .ls-block--selected {
   border-color: var(--sails-primary, #9dcee0) !important;
-  box-shadow: 0 0 0 3px rgba(157, 206, 224, 0.15);
-  background: rgba(157, 206, 224, 0.06);
+  box-shadow: 0 0 0 3px rgba(var(--sails-primary-r, 157), var(--sails-primary-g, 206), var(--sails-primary-b, 224), 0.15);
+  background: rgba(var(--sails-primary-r, 157), var(--sails-primary-g, 206), var(--sails-primary-b, 224), 0.06);
 }
 
 .ls-block--drag-over {
   border-color: var(--sails-primary, #9dcee0) !important;
-  background: rgba(157, 206, 224, 0.1) !important;
+  background: rgba(var(--sails-primary-r, 157), var(--sails-primary-g, 206), var(--sails-primary-b, 224), 0.1) !important;
 }
 
 .ls-block--hidden {
@@ -606,61 +608,77 @@
 
 .ls-block__width-badge {
   position: absolute;
-  bottom: 4px;
-  right: 6px;
-  font-size: 9px;
+  bottom: 2px;
+  right: 4px;
+  font-size: 8px;
   font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 3px;
+  padding: 0 4px;
+  border-radius: 2px;
   background: rgba(99,102,241,0.1);
   color: #6366f1;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 .ls-block__type-badge {
   position: absolute;
-  bottom: 4px;
-  left: 6px;
-  font-size: 9px;
+  bottom: 2px;
+  left: 4px;
+  font-size: 8px;
   font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: rgba(0,0,0,0.06);
+  padding: 0 4px;
+  border-radius: 2px;
+  background: var(--sails-surface-hover, rgba(0,0,0,0.06));
   color: var(--sails-text-muted, #94a3b8);
 }
 
 /* ─── Field block label & value ─────────────────────────────── */
 
-.ls-block--field { gap: 4px; padding-top: 14px; padding-bottom: 26px; }
+.ls-block--field {
+  gap: 2px;
+  padding: 6px 10px;
+  min-height: auto;
+}
+
+/* Designer-only: reserve bottom room for badges */
+.ls-canvas:not(.ls-root--preview):not(.ls-root--readonly) .ls-block--field {
+  padding-bottom: 14px;
+}
 
 .ls-block__label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0.3px;
-  color: var(--sails-text-secondary, #64748b);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--sails-text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  line-height: 1.2;
+  margin-bottom: 1px;
 }
 
 .ls-block__required {
   color: var(--sails-danger, #ef4444);
-  margin-left: 2px;
+  font-weight: 700;
 }
 
 .ls-block__value {
-  font-size: 13px;
-  color: var(--sails-text-primary, #1e293b);
-  line-height: 1.4;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+  line-height: 1.3;
   width: 100%;
-  /* Align with .sails-input content box: same left/right padding and
-     min-height, so display values never shift when toggling edit mode. */
-  padding: 0 12px;
-  min-height: var(--sails-field-height, 38px);
+  padding: 0;
+  min-height: 18px;
   display: flex;
   align-items: center;
 }
 
 .ls-block__empty {
-  color: var(--sails-text-muted, #94a3b8);
+  color: var(--sails-field-placeholder, #94a3b8);
+  font-style: italic;
+  font-weight: 400;
+  opacity: 0.75;
 }
 
 /* ─── Related List Block ────────────────────────────────────── */

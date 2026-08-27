@@ -142,9 +142,38 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
     };
   }, [isEffectivelyCollapsed]);
 
+  const isGlobalNeutralRoute =
+    location.pathname.startsWith('/notifications') ||
+    location.pathname.startsWith('/tasks') ||
+    location.pathname === '/dashboard' ||
+    location.pathname === '/';
+
+  const isItemActive = (itemPath: string) => {
+    if (isGlobalNeutralRoute) return false;
+    if (!itemPath || itemPath === '#' || itemPath === '/') return false;
+
+    const normPath = itemPath.toLowerCase().replace(/\/+$/, '');
+    const currentPath = location.pathname.toLowerCase().replace(/\/+$/, '');
+
+    // Exact match
+    if (currentPath === normPath) return true;
+
+    // Sub-path match
+    if (currentPath.startsWith(normPath + '/')) return true;
+
+    // Direct record detail route: /_r/:tableName/...
+    const pathParts = currentPath.split('/').filter(Boolean);
+    if (pathParts[0] === '_r' && pathParts[1]) {
+      const tableName = pathParts[1];
+      if (normPath.endsWith(`/${tableName}`) || normPath.includes(`/tables/${tableName}`) || normPath.includes(`/${tableName}/`)) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   const getMenuPath = (item: any) => {
-    // Standardized: Always use the path from the database metadata.
-    // This supports the new App-First routing (e.g., /crm/table/leads)
     return item.path || '/';
   };
 
@@ -166,7 +195,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
               const isOpen = openMenus[item.id];
               const menuTop = menuTops[item.id];
               const path = getMenuPath(item);
-              const hasActiveChild = hasChildren && item.children?.some((sub: any) => getMenuPath(sub) === location.pathname);
+              const isChildActive = (sub: any) => isItemActive(getMenuPath(sub));
+              const hasActiveChild = hasChildren && item.children?.some(isChildActive);
+              const itemActive = isItemActive(path);
 
               return (
                 <li 
@@ -177,8 +208,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
                 >
                   <NavLink 
                     to={hasChildren ? '#' : path} 
-                    className={({ isActive }) => 
-                      `sails-sidebar__link ${(isActive && !hasChildren) || (isEffectivelyCollapsed && hasActiveChild) ? 'sails-sidebar__link--active' : ''} ${hasChildren ? 'sails-sidebar__link--has-children' : ''} ${(!isEffectivelyCollapsed && hasActiveChild) ? 'sails-sidebar__link--has-active-child' : ''}`
+                    className={() => 
+                      `sails-sidebar__link ${(itemActive && !hasChildren) || (isEffectivelyCollapsed && hasActiveChild) ? 'sails-sidebar__link--active' : ''} ${hasChildren ? 'sails-sidebar__link--has-children' : ''} ${(!isEffectivelyCollapsed && hasActiveChild) ? 'sails-sidebar__link--has-active-child' : ''}`
                     }
                     onClick={(e) => hasChildren ? toggleSubMenu(item.id, e) : undefined}
                   >
@@ -206,8 +237,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, isMobileOpen }
                         <li key={sub.id} className="sails-sidebar__submenu-item">
                           <NavLink 
                             to={getMenuPath(sub)} 
-                            className={({ isActive }) => 
-                              `sails-sidebar__submenu-link ${isActive ? 'sails-sidebar__submenu-link--active' : ''}`
+                            className={() => 
+                              `sails-sidebar__submenu-link ${isChildActive(sub) ? 'sails-sidebar__submenu-link--active' : ''}`
                             }
                           >
                             <span className="sails-sidebar__submenu-icon">

@@ -111,10 +111,14 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
     let isMounted = true;
     const fetchPendingTaskCount = async () => {
       try {
-        const res = await fetch('/api/workflow/tasks?count=true');
-        const json = await res.json();
-        if (json.success && isMounted) {
-          setPendingTaskCount(json.data.count || 0);
+        const [tasksRes, notifsRes] = await Promise.all([
+          fetch('/api/workflow/tasks?count=true').then((r) => r.json()).catch(() => null),
+          fetch('/api/notifications?count=true').then((r) => r.json()).catch(() => null),
+        ]);
+        if (isMounted) {
+          const taskCount = tasksRes?.success ? (tasksRes.data.count || 0) : 0;
+          const notifCount = notifsRes?.success ? (notifsRes.data.unread || 0) : 0;
+          setPendingTaskCount(taskCount + notifCount);
         }
       } catch {
         // Silently catch network failures
@@ -123,9 +127,19 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
 
     fetchPendingTaskCount();
     const interval = setInterval(fetchPendingTaskCount, 30000); // 30s poll
+
+    const handleCountUpdate = (e: any) => {
+      if (isMounted && typeof e.detail?.count === 'number') {
+        setPendingTaskCount(e.detail.count);
+      }
+    };
+
+    window.addEventListener('sails:notif-count-updated', handleCountUpdate);
+
     return () => {
       isMounted = false;
       clearInterval(interval);
+      window.removeEventListener('sails:notif-count-updated', handleCountUpdate);
     };
   }, []);
 
@@ -167,7 +181,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
                   position: 'absolute',
                   top: 2,
                   right: 2,
-                  background: '#ef4444',
+                  background: '#e11d48',
                   color: '#ffffff',
                   fontSize: 10,
                   fontWeight: 700,

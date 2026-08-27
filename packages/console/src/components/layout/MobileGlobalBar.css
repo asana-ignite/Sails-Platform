@@ -64,8 +64,80 @@
   transform: scale(0.9);
 }
 
+.sails-mobile-global-bar__action--active {
+  background-color: rgba(var(--sails-primary-r, 99), var(--sails-primary-g, 102), var(--sails-primary-b, 241), 0.15) !important;
+  color: var(--sails-primary, #6366f1) !important;
+}
+
 .sails-mobile-global-bar__action--profile {
   background-color: var(--sails-bg-body);
   border-radius: 50%;
   color: var(--sails-primary);
+}
+
+.sails-mobile-notif-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #e11d48;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 10px;
+  min-width: 17px;
+  height: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+/* ─── Mobile Notification Backdrop & Sheet ─── */
+.sails-mobile-notif-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1150;
+  animation: sails-fade-in 0.2s ease-out;
+}
+
+.sails-mobile-notif-sheet {
+  position: fixed;
+  bottom: calc(75px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 24px);
+  max-width: 420px;
+  max-height: calc(85vh - 75px);
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  animation: sails-slide-up 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sails-mobile-notif-sheet .sails-notif-dropdown {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  left: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28) !important;
+}
+
+@keyframes sails-slide-up {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }

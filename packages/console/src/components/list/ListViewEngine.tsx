@@ -16,6 +16,7 @@ import { fetchCached } from '../../api/client';
 import { ActionRegistry } from '../../features/actions';
 import { useRecordStack } from '../../contexts/RecordStackContext';
 import { useToast } from '../../contexts/ToastContext';
+import { UiActionGroup, UiActionItem, Button } from '../ui';
 
 export interface ListViewEngineProps {
   /** Physical table name of the model being listed. */
@@ -704,22 +705,22 @@ export const ListViewEngine: React.FC<ListViewEngineProps> = ({
                 </button>
               </div>
               {actionsBar === 'card' && configuredActions.length > 0 && (
-                <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
-                  {configuredActions.map((act) => {
-                    const plugin = ActionRegistry.getInstance().getAction(act.actionKey);
-                    const iconName = plugin?.iconName || (act.actionKey === 'create' ? 'Plus' : 'Zap');
-                    const variant = act.variant || 'primary';
-                    const variantClass = variant === 'primary' ? 'sails-btn--primary'
-                      : variant === 'danger' ? 'sails-btn--danger'
-                      : variant === 'secondary' ? 'sails-btn--secondary'
-                      : 'sails-btn--ghost';
-                    return (
-                      <button key={act.id} type="button" className={`sails-btn ${variantClass} sails-btn--sm`} onClick={() => handleExecuteAction(act)}>
-                        <DynamicIcon name={iconName} size={14} />
-                        <span>{act.label}</span>
-                      </button>
-                    );
-                  })}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
+                  <UiActionGroup size="sm">
+                    {configuredActions.map((act) => {
+                      const plugin = ActionRegistry.getInstance().getAction(act.actionKey);
+                      const iconName = plugin?.iconName || (act.actionKey === 'create' ? 'Plus' : 'Zap');
+                      return (
+                        <UiActionItem
+                          key={act.id}
+                          label={act.label}
+                          icon={<DynamicIcon name={iconName} size={13} />}
+                          variant={act.variant === 'danger' ? 'danger' : act.variant === 'primary' ? 'primary' : 'ghost'}
+                          onClick={() => handleExecuteAction(act)}
+                        />
+                      );
+                    })}
+                  </UiActionGroup>
                 </div>
               )}
             </div>

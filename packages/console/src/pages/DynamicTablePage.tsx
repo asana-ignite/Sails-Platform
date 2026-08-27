@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
-import { Layers, AlertCircle } from 'lucide-react';
+import { Layers, AlertCircle, Plus } from 'lucide-react';
 import { useConsole } from '../contexts/ConsoleContext';
 import type { ConsoleMenu, ListAction } from '@sails/shared';
 import DynamicIcon from '../components/common/DynamicIcon';
@@ -12,6 +12,7 @@ import LoadingScreen from '../components/common/LoadingScreen';
 import { fetchCached } from '../api/client';
 import { ListViewEngine } from '../components/list/ListViewEngine';
 import { ActionRegistry } from '../features/actions';
+import { UiActionGroup, UiActionItem, UiActionDivider, Button } from '../components/ui';
 import '../features/controls/controls.css';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
@@ -178,22 +179,48 @@ const DynamicTablePage: React.FC = () => {
           </div>
         </div>
         <div className="sails-page-header__right">
-          {(pageActions?.actions || []).map((act) => {
-            const plugin = ActionRegistry.getInstance().getAction(act.actionKey);
-            const actIcon = plugin?.iconName || (act.actionKey === 'create' ? 'Plus' : 'Zap');
-            const variant = act.variant || 'primary';
-            const variantClass = variant === 'primary' ? 'sails-btn--primary'
-              : variant === 'danger' ? 'sails-btn--danger'
-              : variant === 'secondary' ? 'sails-btn--secondary'
-              : 'sails-btn--ghost';
+          {(() => {
+            const rawActions = pageActions?.actions || [];
+            const createAct = rawActions.find((a) => a.actionKey === 'create');
+            const otherActs = rawActions
+              .filter((a) => a.actionKey !== 'create')
+              .sort((a, b) => {
+                const aIsDanger = a.variant === 'danger' || a.actionKey === 'delete';
+                const bIsDanger = b.variant === 'danger' || b.actionKey === 'delete';
+                if (aIsDanger && !bIsDanger) return 1;
+                if (!aIsDanger && bIsDanger) return -1;
+                return 0;
+              });
+
+            if (!createAct && otherActs.length === 0) return null;
+
             return (
-              <button key={act.id} type="button" className={`sails-btn ${variantClass}`}
-                onClick={() => pageActions && pageActions.execute(act)}>
-                <DynamicIcon name={actIcon} size={18} />
-                <span>{act.label}</span>
-              </button>
+              <UiActionGroup size="md">
+                {otherActs.map((act) => {
+                  const plugin = ActionRegistry.getInstance().getAction(act.actionKey);
+                  const actIcon = plugin?.iconName || 'Zap';
+                  return (
+                    <UiActionItem
+                      key={act.id}
+                      label={act.label}
+                      icon={<DynamicIcon name={actIcon} size={14} />}
+                      tone={act.variant === 'danger' ? 'danger' : 'neutral'}
+                      onClick={() => pageActions && pageActions.execute(act)}
+                    />
+                  );
+                })}
+                {otherActs.length > 0 && createAct && <UiActionDivider />}
+                {createAct && (
+                  <UiActionItem
+                    icon={<Plus size={13} />}
+                    label={createAct.label || `New ${displayTitle}`}
+                    tone="primary"
+                    onClick={() => pageActions && pageActions.execute(createAct)}
+                  />
+                )}
+              </UiActionGroup>
             );
-          })}
+          })()}
         </div>
       </header>
 

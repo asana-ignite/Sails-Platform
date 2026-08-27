@@ -1,0 +1,766 @@
+/* NotificationCenterPage styles matching SAILS design tokens */
+
+.sails-notif-page-root {
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 32px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+/* Page Header */
+.sails-notif-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sails-notif-page__title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sails-notif-page__icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--sails-primary, #6366f1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.sails-notif-page__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--sails-text-main, #0f172a);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sails-notif-page__badge {
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  line-height: 1;
+}
+
+.sails-notif-page__subtitle {
+  font-size: 13px;
+  color: var(--sails-text-muted, #64748b);
+  margin: 2px 0 0 0;
+}
+
+.sails-notif-page__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sails-notif-page__action-btn {
+  height: 34px !important;
+  font-size: 12.5px !important;
+  padding: 0 12px !important;
+}
+
+/* Control Bar: Tabs & Search */
+.sails-notif-page__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: var(--sails-radius-md, 8px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+}
+
+.sails-notif-page__tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.sails-notif-page__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--sails-text-muted, #64748b);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sails-notif-page__tab:hover {
+  background: var(--sails-bg-secondary, #f8fafc);
+  color: var(--sails-text-main, #1e293b);
+}
+
+.sails-notif-page__tab--active {
+  background: rgba(99, 102, 241, 0.08) !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
+  color: var(--sails-primary, #6366f1) !important;
+  font-weight: 600;
+}
+
+.sails-notif-page__tab-count {
+  font-size: 11px;
+  color: var(--sails-text-muted, #94a3b8);
+}
+
+.sails-notif-page__tab-badge {
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.sails-notif-page__search-wrap {
+  position: relative;
+  min-width: 200px;
+  flex: 1 1 240px;
+  max-width: 100%;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.sails-notif-page__search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--sails-text-muted, #94a3b8);
+  pointer-events: none;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.sails-notif-page__search-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px 0 32px;
+  border: 1px solid var(--sails-border-color, #cbd5e1);
+  border-radius: 6px;
+  font-size: 12.5px;
+  background: var(--sails-bg-card, #ffffff);
+  color: var(--sails-text-main, #1e293b);
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.sails-notif-page__search-input:focus {
+  border-color: var(--sails-primary, #6366f1);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+/* Card Container */
+.sails-notif-page__card {
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: var(--sails-radius-lg, 10px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.sails-notif-page__list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Individual Notification Item Card */
+.sails-notif-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--sails-border-color, #f1f5f9);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: transparent;
+}
+
+.sails-notif-card:last-child {
+  border-bottom: none;
+}
+
+.sails-notif-card:hover {
+  background: var(--sails-bg-secondary, #f8fafc);
+}
+
+.sails-notif-card--unread {
+  background: rgba(99, 102, 241, 0.015);
+  border-left: 4px solid var(--sails-primary, #6366f1);
+  padding-left: 16px;
+}
+
+.sails-notif-card--expanded {
+  background: var(--sails-bg-secondary, #f8fafc);
+}
+
+.sails-notif-card__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sails-notif-card__icon--read {
+  background: rgba(148, 163, 184, 0.12) !important;
+  color: #94a3b8 !important;
+}
+
+.sails-notif-card__center {
+  flex: 1;
+  min-width: 0;
+}
+
+.sails-notif-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  margin-bottom: 4px;
+}
+
+.sails-notif-card__source {
+  font-weight: 600;
+  color: var(--sails-primary, #6366f1);
+  text-transform: capitalize;
+}
+
+.sails-notif-card__dot {
+  color: var(--sails-border-color, #cbd5e1);
+}
+
+.sails-notif-card__time {
+  color: var(--sails-text-muted, #94a3b8);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sails-notif-card__unread-tag {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--sails-primary, #6366f1);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.sails-notif-card__subject {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sails-text-main, #0f172a);
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+}
+
+.sails-notif-card__subject--read {
+  font-weight: 500;
+  color: var(--sails-text-main, #334155);
+}
+
+.sails-notif-card__body {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--sails-text-main, #334155);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sails-notif-card__body--collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sails-notif-card__body--full {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--sails-border-color, #e2e8f0);
+}
+
+.sails-notif-page__body-link {
+  color: var(--sails-primary, #6366f1);
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.sails-notif-page__body-link:hover {
+  color: #4f46e5;
+}
+
+.sails-notif-card__right {
+  display: flex;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.sails-notif-card__expand-btn {
+  background: transparent;
+  border: none;
+  color: var(--sails-text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.sails-notif-card__expand-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--sails-text-main, #1e293b);
+}
+
+/* Empty State */
+.sails-notif-page__empty {
+  padding: 56px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.sails-notif-page__empty-icon {
+  color: var(--sails-text-muted, #94a3b8);
+  margin-bottom: 12px;
+}
+
+.sails-notif-page__empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+  margin: 0 0 4px 0;
+}
+
+.sails-notif-page__empty-desc {
+  font-size: 12.5px;
+  color: var(--sails-text-muted, #64748b);
+  margin: 0;
+  max-width: 360px;
+}
+
+/* Skeleton Loading */
+.sails-notif-page__loading {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sails-notif-page__skeleton {
+  height: 60px;
+  background: var(--sails-bg-secondary, #f1f5f9);
+  border-radius: 8px;
+  animation: sails-pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes sails-pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+  100% { opacity: 0.6; }
+}
+
+/* Pagination */
+.sails-notif-page__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid var(--sails-border-color, #e2e8f0);
+  background: var(--sails-bg-secondary, #f8fafc);
+  font-size: 12px;
+  color: var(--sails-text-muted, #64748b);
+}
+
+.sails-notif-page__page-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── Mode Switcher (Notifications vs Approvals) ─── */
+.sails-notif-mode-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid var(--sails-border-color, #e2e8f0);
+  padding-bottom: 2px;
+}
+
+.sails-notif-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--sails-text-muted, #64748b);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sails-notif-mode-btn:hover {
+  color: var(--sails-text-main, #1e293b);
+}
+
+.sails-notif-mode-btn--active {
+  color: var(--sails-primary, #6366f1) !important;
+  border-bottom-color: var(--sails-primary, #6366f1) !important;
+}
+
+.sails-notif-mode-badge {
+  background: #e11d48;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  line-height: 1;
+}
+
+/* Task Approval Card Additions */
+.sails-notif-card__icon--task {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+}
+
+.sails-task-status-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 5px;
+  text-transform: capitalize;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sails-task-status-badge--pending {
+  background: rgba(217, 119, 6, 0.08);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+.sails-task-status-badge--decided,
+.sails-task-status-badge--approved {
+  background: rgba(5, 150, 105, 0.08);
+  color: #047857;
+  border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+.sails-task-status-badge--rejected {
+  background: rgba(225, 29, 72, 0.08);
+  color: #be123c;
+  border: 1px solid rgba(225, 29, 72, 0.2);
+}
+
+.sails-task-stage-line {
+  font-size: 12px;
+  color: var(--sails-text-muted, #64748b);
+  margin: 0;
+}
+
+.sails-task-stage-line strong {
+  color: var(--sails-text-main, #1e293b);
+}
+
+.sails-task-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sails-task-act-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sails-task-act-btn--approve {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.sails-task-act-btn--approve:hover:not(:disabled) {
+  background: #059669;
+}
+
+.sails-task-act-btn--reject {
+  background: transparent;
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.sails-task-act-btn--reject:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.sails-task-act-btn--details {
+  background: var(--sails-bg-secondary, #f1f5f9);
+  color: var(--sails-text-main, #334155);
+  border-color: var(--sails-border-color, #e2e8f0);
+}
+
+.sails-task-act-btn--details:hover {
+  background: var(--sails-bg-card, #ffffff);
+  color: var(--sails-primary, #6366f1);
+}
+
+/* ─── Bulk Action Bar & Checkboxes ─── */
+.sails-notif-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 16px;
+  background: var(--sails-bg-card, #ffffff);
+  border: 1px solid var(--sails-border-color, #e2e8f0);
+  border-radius: var(--sails-radius-md, 8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  flex-wrap: wrap;
+  animation: sails-slide-down 0.15s ease-out;
+}
+
+.sails-notif-bulk-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sails-notif-select-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--sails-text-main, #1e293b);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.sails-notif-select-all-btn:hover {
+  background: var(--sails-bg-secondary, #f1f5f9);
+}
+
+.sails-notif-checkbox-icon {
+  color: var(--sails-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.sails-notif-checkbox-icon--checked {
+  color: var(--sails-primary, #6366f1) !important;
+}
+
+.sails-notif-selected-pill {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--sails-primary, #6366f1);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.sails-notif-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sails-task-bulk-btn {
+  height: 32px !important;
+  font-size: 12.5px !important;
+  padding: 0 12px !important;
+}
+
+.sails-notif-deselect-btn {
+  height: 32px !important;
+  font-size: 12px !important;
+  padding: 0 10px !important;
+}
+
+/* Card Checkbox */
+.sails-notif-card__checkbox-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px 0 0;
+  cursor: pointer;
+}
+
+.sails-notif-card--selected {
+  background: rgba(99, 102, 241, 0.04) !important;
+  border-left: 4px solid var(--sails-primary, #6366f1) !important;
+}
+
+/* ─── Responsive Media Queries ─── */
+@media (max-width: 860px) {
+  .sails-notif-page-root {
+    padding: 16px 16px 36px;
+    gap: 12px;
+  }
+
+  .sails-notif-page__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .sails-notif-page__header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .sails-notif-page__controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .sails-notif-page__search-wrap {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+    height: 34px;
+    flex: none;
+  }
+
+  .sails-notif-page__tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Make Task Card Action Buttons stack smoothly below center content on small screens */
+  .sails-notif-card {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 16px;
+    position: relative;
+  }
+
+  .sails-notif-card__actions {
+    width: 100%;
+    margin-top: 6px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--sails-border-color, #f1f5f9);
+  }
+
+  .sails-notif-bulk-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .sails-notif-bulk-actions {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .sails-notif-bulk-actions .ui-action-group,
+  .sails-notif-card__actions .ui-action-group {
+    width: 100%;
+    display: flex;
+    box-sizing: border-box;
+  }
+
+  .sails-notif-bulk-actions .ui-action-item,
+  .sails-notif-card__actions .ui-action-item {
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 0 6px;
+    font-size: 11.5px;
+    min-width: 0;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 520px) {
+  .sails-notif-page-root {
+    padding: 12px 10px 32px;
+  }
+
+  .sails-notif-page__title {
+    font-size: 17px;
+  }
+
+  .sails-notif-mode-switcher {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .sails-notif-bulk-actions .ui-action-item,
+  .sails-notif-card__actions .ui-action-item {
+    font-size: 11px;
+    padding: 0 4px;
+  }
+}

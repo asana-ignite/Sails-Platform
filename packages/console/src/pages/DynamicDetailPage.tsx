@@ -18,7 +18,9 @@ import {
   Copy,
   Trash2,
   List,
-  Zap
+  Zap,
+  Plus,
+  Check
 } from 'lucide-react';
 import type { TableLayout, SailsFieldDefinition, ConsoleMenu, DetailAction, FormVariable, LayoutValidationRule } from '@sails/shared';
 import { isSystemField, SYSTEM_PROTECTED_COLUMNS, registerExpressionFunctions } from '@sails/shared';
@@ -40,6 +42,7 @@ import { useRecordStack } from '../contexts/RecordStackContext';
 import { useToast } from '../contexts/ToastContext';
 import { ActionRegistry } from '../features/actions';
 import { UiConfirmDialog } from '../components/ui/UiConfirmDialog';
+import { UiActionGroup, UiActionItem, UiActionDivider, UiSplitButton, Button } from '../components/ui';
 import SailsPopover from '../components/common/SailsPopover';
 import './DynamicTablePage.css';
 import './custom/LayoutStudio.css';
@@ -106,73 +109,76 @@ interface DetailHeaderProps {
   onBack: () => void;
   onEdit: () => void;
   onCancelEdit: () => void;
-  onSave: () => void;
+  onSave: (options?: { andClose?: boolean; andNew?: boolean }) => void;
   showBack?: boolean;
 }
 
 const DetailHeader: React.FC<DetailHeaderProps> = memo(
   ({ primaryTitle, isNewMode, isEditing, saving, canEdit, allowEdit = true, headerActions, onBack, onEdit, onCancelEdit, onSave, showBack = true }) => (
     <header className="sails-page-header sails-dynamic-table__header">
-      <div className="sails-page-header__left" style={{ pointerEvents: 'auto' }}>
+      <div className="sails-page-header__left" style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
         {showBack && (
           <button
             type="button"
             className="sails-btn sails-btn--secondary"
             onClick={onBack}
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 8, marginRight: 12 }}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}
             title="Back"
           >
             <ChevronLeft size={16} />
           </button>
         )}
-        <div>
-          <h1 className="sails-page-header__title">{primaryTitle}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <h1 className="sails-page-header__title" style={{ margin: 0 }}>{primaryTitle}</h1>
+          {(isNewMode || isEditing) && (
+            <span className="sails-dirty-pill">
+              <span className="sails-dirty-dot"></span>
+              <span>{isNewMode ? 'New Draft' : 'Unsaved Changes'}</span>
+            </span>
+          )}
         </div>
       </div>
       {isNewMode || isEditing ? (
-        <div className="sails-page-header__right" style={{ pointerEvents: 'auto', display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            className="sails-btn sails-btn--secondary"
-            onClick={isNewMode ? onBack : onCancelEdit}
-            disabled={saving}
-          >
-            <span>Cancel</span>
-          </button>
-          <button
-            type="button"
-            className="sails-btn sails-btn--primary"
-            disabled={saving}
-            onClick={onSave}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            {saving ? (
-              <>
-                <Loader2 size={16} className="sails-spin" />
-                <span>Saving...</span>
-              </>
-            ) : (
-              <>
-                <Save size={16} />
-                <span>{isNewMode ? 'Save Record' : 'Update Record'}</span>
-              </>
-            )}
-          </button>
+        <div className="sails-page-header__right" style={{ pointerEvents: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          <UiActionGroup size="md">
+            <UiActionItem
+              label="Cancel"
+              disabled={saving}
+              onClick={isNewMode ? onBack : onCancelEdit}
+            />
+            <UiActionDivider />
+            <UiSplitButton
+              primaryLabel={isNewMode ? 'Save Record' : 'Save Changes'}
+              primaryIcon={<Save size={13} />}
+              onPrimaryClick={() => onSave()}
+              loading={saving}
+              loadingText={isNewMode ? 'Saving...' : 'Updating...'}
+              options={[
+                {
+                  id: 'save_close',
+                  label: 'Save & Close',
+                  description: 'Save and return to the list view',
+                  icon: <Check size={12} />,
+                  onClick: () => onSave({ andClose: true }),
+                },
+                ...(isNewMode
+                  ? [
+                      {
+                        id: 'save_new',
+                        label: 'Save & Create Another',
+                        description: 'Save this record and open a blank form',
+                        icon: <Plus size={12} />,
+                        onClick: () => onSave({ andNew: true }),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          </UiActionGroup>
         </div>
       ) : canEdit ? (
         <div className="sails-page-header__right" style={{ pointerEvents: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           {headerActions}
-          {allowEdit && (
-            <button
-              type="button"
-              className="sails-btn sails-btn--primary"
-              onClick={onEdit}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-            >
-              <Pencil size={16} />
-              <span>Edit</span>
-            </button>
-          )}
         </div>
       ) : null}
     </header>
@@ -596,7 +602,7 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
     setSaveError(null);
   };
 
-  const handleSaveRecord = async (e?: React.FormEvent) => {
+  const handleSaveRecord = async (e?: React.FormEvent, options?: { andClose?: boolean; andNew?: boolean }) => {
     if (e) e.preventDefault();
     if (!tableName) return;
 
@@ -650,22 +656,35 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
         setTouched({});
         setSaveAttempted(false);
         toast.success('Record updated successfully.');
+
+        if (options?.andClose) {
+          if (inStack) requestClose();
+          else navigate(baseRoute);
+        }
       } else {
         const createdRecord = data.record || (Array.isArray(data.rows) ? data.rows[0] : data.rows) || data.data || data;
         const newId = createdRecord?.id || data.id;
         toast.success('Record created successfully.');
 
         if (inStack) {
-          // Stacked create: close the "new" card fully (no created-record card) and
-          // tell lists/related blocks underneath to refetch so the record appears.
           requestClose();
           notifyRecordsChanged();
           return;
         }
 
-        navigate(newId ? `${baseRoute}/${layoutKey}/${newId}` : baseRoute, {
-          replace: true,
-        });
+        if (options?.andNew) {
+          // Reset form to add another record
+          setFormData({});
+          setTouched({});
+          setSaveAttempted(false);
+          toast.success('Record created. Form reset for next record.');
+        } else if (options?.andClose) {
+          navigate(baseRoute);
+        } else {
+          navigate(newId ? `${baseRoute}/${layoutKey}/${newId}` : baseRoute, {
+            replace: true,
+          });
+        }
       }
     } catch (err: any) {
       setSaveError(err.message || 'Failed to save record.');
@@ -1021,27 +1040,18 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
               <DynamicIcon name={condStyle.icon} size={13} />
             </span>
           )}
-          {isSystemFieldDef ? (
-            <div className="ls-block__value">
-              <DetailFieldDisplay field={field} val={val} controlPluginId={b.controlPluginId} />
-            </div>
-          ) : isEditable ? (
-            <DetailFieldInput
-              field={field}
-              fieldKey={key}
-              label={label}
-              val={val}
-              controlPluginId={b.controlPluginId}
-              rules={fieldRules}
-              showErrors={!!touched[key] || saveAttempted}
-              record={formData}
-              onChange={handleFieldInputChange}
-            />
-          ) : (
-            <div className="ls-block__value">
-              <DetailFieldDisplay field={field} val={val} controlPluginId={b.controlPluginId} />
-            </div>
-          )}
+          <DetailFieldInput
+            field={field}
+            fieldKey={key}
+            label={label}
+            val={val}
+            controlPluginId={b.controlPluginId}
+            readOnly={!isEditable}
+            rules={isEditable ? fieldRules : undefined}
+            showErrors={isEditable && (!!touched[key] || saveAttempted)}
+            record={isEditable ? formData : record}
+            onChange={isEditable ? handleFieldInputChange : () => {}}
+          />
           {(!!touched[key] || saveAttempted) && (failingInFieldByField[field.id] || []).length > 0 && (
             <div className="sails-field-error">
               {failingInFieldByField[field.id].map((fr, i) => (
@@ -1172,87 +1182,106 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
           isEditing={isEditing}
           saving={saving}
           canEdit={!isNewMode && !!record}
-          allowEdit={!configuredDetailActions.some((a) => a.actionKey === 'edit') && (config as any)?.allowEdit === true}
+          allowEdit={!isNewMode && (configuredDetailActions.some((a) => a.actionKey === 'edit') || (config as any)?.allowEdit !== false)}
           headerActions={
-            !isNewMode && configuredDetailActions.length > 0 ? (
-              configuredDetailActions.length > 3 ? (
-                <div className="sails-detail-actions-menu">
-                  <button
-                    ref={actionsMenuRef}
-                    type="button"
-                    className="sails-btn sails-btn--ghost"
-                    disabled={actionBusy}
-                    onClick={() => setActionsMenuOpen((o) => !o)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                  >
-                    <List size={15} />
-                    <span>Actions</span>
-                    <ChevronDown size={13} />
-                  </button>
-                  <SailsPopover
-                    open={actionsMenuOpen}
-                    triggerRef={actionsMenuRef}
-                    onClose={() => setActionsMenuOpen(false)}
-                    align="right"
-                    className="sails-detail-actions-menu__pop"
-                  >
-                    <div className="sails-detail-actions-menu__list">
-                      {configuredDetailActions.map((a) => {
-                        const plugin = ActionRegistry.getInstance().getAction(a.actionKey);
-                        const variantClass = a.variant === 'primary' ? 'sails-detail-actions-menu__item--primary'
-                          : a.variant === 'danger' ? 'sails-detail-actions-menu__item--danger'
-                          : 'sails-detail-actions-menu__item--secondary';
-                        return (
-                          <button
-                            key={a.id}
-                            type="button"
-                            className={`sails-detail-actions-menu__item ${variantClass}`}
-                            disabled={actionBusy}
-                            title={plugin?.description || a.label}
-                            onClick={() => {
-                              setActionsMenuOpen(false);
-                              runDetailAction(a);
-                            }}
-                          >
-                            <DynamicIcon name={a.iconName || plugin?.iconName || 'Zap'} size={14} />
-                            <span>{L(a.label)}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </SailsPopover>
-                </div>
-              ) : (
-                <>
-                  {configuredDetailActions.map((a) => {
+            !isNewMode && (configuredDetailActions.length > 0 || (config as any)?.allowEdit !== false) ? (() => {
+              const nonEditActions = [...configuredDetailActions.filter((a) => a.actionKey !== 'edit')].sort((a, b) => {
+                const aIsDanger = a.variant === 'danger' || a.actionKey === 'delete';
+                const bIsDanger = b.variant === 'danger' || b.actionKey === 'delete';
+                if (aIsDanger && !bIsDanger) return 1;
+                if (!aIsDanger && bIsDanger) return -1;
+                return 0;
+              });
+              const allowEdit = configuredDetailActions.some((a) => a.actionKey === 'edit') || (config as any)?.allowEdit !== false;
+              const maxInline = allowEdit ? 2 : 3;
+              const inlineActions = nonEditActions.length > maxInline ? nonEditActions.slice(0, maxInline - 1) : nonEditActions;
+              const overflowActions = nonEditActions.length > maxInline ? nonEditActions.slice(maxInline - 1) : [];
+
+              if (inlineActions.length === 0 && overflowActions.length === 0 && !allowEdit) return null;
+
+              return (
+                <UiActionGroup size="md">
+                  {inlineActions.map((a) => {
                     const plugin = ActionRegistry.getInstance().getAction(a.actionKey);
-                    const variantClass = a.variant === 'primary' ? 'sails-btn--primary'
-                      : a.variant === 'danger' ? 'sails-btn--danger'
-                      : a.variant === 'ghost' ? 'sails-btn--ghost'
-                      : 'sails-btn--secondary';
                     return (
-                      <button
+                      <UiActionItem
                         key={a.id}
-                        type="button"
-                        className={`sails-btn ${variantClass}`}
+                        icon={<DynamicIcon name={a.iconName || plugin?.iconName || 'Zap'} size={14} />}
+                        label={L(a.label)}
                         disabled={actionBusy}
-                        title={plugin?.description || a.label}
+                        tone={a.variant === 'danger' ? 'danger' : 'neutral'}
                         onClick={() => runDetailAction(a)}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                      >
-                        <DynamicIcon name={a.iconName || plugin?.iconName || 'Zap'} size={15} />
-                        <span>{L(a.label)}</span>
-                      </button>
+                        title={plugin?.description || a.label}
+                      />
                     );
                   })}
-                </>
-              )
-            ) : undefined
+                  {overflowActions.length > 0 && (
+                    <div style={{ position: 'relative', display: 'inline-flex' }}>
+                      <UiActionItem
+                        ref={actionsMenuRef}
+                        icon={<List size={13} />}
+                        label={<>More <ChevronDown size={11} className="ms-1" /></>}
+                        disabled={actionBusy}
+                        onClick={() => setActionsMenuOpen((o) => !o)}
+                      />
+                      <SailsPopover
+                        open={actionsMenuOpen}
+                        triggerRef={actionsMenuRef}
+                        onClose={() => setActionsMenuOpen(false)}
+                        align="right"
+                        className="sails-detail-actions-menu__pop"
+                      >
+                        <div className="sails-detail-actions-menu__list">
+                          <div className="sails-detail-actions-menu__section-label">More Actions</div>
+                          {overflowActions.map((a) => {
+                            const plugin = ActionRegistry.getInstance().getAction(a.actionKey);
+                            const isDanger = a.variant === 'danger' || a.actionKey === 'delete';
+                            const isPrimary = a.variant === 'primary';
+                            const variantClass = isDanger ? 'sails-detail-actions-menu__item--danger'
+                              : isPrimary ? 'sails-detail-actions-menu__item--primary'
+                              : 'sails-detail-actions-menu__item--secondary';
+                            return (
+                              <React.Fragment key={a.id}>
+                                {isDanger && <div className="sails-detail-actions-menu__divider" />}
+                                <button
+                                  type="button"
+                                  className={`sails-detail-actions-menu__item ${variantClass}`}
+                                  disabled={actionBusy}
+                                  title={plugin?.description || a.label}
+                                  onClick={() => {
+                                    setActionsMenuOpen(false);
+                                    runDetailAction(a);
+                                  }}
+                                >
+                                  <span className="sails-detail-actions-menu__item-icon">
+                                    <DynamicIcon name={a.iconName || plugin?.iconName || (isDanger ? 'Trash2' : 'Zap')} size={14} />
+                                  </span>
+                                  <span>{L(a.label)}</span>
+                                </button>
+                              </React.Fragment>
+                            );
+                          })}
+                        </div>
+                      </SailsPopover>
+                    </div>
+                  )}
+                  {allowEdit && (inlineActions.length > 0 || overflowActions.length > 0) && <UiActionDivider />}
+                  {allowEdit && (
+                    <UiActionItem
+                      icon={<Pencil size={13} />}
+                      label="Edit Record"
+                      tone="primary"
+                      onClick={handleEditRecord}
+                    />
+                  )}
+                </UiActionGroup>
+              );
+            })() : undefined
           }
           onBack={inStack ? () => requestClose() : () => navigate(-1)}
           onEdit={handleEditRecord}
           onCancelEdit={handleCancelEdit}
-          onSave={() => handleSaveRecord()}
+          onSave={(opts) => handleSaveRecord(undefined, opts)}
           showBack={!inStack}
         />
 
@@ -1341,6 +1370,47 @@ const DynamicDetailPage: React.FC<DynamicDetailPageProps> = ({
           ) : (
             <div className="sails-detail-section-card" style={{ textAlign: 'center' }}>
               <p className="ls-empty">Record not found.</p>
+            </div>
+          )}
+
+          {/* Bottom Action Footer */}
+          {(isNewMode || isEditing) && (
+            <div className="sails-detail-form-footer">
+              <UiActionGroup size="md">
+                <UiActionItem
+                  label="Cancel"
+                  disabled={saving}
+                  onClick={isNewMode ? (inStack ? () => requestClose() : () => navigate(-1)) : handleCancelEdit}
+                />
+                <UiActionDivider />
+                <UiSplitButton
+                  primaryLabel={isNewMode ? 'Save Record' : 'Save Changes'}
+                  primaryIcon={<Save size={13} />}
+                  onPrimaryClick={() => handleSaveRecord()}
+                  loading={saving}
+                  loadingText={isNewMode ? 'Saving...' : 'Updating...'}
+                  options={[
+                    {
+                      id: 'save_close',
+                      label: 'Save & Close',
+                      description: 'Save and return to the list view',
+                      icon: <Check size={12} />,
+                      onClick: () => handleSaveRecord(undefined, { andClose: true }),
+                    },
+                    ...(isNewMode
+                      ? [
+                          {
+                            id: 'save_new',
+                            label: 'Save & Create Another',
+                            description: 'Save this record and open a blank form',
+                            icon: <Plus size={12} />,
+                            onClick: () => handleSaveRecord(undefined, { andNew: true }),
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              </UiActionGroup>
             </div>
           )}
         </section>

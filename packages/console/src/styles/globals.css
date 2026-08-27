@@ -68,14 +68,53 @@ textarea {
 /* Base Utility for BEM Cards */
 .sails-card {
   background-color: var(--sails-bg-card);
-  border-radius: var(--sails-radius-md);
-  box-shadow: var(--sails-shadow-sm);
-  padding: calc(var(--sails-spacing-unit) * 3);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-lg);
+  box-shadow: var(--sails-shadow-card);
+  padding: calc(var(--sails-spacing-unit) * 2.5);
   transition: var(--sails-transition);
 }
 
 .sails-card:hover {
-  box-shadow: var(--sails-shadow-md);
+  box-shadow: var(--sails-shadow-card-hover);
+}
+
+/* Sub-card & Section Container (Tier 2 Inset) */
+.sails-subcard {
+  background: var(--sails-surface-subtle);
+  border: 1px solid var(--sails-border-color);
+  border-radius: var(--sails-radius-md);
+  padding: 12px 16px;
+  transition: var(--sails-transition);
+}
+
+.sails-subcard:hover {
+  background: var(--sails-surface-hover);
+}
+
+/* Slim Custom Scrollbar Area */
+.sails-scroll-area {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sails-border-color) transparent;
+}
+
+.sails-scroll-area::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.sails-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sails-scroll-area::-webkit-scrollbar-thumb {
+  background-color: var(--sails-border-color);
+  border-radius: 4px;
+}
+
+.sails-scroll-area::-webkit-scrollbar-thumb:hover {
+  background-color: var(--sails-text-muted);
 }
 
 /* Global Page Container */
@@ -90,13 +129,28 @@ textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 100%;
 }
 
 .sails-page-header__left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.sails-page-header__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
 }
 
 .sails-page-header__icon-wrapper {
@@ -129,17 +183,19 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: var(--sails-field-height, 36px);
-  padding: 0 14px;
-  border-radius: var(--sails-radius-sm);
-  font-weight: 600;
-  font-size: var(--sails-font-size-base, 14px);
+  gap: 5px;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: var(--sails-radius-md, 6px);
+  font-weight: 500;
+  font-size: 12.5px;
   cursor: pointer;
   transition: var(--sails-transition);
   border: 1px solid transparent;
   outline: none;
   white-space: nowrap;
+  box-sizing: border-box;
+  vertical-align: middle;
 }
 
 .sails-btn--primary {
@@ -323,7 +379,7 @@ textarea {
   font-family: var(--sails-font-family);
   font-size: var(--sails-font-size-base, 14px);
   line-height: 1.5;
-  background: var(--sails-bg-body);
+  background: var(--sails-bg-card, #ffffff);
   color: var(--sails-text-main);
   transition: var(--sails-transition);
 }

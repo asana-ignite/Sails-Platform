@@ -9,6 +9,7 @@ import MobileNav from './MobileNav';
 import MobileGlobalBar from './MobileGlobalBar';
 import MobileSearchBar from './MobileSearchBar';
 import MobileAppSwitcher from './MobileAppSwitcher';
+import { NotificationDropdown } from './NotificationDropdown';
 import { LocaleSync } from '../../contexts/I18nContext';
 import { useConsole } from '../../contexts/ConsoleContext';
 import './AppLayout.css';
@@ -23,6 +24,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(false);
   const [isMobileSearchVisible, setIsMobileSearchVisible] = useState(false);
   const [isMobileAppSwitcherVisible, setIsMobileAppSwitcherVisible] = useState(false);
+  const [isMobileNotifVisible, setIsMobileNotifVisible] = useState(false);
   const { widgets, activeApp } = useConsole();
 
   const showWidgetBar = activeApp?.widgetBarEnabled === true && widgets.length > 0;
@@ -41,6 +43,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     if (newState) {
       setIsMobileSearchVisible(false);
       setIsMobileAppSwitcherVisible(false);
+      setIsMobileNotifVisible(false);
     }
   };
 
@@ -50,6 +53,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     if (newState) {
       setIsMobileNavVisible(false);
       setIsMobileAppSwitcherVisible(false);
+      setIsMobileNotifVisible(false);
     }
   };
 
@@ -59,6 +63,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     if (newState) {
       setIsMobileNavVisible(false);
       setIsMobileSearchVisible(false);
+      setIsMobileNotifVisible(false);
+    }
+  };
+
+  const toggleMobileNotif = () => {
+    const newState = !isMobileNotifVisible;
+    setIsMobileNotifVisible(newState);
+    if (newState) {
+      setIsMobileNavVisible(false);
+      setIsMobileSearchVisible(false);
+      setIsMobileAppSwitcherVisible(false);
     }
   };
 
@@ -66,6 +81,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     setIsMobileNavVisible(false);
     setIsMobileSearchVisible(false);
     setIsMobileAppSwitcherVisible(false);
+    setIsMobileNotifVisible(false);
   };
 
   return (
@@ -88,6 +104,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         onMenuToggle={toggleMobileNav} 
         onSearchToggle={toggleMobileSearch}
         onAppSwitcherToggle={toggleMobileAppSwitcher}
+        onNotifToggle={toggleMobileNotif}
+        isNotifVisible={isMobileNotifVisible}
       />
       <MobileSearchBar 
         isVisible={isMobileSearchVisible} 
@@ -97,6 +115,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         isVisible={isMobileAppSwitcherVisible} 
         onClose={toggleMobileAppSwitcher} 
       />
+      {isMobileNotifVisible && (
+        <>
+          <div
+            className="sails-mobile-notif-backdrop"
+            onClick={() => setIsMobileNotifVisible(false)}
+          />
+          <div className="sails-mobile-notif-sheet">
+            <NotificationDropdown onClose={() => setIsMobileNotifVisible(false)} />
+          </div>
+        </>
+      )}
     </div>
   );
 };
