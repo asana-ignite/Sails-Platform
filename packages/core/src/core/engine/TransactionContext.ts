@@ -21,14 +21,14 @@ export class TransactionContext {
     options?: { userId?: string; tenantId?: string | null; role?: string; activeTeamId?: string }
   ): Promise<T> {
     const client = await pool.connect();
-    // Hoisted so the finally block can reference it even if try throws early.
-    let resolvedRole: string | undefined;
+    // Track whether a database role switch was applied so it can be reset in finally.
+    let roleSwitched = false;
 
     try {
       let resolvedUserId = options?.userId;
       let resolvedTenantId = options?.tenantId;
       let resolvedActiveTeamId = options?.activeTeamId;
-      resolvedRole = options?.role;
+      let resolvedRole = options?.role;
 
       if (!resolvedUserId) {
         const ctx = await getSession();
@@ -40,9 +40,7 @@ export class TransactionContext {
         }
       }
 
-      await client.query('BEGIN');
-      await client.query('SET LOCAL statement_timeout = 30000');
-      await client.query('SET LOCAL lock_timeout = 5000');
+      await client.query('BEGIN; SET LOCAL statement_timeout = 30000; SET LOCAL lock_timeout = 5000');
 
       if (resolvedRole) {
         // Map application/JWT user roles to PostgreSQL database roles
@@ -61,6 +59,7 @@ export class TransactionContext {
             throw new Error(`Security Violation: Unauthorized database role switch to '${dbRole}'`);
           }
           await client.query(`SET ROLE ${dbRole}`);
+          roleSwitched = true;
         }
       }
 
@@ -94,7 +93,7 @@ export class TransactionContext {
       await client.query('ROLLBACK');
       throw error;
     } finally {
-      if (resolvedRole) {
+      if (roleSwitched) {
         try {
           await client.query('RESET ROLE');
         } catch (e) {

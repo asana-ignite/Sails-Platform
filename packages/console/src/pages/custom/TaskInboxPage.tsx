@@ -31,10 +31,18 @@ const TaskInboxPage: React.FC<TaskInboxPageProps> = ({ defaultTab = 'pending' })
     isHistoryPath ? 'decided' : defaultTab
   );
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [tasks, setTasks] = useState<WorkflowTaskItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [counts, setCounts] = useState<{ pending: number }>({ pending: 0 });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -50,24 +58,28 @@ const TaskInboxPage: React.FC<TaskInboxPageProps> = ({ defaultTab = 'pending' })
         q.set('status', 'all');
       }
 
-      if (search) q.set('search', search);
+      if (debouncedSearch) q.set('search', debouncedSearch);
 
-      const [res, countRes] = await Promise.all([
-        fetch(`/api/workflow/tasks?${q.toString()}`),
-        fetch(`/api/workflow/tasks?count=true`)
-      ]);
-
+      const res = await fetch(`/api/workflow/tasks?${q.toString()}`);
       const json = await res.json();
-      const countJson = await countRes.json();
 
       if (json.success) {
         setTasks(json.data.rows || []);
+        if (tab === 'pending' && !debouncedSearch) {
+          setCounts({ pending: json.data.total || (json.data.rows || []).length });
+        }
       } else {
         throw new Error(json.error || 'Failed to fetch tasks');
       }
 
-      if (countJson.success) {
-        setCounts({ pending: countJson.data.count || 0 });
+      // If not on the pending tab, fetch pending badge count asynchronously
+      if (tab !== 'pending') {
+        fetch('/api/workflow/tasks?count=true')
+          .then((r) => r.json())
+          .then((cntJson) => {
+            if (cntJson.success) setCounts({ pending: cntJson.data.count || 0 });
+          })
+          .catch(() => undefined);
       }
     } catch (err: any) {
       setError(err.message || 'Error fetching tasks');
@@ -78,7 +90,7 @@ const TaskInboxPage: React.FC<TaskInboxPageProps> = ({ defaultTab = 'pending' })
 
   useEffect(() => {
     fetchTasks();
-  }, [tab, search]);
+  }, [tab, debouncedSearch]);
 
   const formatDate = (isoStr: string | null) => {
     if (!isoStr) return '\u2014';
@@ -204,7 +216,7 @@ const TaskInboxPage: React.FC<TaskInboxPageProps> = ({ defaultTab = 'pending' })
                         <strong>{t.def_name || 'Workflow Task'}</strong>
                       </td>
                       <td>
-                        <span className="sails-inbox-step-name">{(t as any).stage_name || t.step_id}</span>
+                        <span className="sails-inbox-step-name">{t.stage_name || t.step_id}</span>
                       </td>
                       <td>
                         <span className="sails-inbox-assignee-tag">

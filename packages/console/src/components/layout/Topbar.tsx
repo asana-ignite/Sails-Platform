@@ -110,6 +110,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
   useEffect(() => {
     let isMounted = true;
     const fetchPendingTaskCount = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       try {
         const [tasksRes, notifsRes] = await Promise.all([
           fetch('/api/workflow/tasks?count=true').then((r) => r.json()).catch(() => null),
@@ -133,13 +134,18 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
         setPendingTaskCount(e.detail.count);
       }
     };
-
     window.addEventListener('sails:notif-count-updated', handleCountUpdate);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') fetchPendingTaskCount();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       isMounted = false;
       clearInterval(interval);
       window.removeEventListener('sails:notif-count-updated', handleCountUpdate);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -172,32 +178,10 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuToggle, isMobileSearchVisible }) 
             className={`sails-topbar__action ${isNotifOpen ? 'sails-topbar__action--active' : ''}`}
             title="Notifications & Approvals"
             onClick={() => setIsNotifOpen(!isNotifOpen)}
-            style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <Bell size={20} />
             {pendingTaskCount > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: 2,
-                  right: 2,
-                  background: '#e11d48',
-                  color: '#ffffff',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  borderRadius: 10,
-                  minWidth: 17,
-                  height: 17,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 4px',
-                  lineHeight: 1,
-                  border: '2px solid var(--sails-bg-topbar, #ffffff)',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
-                  pointerEvents: 'none',
-                }}
-              >
+              <span className="sails-topbar__notif-badge">
                 {pendingTaskCount > 99 ? '99+' : pendingTaskCount}
               </span>
             )}

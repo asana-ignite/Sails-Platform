@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, AlertCircle, Loader2 } from 'lucide-react';
 import type { WorkflowTaskDetail } from '@sails/shared';
-import DynamicDetailPage from '../DynamicDetailPage';
 import { ApprovalTaskBanner } from '../../components/workflow/ApprovalTaskBanner';
 import { ApprovalTimeline } from '../../components/workflow/ApprovalTimeline';
 import './ApprovalDetailPage.css';
+
+const DynamicDetailPage = lazy(() => import('../DynamicDetailPage'));
 
 const ApprovalDetailPage: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
@@ -85,11 +86,18 @@ const ApprovalDetailPage: React.FC = () => {
         {activeTab === 'record' ? (
           (instance.tableName || instance.table_name) && (instance.recordId || instance.record_id) ? (
             <div className="sails-approval-dynamic-wrapper">
-              <DynamicDetailPage
-                tableName={(instance.tableName || instance.table_name)!}
-                recordId={(instance.recordId || instance.record_id)!}
-                inStack={false}
-              />
+              <Suspense fallback={
+                <div className="sails-approval-page-loading" style={{ minHeight: 200 }}>
+                  <Loader2 size={24} className="sails-spin" />
+                  <p>Loading record details...</p>
+                </div>
+              }>
+                <DynamicDetailPage
+                  tableName={(instance.tableName || instance.table_name)!}
+                  recordId={(instance.recordId || instance.record_id)!}
+                  inStack={false}
+                />
+              </Suspense>
             </div>
           ) : (
             <div className="sails-approval-no-record">

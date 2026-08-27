@@ -57,5 +57,8 @@ export const AdminPluginRegistry: Record<string, any> = {
   TaskInbox: lazy(() => import('../../pages/custom/TaskInboxPage')),
   TaskInboxHistory: lazy(() => import('../../pages/custom/TaskInboxPage')),
   ApprovalDetailPage: lazy(() => import('../../pages/custom/ApprovalDetailPage')),
+
+  // Operations & Scheduling
+  CalendarApp: lazy(() => import('../../pages/custom/CalendarApp')),
 };
 

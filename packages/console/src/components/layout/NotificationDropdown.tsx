@@ -296,60 +296,60 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
                         {formatTimeAgo(item.timestamp)}
                       </span>
                     </div>
-                    <p className="sails-notif-item__desc">
-                      Approval Stage: <strong>{(task as any).stage_name || task.step_id}</strong>
-                    </p>
-                    {task.due_at && (
-                      <span className="sails-notif-item__due">
-                        <Clock size={11} /> Due soon
-                      </span>
-                    )}
-                  </div>
-                  <ChevronRight size={14} className="sails-notif-item__arrow" />
+                <p className="sails-notif-item__desc">
+                  Approval Stage: <strong>{task.stage_name || task.step_id}</strong>
+                </p>
+                {task.due_at && (
+                  <span className="sails-notif-item__due">
+                    <Clock size={11} /> Due soon
+                  </span>
+                )}
+              </div>
+              <ChevronRight size={14} className="sails-notif-item__arrow" />
+            </div>
+          );
+        } else {
+          const bell = item.data;
+          const isExpanded = !!expandedIds[bell.id];
+          const isUnread = bell.status !== 'read';
+          return (
+            <div
+              key={`bell-${bell.id}-${index}`}
+              className={`sails-notif-item sails-notif-item--bell ${isExpanded ? 'sails-notif-item--expanded' : ''} ${isUnread ? 'sails-notif-item--unread' : 'sails-notif-item--read'}`}
+              onClick={() => handleBellClick(bell)}
+            >
+              <div className={`sails-notif-item__icon sails-notif-item__icon--bell ${!isUnread ? 'sails-notif-item__icon--read' : ''}`}>
+                <Info size={16} />
+              </div>
+              <div className="sails-notif-item__content">
+                <div className="sails-notif-item__head">
+                  <span className={`sails-notif-item__name ${!isUnread ? 'sails-notif-item__name--read' : ''}`}>
+                    {bell.subject || 'System Notification'}
+                  </span>
+                  <span className="sails-notif-item__time">
+                    {formatTimeAgo(item.timestamp)}
+                  </span>
                 </div>
-              );
-            } else {
-              const bell = item.data;
-              const isExpanded = !!expandedIds[bell.id];
-              const isUnread = bell.status !== 'read';
-              return (
-                <div
-                  key={`bell-${bell.id}-${index}`}
-                  className={`sails-notif-item sails-notif-item--bell ${isExpanded ? 'sails-notif-item--expanded' : ''} ${isUnread ? 'sails-notif-item--unread' : 'sails-notif-item--read'}`}
-                  onClick={() => handleBellClick(bell)}
-                >
-                  <div className={`sails-notif-item__icon sails-notif-item__icon--bell ${!isUnread ? 'sails-notif-item__icon--read' : ''}`}>
-                    <Info size={16} />
+                <p className="sails-notif-item__desc">
+                  {bell.source || 'Workflow Engine'}
+                </p>
+                {isExpanded && (
+                  <div className="sails-notif-item__body">
+                    {renderMessageBody(bell.body)}
                   </div>
-                  <div className="sails-notif-item__content">
-                    <div className="sails-notif-item__head">
-                      <span className={`sails-notif-item__name ${!isUnread ? 'sails-notif-item__name--read' : ''}`}>
-                        {bell.subject || 'System Notification'}
-                      </span>
-                      <span className="sails-notif-item__time">
-                        {formatTimeAgo(item.timestamp)}
-                      </span>
-                    </div>
-                    <p className="sails-notif-item__desc">
-                      {bell.source || 'Workflow Engine'}
-                    </p>
-                    {isExpanded && (
-                      <div className="sails-notif-item__body">
-                        {renderMessageBody(bell.body)}
-                      </div>
-                    )}
-                  </div>
-                  {isExpanded ? (
-                    <ChevronDown size={14} className="sails-notif-item__arrow" />
-                  ) : (
-                    <ChevronRight size={14} className="sails-notif-item__arrow" />
-                  )}
-                </div>
-              );
-            }
-          })
-        )}
-      </div>
+                )}
+              </div>
+              {isExpanded ? (
+                <ChevronDown size={14} className="sails-notif-item__arrow" />
+              ) : (
+                <ChevronRight size={14} className="sails-notif-item__arrow" />
+              )}
+            </div>
+          );
+        }
+      })
+    )}
+  </div>
 
       {/* Footer */}
       <div className="sails-notif-dropdown__footer">

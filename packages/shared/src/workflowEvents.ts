@@ -285,38 +285,52 @@ export interface WorkflowTaskItem {
   assignee_type: string;
   assignee_id: string;
   assignee_users: string[];
-  decisions: Array<{ action: string; comment?: string; userId: string; timestamp: string }> | null;
-  actions: WorkflowTaskAction[];
+  decisions?: Array<{ action: string; comment?: string; userId: string; timestamp: string }> | null;
+  actions?: WorkflowTaskAction[];
   due_at: string | null;
-  decided_by: string | null;
-  decision: string | null;
-  decided_at: string | null;
+  decided_by?: string | null;
+  decision?: string | null;
+  decided_at?: string | null;
   created_at: string;
-  def_id: string;
-  instance_state: string;
-  def_name: string;
+  updated_at?: string;
+  def_id?: string;
+  instance_state?: string;
+  def_name?: string;
+  stage_name?: string;
+  workflow_name?: string;
+  table_name?: string;
+  record_id?: string;
 }
 
 export interface WorkflowTaskDetail {
   task: WorkflowTaskItem;
   instance: {
     id: string;
-    state: string;
-    vars: Record<string, any>;
-    createdBy: string | null;
-    createdAt: string;
-    trigger: string;
-    recordId: string | null;
-    defName: string | null;
-    tableId: string | null;
-    tableName: string | null;
+    def_id?: string;
+    defName?: string | null;
+    def_name?: string | null;
+    state?: string;
+    status?: string;
+    recordId?: string | null;
+    record_id?: string | null;
+    tableId?: string | null;
+    tableName?: string | null;
+    table_name?: string | null;
+    createdAt?: string;
+    created_at?: string;
+    createdBy?: string | null;
+    created_by?: string | null;
+    trigger?: string | null;
+    vars?: Record<string, any>;
   };
-  stage: {
+  stage?: {
     id: string;
-    label: string | null;
-    description: string | null;
+    label?: string | null;
+    name?: string | null;
+    description?: string | null;
+    type?: string;
   } | null;
-  approvalEvent: {
+  approvalEvent?: {
     message?: string;
     subject?: string;
     actions?: WorkflowTaskAction[];
@@ -325,21 +339,22 @@ export interface WorkflowTaskDetail {
     attachments?: Array<{ id: string; name: string; url?: string; size?: number }>;
     [key: string]: any;
   } | null;
-  timeline: Array<{
+  timeline?: Array<{
     id: string;
-    stepId: string | null;
+    stepId?: string | null;
     action: string;
-    actorId: string | null;
-    actorName: string | null;
-    detail: any;
+    actorId?: string | null;
+    actorName?: string | null;
+    detail?: any;
     createdAt: string;
   }>;
-  users: Record<string, { id: string; name: string | null; email: string | null }>;
-  variableDefs: any[];
+  users?: Record<string, { id: string; name: string | null; email: string | null; avatarUrl?: string }>;
+  variableDefs?: any[];
 }
 
 export interface WorkflowDecisionPayload {
   action: string;
   comment?: string;
 }
+
 

@@ -135,9 +135,17 @@ async function resolveRhs(rule: FilterRule, ctx: FilterEvalContext): Promise<{ m
 function compare(op: string, lhs: any, rhs: any): boolean {
   if (op === 'is_empty') return lhs === undefined || lhs === null || String(lhs).trim() === '';
   if (op === 'is_not_empty') return lhs !== undefined && lhs !== null && String(lhs).trim() !== '';
-  if (op === 'eq') return String(lhs) === String(rhs);
-  if (op === 'neq') return String(lhs) !== String(rhs);
-  if (op === 'contains') return String(lhs || '').toLowerCase().includes(String(rhs ?? '').toLowerCase());
+  if (op === 'eq') {
+    if (lhs == null && rhs == null) return true;
+    if (lhs == null || rhs == null) return false;
+    return String(lhs) === String(rhs);
+  }
+  if (op === 'neq') {
+    if (lhs == null && rhs == null) return false;
+    if (lhs == null || rhs == null) return true;
+    return String(lhs) !== String(rhs);
+  }
+  if (op === 'contains') return String(lhs ?? '').toLowerCase().includes(String(rhs ?? '').toLowerCase());
   const ln = Number(lhs);
   const rn = Number(rhs);
   if (Number.isNaN(ln) || Number.isNaN(rn)) return false;

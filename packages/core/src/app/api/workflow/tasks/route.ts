@@ -35,23 +35,14 @@ export async function GET(req: NextRequest) {
     }
     const s = quoteIdent(schema);
 
-    // Table may not exist yet for tenants with no runtime activity.
-    const exists = await pool
-      .query(`SELECT to_regclass($1) IS NOT NULL AS ok`, [`${schema}.wf_task`])
-      .then((r) => r.rows[0]?.ok === true)
-      .catch(() => false);
-    if (!exists) {
-      return NextResponse.json({ success: true, data: { rows: [], total: 0, page: 1, limit: 20, totalPages: 0 } });
-    }
-
     const { searchParams } = new URL(req.url);
     const countOnly = searchParams.get('count') === 'true';
     const status = searchParams.get('status') || 'pending';
     const defId = searchParams.get('defId') || '';
     const search = searchParams.get('search') || '';
     const overdue = searchParams.get('overdue') === 'true';
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
-    const limit = Math.min(50, Math.max(5, parseInt(searchParams.get('limit') || '20')));
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.min(50, Math.max(5, parseInt(searchParams.get('limit') || '20', 10)));
 
     const params: any[] = [JSON.stringify([userId])];
     const where: string[] = [`t.assignee_users @> $1::jsonb`];
@@ -99,7 +90,7 @@ export async function GET(req: NextRequest) {
 
     const enrichedRows = rowsRes.rows.map((row: any) => {
       const dag = row.def_published_config || row.def_config;
-      const stage = (dag?.stages || []).find((s: any) => s.id === row.step_id);
+      const stage = (dag?.stages || []).find((st: any) => st.id === row.step_id);
       const { def_config, def_published_config, ...cleanRow } = row;
       return {
         ...cleanRow,
@@ -119,6 +110,13 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: any) {
+    if (error?.code === '42P01' || String(error?.message).includes('does not exist')) {
+      // Return empty payload if wf_task table has not been initialized yet
+      return NextResponse.json({
+        success: true,
+        data: { rows: [], total: 0, page: 1, limit: 20, totalPages: 0, count: 0 },
+      });
+    }
     console.error('[API WORKFLOW TASKS GET]:', error);
     return NextResponse.json({ success: false, error: error.message || 'Internal Server Error' }, { status: 500 });
   }

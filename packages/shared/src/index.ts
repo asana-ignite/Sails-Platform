@@ -67,6 +67,10 @@ export type {
   WorkflowEventConfigParameterType,
   WorkflowEventConfigStep,
   WorkflowAction,
+  WorkflowTaskAction,
+  WorkflowTaskItem,
+  WorkflowTaskDetail,
+  WorkflowDecisionPayload,
 } from './workflowEvents';
 
 // ─── Core Models ──────────────────────────────────────────────
@@ -1247,74 +1251,4 @@ export function serializeFilterGroups(
   return out;
 }
 
-// ─── Workflow Tasks & Approvals Types ────────────────────────────────
-export interface WorkflowTaskAction {
-  label: string;
-  value: string;
-  variant?: 'primary' | 'secondary' | 'danger' | 'success';
-}
 
-export interface WorkflowTaskItem {
-  id: string;
-  instance_id: string;
-  step_id: string;
-  status: 'pending' | 'decided' | 'expired' | 'canceled';
-  decision?: string | null;
-  comment?: string | null;
-  decided_at?: string | null;
-  decided_by?: string | null;
-  due_at?: string | null;
-  created_at: string;
-  updated_at?: string;
-  stage_name?: string;
-  workflow_name?: string;
-  def_name?: string;
-  table_name?: string;
-  record_id?: string;
-  assignee_type?: string;
-  assignee_id?: string;
-  actions?: WorkflowTaskAction[];
-  assignee_users?: string[];
-}
-
-export interface WorkflowTaskDetail {
-  task: WorkflowTaskItem;
-  instance: {
-    id: string;
-    def_id?: string;
-    defName?: string | null;
-    def_name?: string | null;
-    state?: string;
-    status?: string;
-    recordId?: string | null;
-    record_id?: string | null;
-    tableId?: string | null;
-    tableName?: string | null;
-    table_name?: string | null;
-    createdAt?: string;
-    created_at?: string;
-    createdBy?: string | null;
-    created_by?: string | null;
-    trigger?: string | null;
-    vars?: Record<string, any>;
-  };
-  stage?: {
-    id: string;
-    label?: string | null;
-    name?: string | null;
-    description?: string | null;
-    type?: string;
-  } | null;
-  approvalEvent?: any;
-  timeline?: Array<{
-    id: string;
-    stepId: string;
-    action: string;
-    actorId?: string | null;
-    actorName?: string | null;
-    detail?: string | null;
-    createdAt: string;
-  }>;
-  users?: Record<string, { id: string; name: string | null; email: string | null; avatarUrl?: string }>;
-  variableDefs?: any[];
-}

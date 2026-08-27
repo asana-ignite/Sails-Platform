@@ -55,8 +55,6 @@ export async function resolveAssigneeUsers(tenantId: string, type: AssigneeRef['
         tenantId,
         isActive: true,
         OR: [
-          { role: rawVal },
-          { role: cleanRole },
           { role: { equals: rawVal, mode: 'insensitive' } },
           { role: { equals: cleanRole, mode: 'insensitive' } },
         ],
@@ -71,7 +69,7 @@ export async function resolveAssigneeUsers(tenantId: string, type: AssigneeRef['
     });
     if (!team) return [];
     const members = await db.userTeam.findMany({
-      where: { teamId: team.id },
+      where: { teamId: team.id, user: { isActive: true } },
       select: { user: { select: userSel } },
     });
     return members.map((m) => m.user).filter((u): u is ResolvedAssigneeUser => !!u);
@@ -82,7 +80,7 @@ export async function resolveAssigneeUsers(tenantId: string, type: AssigneeRef['
   });
   if (!position) return [];
   const slots = await db.positionSlot.findMany({
-    where: { positionId: position.id, userId: { not: null } },
+    where: { positionId: position.id, userId: { not: null }, user: { isActive: true } },
     select: { user: { select: userSel } },
   });
   return slots.map((s) => s.user).filter((u): u is ResolvedAssigneeUser => !!u);
@@ -224,10 +222,12 @@ const approvalEventPlugin: WorkflowEventPlugin = {
         }
       }
 
+      const resolvedLists = await Promise.all(
+        refs.map((ref) => resolveAssigneeUsers(ctx.tenantId, ref.type, ref.value)),
+      );
       const resolved: ResolvedAssigneeUser[] = [];
       const seenIds = new Set<string>();
-      for (const ref of refs) {
-        const found = await resolveAssigneeUsers(ctx.tenantId, ref.type, ref.value);
+      for (const found of resolvedLists) {
         for (const u of found) {
           if (!seenIds.has(u.id)) {
             seenIds.add(u.id);

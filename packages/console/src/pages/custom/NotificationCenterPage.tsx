@@ -94,7 +94,7 @@ export const NotificationCenterPage: React.FC = () => {
         window.dispatchEvent(new CustomEvent('sails:notif-count-updated', { detail: { count: unread + pendingTaskCount } }));
       }
     } catch {
-      toast({ type: 'error', message: 'Failed to load notifications' });
+      toast.error('Failed to load notifications');
     } finally {
       setLoading(false);
     }
@@ -122,7 +122,7 @@ export const NotificationCenterPage: React.FC = () => {
         window.dispatchEvent(new CustomEvent('sails:notif-count-updated', { detail: { count: unreadNotifCount + pending } }));
       }
     } catch {
-      toast({ type: 'error', message: 'Failed to load approval tasks' });
+      toast.error('Failed to load approval tasks');
     } finally {
       setLoading(false);
     }
@@ -166,7 +166,7 @@ export const NotificationCenterPage: React.FC = () => {
       const res = await fetch('/api/notifications?mark_all_read=true', { method: 'PATCH' });
       const json = await res.json();
       if (json.success) {
-        toast({ type: 'success', message: 'All notifications marked as read' });
+        toast.success('All notifications marked as read');
         setNotifications((prev) =>
           prev.map((n) => ({ ...n, status: 'read', read_at: new Date().toISOString() }))
         );
@@ -174,7 +174,7 @@ export const NotificationCenterPage: React.FC = () => {
         window.dispatchEvent(new CustomEvent('sails:notif-count-updated', { detail: { count: pendingTaskCount } }));
       }
     } catch {
-      toast({ type: 'error', message: 'Failed to mark all as read' });
+      toast.error('Failed to mark all as read');
     }
   };
 
@@ -190,17 +190,18 @@ export const NotificationCenterPage: React.FC = () => {
       });
       const json = await res.json();
       if (json.success) {
-        toast({
-          type: 'success',
-          message: action === 'approve' ? 'Task approved successfully' : 'Task rejected'
-        });
+        if (action === 'approve') {
+          toast.success('Task approved successfully');
+        } else {
+          toast.info('Task rejected');
+        }
         setSelectedTaskIds((prev) => prev.filter((id) => id !== task.id));
         fetchTasks();
       } else {
-        toast({ type: 'error', message: json.error || 'Failed to submit decision' });
+        toast.error(json.error || 'Failed to submit decision');
       }
     } catch {
-      toast({ type: 'error', message: 'Error submitting decision' });
+      toast.error('Error submitting decision');
     } finally {
       setDecidingId(null);
     }
@@ -222,15 +223,12 @@ export const NotificationCenterPage: React.FC = () => {
       const results = await Promise.all(promises);
       const successes = results.filter((r) => r?.success).length;
 
-      toast({
-        type: 'success',
-        message: `Successfully ${action === 'approve' ? 'approved' : 'rejected'} ${successes} task(s)`
-      });
+      toast.success(`Successfully ${action === 'approve' ? 'approved' : 'rejected'} ${successes} task(s)`);
 
       setSelectedTaskIds([]);
       fetchTasks();
     } catch {
-      toast({ type: 'error', message: 'Failed to process bulk decision' });
+      toast.error('Failed to process bulk decision');
     } finally {
       setBulkDeciding(false);
     }
